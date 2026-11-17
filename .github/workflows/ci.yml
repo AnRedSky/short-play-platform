@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-quality:
+    name: backend-quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/pyproject.toml
+      - name: Set up Python
+        run: uv python install 3.12
+      - name: Install backend dependencies
+        run: uv sync --all-groups
+      - name: Ruff
+        run: uv run ruff check .
+      - name: Pytest
+        run: |
+          if [ -d tests ]; then
+            uv run pytest -q
+          else
+            echo "No backend tests directory exists yet; test execution is deferred until tests are added."
+          fi
+
+  frontend-quality:
+    name: frontend-quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package.json
+      - name: Install frontend dependencies
+        run: npm install --no-audit --no-fund
+      - name: Type check
+        run: |
+          if [ -f tsconfig.json ]; then
+            npm run typecheck
+          else
+            echo "TypeScript project config not present yet; type checking is deferred."
+          fi
+      - name: Lint
+        run: |
+          if [ -f eslint.config.js ] || [ -f eslint.config.mjs ] || [ -f eslint.config.cjs ] || [ -f .eslintrc.cjs ] || [ -f .eslintrc.json ]; then
+            npm run lint
+          else
+            echo "ESLint configuration not present yet; lint execution is deferred."
+          fi
+      - name: Build
+        run: |
+          if [ -f index.html ] && [ -f vite.config.ts ] && [ -d src ]; then
+            npm run build
+          else
+            echo "Frontend application scaffold not present yet; build execution is deferred."
+          fi
+
+  compose-validation:
+    name: compose-validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Docker Compose
+        run: docker compose config --quiet
