@@ -36,3 +36,7 @@ npm run build
 - Shared: responsive navigation, Bearer token injection, normalized API errors and development-only mock injection.
 
 Production-domain screens currently use local preview records. They do not claim to perform real generation, human approval, media upload/download, FFmpeg rendering or persistent production operations. See `docs/api_todo.md` for backend contract gaps.
+
+## Delivery verification
+
+Formal release integration targets `main` from a `release/*` branch after required CI and repository policy checks pass.
