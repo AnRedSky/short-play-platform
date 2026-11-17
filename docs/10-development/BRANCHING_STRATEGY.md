@@ -62,8 +62,9 @@ GitHub Actions 自动执行 PR 元数据和分支策略检查，并等待 CI 工
 
 - GitHub Issue 是任务状态、负责人、依赖和验收的唯一事实来源。
 - 推送到 develop 仅表示集成完成，不自动关闭 Issue。
-- 只有 PR 合并到 main，且描述含 Closes #<issue>、Fixes #<issue> 或 Resolves #<issue> 时，GitHub 才自动关闭关联 Issue。
-- 仅同步、重构或未完成任务的 PR 使用 Refs #<issue>。
+- 只有 PR 合并到 main，且描述含 Closes #<issue>、Fixes #<issue> 或 Resolves #<issue> 时，关联 Issue 才允许关闭。
+- 实测结论：由机器人通过 API 完成的合并未触发 GitHub 关键字自动关闭（PR #18 合并后 Issue #1、#9 仍为 open）。因此自动交付工作流在合并 main 后按关键字幂等关闭关联 Issue 并输出日志，避免交付完成但任务长期挂着；该步骤只对目标 main 的 PR 生效。
+- 仅同步、重构或未完成任务的 PR 使用 Refs #<issue>，此类 PR 不会触发关闭。
 - 需要部署或业务验收的任务，必须在 Issue 中记录验收结果；代码合并不自动等同生产验收。
 
 ## 7. 仓库保护与权限配置
