@@ -1,0 +1,1 @@
+export function formatDateTime(value:string|Date){const date=value instanceof Date?value:new Date(value);return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('zh-CN',{dateStyle:'short',timeStyle:'short'}).format(date)}

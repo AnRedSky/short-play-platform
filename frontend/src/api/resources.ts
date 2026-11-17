@@ -1,0 +1,12 @@
+import { apiGet, apiPost, apiPatch } from './index'
+export interface User{id:string;email:string;full_name:string;is_active:boolean}
+export interface Organization{id:string;name:string;slug:string}
+export interface Department{id:string;organization_id:string;name:string;parent_id:string|null}
+export interface Role{id:string;organization_id:string;code:string;name:string;description:string;permissions?:string[]}
+export interface Project{id:string;organization_id:string;code:string;title:string;summary:string;status:string}
+export interface PageMeta{page:number;page_size:number;total:number}
+export const authApi={login:(email:string,password:string)=>apiPost<{access_token:string;token_type:string;expires_in:number;refresh_token:string;user:User},{email:string;password:string}>('/auth/login',{email,password}),me:()=>apiGet<{user:User;organization_id:string|null;permissions:string[]}>('/auth/me'),logout:(refresh_token:string)=>apiPost<{revoked:boolean},{refresh_token:string}>('/auth/logout',{refresh_token})}
+export const usersApi={list:(page=1)=>apiGet<User[]>(`/users?page=${page}&page_size=100`),create:(payload:{email:string;full_name:string;password:string;department_id?:string|null;role_ids?:string[]})=>apiPost<User,typeof payload>('/users',payload),update:(id:string,payload:{full_name?:string;is_active?:boolean})=>apiPatch<User,typeof payload>(`/users/${id}`,payload)}
+export const organizationsApi={list:()=>apiGet<Organization[]>('/organizations'),departments:(page=1)=>apiGet<Department[]>(`/organizations/departments?page=${page}&page_size=100`),createDepartment:(payload:{name:string;parent_id?:string|null})=>apiPost<Department,typeof payload>('/organizations/departments',payload)}
+export const rolesApi={list:(page=1)=>apiGet<Role[]>(`/roles?page=${page}&page_size=100`),create:(payload:{code:string;name:string;description?:string;permissions:string[]})=>apiPost<Role,typeof payload>('/roles',payload),assign:(id:string,role_id:string)=>apiPost<{role_id:string;user_id:string},{role_id:string}>(`/roles/${id}/assignments`,{role_id})}
+export const projectsApi={list:(page=1)=>apiGet<Project[]>(`/projects?page=${page}&page_size=100`),create:(payload:{code:string;title:string;summary?:string})=>apiPost<Project,typeof payload>('/projects',payload),update:(id:string,payload:{title?:string;summary?:string;status?:string})=>apiPatch<Project,typeof payload>(`/projects/${id}`,payload)}
