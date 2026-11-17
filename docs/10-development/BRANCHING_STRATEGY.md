@@ -33,10 +33,13 @@
 
 - 常规功能开发：本地开发后直接集成到 `develop)，由 push CI 校验。
 - 常规版本交付：PR 从 `develop` 到 `main`。
+- 正式发布使用 merge commit 保留分支祖先关系，不需要额外创建 main → develop 回灌 PR。
 - 版本冻结：可使用 `release/vX.Y.Z` 到 `main` 的 PR。
 - 生产紧急修复：`hotfix/*` 到 `main` 的 PR；合并后必须另开 `hotfix/*` 到 `develop` 的同步 PR。
 - 不允许普通功能变更绕过 `develop` 直接进入 `main`。
-- 默认 Squash merge；发布负责人可按版本策略选择 merge commit。
+- 常规短生命周期 PR 默认 Squash merge。
+- `develop` → `main` 正式发布 PR 必须使用 merge commit，保留 develop 历史作为 main 的祖先，避免长期分支因 squash 而产生无意义的历史分叉。
+- 紧急修复 PR 合并到 main 后，必须另开 hotfix → develop 同步 PR。
 - PR 标题遵循 Conventional Commits；描述必须包含背景、范围、测试证据、风险/回滚和 Issue 关联（`Closes #123`、`Fixes #123` 或 `Refs #123`）。
 - 至少一名非作者人工批准；关键领域变更须由相应领域负责人审查。
 - 所有阻塞性变更请求和审查线程必须解决；不得通过关闭重开 PR 绕过门禁。
