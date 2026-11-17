@@ -11,7 +11,7 @@ describe('api request pipeline', () => {
   })
   it('normalizes documented API errors', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: { code: 'PERMISSION_DENIED', message: 'Forbidden', request_id: 'req-1' } }), { status: 403 }))
-    await expect(apiRequest('/private')).rejects.toMatchObject<ApiError>({ name: 'ApiError', status: 403, code: 'PERMISSION_DENIED', requestId: 'req-1' })
+    await expect(apiRequest('/private')).rejects.toMatchObject({ name: 'ApiError', status: 403, code: 'PERMISSION_DENIED', requestId: 'req-1' })
   })
   it('supports an explicitly requested mock adapter', async () => {
     configureApiMock(async path => ({ data: { path } }))

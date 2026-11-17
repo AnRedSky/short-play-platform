@@ -82,12 +82,13 @@ const samples: Record<ModuleKey, Row[]> = {
  ],
 }
 const config = computed(()=>configs[props.module])
+function path(section: string) { return '/projects/demo-project/' + section }
 const rows = ref<Row[]>(samples[props.module].map(x=>({...x})))
 watch(()=>props.module, value=>{ rows.value=samples[value].map(x=>({...x})); search.value=''; filter.value='全部'; selectedId.value=rows.value[0]?.id ?? '' })
 const search=ref(''); const filter=ref('全部'); const selectedId=ref('s1'); const showCreate=ref(false); const newName=ref(''); const newSummary=ref('')
 const selectedStory = computed(()=>rows.value.find(x=>x.id===selectedId.value) ?? rows.value[0] ?? {name:'未选择故事',summary:'请选择左侧故事'})
 const filteredRows = computed(()=>rows.value.filter(x=>(filter.value==='全部'||x.status===filter.value)&&[x.name,x.code,x.kind,x.owner,x.status].join(' ').toLowerCase().includes(search.value.toLowerCase())))
-function openCreate(){ if(props.module==='editor'){ addClip({id:'new',code:'SH-NEW',title:'新建镜头片段',duration:'00:05',status:'待生成'}); return } showCreate.value=true }
+function openCreate(){ if(props.module==='editor'){ addClip({title:'新建镜头片段'}); return } showCreate.value=true }
 function createRow(){const n=rows.value.length+1;rows.value.unshift({id:'new-'+n,name:newName.value,code:'NEW-'+String(n).padStart(3,'0'),kind:config.value.title,owner:'当前用户',updated:'刚刚',status:'草稿',summary:newSummary.value||'新建演示记录'});newName.value='';newSummary.value='';showCreate.value=false}
 function statusClass(status:string){return status==='待审核'?'status-review':status==='进行中'?'status-progress':status==='草稿'?'status-draft':''}
 const playing=ref(false); const timelineVersion=ref(3); const exportStarted=ref(false)
