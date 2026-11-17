@@ -1,4 +1,10 @@
 from apps.api.models.access import Permission, PermissionGrant, Role, RolePermission, UserRole
+from apps.api.models.assets import (
+    AssetReference,
+    AssetVersion,
+    ExportJob,
+    MediaAsset,
+)
 from apps.api.models.audit import AuditLog
 from apps.api.models.creation import (
     Character,
@@ -41,9 +47,13 @@ __all__ = [
     "AuthSession",
     "Character",
     "CharacterVersion",
+    "AssetReference",
+    "AssetVersion",
     "Department",
     "Episode",
+    "ExportJob",
     "GenerationTask",
+    "MediaAsset",
     "OutboxEvent",
     "Organization",
     "OrganizationMember",
