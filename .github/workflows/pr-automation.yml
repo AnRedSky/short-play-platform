@@ -4,22 +4,18 @@ on:
   pull_request:
     types: [opened, reopened, ready_for_review, synchronize, edited]
     branches: [develop, main]
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
 
 permissions:
   contents: read
   pull-requests: read
 
 concurrency:
-  group: pr-automation-${{ github.event.pull_request.number || github.event.workflow_run.id || github.run_id }}
-  cancel-in-progress: true
+  group: pr-automation-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   policy:
     name: PR policy gate
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,32 +42,42 @@ jobs:
 
   automatic-delivery:
     name: Automatic merge after successful CI
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    needs: policy
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - name: Merge eligible pull request
+      - name: Wait for all CI jobs and merge
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          PR_NUMBER="$(gh pr list --repo "$REPOSITORY" --state open --head "$HEAD_BRANCH" --json number,baseRefName,isDraft --jq '.[] | select((.baseRefName == "develop" or .baseRefName == "main") and (.isDraft == false)) | .number' | head -n 1)"
-          [[ -n "$PR_NUMBER" ]] || { echo "No eligible open PR for CI branch $HEAD_BRANCH."; exit 0; }
-          BASE="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json baseRefName --jq '.baseRefName')"
-          HEAD="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json headRefName --jq '.headRefName')"
-          if [[ "$BASE" == "main" && "$HEAD" != "develop" && "$HEAD" != release/* && "$HEAD" != hotfix/* ]]; then
-            echo "Branch policy rejected $HEAD -> $BASE."; exit 1
-          fi
-          if [[ "$BASE" == "develop" && "$HEAD" != hotfix/* && "$HEAD" != docs/* ]]; then
-            echo "Branch policy rejected $HEAD -> $BASE."; exit 1
-          fi
-          gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --squash --delete-branch
+          for attempt in $(seq 1 120); do
+            CURRENT_SHA="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json headRefOid --jq '.headRefOid')"
+            [[ "$CURRENT_SHA" == "$HEAD_SHA" ]] || { echo "PR head changed during validation; a new workflow run must validate the new commit."; exit 1; }
+            DATA="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json statusCheckRollup)"
+            CHECKS="$(jq '[.statusCheckRollup[]? | select(.workflowName == "CI")]' <<< "$DATA")"
+            COUNT="$(jq 'length' <<< "$CHECKS")"
+            if [[ "$COUNT" -ge 3 ]]; then
+              FAILED="$(jq '[.[] | select(.status == "COMPLETED" and .conclusion != "SUCCESS")] | length' <<< "$CHECKS")"
+              PENDING="$(jq '[.[] | select(.status != "COMPLETED")] | length' <<< "$CHECKS")"
+              [[ "$FAILED" -eq 0 ]] || { echo "CI failed; automatic delivery is blocked."; exit 1; }
+              if [[ "$PENDING" -eq 0 ]]; then
+                gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --squash --delete-branch
+                exit 0
+              fi
+            fi
+            echo "Waiting for CI completion ($attempt/120); observed $COUNT CI checks."
+            sleep 10
+          done
+          echo "Timed out waiting for CI; PR remains open."
+          exit 1
 
-# Delivery is unattended: no per-PR human confirmation or manual approval is required.
-# Merge runs only after the separate CI workflow has completed successfully.
-# Repository branch protection / rulesets remain the final enforcement layer.
+# Delivery is unattended: no per-PR user confirmation or manual approval is required.
+# The workflow waits for all three independent CI jobs to succeed before merging.
 # Issue closure is handled by GitHub closing keywords only when a PR merges into main.
