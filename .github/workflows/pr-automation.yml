@@ -63,8 +63,8 @@ jobs:
           for attempt in $(seq 1 120); do
             CURRENT_SHA="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json headRefOid --jq '.headRefOid')"
             [[ "$CURRENT_SHA" == "$HEAD_SHA" ]] || { echo "PR head changed during validation; a new workflow run must validate the new commit."; exit 1; }
-            DATA="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json statusCheckRollup)"
-            CHECKS="$(jq '[.statusCheckRollup[]? | select(.workflowName == "CI")]' <<< "$DATA")"
+            DATA="$(gh api "repos/$REPOSITORY/commits/$HEAD_SHA/check-runs")"
+            CHECKS="$(jq '[.check_runs[]? | select(.name == "backend-quality" or .name == "frontend-quality" or .name == "compose-validation")]' <<< "$DATA")"
             COUNT="$(jq 'length' <<< "$CHECKS")"
             if [[ "$COUNT" -ge 3 ]]; then
               FAILED="$(jq '[.[] | select(.status == "COMPLETED" and .conclusion != "SUCCESS")] | length' <<< "$CHECKS")"
