@@ -1,83 +1,98 @@
 # 前后端 API 对接清单
 
-基线：`docs/04-api/API_CONVENTIONS.md`。前缀 `/api/v1`；成功 `{ data, meta }`；错误 `{ error: { code, message, details, request_id } }`；JSON 字段 snake_case、时间 UTC ISO 8601。
+基线：`docs/04-api/API_CONVENTIONS.md`。统一前缀 `/api/v1`；成功响应 `{ data, meta? }`；错误响应 `{ error: { code, message, details, request_id } }`；JSON 字段 snake_case、时间 UTC ISO 8601。以下已实现路由依据当前 main 后端路由和 Pydantic Schema 核对；未实现模块明确标记待开发，不以猜测路径冒充正式契约。
 
-**契约状态说明：** 路由域依据正式 API 规范整理；具体路由、字段和实现状态必须以 M1+ 后端 OpenAPI 为准。下列入参/出参为联调建议，不构成后端承诺。对接前由后端确认 schema、权限、分页、错误码和状态码。
+## 通用约定
+- 认证：`Authorization: Bearer <access_token>`；登录/初始化不带 Bearer。
+- 分页：`page` 默认 1，`page_size` 默认 20、最大 100；分页响应 meta 为 `{ page, page_size, total }`（部分创建域列表只返回 page/page_size）。
+- 错误：按统一错误 envelope 处理；前端 ApiError 保留 HTTP status、code、details、request_id。
+- 项目资源由服务端校验项目成员和权限；前端权限只控制展示。
+- 生成创建支持 `Idempotency-Key`；若未提供后端会生成随机 key，前端正式接入应主动提供稳定幂等键。
 
-通用：认证方式待确认；分页建议 `page/page_size/sort`，响应 `meta: { page, page_size, total }` 待确认；重要 POST 使用 `Idempotency-Key`；项目资源必须由服务端校验成员授权。
+## M1 身份认证
 
-## 身份认证与会话（M1）
-| 场景 | 方法/路径 | 暂定入参 | 暂定出参 | 状态 |
+| 场景 | 方法与路径 | 请求体 | 响应 data | 状态/说明 |
 |---|---|---|---|---|
-| 登录 | POST `/auth/login` | `{ username, password }` | `{ data: { access_token, token_type, expires_at?, user } }` | 待确认：路径、字段、Cookie/JWT |
-| 当前会话 | GET `/auth/me` | 无 | `{ data: { user, roles, permissions } }` | 待确认 |
-| 退出 | POST `/auth/logout` | `{ refresh_token? }` | `{ data: { success } }` | 待确认：服务端会话策略 |
-| 刷新令牌 | POST `/auth/refresh` | `{ refresh_token? }` | `{ data: { access_token, expires_at? } }` | 待确认 |
+| 首个管理员初始化 | POST `/auth/bootstrap` | `{ email, password, full_name, organization_name }`；password 最少 8 字符 | UserRead: `{ id, email, full_name, is_active }` | 已实现；仅首次管理员初始化流程使用 |
+| 登录 | POST `/auth/login` | `{ email, password }` | `{ access_token, token_type, expires_in, refresh_token, user }` | 已实现；UserRead 同上 |
+| 刷新令牌 | POST `/auth/refresh` | `{ refresh_token }` | 同登录 Token 响应 | 已实现 |
+| 退出 | POST `/auth/logout` | `{ refresh_token }` | `{ revoked: true }` | 已实现 |
+| 当前会话 | GET `/auth/me` | 无 | `{ user: UserRead, organization_id: UUID|null, permissions: string[] }` | 已实现；Bearer 必需 |
+| 撤销所有会话 | POST `/auth/me/revoke-all` | 无 | `{ revoked_sessions: number }` | 已实现；Bearer 必需 |
 
-## 用户、组织、RBAC（M1）
-| 场景 | 方法/路径 | 暂定入参 | 暂定出参 | 状态 |
+## M1 用户与组织
+
+| 场景 | 方法与路径 | 请求体/Query | 响应 data | 权限 |
 |---|---|---|---|---|
-| 用户列表/详情 | GET `/users`；GET `/users/{user_id}` | 分页、keyword?/status?；Path user_id | `{ data: User[] , meta }` / `{ data: User }` | 待确认 |
-| 创建用户 | POST `/users` | `{ username, display_name, email?, password?, role_ids? }` | `{ data: User }` | 待确认：邀请/初始密码 |
-| 更新/禁用用户 | PATCH `/users/{user_id}` | 可变字段；禁用建议 `{ status }` | `{ data: User }` | 待确认 |
-| 组织列表/创建 | GET/POST `/organizations` | GET 分页；POST `{ name, description? }` | `{ data: Organization[]/Organization }` | 待确认 |
-| 部门列表/创建 | GET/POST `/departments` | GET organization_id?；POST `{ organization_id, name, parent_id? }` | `{ data: Department[]/Department }` | 待确认 |
-| 角色列表/创建/更新 | GET/POST `/roles`；PATCH `/roles/{role_id}` | `{ name, description?, permission_codes: string[] }` | `{ data: Role[]/Role }` | 待确认 |
-| 权限目录 | GET `/permissions` | module? | `{ data: Permission[] }` | 待确认 |
+| 用户列表 | GET `/users?page=&page_size=` | Query page/page_size | UserRead[]；meta page/page_size/total | users:read |
+| 创建用户 | POST `/users` | `{ email, full_name, password, department_id?: UUID|null, role_ids: UUID[] }` | UserRead | users:write |
+| 用户详情 | GET `/users/{user_id}` | UUID Path | UserRead + permissions: string[] | users:read |
+| 更新用户 | PATCH `/users/{user_id}` | `{ full_name?: string, is_active?: boolean }` | UserRead | users:write |
+| 组织列表 | GET `/organizations` | 无 | OrganizationRead[]: `{ id, name, slug }` | organizations:read |
+| 组织详情 | GET `/organizations/{organization_id}` | UUID Path | OrganizationRead | organizations:read |
+| 部门列表 | GET `/organizations/departments?page=&page_size=` | Query page/page_size | DepartmentRead[]: `{ id, organization_id, name, parent_id }`；分页 meta | organizations:read |
+| 创建部门 | POST `/organizations/departments` | `{ name, parent_id?: UUID|null }` | DepartmentRead | organizations:write |
+| 组织成员列表 | GET `/organizations/members?page=&page_size=` | Query page/page_size | MemberRead[]: `{ id, organization_id, user_id, department_id, is_active }`；分页 meta | organizations:read |
 
-## 项目与成员（M1）
-| 场景 | 方法/路径 | 暂定入参 | 暂定出参 | 状态 |
+## M1 RBAC
+
+| 场景 | 方法与路径 | 请求体/Query | 响应 data | 权限 |
 |---|---|---|---|---|
-| 项目列表/创建 | GET/POST `/projects` | GET 分页/keyword?/status?；POST `{ name, description?, owner_id? }` | `{ data: Project[]/Project, meta? }` | 待确认 |
-| 项目详情/更新 | GET/PATCH `/projects/{project_id}` | Path；PATCH `{ name?, description?, status? }` | `{ data: Project }` | 待确认 |
-| 成员列表/添加 | GET/POST `/projects/{project_id}/members` | POST `{ user_id, project_role }` | `{ data: ProjectMember[]/ProjectMember }` | 待确认：成员路由 |
-| 移除成员 | DELETE `/projects/{project_id}/members/{user_id}` | Path project_id/user_id | 204 或成功 envelope | 待确认 |
+| 角色列表 | GET `/roles?page=&page_size=` | Query page/page_size | RoleRead[]: `{ id, organization_id, code, name, description }`；分页 meta | roles:read |
+| 创建角色 | POST `/roles` | `{ code, name, description?: string, permissions: string[] }` | RoleDetailRead（RoleRead + permissions） | roles:write |
+| 角色详情 | GET `/roles/{role_id}` | UUID Path | RoleDetailRead | roles:read |
+| 分配角色 | POST `/roles/{role_id}/assignments` | 当前 schema 声明 `{ role_id: UUID }`，但路由实现访问 `payload.user_id` | 预期 `{ role_id, user_id }` | **后端契约冲突待修复**：Schema 缺少 user_id，前端暂不调用 |
 
-## 故事、剧集、剧本（M2）
-| 场景 | 方法/路径 | 暂定入参 | 暂定出参 | 状态 |
+## M1 项目
+
+| 场景 | 方法与路径 | 请求体/Query | 响应 data | 权限 |
 |---|---|---|---|---|
-| 剧集列表/创建 | GET/POST `/episodes` | POST `{ project_id, title, episode_number }` | `{ data: Episode[]/Episode }` | 待确认：是否嵌套项目 |
-| 剧集详情/更新/归档 | GET/PATCH/DELETE `/episodes/{episode_id}` | Path；可变剧集字段 | `{ data: Episode }` 或 204 | 待确认 |
-| 故事设定读取/保存 | GET/PUT `/stories/{story_id}` | `{ title?, premise?, world_setting?, character_relationships? }` | `{ data: StoryBible }` | 待确认：资源路由 |
-| 剧本版本列表/创建 | GET/POST `/script-versions` | `{ episode_id, content, change_note? }` | `{ data: ScriptVersion[]/ScriptVersion }` | 待确认 |
-| 场次列表/创建 | GET/POST `/scenes` | `{ episode_id, title, sequence }` | `{ data: Scene[]/Scene }` | 待确认：与场景资产区分 |
+| 项目列表 | GET `/projects?page=&page_size=` | Query page/page_size | ProjectRead[]: `{ id, organization_id, code, title, summary, status }`；分页 meta | projects:read |
+| 创建项目 | POST `/projects` | `{ code, title, summary?: string }` | ProjectRead | projects:write |
+| 项目详情 | GET `/projects/{project_id}` | UUID Path | ProjectRead | projects:read + 项目访问校验 |
+| 更新项目 | PATCH `/projects/{project_id}` | `{ title?: string, summary?: string, status?: string }` | ProjectRead | projects:write + 项目访问校验 |
+| 项目成员列表 | GET `/projects/{project_id}/members` | UUID Path | ProjectMemberRead[]: `{ id, project_id, user_id, project_role, is_active }` | projects:read |
+| 添加项目成员 | POST `/projects/{project_id}/members` | `{ user_id: UUID, project_role: owner\|producer\|writer\|artist\|editor\|reviewer }` | ProjectMemberRead | projects:manage |
 
-## 影视资产、分镜与镜头（M2）
-| 场景 | 方法/路径 | 暂定入参 | 暂定出参 | 状态 |
-|---|---|---|---|---|
-| 角色 CRUD | GET/POST `/characters`；GET/PATCH `/characters/{character_id}` | `{ project_id, name, description?, appearance? }` | `{ data: Character[]/Character }` | 待确认 |
-| 场景资产 CRUD | GET/POST `/scenes`；GET/PATCH `/scenes/{scene_id}` | `{ project_id, name, description?, visual_description? }` | `{ data: Scene[]/Scene }` | 待确认：需与剧本场次区分 |
-| 道具 CRUD | GET/POST `/props`；GET/PATCH `/props/{prop_id}` | `{ project_id, name, description? }` | `{ data: Prop[]/Prop }` | 待确认 |
-| 分镜列表/创建 | GET/POST `/storyboards` | `{ episode_id, title? }` | `{ data: Storyboard[]/Storyboard }` | 待确认 |
-| 镜头 CRUD | GET/POST `/shots`；GET/PATCH `/shots/{shot_id}` | `{ scene_id, sequence, title?, duration_seconds? }` | `{ data: Shot[]/Shot }` | 待确认 |
-| 镜头合同 | GET/POST `/shot-contracts` | `{ shot_id, contract: object }` | `{ data: ShotContract }` | 待确认：独立 JSON Schema |
+## M2 创作与镜头（部分路由已实现）
 
-## AI 任务、工作流与审核（M3/M4）
-| 场景 | 方法/路径 | 暂定入参 | 暂定出参 | 状态 |
-|---|---|---|---|---|
-| 创建生成任务 | POST `/generation/tasks` | `{ project_id, shot_id?, capability, input }` + Idempotency-Key | `{ data: { task_id, status } }` | 待确认 |
-| 任务列表/详情 | GET `/generation/tasks`；GET `/generation/tasks/{task_id}` | 分页/status?/project_id? | `{ data: Task[]/Task }` | 待确认 |
-| 重试/取消任务 | POST `/generation/tasks/{task_id}/retry`；POST `/generation/tasks/{task_id}/cancel` | `{ reason? }` | `{ data: Task }` | 待确认：动作路由 |
-| 工作流运行 | GET `/workflow-runs`；GET `/workflow-runs/{run_id}` | 分页/project_id? | `{ data: WorkflowRun[]/WorkflowRun }` | 待确认 |
-| 审核列表/提交 | GET/POST `/reviews` | `{ resource_type, resource_id, decision, comment? }` | `{ data: Review }` | 待确认 |
-| 质量检查 | GET/POST `/quality-checks` | `{ resource_type, resource_id, check_type? }` | `{ data: QualityCheck }` | 待确认 |
-| 任务 SSE | GET `/generation/tasks/{task_id}/events` | Last-Event-ID? | 状态/进度/结果摘要事件 | 待确认：事件 schema |
+| 场景 | 方法与路径 | 请求体 | 响应/说明 |
+|---|---|---|---|
+| 剧集列表/创建 | GET/POST `/projects/{project_id}/episodes` | 创建 `{ episode_number, title, synopsis }` | EpisodeRead[] / EpisodeRead；列表带 page/page_size |
+| 剧集详情 | GET `/episodes/{episode_id}` | 无 | EpisodeRead |
+| 故事列表/创建 | GET/POST `/projects/{project_id}/stories` | `{ title, logline, synopsis }` | StoryRead[] / StoryRead |
+| 故事圣经列表/新版本 | GET/POST `/projects/{project_id}/story-bibles` | `{ content: object }` | StoryBibleRead[] / StoryBibleRead |
+| 创建剧本 | POST `/episodes/{episode_id}/scripts` | `{ title }` | ScriptRead |
+| 剧本版本列表/新版本 | GET/POST `/scripts/{script_id}/versions` | `{ content: object }` | ScriptVersionRead[] / ScriptVersionRead |
+| 剧本场次列表/创建 | GET/POST `/script-versions/{version_id}/scenes` | 以 ScriptSceneCreate schema 为准 | ScriptSceneRead[] / ScriptSceneRead |
+| 创建对白 | POST `/script-scenes/{scene_id}/dialogues` | 以 ScriptDialogueCreate schema 为准 | ScriptDialogueRead |
+| 角色列表/创建 | GET/POST `/projects/{project_id}/characters` | AssetCreate: `{ name, description }` | AssetRead[] / AssetRead |
+| 角色详情/版本 | GET `/characters/{character_id}`；POST `/characters/{character_id}/versions` | AssetVersionCreate | AssetDetailRead / AssetVersionRead |
+| 场景资产列表/创建 | GET/POST `/projects/{project_id}/scenes` | AssetCreate | AssetRead[] / AssetRead |
+| 场景资产版本 | POST `/scenes/{scene_id}/versions` | AssetVersionCreate | AssetVersionRead |
+| 道具列表/创建 | GET/POST `/projects/{project_id}/props` | AssetCreate | AssetRead[] / AssetRead |
+| 道具版本 | POST `/props/{prop_id}/versions` | AssetVersionCreate | AssetVersionRead |
+| 创建分镜 | POST `/episodes/{episode_id}/storyboards` | `{ version_number }` | StoryboardRead |
+| 镜头列表/创建 | GET/POST `/storyboards/{storyboard_id}/shots` | ShotCreate schema | ShotRead[] / ShotRead |
+| 镜头合同列表/创建 | GET/POST `/shots/{shot_id}/contracts` | `{ payload: object }` | ShotContractRead[] / ShotContractRead |
 
-## 媒体资产、时间线与导出（M5）
-| 场景 | 方法/路径 | 暂定入参 | 暂定出参 | 状态 |
-|---|---|---|---|---|
-| 上传资产 | POST `/assets` | multipart 文件、project_id、asset_type | `{ data: Asset }` | 待确认：直传/分片 |
-| 资产列表/详情 | GET `/assets`；GET `/assets/{asset_id}` | 分页/项目/类型筛选 | `{ data: Asset[]/Asset }` | 待确认 |
-| 下载/删除 | GET `/assets/{asset_id}/download`；DELETE `/assets/{asset_id}` | Path asset_id | 文件/短时 URL；204 | 待确认 |
-| 时间线读取/保存 | GET/PUT `/timelines/{timeline_id}` | `{ version, tracks: Track[] }` | `{ data: Timeline }` | 待确认：JSON schema |
-| 创建导出 | POST `/exports` | `{ timeline_id, profile, output_format }` + Idempotency-Key | `{ data: { export_id, status } }` | 待确认 |
-| 导出查询/取消 | GET `/exports`；GET `/exports/{export_id}`；POST `/exports/{export_id}/cancel` | 分页/Path | `{ data: ExportJob[]/ExportJob }` | 待确认 |
+## M3 Provider 与生成
 
-## 后端对齐检查表
-- [ ] 发布并锁定 M1 OpenAPI（认证、用户、组织、部门、角色、权限、项目、成员）。
-- [ ] 确认认证方式、刷新/撤销、CORS、CSRF、Cookie/SameSite。
-- [ ] 确认 ID 类型、时间、枚举、分页和排序。
-- [ ] 确认权限代码、项目授权校验和审计要求。
-- [ ] 确认 Pydantic schema、错误码、状态码和示例。
-- [ ] 确认文件传输、SSE 事件和幂等协议。
-- [ ] 用 OpenAPI 生成类型替换 provisional schema，并添加契约测试。
+| 场景 | 方法与路径 | 请求体/Query | 响应 data |
+|---|---|---|---|
+| Provider 健康状态 | GET `/models/providers` | 无 | `{ code, healthy }[]` |
+| 创建生成任务 | POST `/projects/{project_id}/generation/tasks` | `{ capability, prompt, parameters?: object, model_code?: string, provider_code?: string, shot_id?: UUID|null }`；Header `Idempotency-Key?` | GenerationTaskRead: `{ id, project_id, capability, provider_code, model_code, status, idempotency_key, result_payload, error_code, error_message }`；meta.created |
+| 查询任务详情 | GET `/generation/tasks/{task_id}` | UUID Path | GenerationTaskDetailRead（任务字段 + attempts[]） |
+| 取消任务 | POST `/generation/tasks/{task_id}/cancel` | 无 | GenerationTaskRead |
+
+## M4/M5 尚待后端提供正式接口
+- M4：任务列表、重试、工作流运行详情、任务 SSE/事件流、暂停/恢复等；当前 generation 路由仅提供创建、详情、取消。
+- M5：素材文件上传/下载、Timeline、ExportJob、导出取消与进度等；当前 main 未发现对应 API 路由。
+- 审核、质量检查、模型配置管理和审计日志分页虽在产品/领域范围内，需逐一以 OpenAPI 核对；当前审计列表 GET `/audit-logs?page=&page_size=&action=`，响应 data 为审计记录数组，权限 audit:read。
+
+## 对接与阻塞事项
+- [ ] 后端修复 `RoleAssignment` schema 与路由对 `user_id` 的字段冲突，并补接口测试。
+- [ ] 后端发布 OpenAPI JSON；前端生成类型并锁定接口快照。
+- [ ] 确认权限码完整清单、默认角色权限、项目成员角色枚举。
+- [ ] 补充刷新令牌自动续期、401 并发刷新和会话失效处理。
+- [ ] M4/M5 发布正式路由后补齐任务、媒体、时间线和导出页面。
