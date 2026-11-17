@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  checks: read
 
 concurrency:
   group: pr-automation-${{ github.event.pull_request.number || github.run_id }}
@@ -48,6 +49,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      checks: read
     steps:
       - name: Wait for all CI jobs and merge
         env:
