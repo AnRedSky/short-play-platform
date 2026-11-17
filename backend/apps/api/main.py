@@ -19,6 +19,7 @@ from apps.api.routes import (
     projects,
     roles,
     users,
+    workflow,
 )
 
 settings = get_settings()
@@ -54,6 +55,7 @@ for module_router in (
     projects.router,
     creation.router,
     generation.router,
+    workflow.router,
     audit.router,
 ):
     app.include_router(module_router, prefix=settings.api_v1_prefix)
