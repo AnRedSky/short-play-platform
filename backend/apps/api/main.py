@@ -9,7 +9,7 @@ from starlette.responses import Response
 from apps.api.config import get_settings
 from apps.api.errors import register_exception_handlers
 from apps.api.logging import configure_logging
-from apps.api.routes import audit, auth, health, organizations, projects, roles, users
+from apps.api.routes import audit, auth, creation, health, organizations, projects, roles, users
 
 settings = get_settings()
 configure_logging(settings.log_level)
@@ -42,6 +42,7 @@ for module_router in (
     roles.router,
     organizations.router,
     projects.router,
+    creation.router,
     audit.router,
 ):
     app.include_router(module_router, prefix=settings.api_v1_prefix)

@@ -1,6 +1,18 @@
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
+
+from apps.api.schemas.identity import UserRead
+
+__all__ = [
+    "BootstrapRequest",
+    "LoginRequest",
+    "LogoutRequest",
+    "MeRead",
+    "RefreshRequest",
+    "TokenPairRead",
+    "UserRead",
+]
 
 
 class LoginRequest(BaseModel):
@@ -21,15 +33,6 @@ class BootstrapRequest(BaseModel):
     password: str = Field(min_length=8, max_length=256)
     full_name: str = Field(min_length=1, max_length=200)
     organization_name: str = Field(min_length=1, max_length=200)
-
-
-class UserRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    email: str
-    full_name: str
-    is_active: bool
 
 
 class TokenPairRead(BaseModel):
