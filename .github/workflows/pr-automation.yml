@@ -38,15 +38,27 @@ jobs:
           [[ "$DRAFT" == "false" ]] || { echo "Draft PRs are not eligible for delivery."; exit 1; }
           [[ "$PR_TITLE" =~ ^(feat|fix|docs|refactor|test|build|ci|chore|perf|revert)(\([a-z0-9._-]+\))?:\ .+ ]] || { echo "PR title must follow Conventional Commits."; exit 1; }
           [[ "$PR_BODY" =~ (Closes|Fixes|Resolves|Refs)[[:space:]]+#([0-9]+) ]] || { echo "PR body must reference a GitHub Issue."; exit 1; }
-          if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "develop" && "$HEAD_REF" != release/* && "$HEAD_REF" != hotfix/* ]]; then
-            echo "Only develop, release/*, or hotfix/* may target main."; exit 1
-          elif [[ "$BASE_REF" == "develop" && "$HEAD_REF" != hotfix/* && "$HEAD_REF" != docs/* ]]; then
-            echo "Only hotfix synchronization or documentation-governance PRs may target develop; routine development integrates directly into develop."; exit 1
+          if [[ "$BASE_REF" == "main" ]]; then
+            # Only a formal delivery PR into main may close Issues, so it must carry a closing keyword.
+            [[ "$PR_BODY" =~ (Closes|Fixes|Resolves)[[:space:]]+#([0-9]+) ]] || {
+              echo "PRs targeting main must close the delivered Issues with Closes/Fixes/Resolves."
+              exit 1
+            }
+            [[ "$HEAD_REF" == "develop" || "$HEAD_REF" == release/* || "$HEAD_REF" == hotfix/* ]] || {
+              echo "Only develop, release/* or hotfix/* may target main."
+              exit 1
+            }
+          elif [[ "$HEAD_REF" != hotfix/* && "$HEAD_REF" != docs/* ]]; then
+            echo "Only hotfix synchronization or documentation-governance PRs may target develop; routine development integrates directly into develop."
+            exit 1
           fi
 
   automatic-delivery:
     name: Automatic merge after successful CI
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    if: |
+      github.event_name == 'workflow_run'
+      && github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.name == 'CI'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -69,12 +81,14 @@ jobs:
             exit 0
           fi
 
-          PR="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json number,title,body,headRefOid,headRefName,baseRefName,isDraft,mergeable)"
+          PR="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json number,title,body,state,headRefOid,headRefName,baseRefName,isDraft,mergeable)"
+          STATE="$(jq -r '.state' <<< "$PR")"
           BASE="$(jq -r '.baseRefName' <<< "$PR")"
           HEAD="$(jq -r '.headRefName' <<< "$PR")"
           CURRENT_SHA="$(jq -r '.headRefOid' <<< "$PR")"
           DRAFT="$(jq -r '.isDraft' <<< "$PR")"
 
+          [[ "$STATE" == "OPEN" ]] || { echo "PR #$PR_NUMBER is not open: $STATE"; exit 1; }
           [[ "$CURRENT_SHA" == "$CI_HEAD_SHA" ]] || { echo "PR head changed after CI: tested=$CI_HEAD_SHA current=$CURRENT_SHA"; exit 1; }
           [[ "$DRAFT" == "false" ]] || { echo "Draft PR cannot be merged."; exit 1; }
 
@@ -85,14 +99,35 @@ jobs:
             echo "Branch policy rejected $HEAD -> $BASE."; exit 1
           fi
 
-          CHECKS="$(gh api "repos/$REPOSITORY/commits/$CI_HEAD_SHA/check-runs")"
-          for REQUIRED_CHECK in backend-quality frontend-quality compose-validation; do
-            CONCLUSION="$(jq -r --arg name "$REQUIRED_CHECK" '[.check_runs[] | select(.name == $name)] | sort_by(.started_at) | last | if .status == "completed" then .conclusion else "pending" end' <<< "$CHECKS")"
-            [[ "$CONCLUSION" == "success" ]] || { echo "Required CI check $REQUIRED_CHECK is not successful: $CONCLUSION"; exit 1; }
+          # CI and the PR policy gate must both succeed for the exact head SHA being merged.
+          # The PR policy gate may still be running when CI finishes, so wait for it instead of
+          # failing the delivery outright.
+          REQUIRED_CHECKS=("backend-quality" "frontend-quality" "compose-validation" "PR policy gate")
+          SECONDS=0
+          while :; do
+            CHECKS="$(gh api "repos/$REPOSITORY/commits/$CI_HEAD_SHA/check-runs?per_page=100")"
+            PENDING=0
+            for REQUIRED_CHECK in "${REQUIRED_CHECKS[@]}"; do
+              CONCLUSION="$(jq -r --arg name "$REQUIRED_CHECK" '[.check_runs[] | select(.name == $name)] | sort_by(.started_at) | last | if .status == "completed" then .conclusion else "pending" end // "missing"' <<< "$CHECKS")"
+              case "$CONCLUSION" in
+                success) ;;
+                pending|missing) PENDING=1 ;;
+                *)
+                  echo "Required check $REQUIRED_CHECK did not succeed for $CI_HEAD_SHA: $CONCLUSION"
+                  exit 1
+                  ;;
+              esac
+            done
+            if [[ "$PENDING" -eq 0 ]]; then
+              echo "All required checks succeeded for $CI_HEAD_SHA."
+              break
+            fi
+            if (( SECONDS >= 300 )); then
+              echo "Timed out waiting for required checks on $CI_HEAD_SHA."
+              exit 1
+            fi
+            sleep 10
           done
-
-          POLICY_CONCLUSION="$(jq -r '[.check_runs[] | select(.name == "PR policy gate")] | sort_by(.started_at) | last | if .status == "completed" then .conclusion else "pending" end' <<< "$CHECKS")"
-          [[ "$POLICY_CONCLUSION" == "success" ]] || { echo "PR policy gate is not successful for $CI_HEAD_SHA: $POLICY_CONCLUSION"; exit 1; }
 
           MERGEABLE="UNKNOWN"
           for attempt in $(seq 1 5); do
@@ -111,6 +146,7 @@ jobs:
           echo "All gates passed for PR #$PR_NUMBER at $CI_HEAD_SHA. Merging with $MERGE_METHOD."
           MERGE_RESULT="$(gh api --method PUT "repos/$REPOSITORY/pulls/$PR_NUMBER/merge" -f sha="$CI_HEAD_SHA" -f merge_method="$MERGE_METHOD")"
           [[ "$(jq -r '.merged' <<< "$MERGE_RESULT")" == "true" ]] || { echo "GitHub did not confirm merge: $MERGE_RESULT"; exit 1; }
+          echo "Merged PR #$PR_NUMBER with commit $(jq -r '.sha' <<< "$MERGE_RESULT")."
 
           if [[ "$MERGE_METHOD" == "squash" && "$HEAD" != "main" && "$HEAD" != "develop" ]]; then
             gh api --method DELETE "repos/$REPOSITORY/git/refs/heads/$HEAD"
