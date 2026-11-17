@@ -1,0 +1,80 @@
+name: Pull request automation
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize, edited]
+    branches: [develop, main]
+  pull_request_review:
+    types: [submitted, dismissed]
+  check_suite:
+    types: [completed]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: pr-automation-${{ github.event.pull_request.number || github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  policy:
+    name: PR policy gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Validate PR metadata and branch policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          set -euo pipefail
+          [[ "$BASE_REF" == "develop" || "$BASE_REF" == "main" ]] || { echo "Unsupported target branch: $BASE_REF"; exit 1; }
+          [[ "$DRAFT" == "false" ]] || { echo "Draft PRs are not eligible for merge."; exit 1; }
+          [[ "$PR_TITLE" =~ ^(feat|fix|docs|refactor|test|build|ci|chore|perf|revert)(\([a-z0-9._-]+\))?:\ .+ ]] || { echo "PR title must follow Conventional Commits."; exit 1; }
+          [[ "$PR_BODY" =~ (Closes|Fixes|Resolves|Refs)[[:space:]]+#([0-9]+) ]] || { echo "PR body must reference a GitHub Issue (Closes/Refs #123)."; exit 1; }
+          if [[ "$BASE_REF" == "main" && "$HEAD_REF" == "develop" ]]; then
+            echo "Release PR from develop to main."
+          elif [[ "$BASE_REF" == "main" && "$HEAD_REF" != release/* && "$HEAD_REF" != hotfix/* ]]; then
+            echo "Only develop, release/*, or hotfix/* may target main."; exit 1
+          elif [[ "$BASE_REF" == "develop" && "$HEAD_REF" == release/* ]]; then
+            echo "Release branches must target main."; exit 1
+          fi
+          echo "PR metadata and branch policy passed."
+
+  enable-auto-merge:
+    name: Enable protected auto-merge
+    needs: policy
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.draft == false &&
+      (github.event.pull_request.base.ref == 'develop' || github.event.pull_request.base.ref == 'main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Queue squash auto-merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --auto --squash
+
+# Required CI and human approvals are enforced by repository branch protection.
+# This workflow never approves a PR and never bypasses required checks/reviews.
