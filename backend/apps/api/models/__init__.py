@@ -18,6 +18,7 @@ from apps.api.models.creation import (
     StoryBible,
     Storyboard,
 )
+from apps.api.models.generation import GenerationTask, TaskAttempt, UsageRecord
 from apps.api.models.identity import (
     AuthSession,
     Department,
@@ -34,6 +35,7 @@ __all__ = [
     "CharacterVersion",
     "Department",
     "Episode",
+    "GenerationTask",
     "Organization",
     "OrganizationMember",
     "Permission",
@@ -55,6 +57,8 @@ __all__ = [
     "Story",
     "StoryBible",
     "Storyboard",
+    "TaskAttempt",
+    "UsageRecord",
     "User",
     "UserRole",
 ]
