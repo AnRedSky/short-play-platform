@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, apiRequest, configureApiMock, configureApiTokenProvider } from './api'
+import { apiRequest, configureApiMock, configureApiTokenProvider } from './api'
 afterEach(() => { vi.restoreAllMocks(); configureApiMock(undefined); configureApiTokenProvider(undefined) })
 describe('api request pipeline', () => {
   it('injects bearer token and returns JSON response', async () => {
