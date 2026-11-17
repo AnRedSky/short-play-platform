@@ -9,7 +9,7 @@ class Settings(BaseSettings):
 
     app_name: str = "short-play-platform"
     app_env: str = "development"
-    debug: bool = False
+    debug: bool = Field(default=False, validation_alias="APP_DEBUG")
     api_v1_prefix: str = "/api/v1"
     log_level: str = "INFO"
     database_url: str = "postgresql+psycopg://short_play:replace-me@localhost:5432/short_play"

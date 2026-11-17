@@ -66,13 +66,20 @@ jobs:
       - name: Start Celery worker and verify broker round-trip
         run: |
           set -euo pipefail
-          uv run celery -A apps.api.workers.celery_app:celery_app worker --pool=solo --detach --pidfile=/tmp/short-play-celery.pid --logfile=/tmp/short-play-celery.log
+          .venv/bin/celery -A apps.api.workers.celery_app:celery_app worker --pool=solo --without-gossip --without-mingle --without-heartbeat --loglevel=INFO > /tmp/short-play-celery.log 2>&1 &
+          WORKER_PID=$!
           cleanup() {
-            uv run celery -A apps.api.workers.celery_app:celery_app control shutdown || true
+            kill "$WORKER_PID" 2>/dev/null || true
+            wait "$WORKER_PID" 2>/dev/null || true
           }
           trap cleanup EXIT
-          for attempt in $(seq 1 15); do
-            if uv run celery -A apps.api.workers.celery_app:celery_app inspect ping --timeout=2 2>/dev/null | grep -q pong; then
+          for attempt in $(seq 1 30); do
+            if ! kill -0 "$WORKER_PID" 2>/dev/null; then
+              cat /tmp/short-play-celery.log
+              echo "Celery worker exited before becoming ready."
+              exit 1
+            fi
+            if .venv/bin/celery -A apps.api.workers.celery_app:celery_app inspect ping --timeout=1 2>/dev/null | grep -qi pong; then
               echo "Celery worker responded to ping."
               exit 0
             fi
