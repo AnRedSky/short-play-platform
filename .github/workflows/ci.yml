@@ -44,7 +44,6 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg://short_play:short_play@localhost:5432/short_play
       REDIS_URL: redis://localhost:6379/0
-      STORAGE_ROOT: ${{ runner.temp }}/short-play-storage
     defaults:
       run:
         working-directory: backend
@@ -69,7 +68,11 @@ jobs:
       - name: Apply migrations to an empty PostgreSQL database
         run: uv run alembic upgrade head
       - name: Pytest
-        run: uv run pytest -q
+        run: |
+          set -euo pipefail
+          export STORAGE_ROOT="$RUNNER_TEMP/short-play-storage"
+          mkdir -p "$STORAGE_ROOT"
+          uv run pytest -q
       - name: Start Celery worker against Redis broker
         run: |
           set +e
