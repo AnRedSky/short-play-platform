@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
 
+    secret_key: str = "replace-me-for-local-development"
+    access_token_ttl_minutes: int = 15
+    refresh_token_ttl_days: int = 7
+    password_min_length: int = 10
+
 
 @lru_cache
 def get_settings() -> Settings:
