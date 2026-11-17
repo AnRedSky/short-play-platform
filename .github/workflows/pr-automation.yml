@@ -6,8 +6,6 @@ on:
     branches: [develop, main]
   pull_request_review:
     types: [submitted, dismissed]
-  check_suite:
-    types: [completed]
   workflow_run:
     workflows: ["CI"]
     types: [completed]
@@ -15,7 +13,6 @@ on:
 permissions:
   contents: read
   pull-requests: read
-  issues: read
 
 concurrency:
   group: pr-automation-${{ github.event.pull_request.number || github.event.workflow_run.id || github.run_id }}
@@ -24,7 +21,7 @@ concurrency:
 jobs:
   policy:
     name: PR policy gate
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_review'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,8 +29,6 @@ jobs:
     steps:
       - name: Validate PR metadata and branch policy
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_TITLE: ${{ github.event.pull_request.title }}
@@ -52,29 +47,56 @@ jobs:
           elif [[ "$BASE_REF" == "develop" && "$HEAD_REF" == release/* ]]; then
             echo "Release branches must target main."; exit 1
           fi
-          echo "PR metadata and branch policy passed."
 
-  enable-auto-merge:
-    name: Enable protected auto-merge
+  enable-auto-merge-after-review:
+    name: Enable auto-merge after approval and checks
     needs: policy
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.action != 'closed' &&
-      github.event.pull_request.draft == false &&
-      (github.event.pull_request.base.ref == 'develop' || github.event.pull_request.base.ref == 'main')
+    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_review'
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - name: Queue squash auto-merge
+      - name: Require independent approval and successful CI
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
+          DATA="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json reviewDecision,statusCheckRollup)"
+          DECISION="$(jq -r '.reviewDecision // "REVIEW_REQUIRED"' <<< "$DATA")"
+          [[ "$DECISION" == "APPROVED" ]] || { echo "Waiting for an independent human approval."; exit 1; }
+          CHECKS="$(jq '[.statusCheckRollup[]? | select((.name // .context // "") != "PR policy gate") | select((.workflowName // "") != "Pull request automation")]' <<< "$DATA")"
+          COUNT="$(jq 'length' <<< "$CHECKS")"
+          [[ "$COUNT" -gt 0 ]] || { echo "No independent CI status checks found; auto-merge is blocked."; exit 1; }
+          jq -e 'all(.[]; ((.conclusion // .state // "") == "SUCCESS"))' <<< "$CHECKS" >/dev/null || { echo "One or more independent CI checks are not successful."; exit 1; }
           gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --auto --squash
 
-# Required CI and human approvals are enforced by repository branch protection.
-# This workflow never approves a PR and never bypasses required checks/reviews.
+  enable-auto-merge-after-ci:
+    name: Enable auto-merge after CI completes
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Find associated PR and verify review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          PR_NUMBER="$(gh pr list --repo "$REPOSITORY" --state open --json number,headRefName,baseRefName --jq '.[] | select(.headRefName == env.HEAD_BRANCH and (.baseRefName == "develop" or .baseRefName == "main")) | .number' | head -n 1)"
+          [[ -n "$PR_NUMBER" ]] || { echo "No open integration/release PR found for CI branch."; exit 0; }
+          DATA="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json reviewDecision,statusCheckRollup)"
+          [[ "$(jq -r '.reviewDecision // "REVIEW_REQUIRED"' <<< "$DATA")" == "APPROVED" ]] || { echo "Waiting for independent human approval."; exit 1; }
+          CHECKS="$(jq '[.statusCheckRollup[]? | select((.name // .context // "") != "PR policy gate") | select((.workflowName // "") != "Pull request automation")]' <<< "$DATA")"
+          COUNT="$(jq 'length' <<< "$CHECKS")"
+          [[ "$COUNT" -gt 0 ]] || { echo "No independent CI status checks found; auto-merge is blocked."; exit 1; }
+          jq -e 'all(.[]; ((.conclusion // .state // "") == "SUCCESS"))' <<< "$CHECKS" >/dev/null || { echo "One or more independent CI checks are not successful."; exit 1; }
+          gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --auto --squash
+
+# Human review is required; automation never submits APPROVE and never bypasses branch rules.
+# Issue closure is handled by GitHub's native closing keywords only when a PR merges into main.
