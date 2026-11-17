@@ -16,10 +16,10 @@ Vue 3 Composition API + TypeScript + <script setup lang="ts">；API 客户端集
 UTF-8、LF、末尾换行；Python 4 空格，JSON/YAML/TS 2 空格；Ruff、MyPy、ESLint、Prettier、TypeScript typecheck。禁止调试输出、未使用依赖、临时文件和真实密钥。
 
 ## 分支与提交
-main 为稳定分支；develop 为集成分支；feature/<issue>-<name>、fix/<issue>-<name>、docs/<issue>-<name>。功能分支从 develop 建立并 PR 回 develop；发布 PR 从 develop 到 main。提交遵循 Conventional Commits：type(scope): summary。禁止共享分支无评审强推。
+分支模型、命名、权限、生命周期和合并触发条件统一遵循 [分支管理与交付规范](BRANCHING_STRATEGY.md)。长期分支仅保留 `main` 与 `develop`；禁止按单个功能需求创建常规远程临时分支。提交遵循 Conventional Commits：type(scope): summary。禁止共享分支无评审强推。
 
 ## PR
-必须关联 Issue，描述背景、范围、影响、迁移/配置、测试证据、风险和回滚。至少一名非作者审查；权限、凭据、外发、迁移和任务可靠性专项审查；CI 通过后合并。
+必须关联 Issue，描述背景、范围、影响、迁移/配置、测试证据、风险和回滚。至少一名非作者人工审查；权限、凭据、外发、迁移和任务可靠性专项审查；必需 CI 通过后方可自动合并。自动化不得代替人工批准。
 
 ## DoD
-代码、测试、文档、审查和验收标准全部满足才算完成。未满足项记录阻塞和后续 Issue，不得关闭。
+代码、测试、文档、审查和验收标准全部满足才算完成。进入 develop 仅代表集成，不等同正式交付；只有进入 main 且约定验收完成才可关闭任务。
