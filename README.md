@@ -18,6 +18,8 @@ docker compose up --build
 
 API: http://localhost:8000/api/v1/health
 
+依赖就绪探针（PostgreSQL、Redis，降级时返回 503）：http://localhost:8000/api/v1/health/ready
+
 前端开发服务使用 development profile：
 
 ```bash
@@ -28,8 +30,14 @@ docker compose --profile development up --build
 
 ## 工程检查
 
-Backend: `cd backend && uv sync --all-groups && uv run ruff check . && uv run pytest -q`
+依赖版本以锁文件为准：`backend/uv.lock`、`frontend/package-lock.json`。后端解释器由 `backend/.python-version` 固定为 3.12，与生产镜像一致。
 
-Frontend: `cd frontend && npm install && npm run typecheck && npm run lint && npm run test && npm run build`
+Backend: `cd backend && uv sync --locked --all-groups && uv run ruff check . && uv run pytest -q`
+
+Frontend: `cd frontend && npm ci --no-audit --no-fund && npm run typecheck && npm run lint && npm run test && npm run build`
+
+Compose: `docker compose config --quiet`
+
+以上命令即 CI 中强制执行的项目，仓库不存在因缺少文件而跳过测试或构建的条件逻辑。
 
 详细架构和里程碑见 [docs/README.md](docs/README.md)。

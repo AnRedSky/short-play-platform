@@ -56,7 +56,7 @@ GitHub Actions 自动执行 PR 元数据和分支策略检查，并等待 CI 工
 4. PR 没有合并冲突，且待合并的 head commit 与通过 CI 的 commit 完全一致。
 5. GitHub Token 仅具备完成检查和合并所需的最小权限。
 
-任一条件不满足时，PR 保持打开并报告失败原因；不得自动合并、忽略失败或绕过仓库保护。当前仓库初始化阶段尚无完整后端测试目录和可运行前端应用骨架，相关 CI 步骤会明确标记为暂缓，不代表已有业务测试覆盖。应用代码和测试补齐后，必须将这些步骤改为强制执行。
+任一条件不满足时，PR 保持打开并报告失败原因；不得自动合并、忽略失败或绕过仓库保护。自动交付工作流在 CI 完成后等待 PR policy gate 与其他必需检查全部成功（最长 5 分钟），并对同一 head SHA 校验后合并；CI 阶段已强制执行后端 Ruff/pytest、空库 Alembic 迁移、Celery Worker 启动、前端 typecheck/ESLint/Vitest/生产构建、Docker Compose 全栈冒烟与 API 依赖就绪检查，不存在条件跳过的检查项。
 
 ## 6. Issue 自动关闭规则
 
@@ -72,19 +72,26 @@ GitHub Actions 自动执行 PR 元数据和分支策略检查，并等待 CI 工
 
 **main**
 - Require a pull request before merging。
-- Require status checks to pass，至少包含 CI 的三个稳定检查。
+- Require status checks to pass，必需检查为 `backend-quality`、`frontend-quality`、`compose-validation`、`PR policy gate`。
 - Require conversation resolution。
 - Block force pushes and branch deletion。
 - 禁止管理员绕过自动化质量门禁；紧急恢复操作必须审计。
 - 不强制每个 PR 进行人工批准，以保持无人值守自动交付。
 
 **develop**
-- 仅授权开发团队成员可直接推送。
-- Require status checks to pass，Push CI 必须成功。
+- 仅授权开发团队成员可直接推送：仓库当前只有 1 名管理员协作者，Ruleset 未配置 bypass actors，强制推送与分支删除都会被拒绝。
+- Push CI 由 CI 工作流在 `push: develop` 事件上强制执行，失败结果推送后可立即可见并被后续交付门禁继承。GitHub Ruleset 的 required status checks 会在推送到达时校验目标提交已有的检查结果，因此无法约束新提交的直接推送：实测推送被拒绝并返回 `GH013 ... 3 of 3 required status checks are expected`。故 develop 不启用该规则，避免阻断常规集成；正式交付仍必须在 main 上通过全部必需检查。
 - Block force pushes and branch deletion。
 - 不强制每个功能需求创建 PR。
 
 Actions 使用最小权限；自动化 Token 不得拥有修改 Ruleset 的管理权限。仓库工作流文件不能替代 Ruleset 设置，管理员必须验证规则确实生效。
+
+已配置的 Ruleset（2026-11-17 通过 REST API 创建、回读确认并实测验证，`enforcement: active`）：
+
+| Ruleset | ID | 目标 | 规则 |
+|---|---|---|---|
+| main-protection | 27461472 | refs/heads/main | deletion, non_fast_forward, pull_request（必需批准数 0、必须解决对话）, required_status_checks（`backend-quality`、`frontend-quality`、`compose-validation`、`PR policy gate`） |
+| develop-protection | 27461477 | refs/heads/develop | deletion, non_fast_forward |
 
 ## 8. 生命周期与维护
 
