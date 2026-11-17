@@ -102,7 +102,12 @@ def main() -> int:
     token = body["data"]["access_token"]
 
     status, body = call(base, "GET", "/auth/me", token=token)
-    step("authenticated identity resolves", status == 200 and body["data"]["email"] == email, str(body))
+    data = body.get("data") or {}
+    step(
+        "authenticated identity resolves with permissions",
+        status == 200 and data.get("user", {}).get("email") == email and data.get("permissions"),
+        str(body),
+    )
 
     status, body = call(base, "POST", "/projects", token=token, payload={"code": f"e2e-{unique}", "title": "Acceptance Project"})
     step("project creation succeeds", status == 201, str(body))
