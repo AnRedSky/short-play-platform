@@ -1,38 +1,31 @@
 # 前端页面与模块映射（实现基线）
 
-> 当前仓库未发现已批准的视觉稿、页面级交互规格或设计 Token。本文仅将正式产品范围转换为页面信息架构，不代表视觉设计已确认；颜色、字体、间距、图标、断点和动效须以正式 UI 规范补齐后验收。
+产品范围严格以 `docs/02-requirements/PRODUCT_SCOPE_AND_MVP.md` 及领域规范为准。当前仓库未发现已批准的视觉稿、页面级交互规格或设计 Token；实现采用可运行的 UI 原型，视觉细节待正式设计稿验收。
 
-## 全局框架
-- 登录/会话：登录、退出、会话失效、无权限和服务不可用。
-- 工作台：导航、项目上下文、当前用户、通知/任务入口。
-- 通用状态：加载、空数据、校验、请求失败、无权限、资源不存在、分页、危险操作确认。
-- 响应式：桌面管理工作台；窄屏侧栏折叠为抽屉，宽表格横向滚动或卡片化。
+## 已实现页面
+- 企业工作台：项目概览、用户/组织/权限快捷入口。
+- 企业管理：用户、角色、部门。
+- 项目：项目列表与创建。
+- 创作生产：故事圣经、剧集与剧本、角色/场景/道具资产、分镜与 Shot、AI 生成任务、审核质量、轻量时间线、MP4 导出配置。
+- 开发预览：Vite DEV 自动进入演示会话；页面演示数据仅在浏览器内存中，页面明确标记，不写入后端。
 
-## 页面模块映射
-| 模块 | 页面/路由建议 | 核心能力 | 依据/状态 |
+## MVP 业务闭环映射
+| 产品阶段 | 页面 | 关键交互/对象 | 当前状态 |
 |---|---|---|---|
-| 身份认证 | /login | 登录、会话建立、失效提示 | M1；后端契约待确认 |
-| 工作台 | / | 项目概览、待办/任务摘要、最近访问 | 产品流程推导；指标待确认 |
-| 用户与组织 | /admin/users、/admin/organizations、/admin/departments | 用户、组织、部门 | M1；字段/权限待契约 |
-| 角色权限 | /admin/roles、/admin/permissions | RBAC 配置 | M1；权限矩阵待确认 |
-| 项目 | /projects、/projects/:projectId | 列表、创建、详情、成员授权 | M1/MVP |
-| 剧集与故事 | /projects/:projectId/episodes、/stories | 剧集、故事圣经、剧本和版本 | M2 |
-| 影视资产 | /projects/:projectId/assets、/characters、/scenes、/props | 角色/场景/道具档案 | M2 |
-| 分镜与镜头 | /projects/:projectId/storyboards、/shots | 场次、镜头排序、Shot Contract | M2 |
-| AI 任务 | /tasks、/tasks/:taskId | 状态、进度、错误、重试/取消 | M3/M4 |
-| 审核质量 | /reviews、/quality | 审核意见、质量结果、返工 | M2/M4 |
-| 媒体资产 | /assets | 上传、预览、下载 | M5 |
-| 时间线导出 | /projects/:projectId/editor、/exports | 基础时间线、字幕/音轨、导出 | M5 |
+| 创意与故事圣经 | `/projects/:id/stories` | 世界观、人物关系、故事版本 | UI 原型 + demo |
+| 分集与剧本 | `/projects/:id/episodes` | 分集、剧本版本、场次、对白 | UI 原型 + demo |
+| 资产管理 | `/projects/:id/assets` | 角色/场景/道具、参考与版本 | UI 原型 + demo |
+| 分镜/Shot Contract | `/projects/:id/storyboards` | 镜头编号、景别、机位、动作、时长、资产引用、连续性约束 | UI 原型 + demo |
+| AI 生成 | `/projects/:id/tasks` | Text/Image/Video/TTS、Provider、Attempt、产物 | UI 原型 + demo |
+| QA/人工审核 | `/projects/:id/reviews` | 技术/内容/连续性/合规、PASS/REVIEW_REQUIRED/FAIL/WAIVED | UI 原型 + demo |
+| 时间线 | `/projects/:id/editor` | Video/Audio/Subtitle 多轨、毫秒时间基准、版本 | UI 原型 + demo |
+| 成片导出 | `/projects/:id/exports` | MP4、画幅、帧率、字幕、ExportJob | UI 原型 + demo；不执行真实渲染 |
 
-## 交互验收原则
-1. 异步操作显示进行中状态，防止重复提交并提供可恢复错误提示。
-2. 客户端基础校验；服务端错误映射至字段或表单级提示。
-3. 列表具备加载、空态、错误态和分页；破坏性操作二次确认。
-4. UI 权限仅改善体验，服务端授权为准。
-5. 任务以 GET 快照为事实来源，SSE 仅作通知；断线后重新获取快照。
-6. mock 页面显式标识，不得将 mock 伪装为真实生产数据。
+## 预览模式安全边界
+- 自动跳过登录只在 `import.meta.env.DEV` 生效；生产 build 不允许该模式。
+- 预览用户和数据为固定演示数据，不授予服务端权限、不调用真实写接口。
+- 演示页面上的新增、排布和导出操作仅修改当前组件内存状态；页面持续展示“演示数据”标记。
+- 正式环境仍由后端 Bearer Token、组织/项目授权和 RBAC 执行访问控制。
 
-## 阻塞项
-- 正式 UI 设计稿、设计 Token、品牌规范和响应式断点。
-- M1 页面字段、表单规则、角色权限矩阵和后端 OpenAPI。
-- 各模块页面优先级及具体验收流程需产品负责人确认。
+## UI/交互验收原则
+加载/空/错误/无权限状态；异步操作防重复提交；字段校验；破坏性操作确认；项目范围资源引用版本；质量门禁和人工审核留痕；任务取消/重试不覆盖历史；时间线非破坏性版本；导出使用固定快照。
