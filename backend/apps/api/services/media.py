@@ -3,7 +3,6 @@
 import json
 import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 
 from apps.api.config import get_settings
@@ -88,10 +87,12 @@ def render_image_sequence(
     fps: int = 25,
     seconds_per_image: float = 2.0,
 ) -> dict:
-    """Render uploaded stills into a verified MP4 using the concat demuxer.
+    """Render uploaded stills into a verified MP4.
 
-    The output is probed after rendering; a stream that ffprobe cannot read is a failure,
-    never a success.
+    Every image is looped for exactly `seconds_per_image`, normalised to the requested
+    frame size and joined by the concat filter, so the timeline is deterministic instead
+    of depending on demuxer duration heuristics. The output is probed with ffprobe
+    afterwards; a stream ffprobe cannot read is a failure, never a success.
     """
     if not images:
         raise AppError(
@@ -100,50 +101,42 @@ def render_image_sequence(
     binaries = MediaBinaries()
     ffmpeg = binaries.require_ffmpeg()
 
-    with tempfile.TemporaryDirectory(prefix="short-play-render-") as tmp:
-        listing = Path(tmp) / "concat.txt"
-        lines: list[str] = []
-        for image in images:
-            lines.append(f"file '{image.as_posix()}'")
-            lines.append(f"duration {seconds_per_image}")
-        lines.append(f"file '{images[-1].as_posix()}'")
-        listing.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-        output.parent.mkdir(parents=True, exist_ok=True)
-        completed = subprocess.run(  # noqa: S603 - fixed binary, no shell
-            [
-                ffmpeg,
-                "-y",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                str(listing),
-                "-vf",
-                (
-                    f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
-                    f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuv420p"
-                ),
-                "-r",
-                str(fps),
-                "-c:v",
-                "libx264",
-                "-pix_fmt",
-                "yuv420p",
-                "-movflags",
-                "+faststart",
-                str(output),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
+    output.parent.mkdir(parents=True, exist_ok=True)
+    command: list[str] = [ffmpeg, "-y"]
+    chains: list[str] = []
+    for index, image in enumerate(images):
+        command += ["-loop", "1", "-t", f"{seconds_per_image:.3f}", "-i", str(image)]
+        chains.append(
+            f"[{index}:v]scale={width}:{height}:force_original_aspect_ratio=decrease,"
+            f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,fps={fps}[v{index}]"
         )
-        if completed.returncode != 0 or not output.is_file() or output.stat().st_size == 0:
-            raise AppError(
-                "FFmpeg failed to render the export",
-                code="MEDIA_RENDER_FAILED",
-                status_code=422,
-                details={"stderr": completed.stderr[-400:]},
-            )
+    joined = "".join(f"[v{index}]" for index in range(len(images)))
+    chains.append(f"{joined}concat=n={len(images)}:v=1:a=0[out]")
+    command += [
+        "-filter_complex",
+        ";".join(chains),
+        "-map",
+        "[out]",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        str(output),
+    ]
+
+    completed = subprocess.run(  # noqa: S603 - fixed binary, no shell
+        command,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0 or not output.is_file() or output.stat().st_size == 0:
+        raise AppError(
+            "FFmpeg failed to render the export",
+            code="MEDIA_RENDER_FAILED",
+            status_code=422,
+            details={"stderr": completed.stderr[-400:]},
+        )
     return probe(output)
