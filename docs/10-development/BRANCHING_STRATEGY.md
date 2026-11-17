@@ -33,6 +33,7 @@
 
 - 常规功能开发：本地开发后直接集成到 `develop)，由 push CI 校验。
 - 常规版本交付：PR 从 `develop` 到 `main`。
+- 发布后回灌：PR 从 `main` 到 `develop`，用于同步正式发布提交和保持分支历史一致。
 - 版本冻结：可使用 `release/vX.Y.Z` 到 `main` 的 PR。
 - 生产紧急修复：`hotfix/*` 到 `main` 的 PR；合并后必须另开 `hotfix/*` 到 `develop` 的同步 PR。
 - 不允许普通功能变更绕过 `develop` 直接进入 `main`。
