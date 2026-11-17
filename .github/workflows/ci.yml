@@ -44,6 +44,7 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg://short_play:short_play@localhost:5432/short_play
       REDIS_URL: redis://localhost:6379/0
+      STORAGE_ROOT: ${{ runner.temp }}/short-play-storage
     defaults:
       run:
         working-directory: backend
@@ -57,6 +58,12 @@ jobs:
         run: uv python install 3.12
       - name: Install backend dependencies from the committed lock file
         run: uv sync --locked --all-groups
+      - name: Install FFmpeg and ffprobe for real media tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y ffmpeg
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
       - name: Ruff
         run: uv run ruff check .
       - name: Apply migrations to an empty PostgreSQL database
@@ -138,6 +145,11 @@ jobs:
           set -euo pipefail
           docker compose ps --status running --services | grep -qx worker
           echo "Celery worker container is running."
+      - name: Verify the Celery beat recovery scheduler is running
+        run: |
+          set -euo pipefail
+          docker compose ps --status running --services | grep -qx beat
+          echo "Celery beat container is running."
       - name: Start and verify the frontend development service
         run: |
           set -euo pipefail

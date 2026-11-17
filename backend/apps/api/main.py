@@ -10,6 +10,7 @@ from apps.api.config import get_settings
 from apps.api.errors import register_exception_handlers
 from apps.api.logging import configure_logging
 from apps.api.routes import (
+    assets,
     audit,
     auth,
     creation,
@@ -56,6 +57,7 @@ for module_router in (
     creation.router,
     generation.router,
     workflow.router,
+    assets.router,
     audit.router,
 ):
     app.include_router(module_router, prefix=settings.api_v1_prefix)

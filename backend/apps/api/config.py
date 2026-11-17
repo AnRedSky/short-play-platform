@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     refresh_token_ttl_days: int = 7
     password_min_length: int = 10
 
+    storage_root: str = "storage"
+    max_upload_size: int = 500 * 1024 * 1024
+    ffmpeg_binary: str = "ffmpeg"
+    ffprobe_binary: str = "ffprobe"
+
 
 @lru_cache
 def get_settings() -> Settings:
