@@ -1,51 +1,32 @@
-# 工作流与异步任务设计
+# 工作流与异步任务规范
 
-## 1. 概念边界
+## 对象边界
+Workflow/WorkflowVersion 定义流程；WorkflowRun 是一次运行；WorkflowNode/NodeRun 表示步骤及执行；GenerationTask 表示一次模型调用；TaskAttempt 表示实际调用尝试；Checkpoint 保存恢复上下文；Artifact 表示输出；OutboxEvent 可靠投递事件。业务状态保存在 PostgreSQL；Celery 只负责分发执行单元。
 
-- Workflow：一条可持久化的业务生产流程定义。
-- WorkflowRun：某次流程运行实例。
-- WorkflowNode：流程步骤定义。
-- WorkflowNodeRun：节点运行实例及状态。
-- GenerationTask：一次 AI 能力调用请求。
-- TaskExecution/Attempt：一次实际执行尝试。
-- Checkpoint：安全恢复所需的持久化上下文。
-- Artifact/MediaAsset：节点产生的结构化结果或文件资产。
-- OutboxEvent：事务内记录、事务外可靠投递的事件。
+## 执行流程
+1. API 事务写业务变更、WorkflowRun/Task 和 Outbox。
+2. Dispatcher 投递 Celery 消息，允许重复投递。
+3. Worker 以租约/幂等方式领取任务，检查状态、权限策略、预算和并发。
+4. 执行短任务或提交外部异步任务；长时间等待通过轮询/Webhook，不占用 Worker。
+5. 保存 Attempt、Checkpoint、Artifact 和状态。
+6. 节点依赖满足后推进；需审核时进入 waiting_review。
+7. 状态通过查询/SSE通知前端。
 
-Workflow 管业务编排；Celery 只负责分发可重试的执行单元；Provider 只负责模型调用。
+## 可靠性
+- 幂等键按业务作用域唯一，消费端幂等，数据库约束为最终防线。
+- 每次重试创建新 Attempt，指数退避 + 随机抖动 + 最大次数。
+- 区分连接超时、执行超时、业务超时；外部结果未知时先查询供应商状态，避免重复计费。
+- 取消先记录 cancel_requested，再协作执行；供应商不支持取消时记录真实结果。
+- Worker 崩溃通过租约/心跳识别孤儿任务，从安全 Checkpoint 恢复。
+- 结果文件先临时写入、校验、原子发布后登记 Asset。
+- 限制用户、项目、Provider、模型、队列和主机级并发。
+- 上游版本变化标记下游 stale；不自动覆盖已审核产物。
 
-## 2. 运行流程
+## 状态机
+Task：pending → queued → running → succeeded/failed；允许 retry_wait、cancel_requested、cancelled。WorkflowRun：created → running ↔ paused → succeeded/failed/cancelled。NodeRun：pending/ready/running/waiting_review/succeeded/failed/skipped/cancelled。迁移必须经领域服务并记录原因。
 
-1. API 在数据库事务中创建 WorkflowRun/GenerationTask 与 OutboxEvent。
-2. Outbox Dispatcher 扫描未投递事件并发送 Celery 消息。
-3. Worker 以幂等方式领取执行权，校验任务状态与并发限制。
-4. 执行节点，必要时调用 Provider 或 FFmpeg。
-5. 保存 Attempt、Checkpoint、Artifact 和节点状态。
-6. 满足依赖时推进下一个节点；需人工审核则进入 waiting_review。
-7. 完成/失败/取消后更新运行状态并发布状态事件。
+## 失败分类
+可重试：网络瞬断、上游 429/5xx、临时资源故障。不可重试：参数、权限、策略或能力不匹配。需人工：审核拒绝、预算阻断、供应商状态不确定、超过最大重试。非幂等调用不得盲目重试。
 
-## 3. 可靠性要求
-
-- 幂等：同一业务命令的重复请求不能产生重复结果；数据库唯一约束是最终防线。
-- Outbox：业务写入和待投递事件同事务提交；投递可重复，消费端必须幂等。
-- 重试：每次重试创建新的 Attempt；使用指数退避和随机抖动；限制最大次数。
-- 超时：区分连接超时、执行超时和业务超时；超时后按能力决定取消或标记未知结果。
-- 取消：先写 cancel_requested，再由 Worker/轮询器执行协作式取消；供应商不支持取消时记录实际结果。
-- 恢复：Worker 崩溃后通过租约超时/心跳识别孤儿任务；从最后一个安全 Checkpoint 恢复。
-- 并发：按用户、项目、Provider、模型和 Worker 队列实施限制。
-- 结果：文件先写临时路径，校验完成后原子移动并登记 Asset，避免半成品暴露。
-
-## 4. 状态机
-
-Task：pending → queued → running → succeeded/failed；可进入 retry_wait、cancel_requested、cancelled。WorkflowRun：created → running ↔ paused → succeeded/failed/cancelled。所有状态迁移必须经过应用/领域服务并记录原因。
-
-## 5. 失败分类
-
-- 可重试：网络瞬断、上游 429/5xx、暂时性资源不可用。
-- 不可重试：参数错误、权限失败、策略禁止、模型不支持能力。
-- 需人工处理：内容审核拒绝、预算阻断、供应商结果不确定或连续失败。
-- 不允许无条件重试产生费用的非幂等外部调用；需先查询供应商任务状态或使用供应商幂等键。
-
-## 6. 监控指标
-
-队列长度、等待时间、执行耗时、成功率、重试率、失败原因、孤儿任务数、Provider 延迟/错误率、每任务模型用量、合成耗时和磁盘空间。
+## Temporal 决策
+MVP 使用 PostgreSQL 状态 + Celery + Outbox。Temporal 仅在长时间人工等待、复杂补偿、跨系统持久化执行需求显著且团队具备运维能力时评估；如采用，由 ADR 明确迁移边界并替代流程编排层，不能与自研引擎双写双跑。
