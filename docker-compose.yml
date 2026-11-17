@@ -70,6 +70,27 @@ services:
         condition: service_healthy
     command: ["uv", "run", "--no-sync", "celery", "-A", "apps.api.workers.celery_app:celery_app", "worker", "--loglevel=INFO"]
 
+  beat:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-short_play}:${POSTGRES_PASSWORD:-replace-me}@postgres:5432/${POSTGRES_DB:-short_play}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    command:
+      - uv
+      - run
+      - --no-sync
+      - celery
+      - -A
+      - apps.api.workers.celery_app:celery_app
+      - beat
+      - --loglevel=INFO
+      - -s
+      - /tmp/celerybeat-schedule
+
   frontend:
     image: node:22-alpine
     working_dir: /app

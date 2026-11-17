@@ -27,6 +27,14 @@ from apps.api.models.identity import (
     User,
 )
 from apps.api.models.project import Project, ProjectMember
+from apps.api.models.workflow import (
+    OutboxEvent,
+    WorkflowCheckpoint,
+    WorkflowDefinition,
+    WorkflowNodeRun,
+    WorkflowRun,
+    WorkflowVersion,
+)
 
 __all__ = [
     "AuditLog",
@@ -36,6 +44,7 @@ __all__ = [
     "Department",
     "Episode",
     "GenerationTask",
+    "OutboxEvent",
     "Organization",
     "OrganizationMember",
     "Permission",
@@ -60,5 +69,10 @@ __all__ = [
     "TaskAttempt",
     "UsageRecord",
     "User",
+    "WorkflowCheckpoint",
+    "WorkflowDefinition",
+    "WorkflowNodeRun",
+    "WorkflowRun",
+    "WorkflowVersion",
     "UserRole",
 ]
