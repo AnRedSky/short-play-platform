@@ -1,0 +1,77 @@
+name: Pull request automation
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize, edited]
+    branches: [develop, main]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: pr-automation-${{ github.event.pull_request.number || github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  policy:
+    name: PR policy gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Validate PR metadata and branch policy
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          set -euo pipefail
+          [[ "$BASE_REF" == "develop" || "$BASE_REF" == "main" ]] || { echo "Unsupported target branch: $BASE_REF"; exit 1; }
+          [[ "$DRAFT" == "false" ]] || { echo "Draft PRs are not eligible for delivery."; exit 1; }
+          [[ "$PR_TITLE" =~ ^(feat|fix|docs|refactor|test|build|ci|chore|perf|revert)(\([a-z0-9._-]+\))?:\ .+ ]] || { echo "PR title must follow Conventional Commits."; exit 1; }
+          [[ "$PR_BODY" =~ (Closes|Fixes|Resolves|Refs)[[:space:]]+#([0-9]+) ]] || { echo "PR body must reference a GitHub Issue."; exit 1; }
+          if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "develop" && "$HEAD_REF" != release/* && "$HEAD_REF" != hotfix/* ]]; then
+            echo "Only develop, release/*, or hotfix/* may target main."; exit 1
+          elif [[ "$BASE_REF" == "develop" && "$HEAD_REF" != hotfix/* && "$HEAD_REF" != docs/* ]]; then
+            echo "Only hotfix synchronization or documentation-governance PRs may target develop; routine development integrates directly into develop."; exit 1
+          fi
+
+  automatic-delivery:
+    name: Automatic merge after successful CI
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Merge eligible pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          PR_NUMBER="$(gh pr list --repo "$REPOSITORY" --state open --head "$HEAD_BRANCH" --json number,baseRefName,isDraft --jq '.[] | select((.baseRefName == "develop" or .baseRefName == "main") and (.isDraft == false)) | .number' | head -n 1)"
+          [[ -n "$PR_NUMBER" ]] || { echo "No eligible open PR for CI branch $HEAD_BRANCH."; exit 0; }
+          BASE="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json baseRefName --jq '.baseRefName')"
+          HEAD="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json headRefName --jq '.headRefName')"
+          if [[ "$BASE" == "main" && "$HEAD" != "develop" && "$HEAD" != release/* && "$HEAD" != hotfix/* ]]; then
+            echo "Branch policy rejected $HEAD -> $BASE."; exit 1
+          fi
+          if [[ "$BASE" == "develop" && "$HEAD" != hotfix/* && "$HEAD" != docs/* ]]; then
+            echo "Branch policy rejected $HEAD -> $BASE."; exit 1
+          fi
+          gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --squash --delete-branch
+
+# Delivery is unattended: no per-PR human confirmation or manual approval is required.
+# Merge runs only after the separate CI workflow has completed successfully.
+# Repository branch protection / rulesets remain the final enforcement layer.
+# Issue closure is handled by GitHub closing keywords only when a PR merges into main.
