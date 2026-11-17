@@ -40,3 +40,5 @@ Production-domain screens currently use local preview records. They do not claim
 ## Delivery verification
 
 Formal release integration targets `main` from a `release/*` branch after required CI and repository policy checks pass.
+
+The formal release workflow validates this frontend through a release branch and a main-targeting PR.
