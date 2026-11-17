@@ -1,1 +1,4 @@
-<script setup lang="ts">import DepartmentsView from '../DepartmentsView.vue'</script><template><DepartmentsView /></template>
+<script setup lang="ts">
+import DepartmentsView from '../DepartmentsView.vue'
+</script>
+<template><DepartmentsView /></template>
