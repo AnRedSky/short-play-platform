@@ -1,54 +1,22 @@
 # AI Provider 接入规范
 
-## 1. 目标
+## 能力契约
+TextGeneration、ImageGeneration、VideoGeneration、TTS、ASR、MusicGeneration 独立定义请求/结果 Schema。统一能力标识、超时、错误模型、任务状态、取消能力、用量摘要和健康检查。同步图片和异步视频最终都映射为 GenerationTask。
 
-建立统一的外部模型 API 接入层。业务模块只依赖能力契约，不依赖任何供应商 SDK、请求格式或专有状态码。开发早期通过 Mock Provider 完成端到端验证。
+## 责任边界
+Provider 负责 HTTP/SDK 协议适配、请求响应转换、供应商状态映射、错误归一化和健康检查。Provider 不写业务数据库、不创建资产、不判断项目权限、不修改剧本/镜头状态。应用服务负责策略、任务、Attempt、资产、用量和审计。
 
-## 2. 能力接口
+## Registry / Capability Catalog / Router / Policy
+Registry 注册适配器；Capability Catalog 声明模型能力、输入要求、限制和计价单位；Router 根据任务能力、输入兼容、项目策略、预算、健康状态和管理员优先级选择模型；Policy 校验数据分类、授权、供应商区域/合同、预算和外发策略。Fallback 只能在策略允许的候选集内执行。
 
-按能力定义独立协议：
-- TextGenerationProvider
-- ImageGenerationProvider
-- VideoGenerationProvider
-- SpeechGenerationProvider（TTS）
-- SpeechRecognitionProvider（ASR）
-- MusicGenerationProvider（按 MVP 范围启用）
+## 凭据与网络安全
+API Key 应用层加密；加密主密钥通过安全渠道注入且不入库/Git；日志只记录凭据 ID 和脱敏摘要。Base URL 仅管理员配置；限制协议/域名，校验 DNS/IP、重定向和 TLS。下载外部结果限制私网/loopback/链路本地/元数据地址，校验大小、MIME、时长和校验和。请求有连接/读取超时、速率、并发和响应体限制。
 
-统一包含能力标识、请求/结果 Schema、超时、取消能力（若供应商支持）、错误归一化、健康检查和用量摘要。视频等异步供应商需要 submit + poll/query；同步图片返回也应映射为已完成的 GenerationTask。
+## 任务与用量
+GenerationTask 保存能力、模型、Provider、参数、Prompt 版本/摘要、输入快照、幂等键和状态；TaskAttempt 保存供应商 task ID、请求/响应摘要、错误码、时间和耗时。敏感内容按分类与保留策略存储。用量区分供应商账单、接口返回 usage 和平台估算。
 
-## 3. Provider 责任边界
+## 实施顺序
+P0 contracts + Mock Text/Image/Video/TTS；P0 Registry/Router/Policy；P0 Generation Application Service；P1 首个真实 LLM/Image/Video/TTS Provider 按需接入；P1 用量、预算、健康和回退。Mock 是 CI 默认路径，真实 API 测试仅在受控环境运行。
 
-Provider 负责外部 HTTP/SDK 调用、供应商协议转换、结果解析、错误码映射和健康检查。Provider 不写业务数据库、不创建业务资产、不决定剧本/分镜状态、不做权限判断。应用服务负责任务持久化、策略校验、资产登记和审计。
-
-## 4. Registry 与 Router
-
-- Registry：注册 Provider 实现及其能力，校验唯一标识和版本。
-- Router：按能力、模型配置、管理员优先级、可用性和成本策略选择目标。
-- Policy：按数据分类、项目授权、供应商区域/合同和外发审批控制是否允许发送内容。
-- Fallback：仅在策略允许的候选供应商集合内切换；不得因故障绕过数据外发限制。
-- 管理端可配置启用状态、并发、超时、速率限制和预算阈值。
-
-## 5. 凭据与调用安全
-
-- API Key 使用应用层加密密钥加密保存；密钥加密密钥来自部署密钥管理/环境变量，不入库、不入 Git。
-- 读取凭据遵循最小权限；日志只记录凭据 ID/脱敏摘要。
-- 外部 Base URL 仅管理员配置并进行协议、域名白名单、DNS/IP 和重定向校验，防止 SSRF。
-- 外部文件 URL 下载时校验协议、域名、解析 IP、大小和 MIME；禁止访问 loopback、私网、链路本地和云元数据地址。
-- 请求设置连接/读取超时、并发上限、速率限制、最大响应体和预算阈值。
-
-## 6. 统一任务数据
-
-每次模型调用关联 generation_task 与 generation_attempt。任务保存能力、模型、Provider、输入摘要、参数、幂等键、状态、重试策略；Attempt 保存供应商任务 ID、开始结束时间、耗时、错误码和响应摘要。原始请求/响应应脱敏并按数据保留策略存储。
-
-## 7. 初期实现顺序
-
-1. 定义 Pydantic contracts 和统一错误模型。
-2. 实现 Mock Text/Image/Video/TTS Provider。
-3. 实现 Registry、Router、Policy 和 ModelConfig。
-4. 实现 Generation Application Service 与任务持久化。
-5. 选择首个实际供应商并独立适配、契约测试。
-6. 增加用量统计、预算控制、健康检查和供应商切换。
-
-## 8. 验收
-
-同一业务用例可在 Mock 与真实 Provider 间切换而不改业务模块；无凭据泄露；超时/限流/供应商错误被规范化；异步视频任务可查询状态；失败切换遵守外发策略；每次调用均有可追踪 Attempt 和用量记录。
+## 验收
+Mock 与真实 Provider 可替换而不修改业务模块；错误/超时/限流归一；异步任务可查询；凭据不泄露；每次调用有 Attempt、审计和用量记录；故障切换不绕过数据外发策略。
