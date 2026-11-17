@@ -38,8 +38,8 @@ jobs:
           [[ "$PR_BODY" =~ (Closes|Fixes|Resolves|Refs)[[:space:]]+#([0-9]+) ]] || { echo "PR body must reference a GitHub Issue."; exit 1; }
           if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "develop" && "$HEAD_REF" != release/* && "$HEAD_REF" != hotfix/* ]]; then
             echo "Only develop, release/*, or hotfix/* may target main."; exit 1
-          elif [[ "$BASE_REF" == "develop" && "$HEAD_REF" != hotfix/* && "$HEAD_REF" != docs/* ]]; then
-            echo "Only hotfix synchronization or documentation-governance PRs may target develop; routine development integrates directly into develop."; exit 1
+          elif [[ "$BASE_REF" == "develop" && "$HEAD_REF" != hotfix/* && "$HEAD_REF" != docs/* && "$HEAD_REF" != "main" ]]; then
+            echo "Only main synchronization, hotfix synchronization, or documentation-governance PRs may target develop; routine development integrates directly into develop."; exit 1
           fi
 
   automatic-delivery:
