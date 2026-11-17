@@ -95,7 +95,10 @@ def main() -> int:
             "organization_name": f"Acceptance Studio {unique}",
         },
     )
-    step("bootstrap creates the first administrator", status == 200, str(body))
+    step("bootstrap creates the first administrator", status == 200 and body["data"]["email"] == email, str(body))
+
+    status, body = call(base, "POST", "/auth/login", payload={"email": email, "password": password})
+    step("login issues an access token", status == 200 and "access_token" in body["data"], str(body))
     token = body["data"]["access_token"]
 
     status, body = call(base, "GET", "/auth/me", token=token)
