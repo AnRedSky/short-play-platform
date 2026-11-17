@@ -18,6 +18,32 @@ jobs:
   backend-quality:
     name: backend-quality
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: short_play
+          POSTGRES_USER: short_play
+          POSTGRES_PASSWORD: short_play
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U short_play -d short_play"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://short_play:short_play@localhost:5432/short_play
+      REDIS_URL: redis://localhost:6379/0
     defaults:
       run:
         working-directory: backend
@@ -33,8 +59,28 @@ jobs:
         run: uv sync --all-groups
       - name: Ruff
         run: uv run ruff check .
+      - name: Apply migrations to an empty PostgreSQL database
+        run: uv run alembic upgrade head
       - name: Pytest
         run: uv run pytest -q
+      - name: Start Celery worker and verify broker round-trip
+        run: |
+          set -euo pipefail
+          uv run celery -A apps.api.workers.celery_app:celery_app worker --pool=solo --detach --pidfile=/tmp/short-play-celery.pid --logfile=/tmp/short-play-celery.log
+          cleanup() {
+            uv run celery -A apps.api.workers.celery_app:celery_app control shutdown || true
+          }
+          trap cleanup EXIT
+          for attempt in $(seq 1 15); do
+            if uv run celery -A apps.api.workers.celery_app:celery_app inspect ping --timeout=2 2>/dev/null | grep -q pong; then
+              echo "Celery worker responded to ping."
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/short-play-celery.log
+          echo "Celery worker did not respond to ping."
+          exit 1
 
   frontend-quality:
     name: frontend-quality
