@@ -64,6 +64,7 @@ jobs:
       contents: write
       pull-requests: write
       checks: read
+      issues: write
     steps:
       - name: Verify exact tested commit, PR policy and mergeability before delivery
         env:
@@ -147,6 +148,25 @@ jobs:
           MERGE_RESULT="$(gh api --method PUT "repos/$REPOSITORY/pulls/$PR_NUMBER/merge" -f sha="$CI_HEAD_SHA" -f merge_method="$MERGE_METHOD")"
           [[ "$(jq -r '.merged' <<< "$MERGE_RESULT")" == "true" ]] || { echo "GitHub did not confirm merge: $MERGE_RESULT"; exit 1; }
           echo "Merged PR #$PR_NUMBER with commit $(jq -r '.sha' <<< "$MERGE_RESULT")."
+
+          if [[ "$BASE" == "main" ]]; then
+            # GitHub closing keywords are not applied for every API-driven merge, so the delivery
+            # gate closes the delivered Issues itself. The step is idempotent and only runs for
+            # formal delivery into main, never for plain develop integration.
+            ISSUE_NUMBERS="$(grep -oiE '(Closes|Fixes|Resolves)[[:space:]]+#[0-9]+' <<< "$(jq -r '.body // ""' <<< "$PR")" | grep -oE '[0-9]+' | sort -u)"
+            for ISSUE_NUMBER in $ISSUE_NUMBERS; do
+              ISSUE_STATE="$(gh api "repos/$REPOSITORY/issues/$ISSUE_NUMBER" --jq '.state')"
+              if [[ "$ISSUE_STATE" == "open" ]]; then
+                gh api --method PATCH "repos/$REPOSITORY/issues/$ISSUE_NUMBER" -f state=closed -f state_reason=completed > /dev/null
+                echo "Closed delivered Issue #$ISSUE_NUMBER."
+              else
+                echo "Issue #$ISSUE_NUMBER is already $ISSUE_STATE."
+              fi
+            done
+            if [[ -z "$ISSUE_NUMBERS" ]]; then
+              echo "WARNING: delivery PR #$PR_NUMBER did not reference any closing keyword."
+            fi
+          fi
 
           if [[ "$MERGE_METHOD" == "squash" && "$HEAD" != "main" && "$HEAD" != "develop" ]]; then
             gh api --method DELETE "repos/$REPOSITORY/git/refs/heads/$HEAD"
