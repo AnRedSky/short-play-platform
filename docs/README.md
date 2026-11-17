@@ -1,17 +1,37 @@
-# 文档导航
+# 正式方案文档
 
-项目文档按编号目录组织，入口见仓库根目录 README。
+本目录是项目当前唯一生效的方案与工程规范入口。文档按领域拆分，具体模块规范不得与总体方案冲突；发生冲突时，以已接受的 ADR 和对应领域规范为准，并同步修订总体方案。
 
-- 00-overview：项目目标、范围和术语
-- 01-architecture：系统架构与 ADR
-- 02-requirements：产品需求与 MVP
-- 03-database：数据模型与迁移
-- 04-api：接口契约
-- 05-ai-provider：模型接入
-- 06-workflow：异步工作流
-- 07-security：安全基线
-- 08-deployment：部署运维
-- 09-testing：测试策略
-- 10-development：开发、文档和任务治理
+## 00 项目总览
+- [总体方案](00-overview/MASTER_PROJECT_PLAN.md)：产品边界、生产闭环、架构、数据、工作流、质量、交付、运营和实施总纲。
+- [项目章程](00-overview/PROJECT_CHARTER.md)：目标、非目标、用户和成功标准。
 
-文档状态和更新规则见 [文档规范](10-development/DOCUMENTATION.md)。
+## 01–10 工程规范
+- [系统架构](01-architecture/SYSTEM_ARCHITECTURE.md)
+- [产品范围与 MVP](02-requirements/PRODUCT_SCOPE_AND_MVP.md)
+- [数据模型规范](03-database/DATA_MODEL_GUIDELINES.md)
+- [API 规范](04-api/API_CONVENTIONS.md)
+- [AI Provider 规范](05-ai-provider/PROVIDER_SPEC.md)
+- [工作流与任务](06-workflow/WORKFLOW_AND_TASKS.md)
+- [安全基线](07-security/SECURITY_BASELINE.md)
+- [部署与运维](08-deployment/DEPLOYMENT.md)
+- [测试与质量门禁](09-testing/TEST_STRATEGY.md)
+- [开发规范](10-development/DEVELOPMENT.md)
+- [文档规范](10-development/DOCUMENTATION.md)
+- [任务跟踪](10-development/WORK_TRACKING.md)
+- [实施路线图](10-development/ROADMAP.md)
+
+## 11–14 生产域规范
+- [镜头合同](11-production/SHOT_CONTRACT.md)
+- [视觉连续性](11-production/VISUAL_CONTINUITY.md)
+- [质量门禁与返工](11-production/QUALITY_GATES.md)
+- [时间线编辑](12-editor/TIMELINE_SPEC.md)
+- [媒体导出](12-editor/EXPORT_SPEC.md)
+- [模型能力注册](13-ai-governance/MODEL_CAPABILITY_SPEC.md)
+- [工作流引擎决策](13-ai-governance/WORKFLOW_ENGINE_DECISION.md)
+- [第三方软件与许可证治理](14-compliance/THIRD_PARTY_LICENSES.md)
+
+## 规范性约定
+- MUST/必须：交付必须满足的要求；SHOULD/建议：默认采用，例外需记录理由；MAY/可选：按阶段启用。
+- 所有设计状态、开发状态、测试状态和发布状态分开记录。
+- 本仓库不维护并行“最新版”副本。历史版本通过 Git 提交记录追溯；已被取代的方案不继续作为当前操作入口。
