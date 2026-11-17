@@ -17,6 +17,7 @@
 - [部署与运维](08-deployment/DEPLOYMENT.md)
 - [测试与质量门禁](09-testing/TEST_STRATEGY.md)
 - [开发规范](10-development/DEVELOPMENT.md)
+- [分支管理与交付规范](10-development/BRANCHING_STRATEGY.md)
 - [文档规范](10-development/DOCUMENTATION.md)
 - [任务跟踪](10-development/WORK_TRACKING.md)
 - [实施路线图](10-development/ROADMAP.md)
