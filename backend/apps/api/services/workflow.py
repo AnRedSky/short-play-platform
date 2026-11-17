@@ -184,7 +184,7 @@ def get_nodes(db: Session, run_id: UUID) -> list[WorkflowNodeRun]:
         db.scalars(
             select(WorkflowNodeRun)
             .where(WorkflowNodeRun.run_id == run_id)
-            .order_by(WorkflowNodeRun.created_at, WorkflowNodeRun.node_key)
+            .order_by(WorkflowNodeRun.ordinal, WorkflowNodeRun.node_key)
         ).all()
     )
 
@@ -239,12 +239,13 @@ def create_run(
     db.add(run)
     db.flush()
 
-    for node in version.definition.get("nodes", []):
+    for ordinal, node in enumerate(version.definition.get("nodes", [])):
         depends_on = list(node.get("depends_on") or [])
         db.add(
             WorkflowNodeRun(
                 run_id=run.id,
                 node_key=node["key"],
+                ordinal=ordinal,
                 node_type=node.get("type", "generation"),
                 status="ready" if not depends_on else "pending",
                 depends_on=depends_on,
@@ -319,7 +320,7 @@ def claim_next_node(
             WorkflowNodeRun.status == "ready",
             (WorkflowNodeRun.lease_expires_at.is_(None)) | (WorkflowNodeRun.lease_expires_at < now),
         )
-        .order_by(WorkflowNodeRun.created_at)
+        .order_by(WorkflowNodeRun.ordinal)
         .limit(1)
     )
     if candidate is None:

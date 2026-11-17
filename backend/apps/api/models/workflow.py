@@ -95,6 +95,7 @@ class WorkflowNodeRun(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         ForeignKey("workflow_runs.id", ondelete="CASCADE"), nullable=False, index=True
     )
     node_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    ordinal: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     node_type: Mapped[str] = mapped_column(String(40), nullable=False, default="generation")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", index=True)
     depends_on: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)

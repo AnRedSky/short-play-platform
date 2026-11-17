@@ -114,6 +114,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("node_key", sa.String(80), nullable=False),
+        sa.Column("ordinal", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("node_type", sa.String(40), nullable=False, server_default="generation"),
         sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
         sa.Column("depends_on", postgresql.JSONB(), nullable=False, server_default="[]"),
