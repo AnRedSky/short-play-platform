@@ -40,8 +40,8 @@ jobs:
           [[ "$PR_BODY" =~ (Closes|Fixes|Resolves|Refs)[[:space:]]+#([0-9]+) ]] || { echo "PR body must reference a GitHub Issue."; exit 1; }
           if [[ "$BASE_REF" == "main" && "$HEAD_REF" != "develop" && "$HEAD_REF" != release/* && "$HEAD_REF" != hotfix/* ]]; then
             echo "Only develop, release/*, or hotfix/* may target main."; exit 1
-          elif [[ "$BASE_REF" == "develop" && "$HEAD_REF" != hotfix/* && "$HEAD_REF" != docs/* && "$HEAD_REF" != "main" ]]; then
-            echo "Only main synchronization, hotfix synchronization, or documentation-governance PRs may target develop; routine development integrates directly into develop."; exit 1
+          elif [[ "$BASE_REF" == "develop" && "$HEAD_REF" != hotfix/* && "$HEAD_REF" != docs/* ]]; then
+            echo "Only hotfix synchronization or documentation-governance PRs may target develop; routine development integrates directly into develop."; exit 1
           fi
 
   automatic-delivery:
@@ -66,11 +66,11 @@ jobs:
           if [[ "$BASE" == "main" && "$HEAD" != "develop" && "$HEAD" != release/* && "$HEAD" != hotfix/* ]]; then
             echo "Branch policy rejected $HEAD -> $BASE."; exit 1
           fi
-          if [[ "$BASE" == "develop" && "$HEAD" != hotfix/* && "$HEAD" != docs/* && "$HEAD" != "main" ]]; then
+          if [[ "$BASE" == "develop" && "$HEAD" != hotfix/* && "$HEAD" != docs/* ]]; then
             echo "Branch policy rejected $HEAD -> $BASE."; exit 1
           fi
           if [[ "$BASE" == "main" && "$HEAD" == "develop" ]]; then
-            gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --merge --delete-branch
+            gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --merge
           else
             gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --squash --delete-branch
           fi
