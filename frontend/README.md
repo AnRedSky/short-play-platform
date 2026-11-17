@@ -11,13 +11,20 @@ npm run test
 npm run build
 ```
 
-## Implemented in this branch
+## Local UI preview
 
-- Authenticated application shell, login/logout and `/auth/me` permission loading.
-- M1 workspace pages: overview, projects, users, RBAC role list, organizations/departments.
-- Central API client with Bearer token injection, normalized API errors and an injectable mock adapter.
-- Responsive desktop/mobile navigation and common loading/empty/error states.
+- Running `npm run dev` automatically opens the workspace without login.
+- The preview session and demo API adapter are enabled only when `import.meta.env.DEV` is true.
+- Preview records are in-memory sample data, clearly labeled in the UI, and are not sent to backend services or external AI providers.
+- Production builds do not enable the preview session or mock adapter; normal authentication and API calls remain required.
 
-## Pending integration
+## Implemented UI
 
-M2/M3 creation and generation screens, M4 workflow/review/quality, and M5 media/timeline/export screens remain to be implemented against the published OpenAPI contract. See `docs/api_todo.md` and `docs/product/page-map.md`. The repository currently has no approved visual design source; the page map is an information architecture, not a claim of visual-design sign-off.
+- M1: authenticated shell, login/logout, overview, projects, users, RBAC role listing, organizations/departments.
+- M2: story bible, episodes/scripts, character/scene/prop asset library, storyboard and Shot Contract detail.
+- M3/MVP production flow: AI task tracking, QA/review states, lightweight multi-track timeline prototype, MP4 export profile and history prototype.
+- Shared: responsive navigation, API adapter with Bearer token injection, normalized errors, mock injection point and API client tests.
+
+## Integration boundary
+
+Production-domain screens currently use local preview records. They do not claim to perform real generation, human approval, media upload/download, FFmpeg rendering or persistence. See `docs/api_todo.md` for confirmed routes and backend contract gaps. The repository does not yet contain an approved visual design system; current styling is an implementation prototype pending product/design sign-off.
