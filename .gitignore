@@ -31,6 +31,10 @@ logs/
 *.log
 *.pid
 
+# Private deployment artifacts
+backups/
+deploy/nginx/certs/*.crt
+
 # IDE / OS
 .idea/
 .vscode/
