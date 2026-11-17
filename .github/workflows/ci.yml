@@ -34,12 +34,7 @@ jobs:
       - name: Ruff
         run: uv run ruff check .
       - name: Pytest
-        run: |
-          if [ -d tests ]; then
-            uv run pytest -q
-          else
-            echo "No backend tests directory exists yet; test execution is deferred until tests are added."
-          fi
+        run: uv run pytest -q
 
   frontend-quality:
     name: frontend-quality
@@ -57,26 +52,13 @@ jobs:
       - name: Install frontend dependencies
         run: npm install --no-audit --no-fund
       - name: Type check
-        run: |
-          if [ -f tsconfig.json ]; then
-            npm run typecheck
-          else
-            echo "TypeScript project config not present yet; type checking is deferred."
-          fi
+        run: npm run typecheck
       - name: Lint
-        run: |
-          if [ -f eslint.config.js ] || [ -f eslint.config.mjs ] || [ -f eslint.config.cjs ] || [ -f .eslintrc.cjs ] || [ -f .eslintrc.json ]; then
-            npm run lint
-          else
-            echo "ESLint configuration not present yet; lint execution is deferred."
-          fi
-      - name: Build
-        run: |
-          if [ -f index.html ] && [ -f vite.config.ts ] && [ -d src ]; then
-            npm run build
-          else
-            echo "Frontend application scaffold not present yet; build execution is deferred."
-          fi
+        run: npm run lint
+      - name: Unit tests
+        run: npm run test
+      - name: Production build
+        run: npm run build
 
   compose-validation:
     name: compose-validation
