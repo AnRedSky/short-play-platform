@@ -79,19 +79,19 @@ GitHub Actions 自动执行 PR 元数据和分支策略检查，并等待 CI 工
 - 不强制每个 PR 进行人工批准，以保持无人值守自动交付。
 
 **develop**
-- 仅授权开发团队成员可直接推送：仓库当前只有 1 名管理员协作者，且 Ruleset 未配置 bypass actors，任何绕过保护的强制推送与分支删除都会被拒绝。
-- Push CI 由 CI 工作流在 `push: develop` 事件上强制执行；GitHub Ruleset 的 required status checks 会在推送到达时就校验目标提交的检查结果，因此不能用于约束新提交的直接推送，只能作为 PR 合并门禁使用。该限制已实测确认，不在 develop 上启用 required status checks，避免阻断常规集成。
+- 仅授权开发团队成员可直接推送：仓库当前只有 1 名管理员协作者，Ruleset 未配置 bypass actors，强制推送与分支删除都会被拒绝。
+- Push CI 由 CI 工作流在 `push: develop` 事件上强制执行，失败结果推送后可立即可见并被后续交付门禁继承。GitHub Ruleset 的 required status checks 会在推送到达时校验目标提交已有的检查结果，因此无法约束新提交的直接推送：实测推送被拒绝并返回 `GH013 ... 3 of 3 required status checks are expected`。故 develop 不启用该规则，避免阻断常规集成；正式交付仍必须在 main 上通过全部必需检查。
 - Block force pushes and branch deletion。
 - 不强制每个功能需求创建 PR。
 
 Actions 使用最小权限；自动化 Token 不得拥有修改 Ruleset 的管理权限。仓库工作流文件不能替代 Ruleset 设置，管理员必须验证规则确实生效。
 
-已配置的 Ruleset（2026-11-17 通过 REST API 创建并回读确认，`enforcement: active`）：
+已配置的 Ruleset（2026-11-17 通过 REST API 创建、回读确认并实测验证，`enforcement: active`）：
 
 | Ruleset | ID | 目标 | 规则 |
 |---|---|---|---|
-| main-protection | 27461472 | refs/heads/main | deletion, non_fast_forward, pull_request（必需批准数 0、必须解决对话）, required_status_checks（4 项） |
-| develop-protection | 27461477 | refs/heads/develop | deletion, non_fast_forward, required_status_checks（3 项 CI 检查，PR 合并门禁） |
+| main-protection | 27461472 | refs/heads/main | deletion, non_fast_forward, pull_request（必需批准数 0、必须解决对话）, required_status_checks（`backend-quality`、`frontend-quality`、`compose-validation`、`PR policy gate`） |
+| develop-protection | 27461477 | refs/heads/develop | deletion, non_fast_forward |
 
 ## 8. 生命周期与维护
 
