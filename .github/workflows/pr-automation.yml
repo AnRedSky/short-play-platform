@@ -72,6 +72,6 @@ jobs:
           gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" --squash --delete-branch
 
 # Delivery is unattended: no per-PR human confirmation or manual approval is required.
-# The merge job runs only after the separate CI workflow has completed successfully.
+# Merge runs only after the separate CI workflow has completed successfully.
 # Repository branch protection / rulesets remain the final enforcement layer.
 # Issue closure is handled by GitHub closing keywords only when a PR merges into main.
