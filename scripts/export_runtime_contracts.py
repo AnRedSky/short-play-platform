@@ -57,7 +57,9 @@ def _route_inventory(app: Any) -> list[dict[str, Any]]:
             if not isinstance(node, (ast.Assign, ast.AnnAssign)):
                 continue
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-            if not any(isinstance(target, ast.Name) and target.id == "router" for target in targets):
+            if not any(
+                isinstance(target, ast.Name) and target.id == "router" for target in targets
+            ):
                 continue
             value = node.value
             if not isinstance(value, ast.Call):
@@ -77,15 +79,26 @@ def _route_inventory(app: Any) -> list[dict[str, Any]]:
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
             for decorator in node.decorator_list:
-                if not isinstance(decorator, ast.Call) or not isinstance(decorator.func, ast.Attribute):
+                if not isinstance(decorator, ast.Call) or not isinstance(
+                    decorator.func, ast.Attribute
+                ):
                     continue
-                if not isinstance(decorator.func.value, ast.Name) or decorator.func.value.id != "router":
+                if (
+                    not isinstance(decorator.func.value, ast.Name)
+                    or decorator.func.value.id != "router"
+                ):
                     continue
                 verb = decorator.func.attr.lower()
-                methods = [verb.upper()] if verb in {"get", "post", "put", "patch", "delete", "options", "head"} else []
+                methods = (
+                    [verb.upper()]
+                    if verb in {"get", "post", "put", "patch", "delete", "options", "head"}
+                    else []
+                )
                 if verb == "api_route":
                     for keyword in decorator.keywords:
-                        if keyword.arg == "methods" and isinstance(keyword.value, (ast.List, ast.Tuple)):
+                        if keyword.arg == "methods" and isinstance(
+                            keyword.value, (ast.List, ast.Tuple)
+                        ):
                             methods = [
                                 str(item.value).upper()
                                 for item in keyword.value.elts
@@ -98,9 +111,13 @@ def _route_inventory(app: Any) -> list[dict[str, Any]]:
                     route_path = str(decorator.args[0].value)
                 full_path = f"{api_prefix}{router_prefix}/{route_path.lstrip('/')}"
                 full_path = re.sub(r"//+", "/", full_path)
+                if full_path != "/":
+                    full_path = full_path.rstrip("/")
                 include_in_schema = True
                 for keyword in decorator.keywords:
-                    if keyword.arg == "include_in_schema" and isinstance(keyword.value, ast.Constant):
+                    if keyword.arg == "include_in_schema" and isinstance(
+                        keyword.value, ast.Constant
+                    ):
                         include_in_schema = bool(keyword.value.value)
                 permissions = sorted({
                     str(call.args[0].value)
