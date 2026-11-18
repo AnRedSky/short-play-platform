@@ -85,8 +85,10 @@ def update_user(
     return user
 
 
-def permissions_of(db: Session, user_id: UUID) -> list[str]:
-    return sorted(roles_service.permission_codes_for_user(db, user_id))
+def permissions_of(
+    db: Session, user_id: UUID, organization_id: UUID | None
+) -> list[str]:
+    return sorted(roles_service.permission_codes_for_user(db, user_id, organization_id))
 
 
 def dispatch_welcome_notification(db: Session, user_id: UUID) -> bool:
