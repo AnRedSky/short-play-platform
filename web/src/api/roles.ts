@@ -11,6 +11,7 @@ export interface CreateRolePayload {
 export const rolesApi = {
   list: (page = 1) => apiGet<Role[]>(`/roles?page=${page}&page_size=100`),
   create: (payload: CreateRolePayload) => apiPost<Role, CreateRolePayload>('/roles', payload),
+  read: (id: string) => apiGet<Role>(`/roles/${id}`),
   assign: (roleId: string, userId: string) =>
     apiPost<{ role_id: string; user_id: string }, { user_id: string }>(
       `/roles/${roleId}/assignments`,

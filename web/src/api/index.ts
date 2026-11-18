@@ -60,7 +60,7 @@ async function parseError(response: Response) {
 }
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { mock = import.meta.env.DEV && Boolean(mockHandler), auth = true, ...init } = options
+  const { mock = false, auth = true, ...init } = options
   if (mock) {
     if (!mockHandler) throw new Error('Mock mode was requested but no mock adapter is configured.')
     const result = await mockHandler(path, init)
@@ -84,3 +84,13 @@ export const apiPost = <T, B>(path: string, body: B, options: ApiRequestOptions 
 
 export const apiPatch = <T, B>(path: string, body: B, options: ApiRequestOptions = {}) =>
   apiRequest<ApiEnvelope<T>>(path, { ...options, method: 'PATCH', body: JSON.stringify(body) })
+
+/** Download a protected binary resource without attempting to parse it as JSON. */
+export async function apiDownload(path: string, options: Pick<ApiRequestOptions, 'signal' | 'auth'> = {}): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`, {
+    signal: options.signal,
+    headers: buildHeaders({}, options.auth !== false),
+  })
+  if (!response.ok) throw await parseError(response)
+  return response.blob()
+}
