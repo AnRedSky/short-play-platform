@@ -13,7 +13,7 @@ These are verified contract gaps in the current `develop` baseline. V4 deliberat
 | QA | RuleSet list/version; QualityRun create/list/detail; issues and re-run | Real QA gate and failure diagnosis |
 | Review | Review queue/detail; approve/reject; reason; rework creation | Version-bound human review lifecycle |
 | Timeline | Timeline create/read/update; immutable TimelineVersion; Track/Clip CRUD; stale reference checks | Persistent multi-track editor |
-| Export | ExportJob list/detail/cancel; profile catalog; validation report; verified artifact download | Complete render/validate/deliver lifecycle |
+| Export | ExportJob list/detail/cancel; profile catalog; validation report; full timeline-video renderer | Full render/validate/deliver lifecycle. The current image-slideshow endpoint can create an export and return a downloadable Asset, now wired in V4. |
 | Usage & budget | UsageRecord aggregation; budget CRUD; threshold alerts | Real budget and cost dashboard |
 | Notifications | Inbox list/read/read-all and event snapshot | Real notification center |
 | Search | Project-scoped search endpoint | Search without crossing project boundary |
