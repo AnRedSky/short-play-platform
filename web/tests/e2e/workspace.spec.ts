@@ -133,17 +133,17 @@ test('anonymous users are redirected away from project workspaces', async ({ pag
 test('a project member can switch projects but cannot open a project after membership is revoked', async ({ page }) => {
   await loginAsProjectReader(page)
 
-  await page.getByRole('link', { name: '项目管理' }).click()
+  await page.getByRole('link', { name: '项目管理', exact: true }).click()
   const projectARow = page.getByRole('row').filter({ hasText: 'E2E-PROJECT-A' })
   await projectARow.getByRole('link', { name: '进入项目' }).click()
   await expect(page.locator('.project-context')).toContainText(projectA)
 
-  await page.getByRole('link', { name: '项目管理' }).click()
+  await page.getByRole('link', { name: '项目管理', exact: true }).click()
   const projectBRow = page.getByRole('row').filter({ hasText: 'E2E-PROJECT-B' })
   await projectBRow.getByRole('link', { name: '进入项目' }).click()
   await expect(page.locator('.project-context')).toContainText(projectB)
 
-  await page.getByRole('link', { name: '项目管理' }).click()
+  await page.getByRole('link', { name: '项目管理', exact: true }).click()
   const projectCRow = page.getByRole('row').filter({ hasText: 'E2E-PROJECT-C' })
   await expect(projectCRow).toBeVisible()
   const revoke = await api.fetch(
