@@ -34,8 +34,10 @@
 </template>
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 type ModuleKey = 'episodes'|'stories'|'assets'|'storyboards'|'tasks'|'reviews'|'editor'|'exports'
 const props = defineProps<{ module: ModuleKey }>()
+const route = useRoute()
 interface Row { id: string; name: string; code: string; kind: string; owner: string; updated: string; status: string; summary: string }
 const configs: Record<ModuleKey, { eyebrow:string; title:string; description:string; action:string; columns:[string,string,string] }> = {
  episodes:{eyebrow:'SCRIPT & EPISODES',title:'剧集与剧本',description:'管理分集结构、剧本版本、场次与对白。',action:'新建剧集',columns:['剧集名称','集数编号','剧本版本']},
@@ -82,9 +84,11 @@ const samples: Record<ModuleKey, Row[]> = {
  ],
 }
 const config = computed(()=>configs[props.module])
-function path(section: string) { return '/projects/demo-project/' + section }
+function path(section: string) {
+  const projectId = String(route.params.projectId ?? '')
+  return projectId ? `/projects/${encodeURIComponent(projectId)}/${section}` : '/projects'
+}
 const rows = ref<Row[]>(samples[props.module].map(x=>({...x})))
-watch(()=>props.module, value=>{ rows.value=samples[value].map(x=>({...x})); search.value=''; filter.value='全部'; selectedId.value=rows.value[0]?.id ?? '' })
 const search=ref(''); const filter=ref('全部'); const selectedId=ref('s1'); const showCreate=ref(false); const newName=ref(''); const newSummary=ref('')
 const selectedStory = computed(()=>rows.value.find(x=>x.id===selectedId.value) ?? rows.value[0] ?? {name:'未选择故事',summary:'请选择左侧故事'})
 const filteredRows = computed(()=>rows.value.filter(x=>(filter.value==='全部'||x.status===filter.value)&&[x.name,x.code,x.kind,x.owner,x.status].join(' ').toLowerCase().includes(search.value.toLowerCase())))
@@ -97,4 +101,31 @@ const tracks=ref([{name:'视频 V1',items:['雨夜街道','主角入场','拆开
 function addClip(clip:{title:string}){tracks.value[0].items.push(clip.title)}
 const exportForm=reactive({ratio:'9:16 竖屏',resolution:'1080 × 1920',fps:'25 FPS',subtitle:'烧录字幕'})
 const exportJobs=[{id:'j1',name:'第一集正式版 · v03',time:'今天 12:30',status:'已完成'},{id:'j2',name:'第一集审核预览 · v02',time:'今天 11:40',status:'进行中'}]
+
+function resetProjectState() {
+  rows.value = samples[props.module].map(item => ({ ...item }))
+  search.value = ''
+  filter.value = '全部'
+  selectedId.value = rows.value[0]?.id ?? ''
+  showCreate.value = false
+  newName.value = ''
+  newSummary.value = ''
+  playing.value = false
+  timelineVersion.value = 3
+  exportStarted.value = false
+  tracks.value = [
+    { name: '视频 V1', items: ['雨夜街道', '主角入场', '拆开信封'] },
+    { name: '音频 A1', items: ['环境雨声', '对白 · 林知夏'] },
+    { name: '字幕', items: ['EP01 · 字幕 01', 'EP01 · 字幕 02'] },
+  ]
+  Object.assign(exportForm, {
+    ratio: '9:16 竖屏',
+    resolution: '1080 × 1920',
+    fps: '25 FPS',
+    subtitle: '烧录字幕',
+  })
+}
+
+watch(() => props.module, resetProjectState)
+watch(() => route.params.projectId, resetProjectState)
 </script>
