@@ -1,5 +1,7 @@
 # Prototype V4 — API-backed product prototype
 
+Tracking: GitHub Issue #61.
+
 ## Purpose
 
 V4 replaces the standalone HTML demonstration with the repository's production Vue 3 application surface. It is intended for product review and user testing against a running backend, not as an offline clickable mock.
