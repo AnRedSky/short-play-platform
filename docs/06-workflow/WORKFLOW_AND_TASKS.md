@@ -30,3 +30,11 @@ Task：pending → queued → running → succeeded/failed；允许 retry_wait�
 
 ## Temporal 决策
 MVP 使用 PostgreSQL 状态 + Celery + Outbox。Temporal 仅在长时间人工等待、复杂补偿、跨系统持久化执行需求显著且团队具备运维能力时评估；如采用，由 ADR 明确迁移边界并替代流程编排层，不能与自研引擎双写双跑。
+
+## 2026-11-18 工作流实施边界
+
+继续复用现有 domains/workflow、Outbox、Checkpoint、租约和 Celery Worker。PostgreSQL 是任务/工作流业务状态事实来源；Redis/Celery 只负责分发/协调。GenerationTask 表示模型调用，TaskAttempt 表示一次真实调用尝试，Artifact 必须校验后登记到项目内 AssetVersion。
+
+本期不建设第三方业务 Webhook 集成；外部 Provider 的异步任务通过 Adapter 支持的查询/轮询机制获取状态。不得将供应商 Webhook 作为业务工作流正确性的唯一来源。任务取消、重试、恢复和未知供应商状态必须记录实际结果，不能盲目重复调用。
+
+Mork 是默认 Provider；缺少配置时返回 PROVIDER_NOT_CONFIGURED，不能回退 Mock。完整模块现状和任务边界见统一实施基线。
