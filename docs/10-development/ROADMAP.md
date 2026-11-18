@@ -313,3 +313,7 @@ CI 当前定义了 backend-quality、frontend-quality、compose-validation 等�
 - 上述结果只证明工作流覆盖范围内的检查通过，不表示 Mork、QA/审核、Timeline、多轨导出或前端生产链路已经实现。
 
 R0 当前状态：工程 CI 基线已存在并通过；仍需补齐 OpenAPI/权限矩阵/模型迁移盘点和功能缺口 Issue。R0 不应重复搭建 CI 或基础设施。
+
+
+## 2026-11-18 R1 开发进度
+已在 develop 落地项目上下文第一步：移除 demo-project 硬编码，项目列表可进入 `/projects/:projectId/stories`，Pinia store 与路由参数同步，增加单元测试和导航 E2E。R1 后续仍需清理项目切换缓存/订阅、接入真实生产 API，并完成跨项目 IDOR 负向验证；Issue #43 保持开放。

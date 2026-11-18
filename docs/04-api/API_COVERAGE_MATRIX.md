@@ -82,7 +82,7 @@
 1. Generation 创建路由当前在 HTTP 请求中直接执行 Provider 调用；目标是 Task + Outbox + Celery Worker 异步执行。
 2. Provider Registry 当前默认注册 MockProvider 和 FailingProvider，未发现 Mork Adapter；生产未配置时必须失败关闭并返回 PROVIDER_NOT_CONFIGURED。
 3. Generation 创建接口的权限依赖声明 projects:read，但服务内部再检查 projects:write；后续应统一声明和测试写权限。
-4. 项目生产前端当前有 demo-project 硬编码，项目列表页未提供进入真实项目工作区的导航；见 Issue #43。
+4. 已修复项目生产前端 demo-project 硬编码：App.vue 根据 route.params.projectId 构造导航，Pinia project store 保存当前项目上下文，项目列表提供进入真实项目工作区入口。仍需完成页面 API 联调、切换缓存清理和项目越权 E2E；见 Issue #43。
 5. API 列表不代表所有对象支持完整 CRUD；目前部分对象只有创建/列表/版本操作，更新、归档和删除接口需要按业务生命周期补齐。
 
 ## 4. 统一接口规则
@@ -99,3 +99,7 @@
 ## 5. 后续维护
 
 每次 PR 修改 router/schema/service 时，同步更新本矩阵并附 OpenAPI 导出差异。当前路由实现以代码为准，目标接口以统一实施基线和功能交互规范为准；二者必须明确区分。
+
+
+## 6. 2026-11-18 R1 进度
+项目工作区入口与 route-driven project context 已合入 develop；该进度只覆盖导航/上下文初始状态，不代表所有项目资源接口和前端生产页面已完成授权闭环。
