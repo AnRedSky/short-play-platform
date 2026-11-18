@@ -217,3 +217,8 @@ R1 后端隔离和项目上下文基础已实施，但浏览器 403/跨项目资
 - Playwright 改为通过 Vite production preview 运行，并连接 CI 独立 PostgreSQL/Redis 和真实 FastAPI 服务；测试数据在临时 CI 数据库中 bootstrap。
 - 新增浏览器场景：匿名访问重定向、成员在项目 A/B 间切换、无成员项目 C 返回 403 页面、跨项目 Asset detail/download 返回 403。
 - 此代码已提交 develop；最终通过情况以本次 CI run 为准，未通过前不计入验收完成。
+
+
+### 项目成员撤销与缓存授权复核
+- 新增 `DELETE /projects/{project_id}/members/{user_id}`：仅 `projects:manage` 可执行，将成员标记为 inactive 并记录 `project.member_removed` 审计事件；不允许移除项目 owner。
+- 项目列表仅返回活跃成员可访问的项目。即使浏览器仍保留撤销前的旧项目链接，进入项目时仍会重新请求项目详情并由服务端返回 403。
