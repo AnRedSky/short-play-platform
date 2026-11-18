@@ -11,7 +11,7 @@
 | AI generation | `/projects/:projectId/tasks` | Read Provider health; create/query/cancel generation task; list/create/read/cancel/recover workflow runs; display attempts/nodes | Generation task list/retry and SSE/event endpoints absent; provider/model configuration absent; backend currently has synchronous execution path |
 | Quality & review | `/projects/:projectId/reviews` | No write action exposed | No QA RuleSet/Run/Issue or Review/decision/rework APIs |
 | Timeline editor | `/projects/:projectId/editor` | No write action exposed | No Timeline/Version/Track/Clip persistence API |
-| Export & delivery | `/projects/:projectId/exports` | No write action exposed in V4 | Current API only offers synchronous image slideshow export creation; no ExportJob lifecycle, validation report or download API |
+| Export & delivery | `/projects/:projectId/exports` | Create an actual image-slideshow export from selected project image assets; display server ExportJob/Asset response and authenticated download | No ExportJob list/detail/cancel, full video timeline renderer, validation report or independent export artifact lifecycle |
 | User management | `/admin/users` | List/create/update active state; create with department and initial role | No delete, password reset or role update on existing user endpoint |
 | Roles & permissions | `/admin/roles` | List/create/read roles; assign role to user | No role update/delete or assignment removal endpoint |
 | Organization & departments | `/admin/departments` | List organizations/departments/members; create department with parent | No department update/delete or member transfer endpoint |
