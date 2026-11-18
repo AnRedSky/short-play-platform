@@ -44,7 +44,8 @@ curl --cacert docker/certs/server.crt https://short-play.internal/api/v1/health/
 
 The API container applies `alembic upgrade head` on start (`RUN_MIGRATIONS=1`, see
 `docker/entrypoint.sh`) and runs as the non-root user `shortplay` (uid 10001) with an image-level
-healthcheck against `/api/v1/health/ready`.
+healthcheck against `/api/v1/health/ready`. The migration entry point creates the target database
+when it does not exist yet, so a brand-new PostgreSQL host only needs valid credentials.
 
 Bootstrap the first administrator once, against an empty database:
 

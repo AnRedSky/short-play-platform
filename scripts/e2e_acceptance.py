@@ -11,6 +11,7 @@ Exit code 0 means every step above really happened; any failure exits non-zero.
 import argparse
 import base64
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -72,7 +73,11 @@ def step(name, condition, detail=""):
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base-url", default="http://localhost:8000")
+    parser.add_argument(
+        "--base-url",
+        default=f"http://localhost:{os.environ.get('API_PORT', '8000')}",
+        help="API root; defaults to API_PORT from the environment (8000).",
+    )
     parser.add_argument("--timeout", type=int, default=240)
     args = parser.parse_args()
     base = args.base_url.rstrip("/") + "/api/v1"

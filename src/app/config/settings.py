@@ -34,18 +34,23 @@ ENV_EXAMPLE_FILE = ".env.example"
 ENV_FILE_DIR = Path(__file__).resolve().parents[3]
 
 
-def _read_key_from_env_file(path: Path, key: str) -> str | None:
-    """Tiny dotenv reader: only the first matching ``KEY=`` line is needed."""
+def parse_env_file(path: Path) -> dict[str, str]:
+    """Parse a dotenv style file into ``KEY -> value`` (no expansion, no side effects)."""
+    values: dict[str, str] = {}
     if not path.is_file():
-        return None
+        return values
     for line in path.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#") or "=" not in stripped:
             continue
         name, _, value = stripped.partition("=")
-        if name.strip() == key:
-            return value.strip().strip("\"'")
-    return None
+        values[name.strip()] = value.strip().strip("\"'")
+    return values
+
+
+def _read_key_from_env_file(path: Path, key: str) -> str | None:
+    """Tiny dotenv reader: only the first matching ``KEY=`` line is needed."""
+    return parse_env_file(path).get(key)
 
 
 def _read_app_env_from_dotenv() -> str | None:
@@ -100,12 +105,15 @@ class Settings(BaseSettings):
     )
 
     # -- infrastructure ------------------------------------------------------
+    # Local development reuses the already-running shared PostgreSQL/Redis
+    # containers (6432 / 9770) instead of starting a second stack; deployments
+    # override both through the template or process environment.
     database_url: str = Field(
-        default="postgresql+psycopg://short_play:replace-me@localhost:5432/short_play",
+        default="postgresql+psycopg://postgres:postgres@localhost:6432/short_play",
         validation_alias="DATABASE_URL",
     )
     redis_url: str = Field(
-        default="redis://localhost:6379/0", validation_alias="REDIS_URL"
+        default="redis://localhost:9770/0", validation_alias="REDIS_URL"
     )
 
     # -- celery --------------------------------------------------------------

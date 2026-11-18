@@ -95,3 +95,44 @@ def test_settings_have_safe_development_defaults() -> None:
 def test_debug_flag_reads_documented_environment_name() -> None:
     settings = Settings(_env_file=None, APP_DEBUG=True)
     assert settings.debug is True
+
+
+TEMPLATE_SCALAR_DEFAULTS = {
+    "APP_NAME": "app_name",
+    "APP_DEBUG": "debug",
+    "API_HOST": "api_host",
+    "API_PORT": "api_port",
+    "API_V1_PREFIX": "api_v1_prefix",
+    "LOG_LEVEL": "log_level",
+    "PUBLIC_BASE_URL": "public_base_url",
+    "DATABASE_URL": "database_url",
+    "REDIS_URL": "redis_url",
+    "SECRET_KEY": "secret_key",
+    "STORAGE_ROOT": "storage_root",
+    "MAX_UPLOAD_SIZE": "max_upload_size",
+    "CELERY_TIMEZONE": "celery_timezone",
+    "CELERY_TASK_ALWAYS_EAGER": "celery_task_always_eager",
+}
+
+
+def _render_default(value: object) -> str:
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    return str(value)
+
+
+def test_template_scalar_defaults_match_the_code() -> None:
+    """The template is the runtime default layer, so it must not drift from Settings."""
+    template = settings_module.parse_env_file(
+        settings_module.ENV_FILE_DIR / settings_module.ENV_EXAMPLE_FILE
+    )
+    fields = Settings.model_fields
+    mismatches = [
+        f"{key}: template={template.get(key)!r} code={_render_default(fields[field].default)!r}"
+        for key, field in TEMPLATE_SCALAR_DEFAULTS.items()
+        if template.get(key, "").lower()
+        != _render_default(fields[field].default).lower()
+    ]
+    assert not mismatches, "template and Settings defaults disagree: " + "; ".join(mismatches)

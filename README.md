@@ -26,7 +26,16 @@ scripts/          # 运维与开发脚本
 
 ## 本地启动
 
-基础服务（PostgreSQL / Redis / RabbitMQ）与项目服务分开编排，基础服务可被同主机其他项目复用：
+本机资源有限，开发默认**复用已有容器**的 PostgreSQL / Redis（模板指向 `localhost:6432` / `9770`），
+无需再起第二套基础服务：
+
+```bash
+uv run alembic upgrade head     # 数据库不存在时自动创建，再应用迁移
+uv run python start_api.py      # 监听 API_PORT，默认 8000
+```
+
+需要独立实例时再启用仓库自带的基础服务编排，并同步把 `DATABASE_URL` / `REDIS_URL` / `CELERY_*`
+改到 5432 / 6379：
 
 ```bash
 docker compose -f docker/docker-compose.infra.yml up -d
@@ -35,9 +44,10 @@ docker compose up --build -d
 
 配置无需额外文件即可启动：应用按 `.env.example` → `.env` → `.env.{APP_ENV}` → 进程环境变量
 逐层叠加，后者覆盖前者，任一键在前一层缺失时才回落到后一层；`.env` 与其环境专属文件按需创建，
-只写需要改的键（`cp .env.example .env`）。本机直接运行 `python start_api.py` 时，启动日志会打印
-实际生效的配置文件与监听端口。
-```
+只写需要改的键（`cp .env.example .env`）。`API_PORT` 是端口唯一来源：`start_api.py`、
+`docker-compose.yml` 的宿主机映射、`scripts/e2e_acceptance.py` 都读它，前端开发服务器用
+`web/.env` 的 `VITE_API_PROXY_TARGET` 对齐同一端口。本机运行 `python start_api.py` 时，启动日志会
+打印实际生效的配置文件与监听端口。
 
 API: http://localhost:8000/api/v1/health
 
