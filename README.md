@@ -30,9 +30,24 @@ scripts/          # 运维与开发脚本
 无需再起第二套基础服务：
 
 ```bash
-uv run alembic upgrade head     # 数据库不存在时自动创建，再应用迁移
-uv run python start_api.py      # 监听 API_PORT，默认 8000
+cp .env.example .env
+uv run alembic upgrade head
+uv run python start_api.py
 ```
+
+首次启动 API 时，如果数据库中还没有任何用户，应用会自动创建初始组织和管理员账号。
+默认开发环境登录信息：
+
+- Email: `admin@localhost`
+- Password: `ChangeMeNow-2026!`
+
+首次登录后请立即更改密码。自动引导只在用户表为空时执行；后续重启不会重置管理员密码，
+也不会覆盖已有账号。若安装已有任意用户，初始化会安全跳过。
+
+生产部署不得沿用上述开发口令。生产环境默认关闭自动管理员创建；如确需启用首次引导，
+必须显式设置 `BOOTSTRAP_ADMIN_ENABLED=true`、独立的 `BOOTSTRAP_ADMIN_EMAIL` /
+`BOOTSTRAP_ADMIN_PASSWORD`，并设置唯一的 `SECRET_KEY`。生产启动会拒绝已知开发默认口令
+或默认密钥。不要将真实密码、密钥提交到 Git。
 
 需要独立实例时再启用仓库自带的基础服务编排，并同步把 `DATABASE_URL` / `REDIS_URL` / `CELERY_*`
 改到 5432 / 6379：
@@ -42,12 +57,11 @@ docker compose -f docker/docker-compose.infra.yml up -d
 docker compose up --build -d
 ```
 
-配置无需额外文件即可启动：应用按 `.env.example` → `.env` → `.env.{APP_ENV}` → 进程环境变量
-逐层叠加，后者覆盖前者，任一键在前一层缺失时才回落到后一层；`.env` 与其环境专属文件按需创建，
-只写需要改的键（`cp .env.example .env`）。`API_PORT` 是端口唯一来源：`start_api.py`、
-`docker-compose.yml` 的宿主机映射、`scripts/e2e_acceptance.py` 都读它，前端开发服务器用
-`web/.env` 的 `VITE_API_PROXY_TARGET` 对齐同一端口。本机运行 `python start_api.py` 时，启动日志会
-打印实际生效的配置文件与监听端口。
+配置按 `.env.example` → `.env` → `.env.{APP_ENV}` → 进程环境变量逐层叠加，
+后者覆盖前者，任一键在前一层缺失时才回落到后一层；`.env` 与其环境专属文件按需创建，
+只写需要改的键。 `API_PORT` 是端口唯一来源：`start_api.py`、`docker-compose.yml` 的宿主机映射、
+`scripts/e2e_acceptance.py` 都读它，前端开发服务器用 `web/.env` 的 `VITE_API_PROXY_TARGET`
+对齐同一端口。本机运行 `python start_api.py` 时，启动日志会打印实际生效的配置文件与监听端口。
 
 API: http://localhost:8000/api/v1/health
 
