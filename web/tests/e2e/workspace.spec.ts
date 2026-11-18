@@ -116,7 +116,7 @@ test.afterAll(async () => {
 })
 
 test('anonymous users are redirected away from project workspaces', async ({ page }) => {
-  await page.goto(`projects/${projectA}/stories`)
+  await page.goto(`/projects/${projectA}/stories`)
   await expect(page).toHaveURL(/\/login\?redirect=/)
   await expect(page.getByRole('heading', { name: '欢迎回来' })).toBeVisible()
 })
@@ -124,17 +124,17 @@ test('anonymous users are redirected away from project workspaces', async ({ pag
 test('a project member can switch projects but cannot open a project without membership', async ({ page }) => {
   await loginAsProjectReader(page)
 
-  await page.goto(`projects/${projectA}/stories`)
+  await page.goto(`/projects/${projectA}/stories`)
   await expect(page.locator('.project-context')).toContainText(projectA)
 
-  await page.goto(`projects/${projectB}/assets`)
+  await page.goto(`/projects/${projectB}/assets`)
   await expect(page.locator('.project-context')).toContainText(projectB)
   await expect(page.locator('.module-tabs').getByRole('link', { name: '故事圣经' })).toHaveAttribute(
     'href',
-    `projects/${projectB}/stories`,
+    `/projects/${projectB}/stories`,
   )
 
-  await page.goto(`projects/${projectWithoutMembership}/assets`)
+  await page.goto(`/projects/${projectWithoutMembership}/assets`)
   await expect(page).toHaveURL(/\/access-error\?reason=forbidden/)
   await expect(page.getByRole('heading', { name: '无权访问此项目' })).toBeVisible()
   await expect(page.getByText(`项目 ID：${projectWithoutMembership}`)).toBeVisible()
