@@ -35,6 +35,8 @@ def record(
 
 
 def list_logs(
-    db: Session, *, action: str | None, pagination: PaginationParams
+    db: Session, *, organization_id: UUID, action: str | None, pagination: PaginationParams
 ) -> tuple[list[AuditLog], int]:
-    return audit_repo.list_logs(db, action=action, pagination=pagination)
+    return audit_repo.list_logs(
+        db, organization_id=organization_id, action=action, pagination=pagination
+    )
