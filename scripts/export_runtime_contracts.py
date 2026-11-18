@@ -54,6 +54,7 @@ def _route_inventory(app: Any) -> list[dict[str, Any]]:
                 "methods": sorted(route.methods or ()),
                 "name": route.name,
                 "tags": sorted(route.tags or ()),
+                "include_in_schema": route.include_in_schema,
                 "declared_permissions": _permission_codes(route.dependant),
             }
         )
@@ -123,6 +124,17 @@ def main() -> None:
     openapi = app.openapi()
     schema = _schema_inventory()
     routes = _route_inventory(app)
+    schema_paths = set(openapi.get("paths", {}))
+    registered_paths = {
+        route["path"] for route in routes if route["include_in_schema"]
+    }
+    if schema_paths != registered_paths:
+        missing_from_schema = sorted(registered_paths - schema_paths)
+        missing_from_router = sorted(schema_paths - registered_paths)
+        raise RuntimeError(
+            "OpenAPI/router path mismatch: "
+            f"not_in_openapi={missing_from_schema}, not_registered={missing_from_router}"
+        )
     (args.output_dir / "openapi.json").write_text(
         json.dumps(openapi, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
