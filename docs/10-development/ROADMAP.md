@@ -1,7 +1,7 @@
 # 实施路线图（基于现状核实）
 
 > 基线分支：develop  
-> 基线提交：467ef96d4b39bac483e4753efc510afa4e0e0c4d（2026-11-18）  
+> 基线提交：fa9f00b9996c5a70e40a7b8c10386e93af19ac64（2026-11-18）  
 > 状态：实施规划；本文件区分仓库代码现状与目标建设，不代表所有目标已经实现。  
 > 目录约束：保留现有仓库目录结构；本路线不包含 src/app、web、migrations、tests 等既有目录的整体迁移、重命名或重组。
 
@@ -301,3 +301,15 @@ CI 当前定义了 backend-quality、frontend-quality、compose-validation 等�
 - 若实现与既有目录/模块职责冲突，先提交 ADR/Issue 说明，不直接搬迁目录。
 - 进入 develop 只代表集成；进入 main 且验收通过才算正式交付。
 - 最终 MVP 完成定义：在非演示环境中真实完成一次项目生产链路，所有输入、版本、权限、任务、QA、审核、时间线和导出结果均可追溯，并获得可解码、可下载的 MP4。
+
+## 2026-11-18 最新开发进度校准
+
+本路线图的实施事实基线更新为当前 develop HEAD `fa9f00b9996c5a70e40a7b8c10386e93af19ac64`。该 HEAD 包含 main 已有的运行配置/自动建库代码以及 PR #39 产品决策、PR #40 路线图更新。
+
+### 已通过 CI 的工程进展
+- develop 代码提交 `e2972b80a933718062cf230ad23b5a782a83b33c` 的 CI run `44259347047`：backend-quality、frontend-quality、compose-validation、e2e-acceptance 全部成功。
+- PR #40 文档提交 `97fc36b59b0ac9238b2d158370d6ac4f8b7582ab` 的 CI run `44272707942`：四类 Job 全部成功。
+- 已实现运行配置分层、API_HOST/API_PORT 单一配置、数据库缺失时自动建库和迁移、Compose 健康/就绪检查、Celery Worker/Beat 检查、基础 E2E 与备份恢复检查。
+- 上述结果只证明工作流覆盖范围内的检查通过，不表示 Mork、QA/审核、Timeline、多轨导出或前端生产链路已经实现。
+
+R0 当前状态：工程 CI 基线已存在并通过；仍需补齐 OpenAPI/权限矩阵/模型迁移盘点和功能缺口 Issue。R0 不应重复搭建 CI 或基础设施。
