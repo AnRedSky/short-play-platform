@@ -1,0 +1,8 @@
+node_modules
+dist
+.git
+tests/e2e
+tsconfig.tsbuildinfo
+*.log
+.env
+.env.*
