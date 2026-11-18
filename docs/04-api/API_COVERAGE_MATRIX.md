@@ -103,3 +103,31 @@
 
 ## 6. 2026-11-18 R1 进度
 项目工作区入口与 route-driven project context 已合入 develop；该进度只覆盖导航/上下文初始状态，不代表所有项目资源接口和前端生产页面已完成授权闭环。
+
+
+## 2026-11-18 Runtime Contract Snapshot（CI Run #195）
+
+已实际下载并检查 GitHub Actions artifact `runtime-contracts`（Run ID `44294871572`，artifact ID `14423442790`）：
+| 项目 | 快照结果 |
+|---|---:|
+| Runtime OpenAPI paths | 53 |
+| Router declarations | 72 |
+| SQLAlchemy tables | 42 |
+| Alembic revisions | 7 |
+| Alembic head | `0007_workflow_run_workflow_index` |
+| Frontend API calls | 15 |
+| Matched frontend calls | 15 |
+| Unmatched frontend calls | 0 |
+| Backend routes without frontend API Client | 57 |
+| Duplicate routes | 0 |
+
+### 快照解释与差距
+- `openapi.json` 是应用运行时生成的 OpenAPI；路由权限清单由当前领域 router 源码提取声明方法、路径和显式 require_permission，需结合 FastAPI router/dependency 继承关系审阅。
+- 前端 API 匹配为 15/15；57 条后端路由尚无 API Client 映射，主要反映页面接入范围有限，不表示这些 API 未注册。
+- 当前 stories/episodes/assets/storyboards/tasks/reviews/editor/exports 等生产页尚未全部连接真实 API；生产页面已移除演示记录并显示 API 未接入状态。
+- Alembic `0007_workflow_run_workflow_index` 修复了 ORM metadata 与 migration schema 的 workflow_runs.workflow_id 索引差异；Run #195 的 Alembic drift 检查通过。
+- 资产当前没有删除路由；不能将删除 IDOR 标记为已测试。
+- Generation 的同步执行路径、Provider Registry 默认行为和 QA/Review/Timeline/完整 Export API 仍按 R4–R7 路线管理，不因 OpenAPI 路径存在而宣称闭环。
+
+### R1 资源授权检查边界
+服务端负向测试已覆盖 Asset detail/download/version、Creation 资源/版本/Shot-Scene 引用、Generation task detail/cancel/Shot 引用、Workflow run detail/cancel、Export Asset 引用及组织/RBAC 隔离。跨项目引用必须由服务端按资源实际 project_id 校验，不能信任请求体 project_id。
