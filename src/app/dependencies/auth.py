@@ -80,7 +80,9 @@ def get_principal(
     return Principal(
         user=user,
         organization_id=getattr(request.state, "organization_id", None),
-        permissions=permission_codes_for_user(db, user.id),
+        permissions=permission_codes_for_user(
+            db, user.id, getattr(request.state, "organization_id", None)
+        ),
     )
 
 
