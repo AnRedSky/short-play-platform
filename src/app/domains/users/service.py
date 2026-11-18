@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.dependencies.pagination import PaginationParams
 from app.domains.audit import repository as audit_repo
 from app.domains.audit import service as audit_service
+from app.domains.organizations import repository as organizations_repo
 from app.domains.organizations import service as organizations_service
 from app.domains.roles import service as roles_service
 from app.domains.users import repository as users_repo
@@ -26,7 +27,7 @@ def get_user_or_404(db: Session, user_id: UUID) -> User:
 
 
 def assert_user_in_organization(db: Session, user: User, organization_id: UUID | None) -> None:
-    if organization_id is None or not organizations_service.organizations_repo.is_active_member(
+    if organization_id is None or not organizations_repo.is_active_member(
         db, organization_id, user.id
     ):
         raise not_found("User not found")
