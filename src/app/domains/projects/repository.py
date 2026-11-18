@@ -32,13 +32,16 @@ def _scoped_query(organization_id: UUID, *, user_id: UUID | None, manage: bool):
     query = select(Project).where(Project.organization_id == organization_id)
     count_query = select(func.count(Project.id)).where(Project.organization_id == organization_id)
     if not manage and user_id is not None:
-        member_filter = (
-            ProjectMember.project_id == Project.id,
+        member_conditions = (
             ProjectMember.user_id == user_id,
             ProjectMember.is_active.is_(True),
         )
-        query = query.join(ProjectMember, *member_filter)
-        count_query = count_query.join(ProjectMember, *member_filter)
+        query = query.join(ProjectMember, ProjectMember.project_id == Project.id).where(
+            *member_conditions
+        )
+        count_query = count_query.join(
+            ProjectMember, ProjectMember.project_id == Project.id
+        ).where(*member_conditions)
     return query, count_query
 
 

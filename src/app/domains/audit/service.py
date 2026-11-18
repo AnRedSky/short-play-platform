@@ -16,7 +16,7 @@ def record(
     actor_user_id: UUID | None,
     action: str,
     resource_type: str,
-    resource_id: str | None,
+    resource_id: str | None = None,
     result: str = "success",
     request_id: str | None = None,
     details: dict[str, Any] | None = None,
