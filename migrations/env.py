@@ -22,7 +22,7 @@ from app.domains.projects import models as projects_models  # noqa: F401
 from app.domains.roles import models as roles_models  # noqa: F401
 from app.domains.users import models as users_models  # noqa: F401
 from app.domains.workflow import models as workflow_models  # noqa: F401
-from app.infrastructure.db import metadata
+from app.infrastructure.db import ensure_database_exists, metadata
 
 config = context.config
 if config.config_file_name is not None:
@@ -44,6 +44,9 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    # A first run on a fresh PostgreSQL host has no database yet; create it so
+    # `alembic upgrade head` works without manual provisioning.
+    ensure_database_exists(config.get_main_option("sqlalchemy.url"))
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
