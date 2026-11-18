@@ -103,3 +103,39 @@ def test_role_with_unknown_permission_is_rejected(client, admin):
     )
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "CONFLICT"
+
+
+
+def test_role_assignment_cannot_target_user_from_another_organization(client, admin, db_session):
+    from app.domains.organizations.models import Organization, OrganizationMember
+    from app.domains.users.models import User
+
+    role = client.post(
+        "/api/v1/roles",
+        headers=admin["headers"],
+        json={
+            "code": f"scoped-{uuid.uuid4().hex[:8]}",
+            "name": "Scoped",
+            "permissions": ["projects:read"],
+        },
+    ).json()["data"]
+    other_org = Organization(name="Other studio", slug=f"other-{uuid.uuid4().hex[:8]}")
+    db_session.add(other_org)
+    db_session.flush()
+    other_user = User(
+        email=f"other-{uuid.uuid4().hex[:8]}@example.com",
+        full_name="Other organization user",
+        password_hash="not-used-in-this-test",
+    )
+    db_session.add(other_user)
+    db_session.flush()
+    db_session.add(OrganizationMember(organization_id=other_org.id, user_id=other_user.id))
+    db_session.flush()
+
+    response = client.post(
+        f"/api/v1/roles/{role['id']}/assignments",
+        headers=admin["headers"],
+        json={"user_id": str(other_user.id)},
+    )
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "RESOURCE_NOT_FOUND"
