@@ -101,3 +101,7 @@ copied off the host; this runbook does not claim off-site replication is configu
   have been added. They belong to deployment hardening beyond the current milestone scope.
 * Provider credentials for real third-party AI APIs are not wired into the runtime yet; the
   default provider remains the deterministic mock.
+
+## 2026-11-18 生产边界补充
+
+本手册描述的是当前 Compose 运行拓扑，不代表所有业务域均已具备生产能力。生产启用真实生成前必须配置 Mork Provider 凭据、模型能力和外发策略；未配置应保持失败关闭，不允许 Mock 自动兜底。媒体导出当前已有图片序列基础实现，完整 Timeline 多轨渲染仍以 R6 交付为准。资产仅项目内可见；不得通过共享卷或静态文件 URL 绕过 API 项目授权。
