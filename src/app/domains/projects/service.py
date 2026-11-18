@@ -5,8 +5,8 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.dependencies.pagination import PaginationParams
-from app.domains.projects import repository as projects_repo
 from app.domains.organizations import repository as organizations_repo
+from app.domains.projects import repository as projects_repo
 from app.domains.projects.constants import PROJECT_WRITE_ROLES
 from app.domains.projects.models import Project, ProjectMember
 from app.public.exceptions import conflict, not_found, permission_denied
