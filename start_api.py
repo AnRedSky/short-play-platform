@@ -14,8 +14,8 @@ def main() -> None:
     settings = get_settings()
     uvicorn.run(
         "app.main:app",
-        host="0.0.0.0",
-        port=8000,
+        host=settings.api_host,
+        port=settings.api_port,
         reload=not settings.is_production,
         log_level=settings.log_level.lower(),
     )

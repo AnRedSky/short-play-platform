@@ -48,25 +48,26 @@ def env_files() -> tuple[str, str]:
 
 class Settings(BaseSettings):
     """Runtime configuration shared by the API, worker and beat processes."""
-
+    
     model_config = SettingsConfigDict(
         env_file=env_files(),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
     )
-
     # -- application ---------------------------------------------------------
     app_name: str = "short-play-platform"
     app_env: Environment = Field(default_factory=_active_environment)
     debug: bool = Field(default=False, validation_alias="APP_DEBUG")
-    api_v1_prefix: str = "/api/v1"
-    log_level: str = "INFO"
-    public_base_url: str = "http://localhost:8000"
+    api_host: str = Field(default="0.0.0.0", validation_alias="API_HOST")
+    api_port: int = Field(default=7000, validation_alias="API_PORT")
+    api_v1_prefix: str = Field(default="/api/v1", validation_alias="API_V1_PREFIX")
+    log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
+    public_base_url: str = Field(default="http://localhost:8000", validation_alias="PUBLIC_BASE_URL")
 
     # -- infrastructure ------------------------------------------------------
-    database_url: str = "postgresql+psycopg://short_play:replace-me@localhost:5432/short_play"
-    redis_url: str = "redis://localhost:6379/0"
+    database_url: str = Field(default="postgresql+psycopg://short_play:replace-me@localhost:5432/short_play", validation_alias="DATABASE_URL")
+    redis_url: str = Field(default="redis://localhost:6379/0", validation_alias="REDIS_URL")
 
     # -- celery --------------------------------------------------------------
     # Both default to the shared Redis instance; point them at RabbitMQ
@@ -114,6 +115,7 @@ class Settings(BaseSettings):
     @property
     def result_backend_url(self) -> str:
         return self.celery_result_backend or self.redis_url
+
 
 
 @lru_cache
