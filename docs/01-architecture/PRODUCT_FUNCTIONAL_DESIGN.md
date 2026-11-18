@@ -506,3 +506,7 @@ E2E 主场景：
 必须遵守：保留当前仓库目录；本期不建设第三方业务系统/Webhook/爬虫接入及内容版权管理；资产严格项目内隔离；审核为项目统一 review permission，不做多级会签/WAIVED；QA 仅 PASS、REVIEW_REQUIRED、FAIL；默认 Mork Provider，未配置报 PROVIDER_NOT_CONFIGURED 且不回退 Mock；时间线以整数 PTS + 有理数 time_base 为唯一权威时间。
 
 本文中任何目标能力、数据模型或 API 描述均不代表已经开发。代码状态必须引用实施基线的已实现/部分实现/原型/待建设矩阵，并以对应 commit 的测试证据确认。
+
+## 页面交互与代码映射
+
+前端目标页面、当前演示/真实状态、操作状态机和异常交互统一维护于 [功能页面与交互流程规范](../02-requirements/FEATURE_INTERACTION_SPEC.md)。不得仅因页面路由存在就把业务能力标记为已交付。
