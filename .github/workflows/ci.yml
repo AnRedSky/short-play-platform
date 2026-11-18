@@ -114,6 +114,28 @@ jobs:
       - name: Production build
         run: npm run build
 
+  frontend-browser-e2e:
+    name: frontend-browser-e2e
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install frontend dependencies from the committed lock file
+        run: npm ci --no-audit --no-fund
+      - name: Install the optional Playwright runner without changing the lock file
+        run: npm install --no-save --package-lock=false @playwright/test
+      - name: Install Chromium for browser tests
+        run: npx playwright install --with-deps chromium
+      - name: Run real Playwright browser E2E
+        run: npm run test:e2e
+
   compose-validation:
     name: compose-validation
     runs-on: ubuntu-latest
