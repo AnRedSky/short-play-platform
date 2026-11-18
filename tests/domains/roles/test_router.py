@@ -144,9 +144,10 @@ def test_role_assignment_cannot_target_user_from_another_organization(client, ad
 def test_permissions_from_another_organization_do_not_leak_into_current_context(
     client, admin, db_session
 ):
+    from sqlalchemy import select
+
     from app.domains.organizations.models import Organization, OrganizationMember
     from app.domains.roles.models import Permission, Role, RolePermission, UserRole
-    from sqlalchemy import select
 
     email, password, user = _create_user(client, admin)
     other_org = Organization(name="Other studio", slug=f"other-{uuid.uuid4().hex[:8]}")
