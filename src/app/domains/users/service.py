@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.dependencies.pagination import PaginationParams
 from app.domains.audit import repository as audit_repo
 from app.domains.audit import service as audit_service
+from app.domains.organizations import repository as organizations_repo
 from app.domains.organizations import service as organizations_service
 from app.domains.roles import service as roles_service
 from app.domains.users import repository as users_repo
@@ -23,6 +24,13 @@ def get_user_or_404(db: Session, user_id: UUID) -> User:
     if user is None:
         raise not_found("User not found")
     return user
+
+
+def assert_user_in_organization(db: Session, user: User, organization_id: UUID | None) -> None:
+    if organization_id is None or not organizations_repo.is_active_member(
+        db, organization_id, user.id
+    ):
+        raise not_found("User not found")
 
 
 def create_user(
@@ -77,8 +85,10 @@ def update_user(
     return user
 
 
-def permissions_of(db: Session, user_id: UUID) -> list[str]:
-    return sorted(roles_service.permission_codes_for_user(db, user_id))
+def permissions_of(
+    db: Session, user_id: UUID, organization_id: UUID | None
+) -> list[str]:
+    return sorted(roles_service.permission_codes_for_user(db, user_id, organization_id))
 
 
 def dispatch_welcome_notification(db: Session, user_id: UUID) -> bool:

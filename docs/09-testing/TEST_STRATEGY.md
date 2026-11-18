@@ -19,3 +19,9 @@ pytest、pytest-asyncio、Ruff、MyPy；Vitest、ESLint、TypeScript typecheck�
 
 ## PR 门禁
 lint/format/typecheck 通过；相关测试通过；Alembic 空库迁移成功；新 API 有权限和异常路径测试；新任务按适用范围覆盖幂等/超时/重试/取消；安全变更专项审查；文档同步。不得通过跳过测试或吞异常制造绿色 CI。
+
+## 2026-11-18 功能验收对齐
+
+测试报告必须区分现有 CI 通过与功能覆盖完整。develop 代码基线 `e2972b80a933718062cf230ad23b5a782a83b33c` 的 CI run `44259347047` 已通过 backend-quality、frontend-quality、compose-validation、e2e-acceptance；PR #40 文档 CI run `44272707942` 同样通过。该证据只覆盖工作流中实际执行的用例，不代表 Mork、QA/审核、Timeline 或完整多轨导出已完成。
+
+新增/更新测试必须验证：Asset 项目隔离；Mork 未配置返回 PROVIDER_NOT_CONFIGURED；Mock 仅在显式测试/演示模式；QA 无 WAIVED；审核绑定具体版本且使用统一项目 review permission；媒体时间使用整数 PTS + time_base；跨帧率/采样率换算无浮点累计漂移。最终 E2E 必须从项目创建走到真实 MP4 下载。

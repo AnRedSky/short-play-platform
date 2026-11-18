@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.dependencies.pagination import PaginationParams
+from app.domains.organizations import repository as organizations_repo
 from app.domains.projects import repository as projects_repo
 from app.domains.projects.constants import PROJECT_WRITE_ROLES
 from app.domains.projects.models import Project, ProjectMember
@@ -83,7 +84,13 @@ def create_project(
     )
     if owner_user_id is not None:
         # The creator is always an owner so the project is reachable without a second write.
-        add_member(db, project_id=project.id, user_id=owner_user_id, project_role="owner")
+        add_member(
+            db,
+            project_id=project.id,
+            organization_id=organization_id,
+            user_id=owner_user_id,
+            project_role="owner",
+        )
     return project
 
 
@@ -113,8 +120,10 @@ def list_members(db: Session, project_id: UUID) -> list[ProjectMember]:
 
 
 def add_member(
-    db: Session, *, project_id: UUID, user_id: UUID, project_role: str
+    db: Session, *, project_id: UUID, organization_id: UUID, user_id: UUID, project_role: str
 ) -> ProjectMember:
+    if not organizations_repo.is_active_member(db, organization_id, user_id):
+        raise not_found("User not found in this organization")
     existing = projects_repo.find_member(db, project_id, user_id)
     if existing is not None:
         existing.project_role = project_role
@@ -124,3 +133,14 @@ def add_member(
     return projects_repo.add_member_row(
         db, project_id=project_id, user_id=user_id, project_role=project_role
     )
+
+
+def remove_member(db: Session, *, project_id: UUID, user_id: UUID) -> ProjectMember:
+    member = projects_repo.find_member(db, project_id, user_id)
+    if member is None or not member.is_active:
+        raise not_found("Project member not found")
+    if member.project_role == "owner":
+        raise conflict("Project owner cannot be removed")
+    member.is_active = False
+    db.flush()
+    return member

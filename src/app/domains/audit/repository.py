@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.dependencies.pagination import PaginationParams
 from app.domains.audit.models import AuditLog
+from app.domains.organizations.models import OrganizationMember
 
 
 def add_log(
@@ -48,10 +49,24 @@ def find_by_action_and_resource(
 
 
 def list_logs(
-    db: Session, *, action: str | None, pagination: PaginationParams
+    db: Session, *, organization_id: UUID, action: str | None, pagination: PaginationParams
 ) -> tuple[list[AuditLog], int]:
-    query = select(AuditLog)
-    count_query = select(func.count(AuditLog.id))
+    query = (
+        select(AuditLog)
+        .join(OrganizationMember, OrganizationMember.user_id == AuditLog.actor_user_id)
+        .where(
+            OrganizationMember.organization_id == organization_id,
+            OrganizationMember.is_active.is_(True),
+        )
+    )
+    count_query = (
+        select(func.count(AuditLog.id))
+        .join(OrganizationMember, OrganizationMember.user_id == AuditLog.actor_user_id)
+        .where(
+            OrganizationMember.organization_id == organization_id,
+            OrganizationMember.is_active.is_(True),
+        )
+    )
     if action:
         query = query.where(AuditLog.action == action)
         count_query = count_query.where(AuditLog.action == action)

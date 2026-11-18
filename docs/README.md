@@ -11,6 +11,7 @@
 - [产品范围与 MVP](02-requirements/PRODUCT_SCOPE_AND_MVP.md)
 - [数据模型规范](03-database/DATA_MODEL_GUIDELINES.md)
 - [API 规范](04-api/API_CONVENTIONS.md)
+- [API 实际覆盖矩阵](04-api/API_COVERAGE_MATRIX.md)：当前已注册路由、缺失接口和代码偏差。
 - [AI Provider 规范](05-ai-provider/PROVIDER_SPEC.md)
 - [工作流与任务](06-workflow/WORKFLOW_AND_TASKS.md)
 - [安全基线](07-security/SECURITY_BASELINE.md)
@@ -36,3 +37,10 @@
 - MUST/必须：交付必须满足的要求；SHOULD/建议：默认采用，例外需记录理由；MAY/可选：按阶段启用。
 - 所有设计状态、开发状态、测试状态和发布状态分开记录。
 - 本仓库不维护并行“最新版”副本。历史版本通过 Git 提交记录追溯；已被取代的方案不继续作为当前操作入口。
+
+## 统一实施基线（2026-11-18）
+
+- [项目统一实施基线](01-architecture/IMPLEMENTATION_BASELINE.md)：当前唯一实施方案，包含产品范围、技术选型、模块边界、数据/API 约束、当前代码实现矩阵、依赖和阶段 DoD。
+- [功能页面与交互流程规范](02-requirements/FEATURE_INTERACTION_SPEC.md)：页面信息架构、页面现状、目标操作流程、通用状态和前端实施顺序。
+
+任何领域文档与以上基线冲突时，先修订冲突文档再开始对应功能开发；目标能力不得标记为已实现，除非有代码和测试证据。

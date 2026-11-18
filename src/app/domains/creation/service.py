@@ -24,7 +24,7 @@ from app.domains.creation.models import (
     StoryBible,
     Storyboard,
 )
-from app.public.exceptions import conflict, not_found
+from app.public.exceptions import conflict, not_found, permission_denied
 
 # kind -> (row model, version model, version owner column, "not found" label)
 _ASSET_SPEC: dict[str, tuple[type, type, Any, str]] = {
@@ -348,8 +348,12 @@ def create_shot(
     description: str = "",
 ) -> Shot:
     get_storyboard_or_404(db, storyboard_id)
+    storyboard = get_storyboard_or_404(db, storyboard_id)
     if scene_id is not None:
-        get_scene_asset_or_404(db, scene_id)
+        scene = get_scene_asset_or_404(db, scene_id)
+        storyboard_project_id = project_of_episode(db, storyboard.episode_id)
+        if scene.project_id != storyboard_project_id:
+            raise permission_denied("A shot cannot reference a scene from another project")
     ensure_unique_shot_number(db, storyboard_id, shot_number)
     shot = Shot(
         storyboard_id=storyboard_id,

@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth import Principal, require_permission
@@ -147,7 +147,11 @@ def add_project_member(
         permissions=principal.permissions,
     )
     member = projects_service.add_member(
-        db, project_id=project.id, user_id=payload.user_id, project_role=payload.project_role
+        db,
+        project_id=project.id,
+        organization_id=project.organization_id,
+        user_id=payload.user_id,
+        project_role=payload.project_role
     )
     audit_service.record(
         db,
@@ -160,3 +164,32 @@ def add_project_member(
     )
     db.commit()
     return envelope(ProjectMemberRead.model_validate(member).model_dump(mode="json"))
+
+
+@router.delete("/{project_id}/members/{user_id}", status_code=204)
+def remove_project_member(
+    project_id: UUID,
+    user_id: UUID,
+    request: Request,
+    principal: Principal = Depends(require_permission("projects:manage")),
+    db: Session = Depends(get_db),
+) -> Response:
+    project = projects_service.get_accessible_project(
+        db,
+        project_id,
+        user_id=principal.user.id,
+        permissions=principal.permissions,
+        permission_needed="projects:manage",
+    )
+    projects_service.remove_member(db, project_id=project.id, user_id=user_id)
+    audit_service.record(
+        db,
+        actor_user_id=principal.user.id,
+        action="project.member_removed",
+        resource_type="project",
+        resource_id=str(project.id),
+        request_id=getattr(request.state, "request_id", None),
+        details={"user_id": str(user_id)},
+    )
+    db.commit()
+    return Response(status_code=204)

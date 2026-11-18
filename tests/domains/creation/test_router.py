@@ -268,3 +268,80 @@ def test_creation_domain_denies_non_project_members(client, admin):
     ).json()["data"]
     episode_read = client.get(f"/api/v1/episodes/{episode['id']}", headers=outsider_headers)
     assert episode_read.status_code == 403
+
+
+
+def test_shot_cannot_reference_scene_from_another_project(client, admin):
+    project_a = _create_project(client, admin)
+    project_b = _create_project(client, admin)
+    episode = client.post(
+        f"/api/v1/projects/{project_a['id']}/episodes",
+        headers=admin["headers"],
+        json={"episode_number": 1, "title": "Project A episode"},
+    ).json()["data"]
+    storyboard = client.post(
+        f"/api/v1/episodes/{episode['id']}/storyboards",
+        headers=admin["headers"],
+        json={"version_number": 1},
+    ).json()["data"]
+    scene = client.post(
+        f"/api/v1/projects/{project_b['id']}/scenes",
+        headers=admin["headers"],
+        json={"name": "Private Project B location"},
+    ).json()["data"]
+    character = client.post(
+        f"/api/v1/projects/{project_b['id']}/characters",
+        headers=admin["headers"],
+        json={"name": "Private Project B character"},
+    ).json()["data"]
+
+    role = client.post(
+        "/api/v1/roles",
+        headers=admin["headers"],
+        json={
+            "code": f"creation-member-{uuid.uuid4().hex[:8]}",
+            "name": "Creation member",
+            "permissions": ["projects:read", "projects:write"],
+        },
+    ).json()["data"]
+    email = f"creation-member-{uuid.uuid4().hex[:8]}@example.com"
+    password = "MemberPassword1"
+    user = client.post(
+        "/api/v1/users",
+        headers=admin["headers"],
+        json={
+            "email": email,
+            "full_name": "Project A creator",
+            "password": password,
+            "role_ids": [role["id"]],
+        },
+    ).json()["data"]
+    token = client.post(
+        "/api/v1/auth/login", json={"email": email, "password": password}
+    ).json()["data"]["access_token"]
+    member_headers = {"Authorization": f"Bearer {token}"}
+    membership = client.post(
+        f"/api/v1/projects/{project_a['id']}/members",
+        headers=admin["headers"],
+        json={"user_id": user["id"], "project_role": "artist"},
+    )
+    assert membership.status_code == 201, membership.text
+
+    foreign_character = client.get(
+        f"/api/v1/characters/{character['id']}", headers=member_headers
+    )
+    assert foreign_character.status_code == 403
+    foreign_version = client.post(
+        f"/api/v1/characters/{character['id']}/versions",
+        headers=member_headers,
+        json={"appearance": "attempted cross-project change"},
+    )
+    assert foreign_version.status_code == 403
+
+    response = client.post(
+        f"/api/v1/storyboards/{storyboard['id']}/shots",
+        headers=member_headers,
+        json={"shot_number": 1, "scene_id": scene["id"], "description": "Cross-project ref"},
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "PERMISSION_DENIED"

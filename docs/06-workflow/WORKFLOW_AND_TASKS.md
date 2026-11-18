@@ -7,7 +7,7 @@ Workflow/WorkflowVersion 定义流程；WorkflowRun 是一次运行；WorkflowNo
 1. API 事务写业务变更、WorkflowRun/Task 和 Outbox。
 2. Dispatcher 投递 Celery 消息，允许重复投递。
 3. Worker 以租约/幂等方式领取任务，检查状态、权限策略、预算和并发。
-4. 执行短任务或提交外部异步任务；长时间等待通过轮询/Webhook，不占用 Worker。
+4. 执行短任务或提交外部异步任务；长时间等待通过 Provider Adapter 轮询，不占用 Worker；本期不建设第三方业务 Webhook。
 5. 保存 Attempt、Checkpoint、Artifact 和状态。
 6. 节点依赖满足后推进；需审核时进入 waiting_review。
 7. 状态通过查询/SSE通知前端。
@@ -30,3 +30,11 @@ Task：pending → queued → running → succeeded/failed；允许 retry_wait�
 
 ## Temporal 决策
 MVP 使用 PostgreSQL 状态 + Celery + Outbox。Temporal 仅在长时间人工等待、复杂补偿、跨系统持久化执行需求显著且团队具备运维能力时评估；如采用，由 ADR 明确迁移边界并替代流程编排层，不能与自研引擎双写双跑。
+
+## 2026-11-18 工作流实施边界
+
+继续复用现有 domains/workflow、Outbox、Checkpoint、租约和 Celery Worker。PostgreSQL 是任务/工作流业务状态事实来源；Redis/Celery 只负责分发/协调。GenerationTask 表示模型调用，TaskAttempt 表示一次真实调用尝试，Artifact 必须校验后登记到项目内 AssetVersion。
+
+本期不建设第三方业务 Webhook 集成；外部 Provider 的异步任务通过 Adapter 支持的查询/轮询机制获取状态。不得将供应商 Webhook 作为业务工作流正确性的唯一来源。任务取消、重试、恢复和未知供应商状态必须记录实际结果，不能盲目重复调用。
+
+Mork 是默认 Provider；缺少配置时返回 PROVIDER_NOT_CONFIGURED，不能回退 Mock。完整模块现状和任务边界见统一实施基线。

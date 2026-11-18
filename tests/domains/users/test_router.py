@@ -53,3 +53,34 @@ def test_unknown_user_returns_documented_error(client, admin):
     response = client.get(f"/api/v1/users/{uuid.uuid4()}", headers=admin["headers"])
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "RESOURCE_NOT_FOUND"
+
+
+
+def test_user_detail_and_update_are_scoped_to_active_organization(client, admin, db_session):
+    from app.domains.organizations.models import Organization, OrganizationMember
+    from app.domains.users.models import User
+
+    other_org = Organization(name="Other studio", slug=f"other-{uuid.uuid4().hex[:8]}")
+    db_session.add(other_org)
+    db_session.flush()
+    other_user = User(
+        email=f"other-{uuid.uuid4().hex[:8]}@example.com",
+        full_name="Other organization user",
+        password_hash="not-used-in-this-test",
+    )
+    db_session.add(other_user)
+    db_session.flush()
+    db_session.add(OrganizationMember(organization_id=other_org.id, user_id=other_user.id))
+    db_session.flush()
+
+    detail = client.get(f"/api/v1/users/{other_user.id}", headers=admin["headers"])
+    assert detail.status_code == 404
+    assert detail.json()["error"]["code"] == "RESOURCE_NOT_FOUND"
+
+    update = client.patch(
+        f"/api/v1/users/{other_user.id}",
+        headers=admin["headers"],
+        json={"full_name": "Cross-organization modification"},
+    )
+    assert update.status_code == 404
+    assert other_user.full_name == "Other organization user"

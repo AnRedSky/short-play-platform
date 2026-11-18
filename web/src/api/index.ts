@@ -63,7 +63,9 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   const { mock = import.meta.env.DEV && Boolean(mockHandler), auth = true, ...init } = options
   if (mock) {
     if (!mockHandler) throw new Error('Mock mode was requested but no mock adapter is configured.')
-    return (await mockHandler(path, init)) as T
+    const result = await mockHandler(path, init)
+    if (init.signal?.aborted) throw new DOMException('The request was aborted.', 'AbortError')
+    return result as T
   }
   const response = await fetch(`${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`, {
     ...init,
@@ -74,10 +76,11 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   return (await response.json()) as T
 }
 
-export const apiGet = <T>(path: string) => apiRequest<ApiEnvelope<T>>(path)
+export const apiGet = <T>(path: string, options: ApiRequestOptions = {}) =>
+  apiRequest<ApiEnvelope<T>>(path, options)
 
-export const apiPost = <T, B>(path: string, body: B) =>
-  apiRequest<ApiEnvelope<T>>(path, { method: 'POST', body: JSON.stringify(body) })
+export const apiPost = <T, B>(path: string, body: B, options: ApiRequestOptions = {}) =>
+  apiRequest<ApiEnvelope<T>>(path, { ...options, method: 'POST', body: JSON.stringify(body) })
 
-export const apiPatch = <T, B>(path: string, body: B) =>
-  apiRequest<ApiEnvelope<T>>(path, { method: 'PATCH', body: JSON.stringify(body) })
+export const apiPatch = <T, B>(path: string, body: B, options: ApiRequestOptions = {}) =>
+  apiRequest<ApiEnvelope<T>>(path, { ...options, method: 'PATCH', body: JSON.stringify(body) })

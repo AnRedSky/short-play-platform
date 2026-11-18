@@ -20,7 +20,9 @@ def list_audit_logs(
     principal: Principal = Depends(require_permission("audit:read")),
     db: Session = Depends(get_db),
 ) -> dict:
-    rows, total = audit_service.list_logs(db, action=action, pagination=pagination)
+    rows, total = audit_service.list_logs(
+        db, organization_id=principal.organization_id, action=action, pagination=pagination
+    )
     return envelope(
         [AuditLogRead.model_validate(log).model_dump(mode="json") for log in rows],
         pagination.meta(total),

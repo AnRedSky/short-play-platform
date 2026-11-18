@@ -20,3 +20,7 @@ LLM：上下文长度、结构化输出、工具调用、流式能力。
 
 ## 验收
 不兼容参数提交前被拒绝；未知能力不推断为支持；模型能力变更可审计；路由决策可解释并追踪到配置版本。
+
+## 2026-11-18 Provider 默认配置补充
+
+Mork 是 MVP 默认 Provider Adapter。能力数据只在供应商文档、受控实测或管理员确认后标记 enabled；未知参数必须保持 unknown。无 Mork 凭据时返回 PROVIDER_NOT_CONFIGURED，不能以 Mock 能力或假数据冒充可用模型。Mock 仅用于 CI/显式演示。Provider/模型配置变更必须版本化并审计。

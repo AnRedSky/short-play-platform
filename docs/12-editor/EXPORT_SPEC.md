@@ -17,3 +17,7 @@ MVP 输出 MP4；按项目配置分辨率、帧率、视频/音频编码、画�
 
 ## 验收
 MP4 可解码播放；ffprobe 参数符合 ExportProfile；字幕/音频同步；输出 checksum 与文件大小记录；失败不暴露半成品；重复导出可追踪且不覆盖历史版本。
+
+## 2026-11-18 导出契约补充
+
+ExportJob 必须绑定不可变 TimelineVersion、ExportProfile 和输入 AssetVersion 快照。Timeline Clip 的 source_in/source_out/timeline_start 使用整数 PTS + 有理数 time_base；不得在持久化/API 中使用浮点秒作为权威值。Media Worker 必须从精确时码构建 FFmpeg filter/concat 参数，并在输出后执行 ffprobe、完整解码、checksum 校验。当前图片序列 MP4 导出仅为已有基础能力，不等同本规范的多轨时间线导出完成。

@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.dependencies.pagination import PaginationParams
+from app.domains.organizations import repository as organizations_repo
 from app.domains.roles import repository as roles_repo
 from app.domains.roles.constants import PERMISSION_CATALOG, ROLE_TEMPLATES
 from app.domains.roles.models import Permission, Role
@@ -95,14 +96,19 @@ def assign_role_to_user(
     from app.domains.users import repository as users_repo
 
     role = validate_assignable_role(db, role_id, organization_id)
-    if users_repo.get_user_by_id(db, user_id) is None:
-        raise not_found("User not found")
+    if (
+        users_repo.get_user_by_id(db, user_id) is None
+        or not organizations_repo.is_active_member(db, organization_id, user_id)
+    ):
+        raise not_found("User not found in this organization")
     assign_role(db, user_id=user_id, role_id=role_id)
     return role
 
 
-def permission_codes_for_user(db: Session, user_id: UUID) -> frozenset[str]:
-    return roles_repo.permission_codes_of_user(db, user_id)
+def permission_codes_for_user(
+    db: Session, user_id: UUID, organization_id: UUID | None
+) -> frozenset[str]:
+    return roles_repo.permission_codes_of_user(db, user_id, organization_id)
 
 
 def role_permission_codes(db: Session, role_id: UUID) -> list[str]:

@@ -94,5 +94,7 @@ def read_organization(
     principal: Principal = Depends(require_permission("organizations:read")),
     db: Session = Depends(get_db),
 ) -> dict:
-    organization = organizations_service.get_organization_or_404(db, organization_id)
+    organization = organizations_service.get_organization_for_member_or_404(
+        db, organization_id, principal.user.id
+    )
     return envelope(OrganizationRead.model_validate(organization).model_dump(mode="json"))

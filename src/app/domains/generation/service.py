@@ -13,7 +13,7 @@ from app.domains.generation.models import GenerationTask, TaskAttempt
 from app.infrastructure.providers.base import Capability, GenerationRequest, ProviderAdapter
 from app.infrastructure.providers.registry import ProviderRegistry
 from app.public.constants import ErrorCode
-from app.public.exceptions import conflict, not_found, validation_error
+from app.public.exceptions import conflict, not_found, permission_denied, validation_error
 from app.utils.datetime import utcnow
 
 
@@ -70,6 +70,10 @@ def create_task(
     payload: dict = {"prompt": prompt, "parameters": parameters}
     if shot_id is not None:
         creation_service.get_shot_or_404(db, shot_id)
+        if creation_service.project_of_shot(db, shot_id) != project_id:
+            raise permission_denied(
+                "A generation task cannot reference a shot from another project"
+            )
         payload["shot_id"] = str(shot_id)
 
     task = generation_repo.create_task_row(

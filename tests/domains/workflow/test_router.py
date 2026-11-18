@@ -251,3 +251,54 @@ def test_workflow_is_denied_for_non_project_members(client, admin):
 @pytest.mark.parametrize("attempt,expected_floor", [(1, 5), (2, 10), (3, 20)])
 def test_backoff_grows(attempt, expected_floor):
     assert workflow_service.backoff_seconds(attempt) == expected_floor
+
+
+
+def test_project_member_cannot_read_or_cancel_another_projects_workflow(client, admin):
+    project_a = _project(client, admin)
+    project_b = _project(client, admin)
+    foreign_run = _start_run(client, admin, project_b["id"])["data"]
+
+    role = client.post(
+        "/api/v1/roles",
+        headers=admin["headers"],
+        json={
+            "code": f"workflow-member-{uuid.uuid4().hex[:8]}",
+            "name": "Workflow member",
+            "permissions": ["projects:read", "projects:write"],
+        },
+    ).json()["data"]
+    email = f"workflow-member-{uuid.uuid4().hex[:8]}@example.com"
+    password = "MemberPassword1"
+    user = client.post(
+        "/api/v1/users",
+        headers=admin["headers"],
+        json={
+            "email": email,
+            "full_name": "Project A workflow member",
+            "password": password,
+            "role_ids": [role["id"]],
+        },
+    ).json()["data"]
+    token = client.post(
+        "/api/v1/auth/login", json={"email": email, "password": password}
+    ).json()["data"]["access_token"]
+    member_headers = {"Authorization": f"Bearer {token}"}
+    membership = client.post(
+        f"/api/v1/projects/{project_a['id']}/members",
+        headers=admin["headers"],
+        json={"user_id": user["id"], "project_role": "artist"},
+    )
+    assert membership.status_code == 201, membership.text
+
+    detail = client.get(
+        f"/api/v1/workflow-runs/{foreign_run['id']}", headers=member_headers
+    )
+    assert detail.status_code == 403
+    assert detail.json()["error"]["code"] == "PERMISSION_DENIED"
+
+    cancel = client.post(
+        f"/api/v1/workflow-runs/{foreign_run['id']}/cancel", headers=member_headers
+    )
+    assert cancel.status_code == 403
+    assert cancel.json()["error"]["code"] == "PERMISSION_DENIED"

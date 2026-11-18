@@ -12,7 +12,7 @@ from app.domains.assets.models import AssetVersion, ExportJob, MediaAsset
 from app.infrastructure import media as media_service
 from app.infrastructure import storage
 from app.public.constants import ErrorCode
-from app.public.exceptions import AppError, not_found, validation_error
+from app.public.exceptions import AppError, not_found, permission_denied, validation_error
 from app.utils.datetime import utcnow
 
 
@@ -127,7 +127,7 @@ def _assert_slideshow_sources(
 ) -> list[MediaAsset]:
     sources = [get_asset_or_404(db, asset_id) for asset_id in asset_ids]
     if any(asset.project_id != project_id for asset in sources):
-        raise validation_error("All assets must belong to this project")
+        raise permission_denied("An export cannot reference assets from another project")
     for asset in sources:
         if asset.kind != "image":
             raise validation_error(

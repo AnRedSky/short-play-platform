@@ -76,16 +76,23 @@ def permission_codes_of_role(db: Session, role_id: UUID) -> list[str]:
     )
 
 
-def permission_codes_of_user(db: Session, user_id: UUID) -> frozenset[str]:
-    codes = set(
-        db.scalars(
-            select(Permission.code)
-            .join(RolePermission, RolePermission.permission_id == Permission.id)
-            .join(Role, Role.id == RolePermission.role_id)
-            .join(UserRole, UserRole.role_id == Role.id)
-            .where(UserRole.user_id == user_id)
-        ).all()
-    )
+def permission_codes_of_user(
+    db: Session, user_id: UUID, organization_id: UUID | None
+) -> frozenset[str]:
+    codes = set()
+    if organization_id is not None:
+        codes.update(
+            db.scalars(
+                select(Permission.code)
+                .join(RolePermission, RolePermission.permission_id == Permission.id)
+                .join(Role, Role.id == RolePermission.role_id)
+                .join(UserRole, UserRole.role_id == Role.id)
+                .where(
+                    UserRole.user_id == user_id,
+                    Role.organization_id == organization_id,
+                )
+            ).all()
+        )
     codes.update(
         db.scalars(
             select(Permission.code)

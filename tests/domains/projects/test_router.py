@@ -102,3 +102,30 @@ def test_project_code_is_unique_per_organization(client, admin):
         json={"code": "gamma", "title": "Duplicate"},
     )
     assert duplicate.status_code == 409
+
+
+def test_project_member_must_belong_to_the_same_organization(client, admin, db_session):
+    from app.domains.organizations.models import Organization, OrganizationMember
+    from app.domains.users.models import User
+
+    project = _create_project(client, admin, f"scoped-{uuid.uuid4().hex[:6]}")
+    other_org = Organization(name="Other studio", slug=f"other-{uuid.uuid4().hex[:8]}")
+    db_session.add(other_org)
+    db_session.flush()
+    other_user = User(
+        email=f"other-{uuid.uuid4().hex[:8]}@example.com",
+        full_name="Other organization user",
+        password_hash="not-used-in-this-test",
+    )
+    db_session.add(other_user)
+    db_session.flush()
+    db_session.add(OrganizationMember(organization_id=other_org.id, user_id=other_user.id))
+    db_session.flush()
+
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/members",
+        headers=admin["headers"],
+        json={"user_id": str(other_user.id), "project_role": "writer"},
+    )
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "RESOURCE_NOT_FOUND"

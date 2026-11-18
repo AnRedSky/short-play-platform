@@ -23,3 +23,7 @@
 
 ## 关键约束
 外部模型调用必须经过 Provider 和数据外发策略；项目权限由服务端强制校验；凭据加密和脱敏；文件与元数据分离；状态持久化；迁移由 Alembic 管理；不得把设计状态描述为实现状态。
+
+## 2026-11-18 决策补充
+
+本期不建设第三方业务系统集成、Webhook 外部集成、爬虫采集和内容版权管理/采集授权。项目内资产必须归属单一 project_id，禁止跨项目共享、搜索和引用。审核采用项目级统一 review permission，不做多级会签或豁免；QA 结果仅 PASS、REVIEW_REQUIRED、FAIL。默认 Provider 为 Mork，缺少配置时返回 PROVIDER_NOT_CONFIGURED，不得伪造生成成功。媒体时间统一整数 PTS + 有理数 time_base。保留现有仓库目录结构。完整实施边界与当前代码状态见 `../01-architecture/IMPLEMENTATION_BASELINE.md`。
