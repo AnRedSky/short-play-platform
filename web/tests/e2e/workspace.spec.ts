@@ -143,12 +143,12 @@ test('a project member can switch projects but cannot open a project without mem
 test('browser requests cannot read or download an asset from another project', async ({ page }) => {
   await loginAsProjectReader(page)
 
-  const results = await page.evaluate(async ({ assetId, token }) => {
+  const results = await page.evaluate(async ({ apiUrl, assetId, token }) => {
     const headers = { Authorization: `Bearer ${token}` }
-    const detail = await fetch(`/api/v1/assets/${assetId}`, { headers })
-    const download = await fetch(`/api/v1/assets/${assetId}/download`, { headers })
+    const detail = await fetch(`${apiUrl}/assets/${assetId}`, { headers })
+    const download = await fetch(`${apiUrl}/assets/${assetId}/download`, { headers })
     return { detail: detail.status, download: download.status }
-  }, { assetId: foreignAssetId, token: readerToken })
+  }, { apiUrl: apiBase, assetId: foreignAssetId, token: readerToken })
 
   expect(results.detail).toBe(403)
   expect(results.download).toBe(403)
