@@ -105,8 +105,10 @@ def assign_role_to_user(
     return role
 
 
-def permission_codes_for_user(db: Session, user_id: UUID) -> frozenset[str]:
-    return roles_repo.permission_codes_of_user(db, user_id)
+def permission_codes_for_user(
+    db: Session, user_id: UUID, organization_id: UUID | None
+) -> frozenset[str]:
+    return roles_repo.permission_codes_of_user(db, user_id, organization_id)
 
 
 def role_permission_codes(db: Session, role_id: UUID) -> list[str]:
