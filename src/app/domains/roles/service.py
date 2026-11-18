@@ -5,10 +5,10 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.dependencies.pagination import PaginationParams
+from app.domains.organizations import repository as organizations_repo
 from app.domains.roles import repository as roles_repo
 from app.domains.roles.constants import PERMISSION_CATALOG, ROLE_TEMPLATES
 from app.domains.roles.models import Permission, Role
-from app.domains.organizations import repository as organizations_repo
 from app.public.exceptions import conflict, not_found
 
 
