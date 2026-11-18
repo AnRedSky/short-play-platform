@@ -11,6 +11,7 @@
 - [产品范围与 MVP](02-requirements/PRODUCT_SCOPE_AND_MVP.md)
 - [数据模型规范](03-database/DATA_MODEL_GUIDELINES.md)
 - [API 规范](04-api/API_CONVENTIONS.md)
+- [API 实际覆盖矩阵](04-api/API_COVERAGE_MATRIX.md)：当前已注册路由、缺失接口和代码偏差。
 - [AI Provider 规范](05-ai-provider/PROVIDER_SPEC.md)
 - [工作流与任务](06-workflow/WORKFLOW_AND_TASKS.md)
 - [安全基线](07-security/SECURITY_BASELINE.md)
