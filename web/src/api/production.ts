@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiRequest } from './index'
+import { apiDownload, apiGet, apiPost, apiRequest } from './index'
 import type { ApiEnvelope } from '../types/api'
 
 export interface Story { id: string; project_id: string; title: string; logline: string; synopsis: string; status: string }
@@ -48,7 +48,7 @@ export const productionApi = {
     const body = new FormData(); body.append('file', file); body.append('note', note)
     return apiRequest<ApiEnvelope<Record<string, unknown>>>(`/assets/${enc(id)}/versions`, { method: 'POST', body }).then(r => r.data)
   },
-  downloadAsset: (id: string) => apiRequest<Blob>(`/assets/${enc(id)}/download`, { headers: { Accept: '*/*' } }),
+  downloadAsset: (id: string) => apiDownload(`/assets/${enc(id)}/download`),
   createStoryboard: (episodeId: string, versionNumber: number) => data(apiPost<Storyboard, { version_number: number }>(`/episodes/${enc(episodeId)}/storyboards`, { version_number: versionNumber })),
   shots: (storyboardId: string) => data(apiGet<Shot[]>(`/storyboards/${enc(storyboardId)}/shots`)),
   createShot: (storyboardId: string, body: { shot_number: number; shot_size: string; description: string }) => data(apiPost<Shot, typeof body>(`/storyboards/${enc(storyboardId)}/shots`, body)),
