@@ -139,3 +139,40 @@ def test_role_assignment_cannot_target_user_from_another_organization(client, ad
     )
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "RESOURCE_NOT_FOUND"
+
+
+def test_permissions_from_another_organization_do_not_leak_into_current_context(
+    client, admin, db_session
+):
+    from app.domains.organizations.models import Organization, OrganizationMember
+    from app.domains.roles.models import Permission, Role, RolePermission, UserRole
+    from sqlalchemy import select
+
+    email, password, user = _create_user(client, admin)
+    other_org = Organization(name="Other studio", slug=f"other-{uuid.uuid4().hex[:8]}")
+    db_session.add(other_org)
+    db_session.flush()
+    db_session.add(OrganizationMember(organization_id=other_org.id, user_id=user["id"]))
+    foreign_role = Role(
+        organization_id=other_org.id,
+        code=f"foreign-admin-{uuid.uuid4().hex[:8]}",
+        name="Foreign organization admin",
+    )
+    db_session.add(foreign_role)
+    db_session.flush()
+    manage_permission = db_session.scalar(
+        select(Permission).where(Permission.code == "projects:manage")
+    )
+    assert manage_permission is not None
+    db_session.add(RolePermission(role_id=foreign_role.id, permission_id=manage_permission.id))
+    db_session.add(UserRole(user_id=user["id"], role_id=foreign_role.id))
+    db_session.flush()
+
+    tokens = _login(client, email, password)
+    me = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {tokens['access_token']}"},
+    )
+    assert me.status_code == 200
+    assert me.json()["data"]["organization_id"] == admin["organization_id"]
+    assert "projects:manage" not in me.json()["data"]["permissions"]
