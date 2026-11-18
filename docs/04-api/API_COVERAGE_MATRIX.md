@@ -1,6 +1,6 @@
 # API 实际覆盖矩阵（develop 基线）
 
-> 核验基线：develop `fa9f00b9996c5a70e40a7b8c10386e93af19ac64`。  
+> 核验基线：develop `37707f82d2f7f9b5983c1c22446139342fcb7977`。  
 > 本文按当前 `src/app/domains/*/router.py` 的路由装饰器盘点，不是目标 API 清单，也不替代运行时 OpenAPI。所有路径以 `/api/v1` 为前缀。  
 > “存在”只代表路由已注册，不等于完整业务闭环；权限、异常、事务和 E2E 仍需单独验收。
 
@@ -22,7 +22,7 @@
 | Organizations | GET | /organizations/{organization_id} | 组织详情 |
 | Roles | GET/POST | /roles | 角色列表/创建 |
 | Roles | GET | /roles/{role_id} | 角色详情 |
-| Roles | POST | /roles/{role_id}/assignments | 角色分配 |
+| Roles | POST | /roles/{role_id}/assignments | 角色分配（路径 role_id，body user_id） |
 | Projects | GET/POST | /projects | 项目列表/创建 |
 | Projects | GET/PATCH | /projects/{project_id} | 项目详情/更新 |
 | Projects | GET/POST | /projects/{project_id}/members | 项目成员列表/添加 |
@@ -81,8 +81,8 @@
 
 1. Generation 创建路由当前在 HTTP 请求中直接执行 Provider 调用；目标是 Task + Outbox + Celery Worker 异步执行。
 2. Provider Registry 当前默认注册 MockProvider 和 FailingProvider，未发现 Mork Adapter；生产未配置时必须失败关闭并返回 PROVIDER_NOT_CONFIGURED。
-3. Generation 创建接口的权限依赖声明 projects:read，但服务内部再检查 projects:write；后续应统一声明和测试写权限。
-4. 已修复项目生产前端 demo-project 硬编码：App.vue 根据 route.params.projectId 构造导航，Pinia project store 保存当前项目上下文，项目列表提供进入真实项目工作区入口。仍需完成页面 API 联调、切换缓存清理和项目越权 E2E；见 Issue #43。
+3. Generation、Creation、Assets、Workflow 的写路由已统一声明 projects:write；读路由使用 projects:read。
+4. 已移除 demo-project 硬编码；Project Store + useProjectRequest 提供项目上下文版本、请求取消和 cleanup。生产页已移除本地演示数据，尚未接真实 API 的页面显示未接入状态。
 5. API 列表不代表所有对象支持完整 CRUD；目前部分对象只有创建/列表/版本操作，更新、归档和删除接口需要按业务生命周期补齐。
 
 ## 4. 统一接口规则
@@ -103,3 +103,36 @@
 
 ## 6. 2026-11-18 R1 进度
 项目工作区入口与 route-driven project context 已合入 develop；该进度只覆盖导航/上下文初始状态，不代表所有项目资源接口和前端生产页面已完成授权闭环。
+
+
+## 6. 2026-11-18 R0 运行时契约与授权核查
+
+### 6.1 自动化快照
+CI 的 runtime-contracts artifact 包含：
+- openapi.json：FastAPI 运行时 OpenAPI。
+- route-permissions.json：实际 APIRoute 的 path、HTTP methods、tags 和声明的权限依赖。
+- database-schema.json：SQLAlchemy 全量表、列、外键、索引及 Alembic revision 链。
+- frontend-api-map.json：web/src/api 下 API Client 调用与后端 method/path 的匹配情况，列出未匹配前端调用和当前没有 API Client 的后端路由。
+- duplicate-routes.json：重复 method/path 检查结果。
+
+OpenAPI 路径与实际注册路由路径由脚本进行一致性检查；模型与迁移通过 CI 中的 alembic check 核对。快照 artifact 的最终 SHA/运行链接记录在 Issue #42。
+
+### 6.2 权限矩阵摘要
+| 资源层级 | 访问规则 | 服务端校验 |
+|---|---|---|
+| 组织 | 当前组织成员才能读取组织详情；部门父级必须属于同一组织 | OrganizationMember.is_active + organization_id |
+| 用户 | 用户列表、详情、修改限定当前组织 | 用户组织成员关系 |
+| RBAC | 角色归属当前组织；分配角色的目标用户必须属于同一组织；当前权限计算只汇总当前组织 Role | Role.organization_id + OrganizationMember |
+| 项目 | projects:manage 允许组织级项目管理；普通成员必须属于项目且具备对应项目角色 | project membership + project_id |
+| 资产 | 详情、下载、版本、导出引用必须归属当前项目 | Asset.project_id |
+| Creation | 资源读写必须通过所属项目授权；Shot 不得引用其他项目 Scene | 资源反查 project_id |
+| Generation | 任务读写必须通过所属项目授权；Task 不得引用其他项目 Shot | task.project_id + shot.project_id |
+| Workflow | Run 读取、取消、恢复限定所属项目 | run.project_id |
+| Audit | 日志列表按当前组织内活跃成员的 actor 归属过滤 | OrganizationMember |
+
+### 6.3 API Client 与业务差距
+- 已存在 API Client：auth、organizations、projects、roles、users；其余生产页面仍有未映射/未使用路由，具体以 frontend-api-map.json 为准。
+- Role assignment 的前端 API Client 已修复为 `rolesApi.assign(roleId, userId)`，请求体为 `{ user_id }`。
+- 目前无资产删除 API；不应把不存在的删除接口列为已验收能力。
+- Generation 当前仍有同步执行路径；Provider/Mork 异步化属于 R4，不能因路由存在而宣称生成闭环完成。
+- QA/Review、Timeline、完整 Export 管理 API 尚未建设；不提前进入 R2–R7。
