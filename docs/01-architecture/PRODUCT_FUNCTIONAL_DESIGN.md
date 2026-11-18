@@ -82,10 +82,10 @@
 |---|---|---|---|---|
 | 用户主动输入 | Web 表单/编辑器 HTTPS JSON；Markdown、纯文本、结构化表单 | OIDC/Bearer；组织/项目角色；字段级校验 | 用户提交即触发；自动保存可 2–5 秒防抖 | 保存草稿与发布分离；并发编辑使用 If-Match/版本号；限制长度、HTML、脚本 |
 | 外部文件导入 | HTTPS multipart 或预签名对象存储直传；PDF/DOCX/TXT/MD/CSV/JSON/SRT/VTT/PNG/JPEG/WebP/MP3/WAV/MP4/MOV | 项目写权限；上传 URL 短时、单对象、单用途；恶意文件隔离 | 上传完成事件；大文件异步解析 | MIME + magic bytes 双检；大小/时长/页数上限；病毒扫描；压缩炸弹/路径穿越防护 |
-| 第三方系统 API | 本期不纳入产品范围 | 不配置、不授权 | 无 | 后续独立立项后再设计连接器，不预留可执行入口 |
+| 第三方系统 API | 本期不纳入产品范围 | 不启用 | 无 | 后续独立立项后再设计连接器，不预留可执行入口 |
 | 第三方 Webhook/事件推送 | 本期不纳入产品范围 | 不配置、不授权 | 无 | 后续独立立项后再定义事件契约 |
 | 爬虫/网页采集 | 本期不纳入产品范围 | 无 | 无 | 不开发爬虫、采集调度、网页解析或来源连接功能 |
-| 系统自动生成 | 内部任务 API + JSON schema；生成文本/图片/音频/视频 Artifact | 发起用户项目权限 + Mork 配置 + 模型参数策略 + 项目预算 | 工作流节点触发；人工重跑显式触发 | 默认使用 Mork Mock Provider；未配置真实 API 时返回可预测模拟结果；AI 输出默认未审核；记录配置版本和输入快照 |
+| 系统自动生成 | 内部任务 API + JSON schema；生成文本/图片/音频/视频 Artifact | 发起用户项目权限 + Mork 配置 + 模型参数策略 + 项目预算 | 工作流节点触发；人工重跑显式触发 | 默认使用 Mork Provider Adapter；未配置真实 API 时返回可预测模拟结果；AI 输出默认未审核；记录配置版本和输入快照 |
 | 系统内资产引用 | 内部 AssetRef + version_id，不复制文件 | 源资产可读权限与目标模块写权限；引用时重新鉴权 | 绑定/解绑/版本变更事件 | 引用默认固定版本；动态引用必须显式标记并允许 stale 传播 |
 | 批量迁移/管理导入 | 本期不提供通用外部批量迁移入口；仅支持经批准的项目内初始化 | 平台运维受限权限 | 按部署/迁移任务触发 | 通过版本化迁移脚本执行，不提供任意文件包导入 API |
 
@@ -120,8 +120,8 @@
 | 去重与实体解析 | 提取对象 | external_id、checksum、规范化名称、别名和上下文匹配；自动合并仅限高置信度且可逆场景 | EntityLink/duplicate candidates | 不确定时人工合并；不物理删除重复来源 |
 | 标签与分类 | 结构化对象 | 项目内受控词表；标签含 namespace、code、label、parent、definition、owner、version | TaxonomyAssignments | 标签失效时保留历史代码并映射替代项 |
 | 智能增强 | 故事/剧本/镜头/素材 | 摘要、关键词、角色关系、连续性提示、镜头提示词建议、字幕/转写；生成内容独立版本 | Enrichment Artifact | 模型不可用退化为无增强；低置信度标记 review_required |
-| 自动质量检查 | 结构化对象/媒体/生成结果 | schema、完整度、连续性、音视频技术参数、黑帧/静音/时长、版权/安全策略 | QualityResult + issues | 规则执行失败与内容不合格分开；规则服务故障不得误判 PASS |
-| 内容审核 | 具体对象版本 + QA | 业务审核、合规审核、版权/来源审查；decision 必须附 reviewer、reason、policy version | ReviewRecord | 拒绝转返工；超时提醒/升级，不自动批准 |
+| 自动质量检查 | 结构化对象/媒体/生成结果 | schema、完整度、连续性、音视频技术参数、黑帧/静音/时长、安全策略 | QualityResult + issues | 规则执行失败与内容不合格分开；规则服务故障不得误判 PASS |
+| 内容审核 | 具体对象版本 + QA | 业务审核与内容安全审核；decision 必须附 reviewer、reason、policy version | ReviewRecord | 拒绝转返工；超时提醒/升级，不自动批准 |
 | 发布与索引 | 已通过质量门禁/审核的版本 | 原子切换可见版本；写搜索索引/缓存失效事件 | Published Version | 索引失败可异步补偿；主数据库状态为准 |
 
 ### 4.2 标签体系
@@ -138,7 +138,7 @@
 
 ### 4.3 内容审核与质量门禁
 
-质量结果枚举：PASS、REVIEW_REQUIRED、FAIL。MVP 不提供 WAIVED 豁免通道；质量检查失败必须修复后重新检查。
+质量结果枚举：PASS、REVIEW_REQUIRED、FAIL。MVP 不提供 豁免 豁免通道；质量检查失败必须修复后重新检查。
 
 - 结构质量：必填字段、引用完整性、唯一编号、schema 版本。
 - 剧本质量：场次完整、人物出场一致、对白归属、场景切换、时长估算。
@@ -220,7 +220,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 - API 使用 `start`、`duration`、`source_in`、`source_out` 等对象，不使用 `start_seconds` 或 `duration_seconds` 浮点字段。
 - 视频轨道以整数帧序号为编辑权威值，记录精确帧率分数，例如 `frame_rate: { "num": 30000, "den": 1001 }`；帧边界通过有理数运算映射为 PTS。
 - 音频片段以整数采样点为权威值，并记录 `sample_rate`；混轨时转换到共同有理数时间域，不进行浮点累计。
-- TimelineVersion 定义 `timebase`（默认 1/90000 秒用于媒体交换与 FFmpeg PTS 映射），Clip 保留源媒体原生 time_base、帧率/采样率及整数源区间。
+- TimelineVersion 统一主时钟建议采用 1/70,560,000 秒（可精确表示常见 23.976/24/25/29.97/30/50/59.94/60 fps 以及 44.1/48 kHz 音频）；每个 Clip 同时保留源媒体原生 time_base、帧率/采样率及整数源区间。非标准帧率或采样率通过有理数 time_base 精确表示，不得有损强转。
 - 区间采用左闭右开 `[in, out)`；duration = out - in；禁止负时长、溢出和非整数 PTS。
 - JSON Schema 要求 num/den 为正整数、PTS 为安全整数；服务端使用整数/有理数运算，禁止序列化为 IEEE-754 浮点。
 - 数据库、API、前端编辑器、预览渲染和 FFmpeg 适配器共用该契约；前端可格式化显示秒/时间码，提交时必须回传整数 PTS/time_base。
@@ -259,7 +259,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 2. 依赖图查询引用旧版本的下游对象。
 3. 根据 relation_type 和策略标记 stale / stale_candidate / unaffected。
 4. 对正在运行的任务保持输入快照，不中途替换；任务完成后再判断是否 stale。
-5. 已审核/已交付版本保持历史有效，不被静默撤销；如存在版权撤回或安全风险，触发显式 hold/revocation。
+5. 已审核/已交付版本保持历史有效，不被静默撤销；如存在资产撤回或安全风险，触发显式 hold/revocation。
 6. 用户可查看影响列表并选择重新生成、重新审核或保留旧版。
 7. 自动重跑仅适用于无副作用、预算允许、策略明确的节点；禁止对已产生外部费用的任务自动无限重跑。
 
@@ -268,7 +268,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 - 同一业务对象编辑：乐观锁 version/ETag；冲突返回 409 并提供差异，不以后写覆盖前写。
 - 发布/审核/归档：状态迁移使用数据库条件更新或领域锁，确保单次有效迁移。
 - 同一 TimelineVersion 的导出可并发，但相同幂等键和相同配置只能得到一个逻辑 ExportJob。
-- 资产删除：有引用时禁止物理删除；只能归档/撤回，需展示引用影响。
+- 资产删除：有引用时禁止物理删除；只能归档/撤回，需展示项目内引用影响。
 - 同一 Shot 的主版本发布采用单写者/乐观锁；多个 AI 生成任务可并行，但通过候选集选择主产物。
 - 项目归档后默认禁止新写入和新任务；恢复需具备权限并审计。
 
@@ -279,7 +279,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 2. 组织状态与成员关系有效；
 3. 项目成员关系有效；
 4. 项目角色授予具体 permission；
-5. 资源 classification、license、状态策略进一步收紧。
+5. 资源 classification、状态策略进一步收紧。
 
 最终权限是各层限制的交集，不存在通过客户端传入 project_id 或猜测 UUID 获权的情况。跨项目引用一律禁止；不建设企业级共享资产。所有 Asset 必须具有 project_id，所有 AssetRelation 的两端 project_id 必须相同。下载 URL 的短时签名不替代业务授权。
 
@@ -328,12 +328,12 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 ### 7.5 角色、场景、道具与媒体资产
 
 - 资产作用域：Asset 必须绑定 project_id；只允许同项目内模块引用，不提供跨项目共享/复制/搜索入口。
-- 来源：用户表单、文件上传、第三方 DAM（后续）、AI 图像生成、项目内引用。
-- 处理：病毒扫描、媒体探测、元数据提取、人物/物件标签、版本登记、相似资产候选、版权信息校验。
-- 输出：Asset/AssetVersion、缩略图/代理文件、元数据、授权记录。
+- 来源：用户表单、项目内文件上传、Mork Provider 生成、项目内引用。
+- 处理：病毒扫描、媒体探测、元数据提取、人物/物件标签、版本登记、相似资产候选、元数据完整性校验。
+- 输出：Asset/AssetVersion、缩略图/代理文件、元数据、来源记录。
 - 联动：剧本/Shot/时间线固定引用版本；引用影响阻止物理删除。
 - 生命周期：draft → processing → ready → in_review → approved → archived/revoked；媒体文件上传与资产发布分离。
-- 异常：checksum 不匹配隔离；上传中断支持分片续传；扫描失败不发布；版权撤回触发下游 hold。
+- 异常：checksum 不匹配隔离；上传中断支持分片续传；扫描失败不发布；资产撤回触发下游 hold。
 - 验收：上传文件 checksum 100% 校验；无权限下载 100% 拒绝；版本可追溯；任何引用均可反查来源。
 
 ### 7.6 分镜、镜头与 Shot Contract
@@ -348,7 +348,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 
 ### 7.7 AI Provider、模型、任务与工作流
 
-- 默认行为：未配置真实 API 时由 Mork Mock Adapter 返回稳定、可测试的模拟产物/状态；不得伪装成真实模型生成。真实 API 配置缺失或无效时明确报 PROVIDER_NOT_CONFIGURED，不静默切换供应商。
+- 默认行为：未配置真实 API 时由 Mork Provider Adapter 作为默认 Provider Adapter；真实模型 API 通过配置接入 Mork 或切换到其他已配置 Adapter。未完成有效配置时明确报 PROVIDER_NOT_CONFIGURED，不伪造生成结果。
 - 来源：内部工作流/用户命令；默认 Provider 为 Mork Mock Adapter；后续真实模型通过配置启用，配置项包括 provider_key、base_url、secret_ref、model_id、capabilities、timeout、rate_limit、enabled。
 - 处理：能力路由、策略/预算检查、Prompt 模板渲染、参数 schema 校验、幂等、限流、调用、Attempt、产物校验。
 - 输出：Task/Attempt 状态、成本、Artifact、失败诊断、事件通知。
@@ -364,7 +364,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 - 处理：按对象类型选择自动 QA 规则集；人工审核统一使用项目级 review permission，不按内容类型区分角色、不支持多级会签；问题分级；一次审核决定；拒绝生成返工任务。
 - 输出：QualityResult、ReviewRecord、ReworkTask、审核报告。
 - 联动：审核绑定版本；审核拒绝阻断时间线/导出；返工产生新版本/Attempt，不覆盖被拒绝版本。
-- 生命周期：pending → checking → pass/review_required/fail；人工 review：pending → approved/rejected/waived。
+- 生命周期：pending → checking → pass/review_required/fail；人工 review：pending → approved/rejected。
 - 异常：规则服务不可用不允许默认 PASS；审核超时提醒项目成员；不提供 WAIVED 豁免状态。
 - 验收：审核记录不可篡改；所有拒绝项有 reason；未通过门禁的素材进入受控例外流程，不得静默进入正式成片。
 
@@ -372,7 +372,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 
 - 时间表示严格遵循第 5.3 节；视频帧序号、音频采样点分别以整数表示，API 不接受浮点秒作为权威字段。
 - 来源：用户编排、已审核素材、字幕/音轨导入、模板。
-- 处理：统一整数时间基准（建议以帧或 tick 存储，API 明确 timebase）；轨道/片段校验；源区间边界；转场/音量/字幕配置；保存版本快照。
+- 处理：统一整数 PTS + 有理数 time_base；视频帧序号和音频采样点分别保留整数权威值；轨道/片段校验；源区间边界；转场/音量/字幕配置；保存版本快照。
 - 输出：TimelineVersion JSON、预览代理、剪辑变更记录。
 - 联动：Clip 固定引用 AssetVersion；源资产撤回时阻止新导出并提示替换；时间线版本供 ExportJob 固定引用。
 - 生命周期：draft → review_ready → approved → superseded/archived；保存产生新版本。
@@ -414,13 +414,13 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 - 上传安全：magic bytes、病毒扫描、大小/时长限制、压缩炸弹、解压路径穿越、媒体解码沙箱。
 - 模型凭据：KMS/Secret Manager 引用；数据库只存 secret_ref；日志脱敏；轮换和吊销可追踪。
 - 内容安全：AI 生成内容需执行平台内容策略校验；不能将 AI 结果视为事实或默认审核通过。
-- 版权：每个外部素材必须记录来源、许可、允许用途、地域/期限、署名要求；无许可记录的内容不得进入商业成片。
+- 本期不建设版权管理或外部采集功能；仅保留用户上传/录入及系统生成的来源元数据。
 - 隐私：最小化采集、目的限制、保留期限、删除/导出流程；禁止未授权采集登录态/私人信息。
 - 不提供网页采集和第三方内容同步能力。
 
 ## 10. API 与事件契约建议
 
-统一前缀 /api/v1，JSON snake_case，UTC ISO 8601，Envelope 与错误码遵循 API_CONVENTIONS.md。MVP 默认生成 Provider 为 Mork Mock 模式；真实 API 仅通过管理员配置 Provider Adapter 启用，不在业务代码中写死密钥或供应商 URL。
+统一前缀 /api/v1，JSON snake_case，UTC ISO 8601，Envelope 与错误码遵循 API_CONVENTIONS.md。MVP 默认生成 Provider 为 Mork Provider；真实 API 仅通过管理员配置 Provider Adapter 启用，不在业务代码中写死密钥或供应商 URL。
 
 建议新增/补齐资源域：
 - /sources/connections、/sources/ingestions、/sources/ingestions/{id}/retry
@@ -447,7 +447,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 | 版本与血缘 | 上游新版本、资产撤回、依赖循环、旧版引用 | stale 正确传播；无静默覆盖；历史快照可重建 |
 | 权限安全 | 跨组织/项目 IDOR、下载 URL 复用、角色撤销 | 越权 100% 拒绝；短时 URL 过期失效 |
 | 工作流可靠性 | 重复消息、Worker 崩溃、超时、取消、供应商回调乱序 | 无重复业务产物；可恢复；状态最终一致 |
-| QA/审核 | 规则服务不可用、审核拒绝、WAIVED 越权 | 故障不误判 PASS；拒绝可返工；豁免有审计 |
+| QA/审核 | 规则服务不可用、审核拒绝、重复审核决策/无权限审核 | 故障不误判 PASS；拒绝可返工；豁免有审计 |
 | 媒体与导出 | 损坏源文件、无音轨、时码越界、磁盘不足、FFmpeg 中断 | 文件未校验不得成功；失败可诊断；快照可追溯 |
 | E2E | 创建项目至 MP4 下载 | 项目隔离、剧本/资产/镜头/生成/审核/时间线/导出闭环成功 |
 | 迁移与恢复 | 空库升级、备份恢复、对象存储引用恢复 | 迁移可重复验证；元数据与文件 checksum 一致 |
@@ -472,7 +472,7 @@ E2E 主场景：
 | D1 内容接入与资产底座 | 项目内 IngestionRecord、Asset/Version、对象存储、上传扫描 | 幂等、项目隔离、checksum、隔离测试通过；不含第三方连接器/爬虫 |
 | D2 创作结构化 | StoryBible/Script/Scene/Dialogue、导入解析、标签与版本 | 结构化导入、版本差异、引用校验通过 |
 | D3 资产与分镜 | 资产关系、Storyboard/Shot/ShotContract、stale 图 | 固定版本引用与影响分析通过 |
-| D4 生成工作流 | Mork Mock Adapter、Provider 配置、Task/Attempt/Outbox、事件、预算 | 默认 Mock E2E、重试/取消/恢复通过；真实 API 可通过配置启用 |
+| D4 生成工作流 | Mork Mock Adapter、Provider 配置、Task/Attempt/Outbox、事件、预算 | Mork Provider E2E、重试/取消/恢复通过；真实 API 可通过配置启用 |
 | D5 QA 与审核 | QualityResult、ReviewRecord、ReworkTask、审核工作台 | 审核版本绑定、门禁不可绕过 |
 | D6 时间线与导出 | TimelineVersion、ExportJob、FFmpeg、媒体校验 | 可重建时间线、真实 MP4 E2E |
 | D7 运营治理 | Usage/Budget/Audit/Notification、报表 | 成本关联、审计与告警可验证 |
