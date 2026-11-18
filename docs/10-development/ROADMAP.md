@@ -369,3 +369,6 @@ CI 调试记录：PR #56 首次 Run #206 的 backend-quality、frontend-quality�
 
 
 R1 成员变更补充：新增项目成员撤销接口（软停用 + 审计，禁止移除 owner）。Playwright fixture 让测试用户先加入 A/B/C；用户浏览 A/B 后，管理员撤销 C 成员资格，测试再点击列表中仍然存在的旧 C 链接，验证路由重新请求服务端并拒绝访问。跨项目 Asset detail/download 继续验证 403。
+
+
+第五次 Playwright 调试记录：Run #222 的真实 API 环境、项目 A/B/C 创建、成员资格、ffprobe 资产上传 fixture 均成功；浏览器测试在首页点击“项目管理”时发现页面同时存在侧栏、主按钮和卡片链接，Playwright strict mode 无法唯一定位。已将测试定位器改为 `exact: true`，确保点击侧栏导航，更新后继续重跑。
