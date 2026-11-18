@@ -71,7 +71,9 @@ def create_task(
     if shot_id is not None:
         creation_service.get_shot_or_404(db, shot_id)
         if creation_service.project_of_shot(db, shot_id) != project_id:
-            raise permission_denied("A generation task cannot reference a shot from another project")
+            raise permission_denied(
+                "A generation task cannot reference a shot from another project"
+            )
         payload["shot_id"] = str(shot_id)
 
     task = generation_repo.create_task_row(
