@@ -80,10 +80,16 @@ test.beforeAll(async () => {
   projectB = b.id
   projectWithoutMembership = c.id
 
+  const invalidMember = await api.post(`projects/${projectWithoutMembership}/members`, {
+    headers: adminHeaders,
+    data: { user_id: reader.id, project_role: 'viewer' },
+  })
+  expect(invalidMember.status(), await invalidMember.text()).toBe(422)
+
   for (const projectId of [projectA, projectB]) {
     const member = await api.post(`projects/${projectId}/members`, {
       headers: adminHeaders,
-      data: { user_id: reader.id, project_role: 'viewer' },
+      data: { user_id: reader.id, project_role: 'reviewer' },
     })
     expect(member.status(), await member.text()).toBe(201)
   }
