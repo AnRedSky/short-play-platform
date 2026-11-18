@@ -25,6 +25,13 @@ def get_user_or_404(db: Session, user_id: UUID) -> User:
     return user
 
 
+def assert_user_in_organization(db: Session, user: User, organization_id: UUID | None) -> None:
+    if organization_id is None or not organizations_service.organizations_repo.is_active_member(
+        db, organization_id, user.id
+    ):
+        raise not_found("User not found")
+
+
 def create_user(
     db: Session,
     *,
