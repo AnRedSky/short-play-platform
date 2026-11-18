@@ -58,7 +58,10 @@ def _route_inventory(app: Any) -> list[dict[str, Any]]:
                 "declared_permissions": _permission_codes(route.dependant),
             }
         )
-    return sorted(rows, key=lambda item: (item["path"], item["methods"][0] if item["methods"] else ""))
+    return sorted(
+        rows,
+        key=lambda item: (item["path"], item["methods"][0] if item["methods"] else ""),
+    )
 
 
 def _schema_inventory() -> dict[str, Any]:
