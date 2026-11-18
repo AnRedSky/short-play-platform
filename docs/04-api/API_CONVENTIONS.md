@@ -28,3 +28,7 @@ Provider 管理默认仅配置 Mork Adapter；无可用配置/凭据时生成命
 任务 API 创建后返回 task_id/status；查询快照是最终事实，SSE（若实现）仅作通知。Review API 必须绑定 object_version_id，并使用项目级 review permission。QA 结果只允许 PASS、REVIEW_REQUIRED、FAIL。
 
 时间字段对普通创建时间仍使用 ISO 8601 UTC；媒体时间线字段必须使用整数 PTS 与 time_base numerator/denominator，不得以浮点秒定义 source_in、source_out 或 timeline_start。接口实际可用路由以 FastAPI OpenAPI 为准；本文件的路由目录是目标契约，不代表路由已经全部存在。
+
+## 页面与 API 对齐
+
+页面级 API 依赖和状态处理以 `docs/02-requirements/FEATURE_INTERACTION_SPEC.md` 为准；真实可调用接口以当前 FastAPI OpenAPI 为准。尚未实现的 QA/Review、Timeline、完整 Export API 只属于目标契约，不得由前端 Mock 假装可用。
