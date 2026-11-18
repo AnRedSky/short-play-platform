@@ -178,6 +178,12 @@ jobs:
       - name: Install backend dependencies from the committed lock file
         run: uv sync --locked --all-groups
         working-directory: .
+      - name: Install FFmpeg and ffprobe for real asset upload tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y ffmpeg
+          ffprobe -version | head -n 1
+        working-directory: .
       - name: Prepare the isolated browser E2E database and storage
         run: |
           mkdir -p "$STORAGE_ROOT"
