@@ -1,7 +1,7 @@
 # 实施路线图（基于现状核实）
 
 > 基线分支：develop  
-> 基线提交：fa9f00b9996c5a70e40a7b8c10386e93af19ac64（2026-11-18）  
+> 基线提交：37707f82d2f7f9b5983c1c22446139342fcb7977（2026-11-18）  
 > 状态：实施规划；本文件区分仓库代码现状与目标建设，不代表所有目标已经实现。  
 > 目录约束：保留现有仓库目录结构；本路线不包含 src/app、web、migrations、tests 等既有目录的整体迁移、重命名或重组。
 
@@ -317,3 +317,28 @@ R0 当前状态：工程 CI 基线已存在并通过；仍需补齐 OpenAPI/权�
 
 ## 2026-11-18 R1 开发进度
 已在 develop 落地项目上下文第一步：移除 demo-project 硬编码，项目列表可进入 `/projects/:projectId/stories`，Pinia store 与路由参数同步，增加单元测试和导航 E2E。R1 后续仍需清理项目切换缓存/订阅、接入真实生产 API，并完成跨项目 IDOR 负向验证；Issue #43 保持开放。
+
+
+## 2026-11-18 R0/R1 最新代码进展校准
+
+当前代码核查基线：develop `37707f82d2f7f9b5983c1c22446139342fcb7977`；main 保持稳定发布分支，本轮未发布 main。
+
+### R0：工程与权限基线
+- 已新增运行时 OpenAPI/路由/权限、SQLAlchemy 模型、Alembic revision、前端 API 映射和重复路由导出脚本。
+- 已将 alembic check 加入 backend CI；检测到 workflow_runs.workflow_id 缺失索引，已补充 migration 0007。
+- 已修复组织与项目授权边界：组织详情、用户、角色分配、审计日志、部门父级、项目成员、RBAC 当前组织权限计算。
+- 已修复 RoleAssignment 请求体契约及前端 API Client。
+- R0 最终验收依赖 PR #53 的完整 CI run #187（Ruff、空库 migration、pytest、alembic check、runtime contract export、Playwright、Compose、e2e-acceptance）和 runtime artifact 审阅。未取得最终成功前不关闭 Issue #42。
+
+### R1：项目上下文与资源授权
+- 项目上下文由 route projectId 驱动；项目切换时 AbortController 取消旧请求、contextVersion 阻止 stale response、cleanup 释放项目订阅。
+- 新增 useProjectRequest composable，覆盖请求完成后上下文仍有效才应用结果的逻辑。
+- 服务端阻止跨项目 Scene/Shot/Asset 引用；补充 Asset、Creation、Generation、Workflow 的跨项目负向测试。
+- 生产页面已移除演示记录、模拟创建/导出动作和 demo-project 硬编码；未接 API 的页面显示明确的 API 未接入状态。
+- 真实生产 API 页面联调、项目成员权限变更后的缓存重新校验、资产删除（当前无删除路由）仍未完成；R1 Issue #43 保持开放。
+
+### 当前阶段决策
+- R0/R1 验收前不启动 R2。
+- R2 开始后再逐个把故事/剧本/场次/分镜页面接入真实 API；本轮先清除伪生产数据，不用 Mock 冒充真实业务。
+- 不执行线上真实用户数据测试；只使用 GitHub Actions 临时 CI 服务和自动化测试。
+- 任何 CI 结果只绑定其实际 commit SHA，不将旧 SHA 的成功结果移植到新提交。
