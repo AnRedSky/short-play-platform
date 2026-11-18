@@ -1,48 +1,41 @@
+# Project services only: api / worker / beat / web.
+# Base services (PostgreSQL / Redis / RabbitMQ) live in docker/docker-compose.infra.yml
+# and are joined through the external network `short-play-infra`.
+#
+#   docker compose -f docker/docker-compose.infra.yml up -d
+#   docker compose up --build -d
+
+name: short-play-platform
+
+x-backend-env: &backend-env
+  APP_ENV: ${APP_ENV:-development}
+  DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-short_play}:${POSTGRES_PASSWORD:-replace-me}@postgres:5432/${POSTGRES_DB:-short_play}
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+  CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
+  CELERY_TIMEZONE: ${CELERY_TIMEZONE:-UTC}
+  SECRET_KEY: ${SECRET_KEY:-replace-me-for-local-development}
+  CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:5173"]}
+  STORAGE_ROOT: /data/storage
+  MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-524288000}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
 services:
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-short_play}
-      POSTGRES_USER: ${POSTGRES_USER:-short_play}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-replace-me}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-short_play} -d ${POSTGRES_DB:-short_play}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    command: ["redis-server", "--appendonly", "yes"]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   api:
     build:
-      context: ./backend
+      context: .
+      dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-short_play}:${POSTGRES_PASSWORD:-replace-me}@postgres:5432/${POSTGRES_DB:-short_play}
-      REDIS_URL: redis://redis:6379/0
-      CORS_ORIGINS: '["http://localhost:5173"]'
+      <<: *backend-env
+      RUN_MIGRATIONS: "1"
     ports:
       - "8000:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: ["sh", "-c", "uv run --no-sync alembic upgrade head && uv run --no-sync uvicorn apps.api.main:app --host 0.0.0.0 --port 8000"]
+    volumes:
+      - media_storage:/data/storage
+    networks:
+      - default
+      - infra
+    command: ["uv", "run", "--no-sync", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     healthcheck:
       test:
         - CMD
@@ -59,50 +52,64 @@ services:
 
   worker:
     build:
-      context: ./backend
+      context: .
+      dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-short_play}:${POSTGRES_PASSWORD:-replace-me}@postgres:5432/${POSTGRES_DB:-short_play}
-      REDIS_URL: redis://redis:6379/0
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: ["uv", "run", "--no-sync", "celery", "-A", "apps.api.workers.celery_app:celery_app", "worker", "--loglevel=INFO"]
-
-  beat:
-    build:
-      context: ./backend
-    environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-short_play}:${POSTGRES_PASSWORD:-replace-me}@postgres:5432/${POSTGRES_DB:-short_play}
-      REDIS_URL: redis://redis:6379/0
-    depends_on:
-      redis:
-        condition: service_healthy
+      <<: *backend-env
+    volumes:
+      - media_storage:/data/storage
+    networks:
+      - default
+      - infra
     command:
       - uv
       - run
       - --no-sync
       - celery
       - -A
-      - apps.api.workers.celery_app:celery_app
+      - app.workers.celery_app:celery_app
+      - worker
+      - --loglevel=INFO
+
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      <<: *backend-env
+    networks:
+      - default
+      - infra
+    command:
+      - uv
+      - run
+      - --no-sync
+      - celery
+      - -A
+      - app.workers.celery_app:celery_app
       - beat
       - --loglevel=INFO
       - -s
       - /tmp/celerybeat-schedule
 
-  frontend:
-    image: node:22-alpine
-    working_dir: /app
-    volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
-    command: ["sh", "-c", "npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0"]
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
     ports:
-      - "5173:5173"
-    profiles: ["development"]
+      - "5173:80"
+    depends_on:
+      - api
+    networks:
+      - default
 
 volumes:
-  postgres_data:
-  redis_data:
-  frontend_node_modules:
+  media_storage:
+
+networks:
+  default:
+  infra:
+    external: true
+    name: short-play-infra

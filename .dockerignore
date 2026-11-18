@@ -1,0 +1,18 @@
+# Build context hygiene for the backend image (api / worker / beat).
+.git
+.github
+.venv
+.env
+.env.*
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+node_modules
+web
+storage
+backups
+docs
+tests
+*.md

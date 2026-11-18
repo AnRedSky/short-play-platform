@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Private-deployment backup: PostgreSQL logical dump + media storage archive.
-# Usage: bash scripts/backup.sh [compose-file]   (default: docker-compose.yml)
+# Usage: bash scripts/backup.sh [infra-compose] [project-compose]
+#   defaults: docker/docker-compose.infra.yml  docker-compose.yml
 set -euo pipefail
 
-COMPOSE_FILE="${1:-docker-compose.yml}"
+INFRA_COMPOSE="${1:-docker/docker-compose.infra.yml}"
+PROJECT_COMPOSE="${2:-docker-compose.yml}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 POSTGRES_USER="${POSTGRES_USER:-short_play}"
 POSTGRES_DB="${POSTGRES_DB:-short_play}"
@@ -15,11 +17,11 @@ DB_ARCHIVE="$BACKUP_DIR/db-$STAMP.dump.gz"
 MEDIA_ARCHIVE="$BACKUP_DIR/media-$STAMP.tar.gz"
 
 echo "Backing up database $POSTGRES_DB to $DB_ARCHIVE"
-docker compose -f "$COMPOSE_FILE" exec -T postgres \
+docker compose -f "$INFRA_COMPOSE" exec -T postgres \
     pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom | gzip -9 > "$DB_ARCHIVE"
 
 echo "Backing up media storage to $MEDIA_ARCHIVE"
-docker compose -f "$COMPOSE_FILE" exec -T api \
+docker compose -f "$PROJECT_COMPOSE" exec -T api \
     tar -czf - -C /data storage > "$MEDIA_ARCHIVE"
 
 for archive in "$DB_ARCHIVE" "$MEDIA_ARCHIVE"; do
