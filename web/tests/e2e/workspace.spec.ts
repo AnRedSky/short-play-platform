@@ -17,10 +17,11 @@ test('switching project routes updates the active project context and navigation
 
   await page.goto('/projects/project-b/assets')
   await expect(page.locator('.project-context')).toContainText('project-b')
-  await expect(page.getByRole('link', { name: '故事圣经' })).toHaveAttribute(
+  await expect(page.locator('.module-tabs').getByRole('link', { name: '故事圣经' })).toHaveAttribute(
     'href',
     '/projects/project-b/stories',
   )
+  await expect(page.locator('a[href*="demo-project"]')).toHaveCount(0)
 })
 
 test('leaving a project clears the project context from the workspace shell', async ({ page }) => {
