@@ -60,7 +60,7 @@ async function parseError(response: Response) {
 }
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { mock = import.meta.env.DEV && Boolean(mockHandler), auth = true, ...init } = options
+  const { mock = false, auth = true, ...init } = options
   if (mock) {
     if (!mockHandler) throw new Error('Mock mode was requested but no mock adapter is configured.')
     const result = await mockHandler(path, init)
