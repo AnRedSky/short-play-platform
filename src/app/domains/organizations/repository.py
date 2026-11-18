@@ -13,6 +13,16 @@ def get_organization(db: Session, organization_id: UUID) -> Organization | None:
     return db.get(Organization, organization_id)
 
 
+def is_active_member(db: Session, organization_id: UUID, user_id: UUID) -> bool:
+    return db.scalar(
+        select(OrganizationMember.id).where(
+            OrganizationMember.organization_id == organization_id,
+            OrganizationMember.user_id == user_id,
+            OrganizationMember.is_active.is_(True),
+        )
+    ) is not None
+
+
 def list_organizations_for_user(db: Session, user_id: UUID) -> list[Organization]:
     return list(
         db.scalars(
