@@ -68,6 +68,10 @@ def list_members(
 def add_member(
     db: Session, *, organization_id: UUID, user_id: UUID, department_id: UUID | None = None
 ) -> OrganizationMember:
+    if department_id is not None:
+        department = organizations_repo.get_department(db, department_id)
+        if department is None or department.organization_id != organization_id:
+            raise not_found("Department not found")
     return organizations_repo.add_member(
         db, organization_id=organization_id, user_id=user_id, department_id=department_id
     )
