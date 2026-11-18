@@ -10,6 +10,7 @@ from typing import Any
 
 from alembic.config import Config
 from alembic.script import ScriptDirectory
+from fastapi.routing import APIRoute
 
 MODEL_MODULES = (
     "app.domains.assets.models",
@@ -23,6 +24,40 @@ MODEL_MODULES = (
     "app.domains.users.models",
     "app.domains.workflow.models",
 )
+
+
+def _permission_codes(dependant: Any) -> list[str]:
+    found: set[str] = set()
+    pending = list(dependant.dependencies)
+    while pending:
+        dependency = pending.pop()
+        call = dependency.call
+        for cell in getattr(call, "__closure__", ()) or ():
+            try:
+                value = cell.cell_contents
+            except ValueError:
+                continue
+            if isinstance(value, str) and ":" in value:
+                found.add(value)
+        pending.extend(dependency.dependencies)
+    return sorted(found)
+
+
+def _route_inventory(app: Any) -> list[dict[str, Any]]:
+    rows = []
+    for route in app.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        rows.append(
+            {
+                "path": route.path,
+                "methods": sorted(route.methods or ()),
+                "name": route.name,
+                "tags": sorted(route.tags or ()),
+                "declared_permissions": _permission_codes(route.dependant),
+            }
+        )
+    return sorted(rows, key=lambda item: (item["path"], item["methods"][0] if item["methods"] else ""))
 
 
 def _schema_inventory() -> dict[str, Any]:
@@ -87,8 +122,13 @@ def main() -> None:
 
     openapi = app.openapi()
     schema = _schema_inventory()
+    routes = _route_inventory(app)
     (args.output_dir / "openapi.json").write_text(
         json.dumps(openapi, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (args.output_dir / "route-permissions.json").write_text(
+        json.dumps(routes, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     (args.output_dir / "database-schema.json").write_text(
@@ -97,7 +137,8 @@ def main() -> None:
     )
     print(
         f"Exported OpenAPI ({len(openapi.get('paths', {}))} paths) and "
-        f"SQLAlchemy schema inventory ({schema['table_count']} tables) "
+        f"SQLAlchemy schema inventory ({schema['table_count']} tables) and "
+        f"route permission annotations ({len(routes)} routes) "
         f"to {args.output_dir}"
     )
 
