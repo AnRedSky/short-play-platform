@@ -348,7 +348,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 
 ### 7.7 AI Provider、模型、任务与工作流
 
-- 默认行为：未配置真实 API 时由 Mork Provider Adapter 作为默认 Provider Adapter；真实模型 API 通过配置接入 Mork 或切换到其他已配置 Adapter。未完成有效配置时明确报 PROVIDER_NOT_CONFIGURED，不伪造生成结果。
+- 默认行为：Mork Provider Adapter 是唯一默认生产适配器；真实模型 API 通过 Mork Provider 配置接入。未完成有效配置时明确报 PROVIDER_NOT_CONFIGURED，不伪造生成结果、不静默切换供应商。
 - 来源：内部工作流/用户命令；默认 Provider 为 Mork Provider Adapter；后续真实模型通过配置启用，配置项包括 provider_key、base_url、secret_ref、model_id、capabilities、timeout、rate_limit、enabled。
 - 处理：能力路由、策略/预算检查、Prompt 模板渲染、参数 schema 校验、幂等、限流、调用、Attempt、产物校验。
 - 输出：Task/Attempt 状态、成本、Artifact、失败诊断、事件通知。
@@ -393,7 +393,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 
 - 来源：Provider Usage 回执、任务成本估算、系统事件、用户偏好。
 - 处理：按组织/项目/用户/Provider 聚合 token、时长、金额；预算阈值；异常成本检测；审计不可变。
-- 输出：用量报表、预算告警、操作审计、站内通知/Webhook。
+- 输出：用量报表、预算告警、操作审计、站内通知。
 - 联动：生成任务创建前检查预算；超预算阻断或要求授权；通知失败不回滚业务事实。
 - 生命周期：usage event append-only；预算周期 open → warning → exceeded → closed。
 - 异常：供应商账单延迟需标记 estimated/final；重复账单按外部 ID 幂等；通知失败进入重试/死信。
