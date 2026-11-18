@@ -245,3 +245,52 @@ def test_project_member_cannot_read_or_mutate_another_projects_asset(client, adm
     )
     assert denied_version.status_code == 403
     assert denied_version.json()["error"]["code"] == "PERMISSION_DENIED"
+
+
+
+def test_export_cannot_reference_another_projects_assets(client, admin, tmp_path):
+    project_a = _project(client, admin)
+    project_b = _project(client, admin)
+    foreign_asset = _upload(
+        client, admin, project_b["id"], _png(tmp_path, "foreign-export.png")
+    ).json()["data"]
+
+    role = client.post(
+        "/api/v1/roles",
+        headers=admin["headers"],
+        json={
+            "code": f"export-member-{uuid.uuid4().hex[:8]}",
+            "name": "Export member",
+            "permissions": ["projects:read", "projects:write"],
+        },
+    ).json()["data"]
+    email = f"export-member-{uuid.uuid4().hex[:8]}@example.com"
+    password = "MemberPassword1"
+    user = client.post(
+        "/api/v1/users",
+        headers=admin["headers"],
+        json={
+            "email": email,
+            "full_name": "Project A exporter",
+            "password": password,
+            "role_ids": [role["id"]],
+        },
+    ).json()["data"]
+    token = client.post(
+        "/api/v1/auth/login", json={"email": email, "password": password}
+    ).json()["data"]["access_token"]
+    member_headers = {"Authorization": f"Bearer {token}"}
+    membership = client.post(
+        f"/api/v1/projects/{project_a['id']}/members",
+        headers=admin["headers"],
+        json={"user_id": user["id"], "project_role": "artist"},
+    )
+    assert membership.status_code == 201, membership.text
+
+    response = client.post(
+        f"/api/v1/projects/{project_a['id']}/exports",
+        headers=member_headers,
+        json={"asset_ids": [foreign_asset["id"]], "width": 320, "height": 240},
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "PERMISSION_DENIED"
