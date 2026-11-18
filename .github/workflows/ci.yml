@@ -73,6 +73,17 @@ jobs:
           export STORAGE_ROOT="$RUNNER_TEMP/short-play-storage"
           mkdir -p "$STORAGE_ROOT"
           uv run pytest -q
+      - name: Verify ORM metadata matches Alembic migrations
+        run: uv run alembic check
+      - name: Export runtime OpenAPI and database schema inventory
+        run: uv run python scripts/export_runtime_contracts.py --output-dir "$RUNNER_TEMP/runtime-contracts"
+      - name: Upload runtime contract snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-contracts
+          path: ${{ runner.temp }}/runtime-contracts/
+          if-no-files-found: error
+          retention-days: 14
       - name: Start Celery worker against Redis broker
         run: |
           set +e
