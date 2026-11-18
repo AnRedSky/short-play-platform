@@ -14,6 +14,7 @@ export interface Storyboard { id: string; episode_id: string; version_number: nu
 export interface Shot { id: string; storyboard_id: string; scene_id: string | null; shot_number: number; shot_size: string; description: string; status: string }
 export interface ShotContract { id: string; shot_id: string; version_number: number; payload: Record<string, unknown>; status: string }
 export interface ProviderHealth { code: string; healthy: boolean }
+export interface SlideshowExportResult { job: { id: string; project_id: string; status: string; asset_id: string | null; output_key: string | null; error_code: string | null; error_message: string | null }; asset: Record<string, unknown> }
 export interface Task { id: string; project_id: string; capability: string; provider_code: string; model_code: string; status: string; error_code: string | null; error_message: string | null; result_payload: Record<string, unknown>; attempts?: Array<{ attempt_number: number; status: string; provider_task_id: string | null; error_code: string | null; duration_ms: number | null }> }
 export interface WorkflowRun { id: string; project_id: string; status: string; error_code: string | null; error_message: string | null; finished_at: string | null; nodes?: Array<{ id: string; node_key: string; node_type: string; status: string; attempt_count: number; max_attempts: number; error_code: string | null; error_message: string | null }> }
 
@@ -49,6 +50,7 @@ export const productionApi = {
     return apiRequest<ApiEnvelope<Record<string, unknown>>>(`/assets/${enc(id)}/versions`, { method: 'POST', body }).then(r => r.data)
   },
   downloadAsset: (id: string) => apiDownload(`/assets/${enc(id)}/download`),
+  createSlideshowExport: (projectId: string, body: { asset_ids: string[]; width: number; height: number; fps: number; seconds_per_image: number; title: string }) => data(apiPost<SlideshowExportResult, typeof body>(`/projects/${enc(projectId)}/exports`, body)),
   createStoryboard: (episodeId: string, versionNumber: number) => data(apiPost<Storyboard, { version_number: number }>(`/episodes/${enc(episodeId)}/storyboards`, { version_number: versionNumber })),
   shots: (storyboardId: string) => data(apiGet<Shot[]>(`/storyboards/${enc(storyboardId)}/shots`)),
   createShot: (storyboardId: string, body: { shot_number: number; shot_size: string; description: string }) => data(apiPost<Shot, typeof body>(`/storyboards/${enc(storyboardId)}/shots`, body)),
