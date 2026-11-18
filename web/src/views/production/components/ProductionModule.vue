@@ -173,7 +173,7 @@ async function lookupTask(){await run(()=>productionApi.task(taskLookupId.value)
 async function cancelTask(){if(!taskDetail.value)return;await run(()=>productionApi.cancelTask(taskDetail.value!.id),v=>{taskDetail.value=v})}
 async function createWorkflow(){await run(()=>productionApi.createWorkflow(projectId.value,workflowCode.value,{}),async()=>{await load()})}
 async function openWorkflow(id:string){await run(()=>productionApi.workflow(id),v=>{workflowDetail.value=v})}
-async function runWorkflowAction(id:string,action:'cancel'|'recover'){if(!window.confirm(action==='cancel'?'确认请求取消此工作流？':'确认尝试恢复该工作流的孤儿任务？'))return;await run(()=>action==='cancel'?productionApi.cancelWorkflow(id):productionApi.recoverWorkflow(id),async()=>{await load()})}
+async function runWorkflowAction(id:string,action:'cancel'|'recover'){if(!window.confirm(action==='cancel'?'确认请求取消此工作流？':'确认尝试恢复该工作流的孤儿任务？'))return;if(action==='cancel'){await run(()=>productionApi.cancelWorkflow(id))}else{await run(()=>productionApi.recoverWorkflow(id))}await load()}
 function selectVersion(v:ScriptVersion){selectedVersion.value=v;scenes.value=[];productionApi.scenes(v.id).then(v=>scenes.value=v).catch(e=>pageError.value=message(e))}
 function formatBytes(n:number){if(!Number.isFinite(n))return '—';if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';return (n/1048576).toFixed(1)+' MB'}
 watch(()=>[props.module,projectId.value],()=>{showCreateForm.value=false;selectedEpisode.value=null;storyboard.value=null;taskDetail.value=null;void load()})
