@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib
 import json
 import re
@@ -11,7 +12,6 @@ from typing import Any
 
 from alembic.config import Config
 from alembic.script import ScriptDirectory
-from fastapi.routing import APIRoute
 
 MODEL_MODULES = (
     "app.domains.assets.models",
@@ -45,20 +45,84 @@ def _permission_codes(dependant: Any) -> list[str]:
 
 
 def _route_inventory(app: Any) -> list[dict[str, Any]]:
+    from app.config.settings import get_settings
+
+    api_prefix = get_settings().api_v1_prefix.rstrip("/")
     rows = []
-    for route in app.routes:
-        if not isinstance(route, APIRoute):
-            continue
-        rows.append(
-            {
-                "path": route.path,
-                "methods": sorted(route.methods or ()),
-                "name": route.name,
-                "tags": sorted(route.tags or ()),
-                "include_in_schema": route.include_in_schema,
-                "declared_permissions": _permission_codes(route.dependant),
-            }
-        )
+    for source in sorted(Path("src/app/domains").glob("*/router.py")):
+        tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+        router_prefix = ""
+        router_tags: list[str] = []
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+                continue
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if not any(isinstance(target, ast.Name) and target.id == "router" for target in targets):
+                continue
+            value = node.value
+            if not isinstance(value, ast.Call):
+                continue
+            if not isinstance(value.func, ast.Name) or value.func.id != "APIRouter":
+                continue
+            for keyword in value.keywords:
+                if keyword.arg == "prefix" and isinstance(keyword.value, ast.Constant):
+                    router_prefix = str(keyword.value.value).rstrip("/")
+                if keyword.arg == "tags" and isinstance(keyword.value, (ast.List, ast.Tuple)):
+                    router_tags = [
+                        str(item.value) for item in keyword.value.elts
+                        if isinstance(item, ast.Constant)
+                    ]
+
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for decorator in node.decorator_list:
+                if not isinstance(decorator, ast.Call) or not isinstance(decorator.func, ast.Attribute):
+                    continue
+                if not isinstance(decorator.func.value, ast.Name) or decorator.func.value.id != "router":
+                    continue
+                verb = decorator.func.attr.lower()
+                methods = [verb.upper()] if verb in {"get", "post", "put", "patch", "delete", "options", "head"} else []
+                if verb == "api_route":
+                    for keyword in decorator.keywords:
+                        if keyword.arg == "methods" and isinstance(keyword.value, (ast.List, ast.Tuple)):
+                            methods = [
+                                str(item.value).upper()
+                                for item in keyword.value.elts
+                                if isinstance(item, ast.Constant)
+                            ]
+                if not methods:
+                    continue
+                route_path = ""
+                if decorator.args and isinstance(decorator.args[0], ast.Constant):
+                    route_path = str(decorator.args[0].value)
+                full_path = f"{api_prefix}{router_prefix}/{route_path.lstrip('/')}"
+                full_path = re.sub(r"//+", "/", full_path)
+                include_in_schema = True
+                for keyword in decorator.keywords:
+                    if keyword.arg == "include_in_schema" and isinstance(keyword.value, ast.Constant):
+                        include_in_schema = bool(keyword.value.value)
+                permissions = sorted({
+                    str(call.args[0].value)
+                    for call in ast.walk(node)
+                    if isinstance(call, ast.Call)
+                    and isinstance(call.func, ast.Name)
+                    and call.func.id == "require_permission"
+                    and call.args
+                    and isinstance(call.args[0], ast.Constant)
+                    and isinstance(call.args[0].value, str)
+                })
+                rows.append(
+                    {
+                        "path": full_path,
+                        "methods": sorted(methods),
+                        "name": node.name,
+                        "tags": router_tags,
+                        "include_in_schema": include_in_schema,
+                        "declared_permissions": permissions,
+                        "source_file": source.as_posix(),
+                    }
+                )
     return sorted(
         rows,
         key=lambda item: (item["path"], item["methods"][0] if item["methods"] else ""),
