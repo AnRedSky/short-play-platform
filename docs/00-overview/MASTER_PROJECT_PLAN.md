@@ -111,3 +111,17 @@ GitHub Issue 是任务唯一事实来源；PR 关联 Issue；至少一名非作�
 
 ## 19. 完成定义
 只有代码、测试、文档、审查和验收证据全部满足才可关闭任务。设计文档、Issue、截图或演示不能替代可运行代码与测试。每个功能必须说明状态、权限、失败路径、审计、恢复、成本影响和运维要求。
+
+## 2026-11-18 统一实施决策补充
+
+本节与旧版总体方案冲突时，以 `docs/01-architecture/IMPLEMENTATION_BASELINE.md` 为当前实施基线。目录保持仓库现有 `src/app`、`web/src`、`migrations`、`tests` 结构，不执行整体迁移。
+
+本期排除第三方业务系统接入、外部 Webhook 集成、爬虫/采集接入和内容版权管理/采集授权；不排除第三方软件许可证、Provider 服务条款和数据外发安全审查。资产仅项目内共享，必须 project_id 归属，跨项目搜索/引用/共享禁止。
+
+审核采用项目级统一 review permission；不做多级会签、类型化审核角色和 WAIVED 豁免。QA 结果仅 PASS、REVIEW_REQUIRED、FAIL。新版本必须重新 QA/审核，审核记录绑定具体对象版本。
+
+模型默认 Mork Provider Adapter；无有效配置时返回 PROVIDER_NOT_CONFIGURED，禁止静默切换 Mock 或伪造结果。Mock 仅用于 CI 和显式演示环境。异步任务使用 PostgreSQL + Outbox + Celery；外部供应商异步任务优先通过 Provider Adapter 轮询，不建设第三方业务 Webhook 集成。
+
+时间线唯一权威时间格式为整数 PTS + 有理数 time_base；视频帧序号/帧率和音频采样点/sample_rate 均保留整数/分数精度，浮点秒不得作为 API、数据库或版本比较权威字段。专业级 NLE、实时协同仍为非目标。
+
+当前代码已具备身份/项目、创作、资产、生成、工作流、FFmpeg 图片序列导出等不同程度基础；前端生产页面、Mork 真实接入、QA/审核、持久化时间线和多轨导出不可描述为已交付。实际状态以统一实施基线中的代码核验表为准。
