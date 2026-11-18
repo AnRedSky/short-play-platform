@@ -363,3 +363,6 @@ CI 调试记录：PR #56 首次 Run #206 的 backend-quality、frontend-quality�
 
 
 第三次 Playwright 调试记录：Run #211 的 API base path 已修正，fixture 成功创建用户和项目；随后发现项目成员角色枚举不包含 `viewer`（允许值为 owner/producer/writer/director/artist/editor/reviewer），并暴露了 RequestValidationError 的 ctx.ValueError 无法 JSON 序列化、错误返回 500 的后端问题。已将 fixture 改为合法的 reviewer 角色，并修复 `register.py` 对 Pydantic 验证错误上下文的 JSON 安全序列化；fixture 增加非法角色应返回 422 的断言。更新后继续重跑。
+
+
+第四次 Playwright 调试记录：Run #214 已通过 API bootstrap、用户/角色/项目创建、成员角色校验（包含非法 viewer 返回 422）和项目成员加入；在上传跨项目测试资产时发现浏览器专用 API Job 未安装 ffprobe，API 正确返回 MEDIA_PROBE_UNAVAILABLE。已为该 Job 增加 FFmpeg/ffprobe 安装步骤，保证真实上传路径具备与 backend-quality 相同的媒体探测依赖，更新后继续重跑。
