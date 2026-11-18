@@ -354,3 +354,6 @@ R0 的运行时 OpenAPI、ORM/Migration 自动差异核查和页面 API 映射�
 - E2E fixtures 通过真实 API bootstrap 管理员、创建 projects:read 用户、创建 A/B/C 项目、仅授予 A/B 成员资格并在 C 上传测试资产。
 - 浏览器验收覆盖匿名访问、A/B 项目切换、C 项目 403、C 项目资产详情/下载 403。
 - 此阶段仍只处理 R1，不进入 R2。以上变更的最终验收以 CI run 成功和浏览器报告为准。
+
+
+CI 调试记录：PR #56 首次 Run #206 的 backend-quality、frontend-quality、compose-validation 均通过；Playwright job 在启动前端服务时发现项目没有 `npm run preview` script。已将 Playwright webServer 命令修正为直接调用 `npx vite preview`，等待更新后的完整 CI 复验。该失败属于测试环境启动命令问题，不是浏览器用例通过证据。
