@@ -52,7 +52,7 @@
                 <h3>v{{ selectedVersion.version_number }} · 场次</h3>
                 <div class="form-inline"><input v-model.number="sceneForm.scene_number" type="number" min="1" max="999" placeholder="场次编号"><input v-model.trim="sceneForm.location" placeholder="场景地点"><input v-model.trim="sceneForm.time_of_day" placeholder="时间"><button class="primary-button" :disabled="saving" @click="createScene">新增场次</button></div>
                 <div v-for="scene in scenes" :key="scene.id" class="record-card"><span><strong>场次 {{ scene.scene_number }} · {{ scene.location }}</strong><small class="cell-sub">{{ scene.time_of_day }} · {{ scene.summary }}</small></span><button class="text-action" @click="selectedScene=scene">添加对白</button></div>
-                <div v-if="selectedScene" class="form-inline"><input v-model.number="dialogueForm.order_number" type="number" min="1" placeholder="对白顺序"><input v-model.trim="dialogueForm.character_name" placeholder="角色名"><input v-model.trim="dialogueForm.content" placeholder="对白内容"><button class="primary-button" :disabled="saving" @click="createDialogue">保存对白</button></div>
+                <div v-if="selectedScene" class="nested-workspace"><h4>场次 {{ selectedScene.scene_number }} · 对白</h4><div class="form-inline"><input v-model.number="dialogueForm.order_number" type="number" min="1" placeholder="对白顺序"><input v-model.trim="dialogueForm.character_name" placeholder="角色名"><input v-model.trim="dialogueForm.content" placeholder="对白内容"><button class="primary-button" :disabled="saving||!dialogueForm.character_name||!dialogueForm.content" @click="createDialogue">保存对白</button></div><div v-for="d in dialogues" :key="d.id" class="record-card"><span><strong>{{ d.order_number }} · {{ d.character_name }}</strong><small class="cell-sub">{{ d.content }}</small></span></div><p class="muted">仅展示本次工作区内已由服务端确认创建的对白；后端暂未提供对白列表读取接口。</p></div>
               </div>
             </div>
           </div>
@@ -102,7 +102,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ApiError } from '../../../api'
-import { productionApi, type Episode, type ProductionAsset, type Script, type ScriptScene, type ScriptVersion, type Shot, type ShotContract, type Story, type StoryBible, type Storyboard, type Task, type WorkflowRun, type ProviderHealth } from '../../../api/production'
+import { productionApi, type Dialogue, type Episode, type ProductionAsset, type Script, type ScriptScene, type ScriptVersion, type Shot, type ShotContract, type Story, type StoryBible, type Storyboard, type Task, type WorkflowRun, type ProviderHealth } from '../../../api/production'
 
 type ModuleKey='stories'|'episodes'|'assets'|'storyboards'|'tasks'|'reviews'|'editor'|'exports'
 const props=defineProps<{module:ModuleKey}>()
@@ -128,7 +128,7 @@ const bibleJson=ref(`{
   "rules": []
 }`)
 const selectedEpisode=ref<Episode|null>(null),scripts=ref<Script[]>([]),selectedScript=ref<Script|null>(null),scriptTitle=ref(''),scriptVersions=ref<ScriptVersion[]>([]),scriptContent=ref(''),selectedVersion=ref<ScriptVersion|null>(null),scenes=ref<ScriptScene[]>([]),selectedScene=ref<ScriptScene|null>(null)
-const sceneForm=reactive({scene_number:1,location:'',time_of_day:'',summary:''}),dialogueForm=reactive({order_number:1,character_name:'',content:''})
+const sceneForm=reactive({scene_number:1,location:'',time_of_day:'',summary:''}),dialogueForm=reactive({order_number:1,character_name:'',content:''}),dialogues=ref<Dialogue[]>([])
 const assetKinds=[{value:'characters',label:'角色'},{value:'scenes',label:'场景'},{value:'props',label:'道具'}] as const
 const assetKind=ref<'characters'|'scenes'|'props'|'files'>('characters'),productionAssets=ref<ProductionAsset[]>([]),mediaAssets=ref<Array<Record<string,unknown>>>([]),selectedProductionAsset=ref<ProductionAsset|null>(null),assetForm=reactive({name:'',description:''}),assetVersion=reactive({appearance:'',prompt:''}),assetDetail=ref<Record<string,unknown>|null>(null),versionNote=ref(''),versionFile=ref<File|null>(null),uploadTitle=ref(''),uploadFileValue=ref<File|null>(null)
 const storyboardEpisode=ref(''),storyboard=ref<Storyboard|null>(null),shots=ref<Shot[]>([]),shotForm=reactive({shot_number:1,shot_size:'medium',description:''}),selectedShot=ref<Shot|null>(null),contracts=ref<ShotContract[]>([]),contractJson=ref(`{
@@ -150,12 +150,12 @@ function openCreate(){showCreateForm.value=true}
 async function createStory(){await run(()=>productionApi.createStory(projectId.value,{...storyForm}),async()=>{showCreateForm.value=false;Object.assign(storyForm,{title:'',logline:'',synopsis:''});await load()})}
 async function createEpisode(){await run(()=>productionApi.createEpisode(projectId.value,{...episodeForm}),async()=>{showCreateForm.value=false;Object.assign(episodeForm,{episode_number:episodes.value.length+1,title:'',synopsis:''});await load()})}
 async function createBible(){try{const parsed=JSON.parse(bibleJson.value);await run(()=>productionApi.createStoryBible(projectId.value,parsed),async()=>{showCreateForm.value=false;tab.value='bibles';await load()})}catch{pageError.value='故事圣经必须是有效 JSON 对象。'}}
-async function selectEpisode(ep:Episode){selectedEpisode.value=ep;selectedScript.value=null;selectedVersion.value=null;scripts.value=[];scriptVersions.value=[];try{const detail=await productionApi.episode(ep.id);selectedEpisode.value=detail;const maybe=await productionApi.episode(ep.id);void maybe}catch(e){pageError.value=message(e)}}
+async function selectEpisode(ep:Episode){selectedEpisode.value=ep;selectedScript.value=null;selectedVersion.value=null;scripts.value=[];scriptVersions.value=[];selectedScene.value=null;dialogues.value=[];try{selectedEpisode.value=await productionApi.episode(ep.id)}catch(e){pageError.value=message(e)}}
 async function createScript(){if(!selectedEpisode.value)return;await run(()=>productionApi.createScript(selectedEpisode.value!.id,scriptTitle.value),v=>{if(v){scripts.value=[...scripts.value,v];selectedScript.value=v;scriptVersions.value=[]}scriptTitle.value=''})}
 async function selectScript(s:Script){selectedScript.value=s;scriptVersions.value=await productionApi.scriptVersions(s.id)}
 async function createScriptVersion(){if(!selectedScript.value)return;await run(()=>productionApi.createScriptVersion(selectedScript.value!.id,scriptContent.value),async v=>{scriptContent.value='';if(v)await selectScript(selectedScript.value!)})}
 async function createScene(){if(!selectedVersion.value)return;await run(()=>productionApi.createScene(selectedVersion.value!.id,{...sceneForm}),async()=>{await selectVersion(selectedVersion.value!)})}
-async function createDialogue(){if(!selectedScene.value)return;await run(()=>productionApi.createDialogue(selectedScene.value!.id,{...dialogueForm}),()=>{pageError.value='对白已由服务端创建。当前 API 未提供对白列表读取接口，无法在此展示已保存对白。'})}
+async function createDialogue(){if(!selectedScene.value)return;await run(()=>productionApi.createDialogue(selectedScene.value!.id,{...dialogueForm}),v=>{if(v)dialogues.value=[...dialogues.value,v];dialogueForm.order_number+=1;dialogueForm.character_name='';dialogueForm.content=''})}
 async function createProductionAsset(){await run(()=>productionApi.createProductionAsset(projectId.value,assetKind.value as 'characters'|'scenes'|'props',{...assetForm}),async()=>{Object.assign(assetForm,{name:'',description:''});await load()})}
 async function createAssetVersion(){if(!selectedProductionAsset.value)return;await run(()=>productionApi.createAssetVersion(assetKind.value as 'characters'|'scenes'|'props',selectedProductionAsset.value!.id,{...assetVersion}),async()=>{selectedProductionAsset.value=null;Object.assign(assetVersion,{appearance:'',prompt:''});await load()})}
 function onFileChange(e:Event){uploadFileValue.value=(e.target as HTMLInputElement).files?.[0]??null}
