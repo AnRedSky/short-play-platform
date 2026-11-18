@@ -29,9 +29,14 @@ scripts/          # 运维与开发脚本
 基础服务（PostgreSQL / Redis / RabbitMQ）与项目服务分开编排，基础服务可被同主机其他项目复用：
 
 ```bash
-cp .env.example .env
 docker compose -f docker/docker-compose.infra.yml up -d
 docker compose up --build -d
+```
+
+配置无需额外文件即可启动：应用按 `.env.example` → `.env` → `.env.{APP_ENV}` → 进程环境变量
+逐层叠加，后者覆盖前者，任一键在前一层缺失时才回落到后一层；`.env` 与其环境专属文件按需创建，
+只写需要改的键（`cp .env.example .env`）。本机直接运行 `python start_api.py` 时，启动日志会打印
+实际生效的配置文件与监听端口。
 ```
 
 API: http://localhost:8000/api/v1/health

@@ -4,7 +4,7 @@
 企业 Linux + Docker Compose。服务包括 Nginx/Web、FastAPI API、Celery Worker（按队列拆 AI/Media 进程）、PostgreSQL、Redis；确有周期调度时启用 Celery Beat。FFmpeg 位于受控媒体 Worker 镜像。
 
 ## 配置
-开发/测试/生产分离。环境变量包含 DATABASE_URL、REDIS_URL、SECRET_KEY、TOKEN_SIGNING_KEY、CREDENTIAL_ENCRYPTION_KEY、STORAGE_ROOT、MAX_UPLOAD_SIZE、CORS_ORIGINS、PUBLIC_BASE_URL、LOG_LEVEL。真实密钥不得进入 Git、镜像或普通日志；通过企业密钥管理或受控环境注入。
+开发/测试/生产分离。配置按 `.env.example`（仓库内置默认）→ `.env` → `.env.{APP_ENV}` → 进程环境变量依次叠加，后层覆盖前层、前层缺失才回落；容器与生产环境只通过环境变量注入。环境变量包含 DATABASE_URL、REDIS_URL、CELERY_BROKER_URL、CELERY_RESULT_BACKEND、SECRET_KEY、STORAGE_ROOT、MAX_UPLOAD_SIZE、CORS_ORIGINS、PUBLIC_BASE_URL、LOG_LEVEL。真实密钥不得进入 Git、镜像或普通日志；通过企业密钥管理或受控环境注入。
 
 ## 持久化
 PostgreSQL、必要的 Redis 数据、媒体存储、备份目录使用独立持久卷。备份包含数据库、媒体和必要配置；密钥恢复材料单独加密保管。明确 RPO/RTO 由部署方结合业务确定。
