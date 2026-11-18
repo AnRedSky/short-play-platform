@@ -12,8 +12,9 @@ let projectWithoutMembership = ''
 let foreignAssetId = ''
 
 async function payload(response: Awaited<ReturnType<typeof api.get>>) {
-  expect(response.ok(), await response.text()).toBeTruthy()
-  return (await response.json()).data
+  const body = await response.json()
+  expect(response.ok(), JSON.stringify(body)).toBeTruthy()
+  return body.data
 }
 
 async function loginAsProjectReader(page: import('@playwright/test').Page) {
