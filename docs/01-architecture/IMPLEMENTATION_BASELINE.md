@@ -207,3 +207,13 @@ CI artifact `runtime-contracts` 已实际生成、下载并检查，包含 opena
 ### 验收状态
 R0 运行时导出、模型迁移 drift 检查、前端映射盘点已有实际 CI 证据；R0 文档/权限审阅仍需合并本轮 docs PR 后复核 Issue 验收条目。
 R1 后端隔离和项目上下文基础已实施，但浏览器 403/跨项目资源访问场景仍缺；真实业务页面 API 接入和成员权限变更后的缓存失效仍未完成。Issue #42/#43 在对应验收项补齐前保持开放。
+
+
+## R1 项目访问前置授权（2026-11-18，待 CI 验证）
+
+- Web Router 在生产构建中打开项目工作区前先请求 `GET /projects/{project_id}`，由后端项目成员权限作最终授权。
+- 未登录访问项目路由跳转登录并保留 redirect；401 清除本地会话；403 显示明确无权限状态；404 显示项目不存在；权限服务不可用时 fail closed，不渲染项目业务页。
+- 新导航会 abort 旧的项目授权检查，旧检查结果不得授权新路由。
+- Playwright 改为通过 Vite production preview 运行，并连接 CI 独立 PostgreSQL/Redis 和真实 FastAPI 服务；测试数据在临时 CI 数据库中 bootstrap。
+- 新增浏览器场景：匿名访问重定向、成员在项目 A/B 间切换、无成员项目 C 返回 403 页面、跨项目 Asset detail/download 返回 403。
+- 此代码已提交 develop；最终通过情况以本次 CI run 为准，未通过前不计入验收完成。
