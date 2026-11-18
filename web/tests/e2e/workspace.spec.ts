@@ -9,3 +9,24 @@ test('production navigation does not point at a hard-coded demo project', async 
   await page.goto('/')
   await expect(page.getByRole('link', { name: '故事圣经' })).toHaveAttribute('href', '/projects')
 })
+
+
+test('switching project routes updates the active project context and navigation', async ({ page }) => {
+  await page.goto('/projects/project-a/stories')
+  await expect(page.locator('.project-context')).toContainText('project-a')
+
+  await page.goto('/projects/project-b/assets')
+  await expect(page.locator('.project-context')).toContainText('project-b')
+  await expect(page.getByRole('link', { name: '故事圣经' })).toHaveAttribute(
+    'href',
+    '/projects/project-b/stories',
+  )
+})
+
+test('leaving a project clears the project context from the workspace shell', async ({ page }) => {
+  await page.goto('/projects/project-a/stories')
+  await expect(page.locator('.project-context')).toContainText('project-a')
+
+  await page.goto('/projects')
+  await expect(page.locator('.project-context')).toHaveCount(0)
+})
