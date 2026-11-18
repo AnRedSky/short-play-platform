@@ -17,7 +17,13 @@ export const useProjectStore = defineStore('project', () => {
     contextVersion.value += 1
     for (const controller of controllers) controller.abort()
     controllers.clear()
-    for (const cleanup of cleanups) cleanup()
+    for (const cleanup of cleanups) {
+      try {
+        cleanup()
+      } catch {
+        // A failing subscriber must not prevent other project-scoped resources from clearing.
+      }
+    }
     cleanups.clear()
   }
 
