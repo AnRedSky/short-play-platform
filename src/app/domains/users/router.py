@@ -68,7 +68,7 @@ def read_user(
     return envelope(
         UserDetailRead(
             **UserRead.model_validate(user).model_dump(),
-            permissions=users_service.permissions_of(db, user.id),
+            permissions=users_service.permissions_of(db, user.id, principal.organization_id),
         ).model_dump(mode="json")
     )
 
