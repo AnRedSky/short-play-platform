@@ -74,10 +74,11 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   return (await response.json()) as T
 }
 
-export const apiGet = <T>(path: string) => apiRequest<ApiEnvelope<T>>(path)
+export const apiGet = <T>(path: string, options: ApiRequestOptions = {}) =>
+  apiRequest<ApiEnvelope<T>>(path, options)
 
-export const apiPost = <T, B>(path: string, body: B) =>
-  apiRequest<ApiEnvelope<T>>(path, { method: 'POST', body: JSON.stringify(body) })
+export const apiPost = <T, B>(path: string, body: B, options: ApiRequestOptions = {}) =>
+  apiRequest<ApiEnvelope<T>>(path, { ...options, method: 'POST', body: JSON.stringify(body) })
 
-export const apiPatch = <T, B>(path: string, body: B) =>
-  apiRequest<ApiEnvelope<T>>(path, { method: 'PATCH', body: JSON.stringify(body) })
+export const apiPatch = <T, B>(path: string, body: B, options: ApiRequestOptions = {}) =>
+  apiRequest<ApiEnvelope<T>>(path, { ...options, method: 'PATCH', body: JSON.stringify(body) })
