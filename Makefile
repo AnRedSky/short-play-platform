@@ -1,25 +1,40 @@
-.PHONY: help infra-up infra-down backend-install backend-lint backend-test frontend-install frontend-build
+.PHONY: help infra-up infra-down api worker beat web-install web-dev lint test build up down
 
 help:
-	@echo "infra-up infra-down backend-install backend-lint backend-test frontend-install frontend-build"
+	@echo "infra-up infra-down api worker beat web-install web-dev lint test build up down"
 
 infra-up:
-	docker compose up -d postgres redis
+	docker compose -f docker/docker-compose.infra.yml up -d
 
 infra-down:
+	docker compose -f docker/docker-compose.infra.yml down
+
+api:
+	uv run python start_api.py
+
+worker:
+	uv run python start_worker.py
+
+beat:
+	uv run python start_worker.py --beat
+
+web-install:
+	cd web && npm install
+
+web-dev:
+	cd web && npm run dev
+
+lint:
+	uv run ruff check .
+
+test:
+	uv run pytest -q
+
+build:
+	cd web && npm run build
+
+up:
+	docker compose up --build -d
+
+down:
 	docker compose down
-
-backend-install:
-	cd backend && uv sync --all-groups
-
-backend-lint:
-	cd backend && uv run ruff check .
-
-backend-test:
-	cd backend && uv run pytest -q
-
-frontend-install:
-	cd frontend && npm install
-
-frontend-build:
-	cd frontend && npm run build

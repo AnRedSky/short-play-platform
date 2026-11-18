@@ -1,0 +1,96 @@
+# Enterprise private deployment overlay: internal Linux host, no public SaaS exposure.
+#
+#   docker compose -f docker/docker-compose.infra.yml up -d
+#   docker compose -f docker-compose.yml -f docker/docker-compose.prod.yml --env-file .env up -d --build
+#
+# Paths in this overlay resolve against the repository root (the project directory),
+# so TLS assets live in docker/certs and the nginx config in docker/nginx.conf.
+#
+# Differences from the development compose file:
+#   * restart policies and a production APP_ENV
+#   * base services are never published on the host network
+#   * media storage is a named volume shared by api / worker
+#   * TLS termination sits in front of api and web
+
+name: short-play-platform
+
+x-prod-backend-env: &prod-backend-env
+  APP_ENV: production
+  APP_DEBUG: "false"
+  SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+  DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-short_play}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-short_play}
+  REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://:${REDIS_PASSWORD}@redis:6379/0}
+  CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://:${REDIS_PASSWORD}@redis:6379/1}
+  CELERY_TIMEZONE: ${CELERY_TIMEZONE:-Asia/Shanghai}
+  STORAGE_ROOT: /data/storage
+  MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-524288000}
+  CORS_ORIGINS: ${CORS_ORIGINS:-["https://short-play.internal"]}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+services:
+  api:
+    restart: unless-stopped
+    environment:
+      <<: *prod-backend-env
+      RUN_MIGRATIONS: "1"
+    ports: []
+    expose:
+      - "8000"
+    volumes:
+      - media_storage:/data/storage
+    command:
+      - uv
+      - run
+      - --no-sync
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --workers
+      - "2"
+
+  worker:
+    restart: unless-stopped
+    environment:
+      <<: *prod-backend-env
+    volumes:
+      - media_storage:/data/storage
+    command:
+      - uv
+      - run
+      - --no-sync
+      - celery
+      - -A
+      - app.workers.celery_app:celery_app
+      - worker
+      - --loglevel=INFO
+      - --concurrency=2
+
+  beat:
+    restart: unless-stopped
+    environment:
+      <<: *prod-backend-env
+
+  web:
+    restart: unless-stopped
+    ports: []
+    expose:
+      - "80"
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+      - web
+
+volumes:
+  media_storage:

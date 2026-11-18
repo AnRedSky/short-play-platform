@@ -5,15 +5,24 @@ exposure. It complements `docs/08-deployment/DEPLOYMENT.md` and does not replace
 
 ## 1. Stack layout
 
-`docker-compose.prod.yml` defines the whole runtime:
+Two compose projects run side by side:
+
+- `docker/docker-compose.infra.yml` (`short-play-infra`): `postgres`, `redis`, `rabbitmq`. Own
+  volumes, its own project name, reusable by other projects on the same host.
+- `docker-compose.yml` (`short-play-platform`): `api`, `worker`, `beat`, `web`; joins the external
+  network `short-play-infra`.
+- `docker/docker-compose.prod.yml`: overlay for the project compose (restart policies, production
+  env, TLS nginx).
 
 | Service | Role | Exposure |
 | --- | --- | --- |
 | `postgres` | PostgreSQL 16 metadata store | internal only |
-| `redis` | Celery broker and result backend, password protected | internal only |
+| `redis` | Cache and Celery result backend | internal only |
+| `rabbitmq` | Optional Celery broker (`CELERY_BROKER_URL` switch) | internal only |
 | `api` | FastAPI application, runs Alembic then Uvicorn with 2 workers | internal only, fronted by nginx |
 | `worker` | Celery workers executing generation and workflow nodes | internal only |
 | `beat` | Celery beat, runs `workflow.recover` every 60 s | internal only |
+| `web` | Static Vue build served by nginx | internal only, fronted by nginx |
 | `nginx` | TLS termination, request-size limit, security headers | `443` |
 
 File bodies never enter PostgreSQL: `api` and `worker` share the `media_storage` volume mounted
@@ -24,22 +33,26 @@ at `/data/storage`, and the database stores only `storage_key`, `checksum` and m
 ```bash
 cp .env.example .env
 # Required values: POSTGRES_PASSWORD, REDIS_PASSWORD, SECRET_KEY, CORS_ORIGINS
-mkdir -p deploy/nginx/certs
+docker compose -f docker/docker-compose.infra.yml up -d
+mkdir -p docker/certs
 openssl req -x509 -newkey rsa:4096 -days 365 -nodes \
-  -keyout deploy/nginx/certs/server.key -out deploy/nginx/certs/server.crt \
+  -keyout docker/certs/server.key -out docker/certs/server.crt \
   -subj "/CN=short-play.internal"
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
-curl --cacert deploy/nginx/certs/server.crt https://short-play.internal/api/v1/health/ready
+docker compose -f docker-compose.yml -f docker/docker-compose.prod.yml --env-file .env up -d --build
+curl --cacert docker/certs/server.crt https://short-play.internal/api/v1/health/ready
 ```
 
-The API container applies `alembic upgrade head` on start and runs as the non-root user
-`shortplay` (uid 10001) with an image-level healthcheck against `/api/v1/health/ready`.
+The API container applies `alembic upgrade head` on start (`RUN_MIGRATIONS=1`, see
+`docker/entrypoint.sh`) and runs as the non-root user `shortplay` (uid 10001) with an image-level
+healthcheck against `/api/v1/health/ready`.
 
 Bootstrap the first administrator once, against an empty database:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec -T api \
-  uv run --no-sync python -m apps.api.cli create-admin
+docker compose -f docker-compose.yml -f docker/docker-compose.prod.yml exec -T api \
+  uv run --no-sync python scripts/create_superuser.py \
+  --email admin@example.com --password 'CorrectHorseBattery1' \
+  --name Admin --organization Studio
 ```
 
 ## 3. Acceptance verification
@@ -57,16 +70,17 @@ python3 scripts/e2e_acceptance.py --base-url https://short-play.internal --timeo
 ## 4. Backup and restore
 
 ```bash
-bash scripts/backup.sh docker-compose.prod.yml        # prints db and media archive paths
-bash scripts/restore.sh <db.dump.gz> short_play docker-compose.prod.yml
-bash scripts/restore.sh --media <media.tar.gz> docker-compose.prod.yml
+# prints db and media archive paths
+bash scripts/backup.sh docker/docker-compose.infra.yml docker-compose.yml
+bash scripts/restore.sh <db.dump.gz> short_play docker/docker-compose.infra.yml
+bash scripts/restore.sh --media <media.tar.gz> docker-compose.yml
 ```
 
-The database archive is a `pg_dump --format=custom` stream; the media archive is a
-`tar -czf` of `/data/storage`. CI restores the dump into a fresh database
-(`short_play_restore`) and asserts a non-zero `users` count, so the restore path is verified
-rather than assumed. Backup artifacts must be copied off the host; this runbook does not claim
-off-site replication is configured.
+The database archive is a `pg_dump --format=custom` stream taken from the infra `postgres`
+service; the media archive is a `tar -czf` of `/data/storage` taken from the project `api`
+service. CI restores the dump into a fresh database (`short_play_restore`) and asserts a non-zero
+`users` count, so the restore path is verified rather than assumed. Backup artifacts must be
+copied off the host; this runbook does not claim off-site replication is configured.
 
 ## 5. Operational recovery
 

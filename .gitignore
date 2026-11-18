@@ -15,9 +15,14 @@ node_modules/
 .vite/
 coverage/
 *.tsbuildinfo
+playwright-report/
+test-results/
 
 # Environment and secrets
 .env
+.env.development
+.env.test
+.env.production
 .env.*
 !.env.example
 *.pem
@@ -30,10 +35,11 @@ media/
 logs/
 *.log
 *.pid
+celerybeat-schedule*
 
 # Private deployment artifacts
 backups/
-deploy/nginx/certs/*.crt
+docker/certs/
 
 # IDE / OS
 .idea/

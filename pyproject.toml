@@ -1,0 +1,53 @@
+[project]
+name = "short-play-platform"
+version = "0.1.0"
+description = "Enterprise AI short drama production platform"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115,<1.0",
+  "uvicorn[standard]>=0.30,<1.0",
+  "sqlalchemy>=2.0,<3.0",
+  "pydantic>=2.8,<3.0",
+  "pydantic-settings>=2.4,<3.0",
+  "alembic>=1.13,<2.0",
+  "psycopg[binary]>=3.2,<4.0",
+  "redis>=5.0,<7.0",
+  "celery[redis]>=5.4,<6.0",
+  "httpx>=0.27,<1.0",
+  "argon2-cffi>=23.1,<26.0",
+  "pyjwt>=2.8,<3.0",
+  "python-multipart>=0.0.9,<1.0",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0,<9.0",
+  "pytest-asyncio>=0.23,<2.0",
+  "ruff>=0.6,<1.0",
+  "mypy>=1.11,<2.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/app/**/router.py" = ["B008"]
+"src/app/dependencies/*.py" = ["B008"]
+"src/app/domains/**/dependencies.py" = ["B008"]
+"scripts/*.py" = ["B008"]
+"scripts/e2e_acceptance.py" = ["E501"]
+"migrations/versions/*.py" = ["E501"]
+"tests/**/*.py" = ["B008"]
