@@ -35,7 +35,8 @@ router.beforeEach(async (to) => {
   pendingProjectAccess = null
 
   if (import.meta.env.DEV && to.name === 'login') return { name: 'home' }
-  if (to.meta.public) return session.isAuthenticated ? { name: 'home' } : true
+  if (to.name === 'login' && session.isAuthenticated) return { name: 'home' }
+  if (to.meta.public) return true
   if (import.meta.env.DEV) return true
 
   if (!session.isAuthenticated) {
