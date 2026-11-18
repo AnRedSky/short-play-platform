@@ -32,3 +32,6 @@ Provider 管理默认仅配置 Mork Adapter；无可用配置/凭据时生成命
 ## 页面与 API 对齐
 
 页面级 API 依赖和状态处理以 `docs/02-requirements/FEATURE_INTERACTION_SPEC.md` 为准；真实可调用接口以当前 FastAPI OpenAPI 为准。尚未实现的 QA/Review、Timeline、完整 Export API 只属于目标契约，不得由前端 Mock 假装可用。
+
+## 实际路由清单
+当前已注册 endpoint 与未实现目标 API 的逐项清单见 [API 实际覆盖矩阵](API_COVERAGE_MATRIX.md)。新增或修改路由时必须同步更新该矩阵。
