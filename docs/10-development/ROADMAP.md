@@ -317,3 +317,30 @@ R0 当前状态：工程 CI 基线已存在并通过；仍需补齐 OpenAPI/权�
 
 ## 2026-11-18 R1 开发进度
 已在 develop 落地项目上下文第一步：移除 demo-project 硬编码，项目列表可进入 `/projects/:projectId/stories`，Pinia store 与路由参数同步，增加单元测试和导航 E2E。R1 后续仍需清理项目切换缓存/订阅、接入真实生产 API，并完成跨项目 IDOR 负向验证；Issue #43 保持开放。
+
+
+## 2026-11-18 R0/R1 状态更新（PR #53 已合并）
+
+当前 develop 基线：`a04acff6eeb2a5675e6d009d22c023b214adf5fc`；main 未变更。PR #53 已合并，CI Run #195：
+https://github.com/AnRedSky/short-play-platform/actions/runs/44294871572
+
+### CI 实际结果
+- backend-quality：通过（含 Ruff、pytest、空库 migration、Alembic drift、runtime contract export）。
+- frontend-quality：通过（typecheck、lint、unit tests、production build）。
+- frontend-browser-e2e：通过，实际执行 Chromium Playwright。
+- compose-validation：通过。
+- e2e-acceptance：通过，包含备份恢复验证。
+- Runtime artifact：53 OpenAPI paths、72 route declarations、42 tables、7 revisions、15/15 frontend API calls matched、57 backend routes currently without frontend API Client、0 duplicate routes。
+
+### R0
+R0 的运行时 OpenAPI、ORM/Migration 自动差异核查和页面 API 映射快照已生成并检查。仍需将快照差距、路由依赖继承和权限矩阵逐项人工审阅后，才可关闭 #42。
+
+### R1
+- 项目切换请求取消、上下文版本和 cleanup 机制已实现。
+- 服务端跨项目引用和资源读取/修改边界已有负向 API 测试。
+- Playwright 目前证明项目路由切换和离开项目时清理上下文，但尚未覆盖真实登录态 403 页面和跨项目资源 API 的浏览器访问拒绝。
+- 生产页真实 API 接入、权限变更后的缓存失效、资产删除（当前不存在删除 API）仍未完成。
+- 不因 PR #53 的 CI 全绿而关闭 #43；补齐浏览器权限场景并逐项满足 Issue 验收后再关闭。
+
+### 执行顺序约束
+继续只处理 R0/R1；未完成 Issue #42/#43 验收前，不启动 R2。线上真实环境/真实用户数据测试不在本轮范围内。
