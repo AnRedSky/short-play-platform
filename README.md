@@ -41,11 +41,12 @@ uv run python start_api.py
 - Email: `admin@localhost`
 - Password: `ChangeMeNow-2026!`
 
-首次登录后请立即更改密码。自动引导只在用户表为空时执行；后续重启不会重置管理员密码，
-也不会覆盖已有账号。若安装已有任意用户，初始化会安全跳过。
+该口令仅供受信任的本机开发环境使用，不可将使用默认口令的服务暴露到公共网络。
+如需共享或部署，请在首次启动前修改 `.env` 中的管理员口令。自动引导只在用户表为空时执行；
+后续重启不会重置管理员密码，也不会覆盖已有账号。若安装已有任意用户，初始化会安全跳过。
 
-生产部署不得沿用上述开发口令。生产环境默认关闭自动管理员创建；如确需启用首次引导，
-必须显式设置 `BOOTSTRAP_ADMIN_ENABLED=true`、独立的 `BOOTSTRAP_ADMIN_EMAIL` /
+生产部署不得沿用上述开发口令。生产环境必须显式设置 `BOOTSTRAP_ADMIN_ENABLED=false`；
+如确需启用首次引导，则设置 `BOOTSTRAP_ADMIN_ENABLED=true`、独立的 `BOOTSTRAP_ADMIN_EMAIL` /
 `BOOTSTRAP_ADMIN_PASSWORD`，并设置唯一的 `SECRET_KEY`。生产启动会拒绝已知开发默认口令
 或默认密钥。不要将真实密码、密钥提交到 Git。
 
