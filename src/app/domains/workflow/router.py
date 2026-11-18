@@ -60,7 +60,7 @@ def start_workflow_run(
     project_id: UUID,
     payload: WorkflowRunCreate,
     idempotency_key: str | None = Header(default=None, alias=IDEMPOTENCY_KEY_HEADER),
-    principal: Principal = Depends(require_permission(projects:write)),
+    principal: Principal = Depends(require_permission("projects:write")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, project_id, need="projects:write")
@@ -108,7 +108,7 @@ def read_workflow_run(
 @router.post("/workflow-runs/{run_id}/cancel")
 def cancel_workflow_run(
     run_id: UUID,
-    principal: Principal = Depends(require_permission(projects:write)),
+    principal: Principal = Depends(require_permission("projects:write")),
     db: Session = Depends(get_db),
 ) -> dict:
     run = workflow_service.get_run_or_404(db, run_id)
@@ -121,7 +121,7 @@ def cancel_workflow_run(
 @router.post("/workflow-runs/{run_id}/recover")
 def recover_workflow_run(
     run_id: UUID,
-    principal: Principal = Depends(require_permission(projects:write)),
+    principal: Principal = Depends(require_permission("projects:write")),
     db: Session = Depends(get_db),
 ) -> dict:
     """Reclaim orphaned nodes for an operator-initiated recovery."""
