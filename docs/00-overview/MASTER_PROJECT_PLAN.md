@@ -49,7 +49,7 @@ LLM、图片、视频、TTS、ASR、音乐能力；Mock 与外部 Provider；模
 资产上传/预览/下载、时间线、视频轨、音轨、字幕轨、片段裁剪、音量、转场、片头片尾、预览、FFmpeg 渲染、MP4、字幕文件和项目归档。
 
 ### 4.7 审核和质量
-剧本、资产、镜头和成片审核；技术检测、内容符合度、视觉连续性、交付质量；PASS、REVIEW_REQUIRED、FAIL、WAIVED 质量结果；审核意见、授权豁免和返工历史。
+剧本、资产、镜头和成片审核；技术检测、内容符合度、视觉连续性、交付质量；PASS、REVIEW_REQUIRED、FAIL 质量结果；审核意见和返工历史；MVP 不提供 WAIVED 豁免。
 
 ## 5. 总体技术架构
 采用模块化单体 + 领域分层 + Provider 适配 + PostgreSQL 持久化业务状态。Vue 3 Web 通过 HTTPS/REST 与 FastAPI 交互，任务状态使用查询/SSE。API 在事务中写业务记录和 Outbox；Celery Worker 执行外部模型调用或媒体处理；PostgreSQL 保存业务/任务元数据，Redis 用于队列与缓存，私有 Storage 保存二进制文件，FFmpeg 在内部执行。
@@ -77,16 +77,16 @@ Project → Episode → Scene → Shot；StoryBible、ScriptVersion、CharacterV
 每个镜头在生成前必须形成结构化 Shot Contract，包含叙事目的、镜头参数、画面描述、角色/场景/道具引用、动作、时长、音频、画幅、模型能力约束和质量检查项。引用必须锁定具体资产版本。连续性管理角色外观/服装/状态、场景布局/光线/时间、道具状态、镜头间位置/动作衔接及全片视觉风格。完整规范见 11-production。
 
 ## 8. AI Provider 与模型路由
-按 Text、Image、Video、TTS、ASR、Music 定义独立能力契约。Registry 注册实现，Capability Catalog 描述模型能力和限制，Router 根据任务能力、输入兼容性、项目策略、预算、可用性和管理员优先级选择模型。Policy 在任何外发前校验数据分类、供应商合同/区域、授权和预算。Mock Provider 是开发和 CI 默认实现；真实 Provider 按供应商独立适配。可选 AI Gateway 只用于确有统一 LLM 网关需求时，不替代多模态业务 Provider。
+按 Text、Image、Video、TTS、ASR、Music 定义独立能力契约。Registry 注册实现，Capability Catalog 描述模型能力和限制，Router 根据任务能力、输入兼容性、项目策略、预算、可用性和管理员优先级选择模型。Policy 在任何外发前校验数据分类、供应商合同/区域、授权和预算。Mork Provider Adapter 是默认生产适配器；Mock 仅用于 CI 和显式演示环境。未配置 Mork 时返回 PROVIDER_NOT_CONFIGURED，不静默回退。可选 AI Gateway 只用于确有统一 LLM 网关需求时，不替代多模态业务 Provider。
 
 ## 9. 工作流与任务可靠性
-Workflow、WorkflowRun、WorkflowNode、WorkflowNodeRun、GenerationTask、TaskAttempt、Checkpoint、Artifact、OutboxEvent 分离。业务事务写任务和 Outbox；Dispatcher 投递 Celery；Worker 以幂等方式执行。外部异步视频任务提交后释放 Worker，通过 Webhook 或轮询获取结果。重试新建 Attempt；超时分类；回调幂等；Worker 崩溃可恢复；取消协作传播；成功节点不无条件重跑。Celery 是执行分发器，不是唯一状态来源。Temporal 仅在长流程复杂度、恢复需求和运维收益明确后通过 ADR 决定是否替代自研业务编排。
+Workflow、WorkflowRun、WorkflowNode、WorkflowNodeRun、GenerationTask、TaskAttempt、Checkpoint、Artifact、OutboxEvent 分离。业务事务写任务和 Outbox；Dispatcher 投递 Celery；Worker 以幂等方式执行。外部异步任务提交后释放 Worker，通过 Provider Adapter 轮询获取结果。重试新建 Attempt；超时分类；轮询幂等；Worker 崩溃可恢复；取消协作传播；成功节点不无条件重跑。Celery 是执行分发器，不是唯一状态来源。Temporal 仅在长流程复杂度、恢复需求和运维收益明确后通过 ADR 决定是否替代自研业务编排。
 
 ## 10. 时间线与媒体导出
 时间线由 Timeline、Track、Clip、Transition、AudioMix、SubtitleCue、ExportProfile 构成。Timeline 保存源资产版本、时间基准、轨道顺序、入出点、位置、音量、速度、转场和字幕。MVP 支持基础多轨和片段裁剪，不承诺专业 NLE。FFmpeg wrapper 使用参数数组，禁止 shell 拼接用户输入；导出先临时写入，ffprobe 校验后原子发布。具体规范见 12-editor。
 
 ## 11. 质量门禁
-技术质量：可解码、分辨率、画幅、帧率、时长、音视频流、文件完整性。内容质量：角色、场景、动作、对白和镜头合同符合度。连续性质量：角色外观、服装、场景、道具和动作衔接。交付质量：字幕、音量、时长、编码和文件完整性。结果分 PASS、REVIEW_REQUIRED、FAIL、WAIVED。WAIVED 必须有权限、原因和审计记录。质量规范见 11-production。
+技术质量：可解码、分辨率、画幅、帧率、时长、音视频流、文件完整性。内容质量：角色、场景、动作、对白和镜头合同符合度。连续性质量：角色外观、服装、场景、道具和动作衔接。交付质量：字幕、音量、时长、编码和文件完整性。结果分 PASS、REVIEW_REQUIRED、FAIL；MVP 不提供 WAIVED 或豁免通道。质量规范见 11-production。
 
 ## 12. 数据与存储原则
 文件本体不入数据库；存储 storage_key、checksum、mime_type、size、宽高、时长等元数据。私有本地存储通过 StorageBackend 抽象。数据库强制唯一约束、外键和索引；JSONB 不替代核心关系字段。所有 schema 变更通过 Alembic。组织/项目权限不使用 tenant_id 全表注入。
