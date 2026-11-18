@@ -64,6 +64,7 @@ def read_user(
     principal: Principal = Depends(require_permission("users:read")),
     db: Session = Depends(get_db),
 ) -> dict:
+    users_service.assert_user_in_organization(db, user, principal.organization_id)
     return envelope(
         UserDetailRead(
             **UserRead.model_validate(user).model_dump(),
@@ -80,6 +81,7 @@ def update_user(
     principal: Principal = Depends(require_permission("users:write")),
     db: Session = Depends(get_db),
 ) -> dict:
+    users_service.assert_user_in_organization(db, user, principal.organization_id)
     users_service.update_user(
         db, user, full_name=payload.full_name, is_active=payload.is_active
     )
