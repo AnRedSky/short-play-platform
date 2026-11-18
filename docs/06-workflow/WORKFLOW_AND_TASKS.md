@@ -7,7 +7,7 @@ Workflow/WorkflowVersion 定义流程；WorkflowRun 是一次运行；WorkflowNo
 1. API 事务写业务变更、WorkflowRun/Task 和 Outbox。
 2. Dispatcher 投递 Celery 消息，允许重复投递。
 3. Worker 以租约/幂等方式领取任务，检查状态、权限策略、预算和并发。
-4. 执行短任务或提交外部异步任务；长时间等待通过轮询/Webhook，不占用 Worker。
+4. 执行短任务或提交外部异步任务；长时间等待通过 Provider Adapter 轮询，不占用 Worker；本期不建设第三方业务 Webhook。
 5. 保存 Attempt、Checkpoint、Artifact 和状态。
 6. 节点依赖满足后推进；需审核时进入 waiting_review。
 7. 状态通过查询/SSE通知前端。
