@@ -194,9 +194,7 @@ def main() -> None:
     frontend_map = _frontend_api_inventory(routes)
     duplicate_routes = _duplicate_route_methods(routes)
     schema_paths = set(openapi.get("paths", {}))
-    registered_paths = {
-        route["path"] for route in routes if route["include_in_schema"]
-    }
+    registered_paths = {route["path"] for route in routes}
     if schema_paths != registered_paths:
         missing_from_schema = sorted(registered_paths - schema_paths)
         missing_from_router = sorted(schema_paths - registered_paths)
