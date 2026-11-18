@@ -13,10 +13,15 @@ from app.config.settings import get_settings
 
 @lru_cache
 def get_redis_client() -> redis.Redis:
-    """Process-wide Redis client with fail-fast timeouts for probes."""
+    """Process-wide Redis client with fail-fast timeouts for probes.
+
+    The application cache uses ``REDIS_URL``; ``CELERY_RESULT_BACKEND`` is a
+    separate concern owned by the broker module, so a backend-only credential
+    can never break readiness.
+    """
     settings = get_settings()
     return redis.Redis.from_url(
-        settings.result_backend_url,
+        settings.redis_url,
         socket_connect_timeout=1,
         socket_timeout=1,
         decode_responses=True,
