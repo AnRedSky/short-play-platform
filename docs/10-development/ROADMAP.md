@@ -344,3 +344,31 @@ R0 的运行时 OpenAPI、ORM/Migration 自动差异核查和页面 API 映射�
 
 ### 执行顺序约束
 继续只处理 R0/R1；未完成 Issue #42/#43 验收前，不启动 R2。线上真实环境/真实用户数据测试不在本轮范围内。
+
+
+## R1 项目访问授权与真实浏览器测试增量（2026-11-18）
+
+- 生产路由增加项目详情访问前置校验，401/403/404/服务不可用分别处理；未知错误 fail closed。
+- 项目切换时取消旧的权限检查请求，防止异步竞态。
+- Playwright 从仅启动 Vite dev server 改为 production build + preview，并在 CI 启动临时 PostgreSQL、Redis 和 FastAPI。
+- E2E fixtures 通过真实 API bootstrap 管理员、创建 projects:read 用户、创建 A/B/C 项目、仅授予 A/B 成员资格并在 C 上传测试资产。
+- 浏览器验收覆盖匿名访问、A/B 项目切换、C 项目 403、C 项目资产详情/下载 403。
+- 此阶段仍只处理 R1，不进入 R2。以上变更的最终验收以 CI run 成功和浏览器报告为准。
+
+
+CI 调试记录：PR #56 首次 Run #206 的 backend-quality、frontend-quality、compose-validation 均通过；Playwright job 在启动前端服务时发现项目没有 `npm run preview` script。已将 Playwright webServer 命令修正为直接调用 `npx vite preview`，等待更新后的完整 CI 复验。该失败属于测试环境启动命令问题，不是浏览器用例通过证据。
+
+
+第二次 Playwright 调试记录：Run #208 的真实 API 已正常启动，失败原因是 Playwright APIRequestContext 对以斜杠开头的 URL 重置了 `/api/v1` 前缀，导致 bootstrap 请求落到 `/auth/bootstrap` 并得到 404。已将 fixture 改为基于带尾斜杠的 API base URL 使用相对路径，并修正浏览器页面导航为绝对站内路径；更新后继续重跑。
+
+
+第三次 Playwright 调试记录：Run #211 的 API base path 已修正，fixture 成功创建用户和项目；随后发现项目成员角色枚举不包含 `viewer`（允许值为 owner/producer/writer/director/artist/editor/reviewer），并暴露了 RequestValidationError 的 ctx.ValueError 无法 JSON 序列化、错误返回 500 的后端问题。已将 fixture 改为合法的 reviewer 角色，并修复 `register.py` 对 Pydantic 验证错误上下文的 JSON 安全序列化；fixture 增加非法角色应返回 422 的断言。更新后继续重跑。
+
+
+第四次 Playwright 调试记录：Run #214 已通过 API bootstrap、用户/角色/项目创建、成员角色校验（包含非法 viewer 返回 422）和项目成员加入；在上传跨项目测试资产时发现浏览器专用 API Job 未安装 ffprobe，API 正确返回 MEDIA_PROBE_UNAVAILABLE。已为该 Job 增加 FFmpeg/ffprobe 安装步骤，保证真实上传路径具备与 backend-quality 相同的媒体探测依赖，更新后继续重跑。
+
+
+R1 成员变更补充：新增项目成员撤销接口（软停用 + 审计，禁止移除 owner）。Playwright fixture 让测试用户先加入 A/B/C；用户浏览 A/B 后，管理员撤销 C 成员资格，测试再点击列表中仍然存在的旧 C 链接，验证路由重新请求服务端并拒绝访问。跨项目 Asset detail/download 继续验证 403。
+
+
+第五次 Playwright 调试记录：Run #222 的真实 API 环境、项目 A/B/C 创建、成员资格、ffprobe 资产上传 fixture 均成功；浏览器测试在首页点击“项目管理”时发现页面同时存在侧栏、主按钮和卡片链接，Playwright strict mode 无法唯一定位。已将测试定位器改为 `exact: true`，确保点击侧栏导航，更新后继续重跑。

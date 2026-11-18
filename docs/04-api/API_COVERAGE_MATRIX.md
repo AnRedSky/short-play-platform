@@ -131,3 +131,17 @@
 
 ### R1 资源授权检查边界
 服务端负向测试已覆盖 Asset detail/download/version、Creation 资源/版本/Shot-Scene 引用、Generation task detail/cancel/Shot 引用、Workflow run detail/cancel、Export Asset 引用及组织/RBAC 隔离。跨项目引用必须由服务端按资源实际 project_id 校验，不能信任请求体 project_id。
+
+
+## R1 Web 项目访问入口授权
+
+新增前端路由进入项目工作区前的 API 检查：`GET /projects/{project_id}`。接口使用 `projects:read` 并调用 `get_accessible_project`，非项目成员返回 403；不能只依赖路由中的 projectId 或前端隐藏按钮。
+浏览器测试通过真实 API 服务验证项目 A/B 成员可访问、项目 C 非成员不可访问，并使用项目 C 的 Asset ID 验证 `GET /assets/{asset_id}` 和 `GET /assets/{asset_id}/download` 返回 403。CI 最终结果及精确 SHA 待记录。
+
+
+### 项目成员撤销接口
+| Method | Path | Permission | Behavior |
+|---|---|---|---|
+| DELETE | `/projects/{project_id}/members/{user_id}` | `projects:manage` | 将成员 `is_active=false`，写入 `project.member_removed` 审计事件，返回 204；项目 owner 不可被移除 |
+
+浏览器 E2E 将先在项目列表中缓存项目 C 链接，再通过管理员 API 撤销成员资格，点击旧链接验证项目详情接口仍返回 403。此场景用于验证成员权限变更后不能由前端旧缓存绕过服务端授权。
