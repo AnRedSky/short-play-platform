@@ -12,7 +12,7 @@ PostgreSQL；UUID 主键；snake_case；表名复数；UTC + TIMESTAMPTZ；重�
 - 媒体：media_assets、asset_versions、asset_references、media_folders。
 - AI：model_providers、model_configs、provider_credentials、model_capabilities、model_pricing、generation_tasks、task_attempts、model_call_logs、usage_records。
 - 工作流：workflows、workflow_versions、workflow_runs、workflow_nodes、workflow_node_runs、checkpoints、outbox_events。
-- 审核：review_records、quality_checks、quality_findings、waivers。
+- 审核：review_records、quality_runs、quality_issues（MVP 不建立 waivers）。
 - 剪辑：timelines、timeline_versions、timeline_tracks、timeline_clips、transitions、subtitle_cues、export_profiles、export_jobs。
 - 治理：audit_logs、system_settings、plugin_registry。
 
