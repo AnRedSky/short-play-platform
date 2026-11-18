@@ -205,6 +205,18 @@ def test_generation_task_cannot_reference_shot_from_another_project(client, admi
     )
     assert membership.status_code == 201, membership.text
 
+    foreign_task_response, _ = _create_task(client, admin, project_b["id"])
+    assert foreign_task_response.status_code == 201, foreign_task_response.text
+    foreign_task_id = foreign_task_response.json()["data"]["id"]
+    foreign_detail = client.get(
+        f"/api/v1/generation/tasks/{foreign_task_id}", headers=member_headers
+    )
+    assert foreign_detail.status_code == 403
+    foreign_cancel = client.post(
+        f"/api/v1/generation/tasks/{foreign_task_id}/cancel", headers=member_headers
+    )
+    assert foreign_cancel.status_code == 403
+
     response = client.post(
         f"/api/v1/projects/{project_a['id']}/generation/tasks",
         headers=member_headers,
