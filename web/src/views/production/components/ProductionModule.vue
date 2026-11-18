@@ -120,18 +120,18 @@ const loading=ref(false),saving=ref(false),pageError=ref(''),requestId=ref(''),s
 const stories=ref<Story[]>([]),bibles=ref<StoryBible[]>([]),episodes=ref<Episode[]>([])
 const selectedStory=ref<Story|null>(null),selectedBible=ref<StoryBible|null>(null)
 const storyForm=reactive({title:'',logline:'',synopsis:''}),episodeForm=reactive({episode_number:1,title:'',synopsis:''})
-const bibleJson=ref('{
+const bibleJson=ref(`{
   "worldview": "",
   "themes": [],
   "characters": [],
   "relationships": [],
   "rules": []
-}')
+}`)
 const selectedEpisode=ref<Episode|null>(null),scripts=ref<Script[]>([]),selectedScript=ref<Script|null>(null),scriptTitle=ref(''),scriptVersions=ref<ScriptVersion[]>([]),scriptContent=ref(''),selectedVersion=ref<ScriptVersion|null>(null),scenes=ref<ScriptScene[]>([]),selectedScene=ref<ScriptScene|null>(null)
 const sceneForm=reactive({scene_number:1,location:'',time_of_day:'',summary:''}),dialogueForm=reactive({order_number:1,character_name:'',content:''})
 const assetKinds=[{value:'characters',label:'角色'},{value:'scenes',label:'场景'},{value:'props',label:'道具'}] as const
 const assetKind=ref<'characters'|'scenes'|'props'|'files'>('characters'),productionAssets=ref<ProductionAsset[]>([]),mediaAssets=ref<Array<Record<string,unknown>>>([]),selectedProductionAsset=ref<ProductionAsset|null>(null),assetForm=reactive({name:'',description:''}),assetVersion=reactive({appearance:'',prompt:''}),assetDetail=ref<Record<string,unknown>|null>(null),versionNote=ref(''),versionFile=ref<File|null>(null),uploadTitle=ref(''),uploadFileValue=ref<File|null>(null)
-const storyboardEpisode=ref(''),storyboard=ref<Storyboard|null>(null),shots=ref<Shot[]>([]),shotForm=reactive({shot_number:1,shot_size:'medium',description:''}),selectedShot=ref<Shot|null>(null),contracts=ref<ShotContract[]>([]),contractJson=ref('{
+const storyboardEpisode=ref(''),storyboard=ref<Storyboard|null>(null),shots=ref<Shot[]>([]),shotForm=reactive({shot_number:1,shot_size:'medium',description:''}),selectedShot=ref<Shot|null>(null),contracts=ref<ShotContract[]>([]),contractJson=ref(`{
   "framing": "",
   "camera": "",
   "action": "",
@@ -139,7 +139,7 @@ const storyboardEpisode=ref(''),storyboard=ref<Storyboard|null>(null),shots=ref<
   "duration": null,
   "asset_version_refs": [],
   "continuity_constraints": []
-}')
+}`)
 const providers=ref<ProviderHealth[]>([]),taskForm=reactive({capability:'image',provider_code:'',model_code:'',prompt:''}),taskParameters=ref('{}'),taskLookupId=ref(''),taskDetail=ref<Task|null>(null),workflows=ref<WorkflowRun[]>([]),workflowCode=ref('episode-production'),workflowDetail=ref<WorkflowRun|null>(null)
 function path(section:string){return projectId.value?'/projects/'+encodeURIComponent(projectId.value)+'/'+section:'/projects'}
 function message(e:unknown){if(e instanceof ApiError){requestId.value=e.requestId??'';return e.status===403?'当前账号没有执行此操作的权限。':e.status===404?'资源不存在或已不可访问。':e.status===409?'数据版本冲突，请重新加载后再操作。':e.message}return e instanceof Error?e.message:'请求失败，请稍后重试。'}
