@@ -147,7 +147,11 @@ def add_project_member(
         permissions=principal.permissions,
     )
     member = projects_service.add_member(
-        db, project_id=project.id, user_id=payload.user_id, project_role=payload.project_role
+        db,
+        project_id=project.id,
+        organization_id=project.organization_id,
+        user_id=payload.user_id,
+        project_role=payload.project_role
     )
     audit_service.record(
         db,
