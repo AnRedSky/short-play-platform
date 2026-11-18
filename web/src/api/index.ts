@@ -63,7 +63,9 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   const { mock = import.meta.env.DEV && Boolean(mockHandler), auth = true, ...init } = options
   if (mock) {
     if (!mockHandler) throw new Error('Mock mode was requested but no mock adapter is configured.')
-    return (await mockHandler(path, init)) as T
+    const result = await mockHandler(path, init)
+    if (init.signal?.aborted) throw new DOMException('The request was aborted.', 'AbortError')
+    return result as T
   }
   const response = await fetch(`${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`, {
     ...init,
