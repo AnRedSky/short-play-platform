@@ -125,3 +125,7 @@ GitHub Issue 是任务唯一事实来源；PR 关联 Issue；至少一名非作�
 时间线唯一权威时间格式为整数 PTS + 有理数 time_base；视频帧序号/帧率和音频采样点/sample_rate 均保留整数/分数精度，浮点秒不得作为 API、数据库或版本比较权威字段。专业级 NLE、实时协同仍为非目标。
 
 当前代码已具备身份/项目、创作、资产、生成、工作流、FFmpeg 图片序列导出等不同程度基础；前端生产页面、Mork 真实接入、QA/审核、持久化时间线和多轨导出不可描述为已交付。实际状态以统一实施基线中的代码核验表为准。
+
+## 文档对齐入口
+
+当前模块实现矩阵、技术边界和阶段 DoD 以 [项目统一实施基线](../01-architecture/IMPLEMENTATION_BASELINE.md) 为准；页面级交互以 [功能页面与交互流程规范](../02-requirements/FEATURE_INTERACTION_SPEC.md) 为准。
