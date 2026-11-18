@@ -40,3 +40,11 @@ PostgreSQL 保存结构化业务和任务元数据；Redis 用于消息代理和
 
 ## 演进门槛
 只有出现独立扩缩容、故障隔离、资源隔离或团队自治的可量化收益，才拆服务。Temporal 作为工作流编排替代方案需通过 ADR；不得同时运行两套竞争的工作流状态引擎。
+
+## 2026-11-18 实施边界补充
+
+逻辑架构沿用当前目录结构：`src/app/domains`、`infrastructure`、`workers`、`router` 和 `web/src/api|stores|router|views|components|composables`。不执行整体目录搬迁。业务模块边界与当前代码映射见 [统一实施基线](IMPLEMENTATION_BASELINE.md)。
+
+Provider 默认目标为 Mork；Provider Adapter 不持有业务授权/资产创建职责。无有效配置返回 PROVIDER_NOT_CONFIGURED，不允许 Mock 自动兜底。外部供应商长任务优先通过受控轮询查询，不扩展为第三方业务 Webhook 集成。
+
+所有项目资源在服务端校验 project_id 和成员权限；Asset 不可跨项目引用。QA/Review 是版本绑定流程，项目级统一 review permission。媒体时间使用整数 PTS + 有理数 time_base。
