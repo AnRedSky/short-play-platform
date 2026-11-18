@@ -44,7 +44,7 @@ def create_generation_task(
     payload: GenerationTaskCreate,
     request: Request,
     idempotency_key: str | None = Header(default=None, alias=IDEMPOTENCY_KEY_HEADER),
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
     registry: ProviderRegistry = Depends(get_registry),
 ) -> dict:
@@ -118,7 +118,7 @@ def read_generation_task(
 @router.post("/generation/tasks/{task_id}/cancel")
 def cancel_generation_task(
     task_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     task = generation_service.get_task_or_404(db, task_id)
