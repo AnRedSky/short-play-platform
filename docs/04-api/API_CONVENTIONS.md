@@ -18,3 +18,13 @@ AUTHENTICATION_REQUIRED、PERMISSION_DENIED、RESOURCE_NOT_FOUND、VALIDATION_ER
 
 ## 异步接口
 任务创建返回 task_id/status；查询返回状态、进度、结果摘要、错误码和允许动作。SSE 是通知通道，GET 快照是事实来源；断线后重新拉取快照，支持事件 ID 时可续传。
+
+## 2026-11-18 契约补充
+
+项目资源 API 必须从认证上下文解析成员权限，并校验 URL/Body 中 project_id 与资源归属一致；不允许客户端 project_id 作为授权依据。Asset/AssetVersion/AssetRelation 强制项目内引用。
+
+Provider 管理默认仅配置 Mork Adapter；无可用配置/凭据时生成命令返回 `PROVIDER_NOT_CONFIGURED`（服务不可用/配置缺失的明确错误），不得伪造任务成功或静默使用 Mock。Mock 只在测试/显式演示环境启用。
+
+任务 API 创建后返回 task_id/status；查询快照是最终事实，SSE（若实现）仅作通知。Review API 必须绑定 object_version_id，并使用项目级 review permission。QA 结果只允许 PASS、REVIEW_REQUIRED、FAIL。
+
+时间字段对普通创建时间仍使用 ISO 8601 UTC；媒体时间线字段必须使用整数 PTS 与 time_base numerator/denominator，不得以浮点秒定义 source_in、source_out 或 timeline_start。接口实际可用路由以 FastAPI OpenAPI 为准；本文件的路由目录是目标契约，不代表路由已经全部存在。
