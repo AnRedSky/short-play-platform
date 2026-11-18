@@ -11,7 +11,7 @@
 | 故事与剧本 | 故事圣经、分集、场次、对白、版本 | P0 |
 | 资产 | 角色/场景/道具、参考图、版本和引用 | P0 |
 | 分镜/镜头 | Shot、镜头合同、版本、排序、生成状态 | P0 |
-| AI | Mock Text/Image/Video/TTS，统一 Provider 契约 | P0 |
+| AI | Mork Provider Adapter 与统一能力契约；Mock 仅用于 CI/显式演示 | P0 |
 | 工作流 | Task/Attempt/Outbox、重试、取消、恢复 | P0 |
 | 媒体资产 | 上传、校验、预览、下载鉴权、checksum | P0 |
 | 合成导出 | 基础时间线、字幕/音轨、FFmpeg MP4 | P0 |
