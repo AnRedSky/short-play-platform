@@ -51,3 +51,7 @@
 审核使用项目级统一 review permission，不做多级会签或按内容类型配置审核角色。QA 仅 PASS、REVIEW_REQUIRED、FAIL；不提供 WAIVED。默认 Mork Provider，缺配置返回 PROVIDER_NOT_CONFIGURED，不伪造生成成功。时间线采用整数 PTS + 有理数 time_base。
 
 当前项目不是空白骨架：身份/项目、creation、assets、generation、workflow 和基础 FFmpeg 图片序列导出已有不同程度实现；生产前端仍有演示页面，QA/审核、持久化时间线、完整多轨导出仍待建设。状态和阶段 DoD 见 [统一实施基线](../01-architecture/IMPLEMENTATION_BASELINE.md)。
+
+## 页面交互规范入口
+
+页面级导航、角色任务、交互状态、关键业务流程及当前原型/真实 API 状态见 [功能页面与交互流程规范](FEATURE_INTERACTION_SPEC.md)。页面路由存在不代表该功能已交付；生产页面必须以真实 API 状态和服务端权限为准。
