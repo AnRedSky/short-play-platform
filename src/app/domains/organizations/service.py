@@ -22,6 +22,15 @@ def get_organization_or_404(db: Session, organization_id: UUID) -> Organization:
     return organization
 
 
+def get_organization_for_member_or_404(
+    db: Session, organization_id: UUID, user_id: UUID
+) -> Organization:
+    organization = get_organization_or_404(db, organization_id)
+    if not organizations_repo.is_active_member(db, organization_id, user_id):
+        raise not_found("Organization not found")
+    return organization
+
+
 def create_organization(db: Session, *, name: str) -> Organization:
     return organizations_repo.create_organization(db, name=name, slug=slugify(name))
 
@@ -41,8 +50,10 @@ def create_department(
 ) -> Department:
     if organizations_repo.find_department_by_name(db, organization_id, name) is not None:
         raise conflict("Department name already exists", {"name": name})
-    if parent_id is not None and organizations_repo.get_department(db, parent_id) is None:
-        raise not_found("Parent department not found")
+    if parent_id is not None:
+        parent = organizations_repo.get_department(db, parent_id)
+        if parent is None or parent.organization_id != organization_id:
+            raise not_found("Parent department not found")
     return organizations_repo.create_department_row(
         db, organization_id=organization_id, name=name, parent_id=parent_id
     )
