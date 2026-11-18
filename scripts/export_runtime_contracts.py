@@ -157,8 +157,16 @@ def _frontend_api_inventory(routes: list[dict[str, Any]]) -> dict[str, Any]:
     call_pattern = re.compile(
         r"\bapi(Get|Post|Patch|Put|Delete)\s*(?:<[^()]*>)?\s*\(\s*(['\"\x60])([^'\"\x60]+)\2"
     )
+    from app.config.settings import get_settings
+
+    api_prefix = get_settings().api_v1_prefix.rstrip("/")
     route_keys = {
-        (method, _normalize_path(route["path"]))
+        (
+            method,
+            _normalize_path(route["path"])[len(api_prefix):]
+            if _normalize_path(route["path"]).startswith(api_prefix)
+            else _normalize_path(route["path"]),
+        )
         for route in routes
         for method in route["methods"]
     }
