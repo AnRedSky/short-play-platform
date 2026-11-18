@@ -1,7 +1,7 @@
 # 项目统一实施基线（2026-11-18）
 
 > 状态：当前唯一实施基线，覆盖产品边界、现状核验、模块职责、技术选型、依赖和交付规则。  
-> 代码基线：develop `fa9f00b9996c5a70e40a7b8c10386e93af19ac64`。  
+> 代码基线：develop `37707f82d2f7f9b5983c1c22446139342fcb7977`。  
 > 前序设计：`PRODUCT_FUNCTIONAL_DESIGN.md`；实施阶段：`../10-development/ROADMAP.md`。  
 > 目录政策：必须保留现有目录结构；本方案不要求整体迁移或重命名。
 
@@ -149,8 +149,8 @@ QA 针对不可变对象版本和 RuleSet 版本运行，保存问题、证据�
 | QA/审核 | 有前端入口和设计文档 | 待建设 | 未发现完整后端 QualityRun/Review/返工 API 与迁移 |
 | 时间线 | 前端编辑器原型 | 原型 | 无持久化时间线 API/模型；现有时码不符合 PTS 契约 |
 | 媒体导出 | ffprobe、FFmpeg 图片序列 MP4、ExportJob 基础 | 部分实现 | 非多轨时间线渲染；缺少异步完整交付校验 |
-| 前端生产体验 | 项目列表可进入真实 project_id 路由；Pinia 项目上下文随路由同步；生产业务页仍复用演示数据 | 部分实现 | 项目切换缓存清理、生产页面真实 API 和权限状态联调待完成 |
-| 自动化验收 | develop SHA e2972b80 的 CI 四类 Job 全部成功 | 已验证 | 当前功能覆盖范围以实际测试为准 |
+| 前端生产体验 | 路由驱动项目上下文、请求取消/过期响应抑制；生产页面已移除本地演示记录，未接 API 时显示明确空状态 | 部分实现 | 生产页面真实 API 联调、权限变更后的缓存失效待完成 |
+| 自动化验收 | PR #53 CI 增加 Chromium Playwright、Alembic drift、运行时契约 artifact；最终结果待当前 head | 进行中 | 以 PR #53 最终 SHA 的完整检查结果为准 |
 
 ### 7.1 CI 证据
 - develop 代码基线 `e2972b80a933718062cf230ad23b5a782a83b33c` 的 CI run #44259347047：backend-quality、frontend-quality、compose-validation、e2e-acceptance 均成功。
@@ -181,3 +181,28 @@ QA 针对不可变对象版本和 RuleSet 版本运行，保存问题、证据�
 
 ### R1 首个增量交付（2026-11-18）
 已完成第一步：移除 App.vue 的 demo-project 硬编码；新增 `web/src/stores/project.ts` 管理当前项目 ID，并由 `route.params.projectId` 同步；项目列表新增“进入项目”入口；补充 Pinia 单测和导航 E2E。此交付仅解决项目上下文入口，不代表所有生产页已接真实 API，也不代表完整 IDOR/缓存隔离验收完成。
+
+
+## 2026-11-18 R0/R1 实际代码核查补充
+
+本节覆盖并取代前文中 fa9f00b 基线的旧进度描述；当前代码核查基线为 develop `37707f82d2f7f9b5983c1c22446139342fcb7977`。
+
+### R0 工程与权限核查
+- 新增 `scripts/export_runtime_contracts.py`：导出运行时 OpenAPI、实际 APIRoute 清单及权限依赖、SQLAlchemy 全量表/列/外键/索引、Alembic revision 链、前端 API Client 路径映射、重复 method/path 清单。
+- CI 在空库迁移和 pytest 后执行 `alembic check`；本轮实际发现 workflow_runs.workflow_id 索引缺失，新增 migration `0007_workflow_run_workflow_index`。
+- R0 复验以 PR #53 的 CI run #187 为准；最终成功后 runtime-contracts artifact 为本轮核查证据。此前 run #185 的导出步骤暴露了核查脚本对 include_in_schema 的错误假设，已修正为比较全部实际注册路由路径。
+- 修复 RoleAssignment 的请求 schema 与路由不一致：统一为 role_id 路径参数 + user_id 请求字段；同步修正前端 roles API client。
+- 组织/项目授权已补强：组织详情、用户详情/修改、角色分配、审计日志、部门父级、项目成员、当前组织 RBAC 权限均按组织上下文隔离。
+- 项目资源授权已补强：跨项目 Scene/Shot/Asset 引用均由服务端拒绝；Generation/Creation/Assets/Workflow 的写路由统一声明 projects:write。
+
+### R1 前端与资源隔离
+- Project Store 提供 contextVersion、AbortController、请求有效性判断和 cleanup 注册。
+- API Client 支持 AbortSignal；新增 `useProjectRequest`，项目切换/组件 scope 结束时取消请求，只有当前上下文仍有效才应用异步结果。
+- ProductionModule 已删除本地示例记录、假创建和假导出操作；未接真实 API 的页面明确显示 API 未接入状态，不再伪装真实生产数据。
+- 已补充资产详情/下载/版本、Creation 资源读取/版本/引用、Generation 任务读取/取消/引用、Workflow 读取/取消、组织/用户/角色/审计/项目成员跨组织/跨项目负向测试。
+
+### 尚未验收的边界
+- 生产 stories/episodes/assets/storyboards/tasks 等页面尚未全部接入真实业务 API；这部分与 R2 业务页面闭环存在依赖，当前不提前宣称完成。
+- 当前没有资产删除路由，故不能声称已经覆盖删除 IDOR；后续新增删除接口时必须同步补负向测试。
+- 项目成员权限变更后的缓存重新校验，以及真实业务 API 接入仍是 R1 遗留。
+- 本轮不连接第三方业务系统、不进行线上真实用户数据测试；所有自动化验证仅使用 GitHub Actions 临时 CI 环境。
