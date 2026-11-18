@@ -85,7 +85,7 @@
 | 第三方系统 API | 本期不纳入产品范围 | 不启用 | 无 | 后续独立立项后再设计连接器，不预留可执行入口 |
 | 第三方 Webhook/事件推送 | 本期不纳入产品范围 | 不配置、不授权 | 无 | 后续独立立项后再定义事件契约 |
 | 爬虫/网页采集 | 本期不纳入产品范围 | 无 | 无 | 不开发爬虫、采集调度、网页解析或来源连接功能 |
-| 系统自动生成 | 内部任务 API + JSON schema；生成文本/图片/音频/视频 Artifact | 发起用户项目权限 + Mork 配置 + 模型参数策略 + 项目预算 | 工作流节点触发；人工重跑显式触发 | 默认使用 Mork Provider Adapter；未配置真实 API 时返回可预测模拟结果；AI 输出默认未审核；记录配置版本和输入快照 |
+| 系统自动生成 | 内部任务 API + JSON schema；生成文本/图片/音频/视频 Artifact | 发起用户项目权限 + Mork 配置 + 模型参数策略 + 项目预算 | 工作流节点触发；人工重跑显式触发 | 默认使用 Mork Provider Adapter；默认调用 Mork Provider；真实模型 API 后续通过配置接入；AI 输出默认未审核；记录配置版本和输入快照 |
 | 系统内资产引用 | 内部 AssetRef + version_id，不复制文件 | 源资产可读权限与目标模块写权限；引用时重新鉴权 | 绑定/解绑/版本变更事件 | 引用默认固定版本；动态引用必须显式标记并允许 stale 传播 |
 | 批量迁移/管理导入 | 本期不提供通用外部批量迁移入口；仅支持经批准的项目内初始化 | 平台运维受限权限 | 按部署/迁移任务触发 | 通过版本化迁移脚本执行，不提供任意文件包导入 API |
 
@@ -215,8 +215,8 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 
 采用 **整数 PTS + 有理数 time_base** 作为唯一权威时间表示。禁止将浮点秒作为数据库持久化字段、API 写入值或版本比较依据。
 
-- 时间戳：`{ "pts": 90000, "time_base": { "num": 1, "den": 90000 } }`，时间值为 pts × num / den 秒。
-- 时长：`{ "value": 45000, "time_base": { "num": 1, "den": 90000 } }`。
+- 时间戳：`{ "pts": 70560000, "time_base": { "num": 1, "den": 70560000 } }`，时间值为 pts × num / den 秒。
+- 时长：`{ "value": 35280000, "time_base": { "num": 1, "den": 70560000 } }`。
 - API 使用 `start`、`duration`、`source_in`、`source_out` 等对象，不使用 `start_seconds` 或 `duration_seconds` 浮点字段。
 - 视频轨道以整数帧序号为编辑权威值，记录精确帧率分数，例如 `frame_rate: { "num": 30000, "den": 1001 }`；帧边界通过有理数运算映射为 PTS。
 - 音频片段以整数采样点为权威值，并记录 `sample_rate`；混轨时转换到共同有理数时间域，不进行浮点累计。
@@ -349,7 +349,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 ### 7.7 AI Provider、模型、任务与工作流
 
 - 默认行为：未配置真实 API 时由 Mork Provider Adapter 作为默认 Provider Adapter；真实模型 API 通过配置接入 Mork 或切换到其他已配置 Adapter。未完成有效配置时明确报 PROVIDER_NOT_CONFIGURED，不伪造生成结果。
-- 来源：内部工作流/用户命令；默认 Provider 为 Mork Mock Adapter；后续真实模型通过配置启用，配置项包括 provider_key、base_url、secret_ref、model_id、capabilities、timeout、rate_limit、enabled。
+- 来源：内部工作流/用户命令；默认 Provider 为 Mork Provider Adapter；后续真实模型通过配置启用，配置项包括 provider_key、base_url、secret_ref、model_id、capabilities、timeout、rate_limit、enabled。
 - 处理：能力路由、策略/预算检查、Prompt 模板渲染、参数 schema 校验、幂等、限流、调用、Attempt、产物校验。
 - 输出：Task/Attempt 状态、成本、Artifact、失败诊断、事件通知。
 - 联动：任务绑定项目、ShotContractVersion、输入资产版本、模型配置版本；输出资产进入 QA/审核。
@@ -365,7 +365,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 - 输出：QualityResult、ReviewRecord、ReworkTask、审核报告。
 - 联动：审核绑定版本；审核拒绝阻断时间线/导出；返工产生新版本/Attempt，不覆盖被拒绝版本。
 - 生命周期：pending → checking → pass/review_required/fail；人工 review：pending → approved/rejected。
-- 异常：规则服务不可用不允许默认 PASS；审核超时提醒项目成员；不提供 WAIVED 豁免状态。
+- 异常：规则服务不可用不允许默认 PASS；审核超时提醒项目成员；不提供审核豁免状态。
 - 验收：审核记录不可篡改；所有拒绝项有 reason；未通过门禁的素材进入受控例外流程，不得静默进入正式成片。
 
 ### 7.9 时间线与剪辑
@@ -457,7 +457,7 @@ E2E 主场景：
 2. 创建项目、故事圣经版本、剧集与剧本版本；
 3. 创建角色/场景/道具资产并上传参考文件；
 4. 创建场次、分镜、Shot Contract，固定资产版本；
-5. 使用默认 Mork Mock Provider 创建生成任务，验证 Attempt、重试/取消和 Artifact；
+5. 使用默认 Mork Provider 创建生成任务，验证 Attempt、重试/取消和 Artifact；
 6. 执行 QA 与人工审核，拒绝一次并完成返工；
 7. 选择已审核素材创建 TimelineVersion；
 8. 创建 ExportJob，执行 FFmpeg，ffprobe 校验并下载 MP4；
@@ -472,7 +472,7 @@ E2E 主场景：
 | D1 内容接入与资产底座 | 项目内 IngestionRecord、Asset/Version、对象存储、上传扫描 | 幂等、项目隔离、checksum、隔离测试通过；不含第三方连接器/爬虫 |
 | D2 创作结构化 | StoryBible/Script/Scene/Dialogue、导入解析、标签与版本 | 结构化导入、版本差异、引用校验通过 |
 | D3 资产与分镜 | 资产关系、Storyboard/Shot/ShotContract、stale 图 | 固定版本引用与影响分析通过 |
-| D4 生成工作流 | Mork Mock Adapter、Provider 配置、Task/Attempt/Outbox、事件、预算 | Mork Provider E2E、重试/取消/恢复通过；真实 API 可通过配置启用 |
+| D4 生成工作流 | Mork Provider Adapter、Provider 配置、Task/Attempt/Outbox、事件、预算 | Mork Provider E2E、重试/取消/恢复通过；真实 API 可通过配置启用 |
 | D5 QA 与审核 | QualityResult、ReviewRecord、ReworkTask、审核工作台 | 审核版本绑定、门禁不可绕过 |
 | D6 时间线与导出 | TimelineVersion、ExportJob、FFmpeg、媒体校验 | 可重建时间线、真实 MP4 E2E |
 | D7 运营治理 | Usage/Budget/Audit/Notification、报表 | 成本关联、审计与告警可验证 |
@@ -485,7 +485,7 @@ E2E 主场景：
 1. 第三方系统接入与网页采集：本期忽略，不建设对应功能。
 2. 资产共享：仅项目内共享；跨项目资产共享和引用禁止。
 3. 审核流程：不支持多级会签，不按内容类型划分审核角色；采用项目统一审核权限与单次审核决定。
-4. 模型供应商：默认使用 Mork Mock Provider；真实模型 API 后续通过 Provider 配置接入。
+4. 模型供应商：默认使用 Mork Provider；真实模型 API 后续通过 Provider 配置接入。
 5. 时间线时码：采用整数 PTS + 有理数 time_base 的统一时间表示，禁止浮点秒作为持久化/API 权威值（详见 5.3）。
 6. 性能目标需依据部署规格、并发和媒体样本压测后固化。
 
