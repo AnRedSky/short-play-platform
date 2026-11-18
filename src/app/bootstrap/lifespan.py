@@ -12,8 +12,8 @@ from app.config.settings import Settings, get_settings
 from app.domains.audit import service as audit_service
 from app.domains.auth import service as auth_service
 from app.domains.users import repository as users_repo
-from app.infrastructure.db import SessionFactory
 from app.infrastructure import redis as redis_infra
+from app.infrastructure.db import SessionFactory
 
 logger = get_logger(__name__)
 _DEVELOPMENT_BOOTSTRAP_PASSWORD = "ChangeMeNow-2026!"
@@ -46,7 +46,10 @@ def _provision_first_administrator(settings: Settings) -> None:
         with db.begin():
             # Serialize simultaneous first starts so two API replicas cannot both
             # observe an empty installation and race to create the initial tenant.
-            db.execute(text("SELECT pg_advisory_xact_lock(:lock_id)"), {"lock_id": _BOOTSTRAP_LOCK_ID})
+            db.execute(
+                text("SELECT pg_advisory_xact_lock(:lock_id)"),
+                {"lock_id": _BOOTSTRAP_LOCK_ID},
+            )
             if users_repo.any_user_exists(db):
                 logger.info("first administrator already exists; bootstrap skipped")
                 return
@@ -66,7 +69,8 @@ def _provision_first_administrator(settings: Settings) -> None:
                 details={"source": "startup"},
             )
             logger.warning(
-                "initial administrator provisioned email=%s; change its password after first login",
+                "development first administrator provisioned email=%s; "
+                "do not expose this instance outside a trusted local environment",
                 user.email,
             )
     finally:
