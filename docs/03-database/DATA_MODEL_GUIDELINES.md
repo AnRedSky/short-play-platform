@@ -31,3 +31,10 @@ PostgreSQL；UUID 主键；snake_case；表名复数；UTC + TIMESTAMPTZ；重�
 
 ## 迁移
 所有结构变更通过 Alembic。迁移必须从空库升级到 head；测试 upgrade/downgrade。破坏性变更采用 expand-migrate-contract；删除字段前先完成兼容发布、数据迁移和备份。生产库禁止手工改 schema。
+
+## 2026-11-18 数据约束补充
+
+- Asset 与 AssetVersion 必须携带 project_id；数据库约束和服务层双重保证 AssetRelation 两端 project_id 一致。不得建立跨项目共享、搜索或引用关系。
+- ReviewRecord、QualityRun 必须绑定不可变 subject_version_id；新版本重新 QA/审核。MVP 不建 waivers 表或 WAIVED 状态。
+- TimelineVersion/Track/Clip 的权威时码使用整数 PTS 和有理数 time_base（numerator/denominator）；视频帧序号和音频采样点保持整数。禁止以 float seconds 持久化或比较。
+- 新模型只有在对应阶段 Issue 明确范围、现有模块落点、迁移和回滚后才能加入。所有迁移在现有 migrations/versions 下按 Alembic 管理。
