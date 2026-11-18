@@ -366,3 +366,6 @@ CI 调试记录：PR #56 首次 Run #206 的 backend-quality、frontend-quality�
 
 
 第四次 Playwright 调试记录：Run #214 已通过 API bootstrap、用户/角色/项目创建、成员角色校验（包含非法 viewer 返回 422）和项目成员加入；在上传跨项目测试资产时发现浏览器专用 API Job 未安装 ffprobe，API 正确返回 MEDIA_PROBE_UNAVAILABLE。已为该 Job 增加 FFmpeg/ffprobe 安装步骤，保证真实上传路径具备与 backend-quality 相同的媒体探测依赖，更新后继续重跑。
+
+
+R1 成员变更补充：新增项目成员撤销接口（软停用 + 审计，禁止移除 owner）。Playwright fixture 让测试用户先加入 A/B/C；用户浏览 A/B 后，管理员撤销 C 成员资格，测试再点击列表中仍然存在的旧 C 链接，验证路由重新请求服务端并拒绝访问。跨项目 Asset detail/download 继续验证 403。
