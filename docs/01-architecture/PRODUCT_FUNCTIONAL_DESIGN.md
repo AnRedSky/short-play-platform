@@ -498,3 +498,11 @@ E2E 主场景：
 - 状态机、幂等、重试、取消、恢复和 stale 规则与现有工作流规范一致。
 - 所有待建设项明确标记，不将方案描述为现有实现。
 - 通过产品/架构评审后，拆分为可交付 Issue，再进入实现阶段。
+
+## 2026-11-18 实施状态与决策对齐
+
+本文为产品功能设计基线；具体模块边界、技术选型、代码现状和分阶段 DoD 以 [统一实施基线](IMPLEMENTATION_BASELINE.md) 为准，页面级交互以 [功能页面与交互流程规范](../02-requirements/FEATURE_INTERACTION_SPEC.md) 为准。
+
+必须遵守：保留当前仓库目录；本期不建设第三方业务系统/Webhook/爬虫接入及内容版权管理；资产严格项目内隔离；审核为项目统一 review permission，不做多级会签/WAIVED；QA 仅 PASS、REVIEW_REQUIRED、FAIL；默认 Mork Provider，未配置报 PROVIDER_NOT_CONFIGURED 且不回退 Mock；时间线以整数 PTS + 有理数 time_base 为唯一权威时间。
+
+本文中任何目标能力、数据模型或 API 描述均不代表已经开发。代码状态必须引用实施基线的已实现/部分实现/原型/待建设矩阵，并以对应 commit 的测试证据确认。
