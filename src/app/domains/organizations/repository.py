@@ -28,7 +28,10 @@ def list_organizations_for_user(db: Session, user_id: UUID) -> list[Organization
         db.scalars(
             select(Organization)
             .join(OrganizationMember, OrganizationMember.organization_id == Organization.id)
-            .where(OrganizationMember.user_id == user_id)
+            .where(
+                OrganizationMember.user_id == user_id,
+                OrganizationMember.is_active.is_(True),
+            )
             .order_by(Organization.created_at)
         ).all()
     )
