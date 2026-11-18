@@ -181,3 +181,29 @@ QA 针对不可变对象版本和 RuleSet 版本运行，保存问题、证据�
 
 ### R1 首个增量交付（2026-11-18）
 已完成第一步：移除 App.vue 的 demo-project 硬编码；新增 `web/src/stores/project.ts` 管理当前项目 ID，并由 `route.params.projectId` 同步；项目列表新增“进入项目”入口；补充 Pinia 单测和导航 E2E。此交付仅解决项目上下文入口，不代表所有生产页已接真实 API，也不代表完整 IDOR/缓存隔离验收完成。
+
+
+## 2026-11-18 R0/R1 验证证据增补（PR #53 合并后）
+
+当前代码基线：develop `a04acff6eeb2a5675e6d009d22c023b214adf5fc`；main 仍为稳定发布分支，本轮没有发布 main。
+
+### R0 运行时快照（GitHub Actions Run #195）
+CI artifact `runtime-contracts` 已实际生成、下载并检查，包含 openapi.json、route-permissions.json、database-schema.json、frontend-api-map.json、duplicate-routes.json。
+- FastAPI runtime OpenAPI：53 个路径。
+- 路由声明清单：72 条（包含不进入 OpenAPI schema 的路由声明）。
+- SQLAlchemy schema：42 张表；Alembic revision 7 个，当前 head 为 `0007_workflow_run_workflow_index`。
+- 前端 API Client：15 个调用，15 个匹配；0 个未匹配。
+- 后端已注册但当前无前端 API Client 映射：57 条；这是页面/API 接入缺口盘点，不代表 57 个接口错误。
+- 重复 method/path：0。
+- 无显式 require_permission 声明的 8 条为 auth/health 路由；业务域路由另需结合依赖继承和资源归属检查，不能仅按 AST 列表推断最终授权。
+
+### R1 浏览器与业务边界
+- PR #53 的 frontend-browser-e2e 在 Run #195 实际安装 Chromium 并执行 Playwright，Job 成功。
+- 当前 Playwright 用例覆盖工作区导航、项目 A/B 路由上下文切换、离开项目清空上下文、无 demo-project 硬编码链接、生产页不显示本地演示记录。
+- 该浏览器套件目前尚未覆盖真实登录态下 403 无权限页面和跨项目资源详情/下载请求；不可把现有 E2E 说成完整 R1 浏览器授权验收。
+- 项目 Store 已实现 contextVersion、AbortController、cleanup 注册和请求上下文有效性判断；useProjectRequest 防止旧项目异步响应写入新项目状态。
+- 服务端已增加资产、Creation、Generation、Workflow 和组织/RBAC 的跨项目/跨组织负向 API 测试；没有资产删除路由，因此不宣称已覆盖资产删除 IDOR。
+
+### 验收状态
+R0 运行时导出、模型迁移 drift 检查、前端映射盘点已有实际 CI 证据；R0 文档/权限审阅仍需合并本轮 docs PR 后复核 Issue 验收条目。
+R1 后端隔离和项目上下文基础已实施，但浏览器 403/跨项目资源访问场景仍缺；真实业务页面 API 接入和成员权限变更后的缓存失效仍未完成。Issue #42/#43 在对应验收项补齐前保持开放。
