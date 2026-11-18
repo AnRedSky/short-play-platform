@@ -117,13 +117,21 @@ jobs:
   compose-validation:
     name: compose-validation
     runs-on: ubuntu-latest
+    env:
+      POSTGRES_DB: short_play
+      POSTGRES_USER: short_play
+      POSTGRES_PASSWORD: short_play
+      REDIS_PASSWORD: short-play-redis
+      SECRET_KEY: ci-only-secret-key
+      CELERY_BROKER_URL: redis://:short-play-redis@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:short-play-redis@redis:6379/1
     steps:
       - uses: actions/checkout@v4
       - name: Validate Docker Compose files
         run: |
           docker compose -f docker/docker-compose.infra.yml config --quiet
-          docker compose -f docker/docker-compose.infra.yml -f docker/docker-compose.prod.yml config --quiet
           docker compose config --quiet
+          docker compose -f docker-compose.yml -f docker/docker-compose.prod.yml config --quiet
       - name: Start shared infrastructure (PostgreSQL, Redis, RabbitMQ)
         run: docker compose -f docker/docker-compose.infra.yml up -d
       - name: Build and start the project stack
