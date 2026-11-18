@@ -6,6 +6,8 @@ const readerPassword = 'ProjectReader-Password-123!'
 
 let api: Awaited<ReturnType<typeof playwrightRequest.newContext>>
 let readerToken = ''
+let readerId = ''
+let adminHeaders: Record<string, string> = {}
 let projectA = ''
 let projectB = ''
 let projectWithoutMembership = ''
@@ -44,7 +46,7 @@ test.beforeAll(async () => {
     data: { email: 'ci-admin@example.test', password: 'CI-Administrator-Password-123!' },
   })
   const admin = (await payload(adminLogin)).access_token
-  const adminHeaders = { Authorization: `Bearer ${admin}` }
+  adminHeaders = { Authorization: `Bearer ${admin}` }
 
   const roleResponse = await api.post('roles', {
     headers: adminHeaders,
@@ -66,6 +68,7 @@ test.beforeAll(async () => {
     },
   })
   const reader = await payload(userResponse)
+  readerId = reader.id
 
   const createProject = async (code: string, title: string) =>
     payload(await api.post('projects', {
@@ -86,7 +89,7 @@ test.beforeAll(async () => {
   })
   expect(invalidMember.status(), await invalidMember.text()).toBe(422)
 
-  for (const projectId of [projectA, projectB]) {
+  for (const projectId of [projectA, projectB, projectWithoutMembership]) {
     const member = await api.post(`projects/${projectId}/members`, {
       headers: adminHeaders,
       data: { user_id: reader.id, project_role: 'reviewer' },
@@ -127,20 +130,29 @@ test('anonymous users are redirected away from project workspaces', async ({ pag
   await expect(page.getByRole('heading', { name: '欢迎回来' })).toBeVisible()
 })
 
-test('a project member can switch projects but cannot open a project without membership', async ({ page }) => {
+test('a project member can switch projects but cannot open a project after membership is revoked', async ({ page }) => {
   await loginAsProjectReader(page)
 
-  await page.goto(`/projects/${projectA}/stories`)
+  await page.getByRole('link', { name: '项目管理' }).click()
+  const projectARow = page.getByRole('row').filter({ hasText: 'E2E-PROJECT-A' })
+  await projectARow.getByRole('link', { name: '进入项目' }).click()
   await expect(page.locator('.project-context')).toContainText(projectA)
 
-  await page.goto(`/projects/${projectB}/assets`)
+  await page.getByRole('link', { name: '项目管理' }).click()
+  const projectBRow = page.getByRole('row').filter({ hasText: 'E2E-PROJECT-B' })
+  await projectBRow.getByRole('link', { name: '进入项目' }).click()
   await expect(page.locator('.project-context')).toContainText(projectB)
-  await expect(page.locator('.module-tabs').getByRole('link', { name: '故事圣经' })).toHaveAttribute(
-    'href',
-    `/projects/${projectB}/stories`,
-  )
 
-  await page.goto(`/projects/${projectWithoutMembership}/assets`)
+  await page.getByRole('link', { name: '项目管理' }).click()
+  const projectCRow = page.getByRole('row').filter({ hasText: 'E2E-PROJECT-C' })
+  await expect(projectCRow).toBeVisible()
+  const revoke = await api.fetch(
+    `projects/${projectWithoutMembership}/members/${readerId}`,
+    { method: 'DELETE', headers: adminHeaders },
+  )
+  expect(revoke.status(), await revoke.text()).toBe(204)
+
+  await projectCRow.getByRole('link', { name: '进入项目' }).click()
   await expect(page).toHaveURL(/\/access-error\?reason=forbidden/)
   await expect(page.getByRole('heading', { name: '无权访问此项目' })).toBeVisible()
   await expect(page.getByText(`项目 ID：${projectWithoutMembership}`)).toBeVisible()
