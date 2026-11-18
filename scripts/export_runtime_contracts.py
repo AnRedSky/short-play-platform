@@ -228,7 +228,8 @@ def main() -> None:
         f"Exported OpenAPI ({len(openapi.get('paths', {}))} paths) and "
         f"SQLAlchemy schema inventory ({schema['table_count']} tables) and "
         f"route permission annotations ({len(routes)} routes), "
-        f"frontend API map ({frontend_map['matched_call_count']}/{frontend_map['frontend_call_count']} calls matched), "
+        f"frontend API map ({frontend_map['matched_call_count']}/"
+        f"{frontend_map['frontend_call_count']} calls matched), "
         f"and {len(duplicate_routes)} duplicate method/path pairs "
         f"to {args.output_dir}"
     )
