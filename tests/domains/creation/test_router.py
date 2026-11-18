@@ -289,6 +289,11 @@ def test_shot_cannot_reference_scene_from_another_project(client, admin):
         headers=admin["headers"],
         json={"name": "Private Project B location"},
     ).json()["data"]
+    character = client.post(
+        f"/api/v1/projects/{project_b['id']}/characters",
+        headers=admin["headers"],
+        json={"name": "Private Project B character"},
+    ).json()["data"]
 
     role = client.post(
         "/api/v1/roles",
@@ -321,6 +326,17 @@ def test_shot_cannot_reference_scene_from_another_project(client, admin):
         json={"user_id": user["id"], "project_role": "artist"},
     )
     assert membership.status_code == 201, membership.text
+
+    foreign_character = client.get(
+        f"/api/v1/characters/{character['id']}", headers=member_headers
+    )
+    assert foreign_character.status_code == 403
+    foreign_version = client.post(
+        f"/api/v1/characters/{character['id']}/versions",
+        headers=member_headers,
+        json={"appearance": "attempted cross-project change"},
+    )
+    assert foreign_version.status_code == 403
 
     response = client.post(
         f"/api/v1/storyboards/{storyboard['id']}/shots",
