@@ -360,3 +360,6 @@ CI 调试记录：PR #56 首次 Run #206 的 backend-quality、frontend-quality�
 
 
 第二次 Playwright 调试记录：Run #208 的真实 API 已正常启动，失败原因是 Playwright APIRequestContext 对以斜杠开头的 URL 重置了 `/api/v1` 前缀，导致 bootstrap 请求落到 `/auth/bootstrap` 并得到 404。已将 fixture 改为基于带尾斜杠的 API base URL 使用相对路径，并修正浏览器页面导航为绝对站内路径；更新后继续重跑。
+
+
+第三次 Playwright 调试记录：Run #211 的 API base path 已修正，fixture 成功创建用户和项目；随后发现项目成员角色枚举不包含 `viewer`（允许值为 owner/producer/writer/director/artist/editor/reviewer），并暴露了 RequestValidationError 的 ctx.ValueError 无法 JSON 序列化、错误返回 500 的后端问题。已将 fixture 改为合法的 reviewer 角色，并修复 `register.py` 对 Pydantic 验证错误上下文的 JSON 安全序列化；fixture 增加非法角色应返回 422 的断言。更新后继续重跑。
