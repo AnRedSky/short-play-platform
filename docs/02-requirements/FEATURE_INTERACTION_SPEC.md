@@ -24,14 +24,14 @@
 | 登录 | views/auth | 基础实现 | 登录、续期、退出、过期恢复 | auth/session |
 | 企业管理 | views/organizations、users、roles | 基础实现 | 组织/部门/成员/角色维护 | organizations/users/roles |
 | 项目 | views/projects | 基础实现 | 项目 CRUD、成员和项目上下文 | projects/project_members |
-| 故事圣经 | views/stories | 演示/待接入 | 故事设定、人物关系、版本 | creation Story/StoryBible |
-| 剧集剧本 | views/episodes | 演示/待接入 | 分集、剧本编辑、场次/对白、版本 | Episode/Script/ScriptVersion |
-| 资产 | views/assets | 部分 UI/待完整联调 | 上传、预览、版本、引用、下载 | assets/AssetVersion |
-| 分镜 | views/storyboards | 演示/待接入 | 分镜排序、Shot Contract、引用版本 | Storyboard/Shot/Contract |
-| AI 任务 | views/tasks | 待完整联调 | 创建任务、进度、Attempt、重试/取消 | GenerationTask/WorkflowRun |
-| QA/审核 | views/reviews | 原型/待后端 | 问题列表、审核意见、通过/拒绝、返工 | QualityRun/ReviewRecord |
-| 时间线 | views/editor | 原型 | 多轨编辑、片段裁剪、版本保存 | Timeline/Track/Clip |
-| 导出 | views/exports | 原型 | ExportProfile、队列进度、校验、下载 | ExportJob/Artifact |
+| 故事圣经 | views/stories | API 未接入（已移除演示数据） | 故事设定、人物关系、版本 | creation Story/StoryBible |
+| 剧集剧本 | views/episodes | API 未接入（已移除演示数据） | 分集、剧本编辑、场次/对白、版本 | Episode/Script/ScriptVersion |
+| 资产 | views/assets | API 未接入（已移除演示数据） | 上传、预览、版本、引用、下载 | assets/AssetVersion |
+| 分镜 | views/storyboards | API 未接入（已移除演示数据） | 分镜排序、Shot Contract、引用版本 | Storyboard/Shot/Contract |
+| AI 任务 | views/tasks | API 未接入（已移除演示数据） | 创建任务、进度、Attempt、重试/取消 | GenerationTask/WorkflowRun |
+| QA/审核 | views/reviews | API 未接入（已移除演示数据） | 问题列表、审核意见、通过/拒绝、返工 | QualityRun/ReviewRecord |
+| 时间线 | views/editor | API 未接入（已移除演示数据） | 多轨编辑、片段裁剪、版本保存 | Timeline/Track/Clip |
+| 导出 | views/exports | API 未接入（已移除演示数据） | ExportProfile、队列进度、校验、下载 | ExportJob/Artifact |
 
 ## 3. 通用交互状态
 
@@ -136,3 +136,16 @@
 - 工作区导航使用当前真实 project_id 构造路径；无项目上下文时返回项目列表，不拼接假 ID。
 - 新增项目上下文 store 单元测试和“导航不指向硬编码 demo 项目”的 Playwright 检查。
 - 尚未完成：切换项目清理各页面请求缓存/事件订阅、所有生产页面接真实 API、完整项目权限负向 E2E。
+
+
+## 8. 2026-11-18 项目切换与生产页状态补充
+
+### 8.1 项目上下文生命周期
+- App 路由监听 `route.params.projectId`，同步当前 Project Store；离开项目时清空当前上下文。
+- Project Store 在项目 ID 改变时递增 contextVersion、abort 所有在途请求，并执行已注册的订阅/缓存 cleanup。
+- API Client 的 apiRequest/apiGet/apiPost/apiPatch 支持传入 AbortSignal。
+- `useProjectRequest` 为项目请求创建上下文，只有请求完成时项目版本仍匹配才调用 apply；项目切换或组件 scope 销毁时取消请求。
+- 项目切换时 ProductionModule 清空页面本地筛选、选择、编辑态和轨道状态；导航链接始终从当前 route projectId 构造，不再使用 demo-project。
+
+### 8.2 未接 API 页面处理规则
+当前 stories、episodes、assets、storyboards、tasks、reviews、editor、exports 仍未全部完成真实 API 联调。为避免演示数据混入生产路径，这些页面已移除样例记录和模拟创建/导出动作，改为明确显示“尚未接入真实业务数据”。页面可见不代表业务完成；对应模块进入 R2–R7 时按真实 API、权限、数据模型和测试逐步接入。
