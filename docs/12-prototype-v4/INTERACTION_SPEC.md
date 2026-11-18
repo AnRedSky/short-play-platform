@@ -69,3 +69,12 @@
 - Tablet (768–1199px): navigation collapses to compact rail; content and forms reduce columns; tables remain horizontally scrollable.
 - Mobile (<768px): navigation becomes compact/hidden according to shell behavior; page headings stack, forms become single-column, tab strips scroll horizontally, drawers/modals fit viewport and tables scroll horizontally.
 - Keyboard: native form controls, semantic buttons, focusable navigation and Escape closes transient dialogs where provided.
+
+
+## Image slideshow export (current API capability)
+1. Load current-project media assets from the server and filter image MIME types.
+2. User selects one or more image Asset IDs and provides title, width, height, FPS and seconds per image.
+3. Submit `POST /projects/{project_id}/exports`; the server creates the slideshow ExportJob and output Asset.
+4. Display the returned job status and output asset ID only after a successful response.
+5. Download the resulting asset through the authenticated asset download endpoint.
+6. This is a real but limited slideshow export capability. It is not the full TimelineVersion → FFmpeg video ExportJob lifecycle; that remains a backend gap.
