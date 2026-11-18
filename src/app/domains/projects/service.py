@@ -133,3 +133,14 @@ def add_member(
     return projects_repo.add_member_row(
         db, project_id=project_id, user_id=user_id, project_role=project_role
     )
+
+
+def remove_member(db: Session, *, project_id: UUID, user_id: UUID) -> ProjectMember:
+    member = projects_repo.find_member(db, project_id, user_id)
+    if member is None or not member.is_active:
+        raise not_found("Project member not found")
+    if member.project_role == "owner":
+        raise conflict("Project owner cannot be removed")
+    member.is_active = False
+    db.flush()
+    return member
