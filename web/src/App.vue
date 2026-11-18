@@ -61,7 +61,7 @@ watch(
       project.clearCurrentProject()
     }
   },
-  { immediate: true },
+  { immediate: true, flush: 'sync' },
 )
 
 function projectPath(section: string) {
