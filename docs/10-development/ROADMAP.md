@@ -344,3 +344,13 @@ R0 的运行时 OpenAPI、ORM/Migration 自动差异核查和页面 API 映射�
 
 ### 执行顺序约束
 继续只处理 R0/R1；未完成 Issue #42/#43 验收前，不启动 R2。线上真实环境/真实用户数据测试不在本轮范围内。
+
+
+## R1 项目访问授权与真实浏览器测试增量（2026-11-18）
+
+- 生产路由增加项目详情访问前置校验，401/403/404/服务不可用分别处理；未知错误 fail closed。
+- 项目切换时取消旧的权限检查请求，防止异步竞态。
+- Playwright 从仅启动 Vite dev server 改为 production build + preview，并在 CI 启动临时 PostgreSQL、Redis 和 FastAPI。
+- E2E fixtures 通过真实 API bootstrap 管理员、创建 projects:read 用户、创建 A/B/C 项目、仅授予 A/B 成员资格并在 C 上传测试资产。
+- 浏览器验收覆盖匿名访问、A/B 项目切换、C 项目 403、C 项目资产详情/下载 403。
+- 此阶段仍只处理 R1，不进入 R2。以上变更的最终验收以 CI run 成功和浏览器报告为准。
