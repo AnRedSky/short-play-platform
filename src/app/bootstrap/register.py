@@ -7,6 +7,7 @@ FastAPI instance; ``main.create_app`` stays a shell around it.
 import uuid
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -28,6 +29,21 @@ _HTTP_STATUS_CODES = {
 
 def _request_id(request: Request) -> str:
     return getattr(request.state, "request_id", None) or str(uuid.uuid4())
+
+
+def _safe_validation_errors(exc: RequestValidationError) -> list[dict]:
+    """Convert Pydantic validation context into JSON-safe API error details."""
+    errors = []
+    for error in exc.errors():
+        item = dict(error)
+        context = item.get("ctx")
+        if isinstance(context, dict):
+            item["ctx"] = {
+                key: str(value) if isinstance(value, Exception) else value
+                for key, value in context.items()
+            }
+        errors.append(item)
+    return jsonable_encoder(errors)
 
 
 def _error_body(code: str, message: str, request_id: str, details: dict | None = None) -> dict:
@@ -56,7 +72,7 @@ def register_exception_handlers(app: FastAPI) -> None:
                 ErrorCode.VALIDATION_ERROR,
                 "Request validation failed",
                 _request_id(request),
-                {"errors": exc.errors()},
+                {"errors": _safe_validation_errors(exc)},
             ),
         )
 
