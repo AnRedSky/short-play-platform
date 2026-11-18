@@ -84,7 +84,7 @@ def create_episode(
     project_id: UUID,
     payload: EpisodeCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, project_id, need="projects:write")
@@ -138,7 +138,7 @@ def create_story(
     project_id: UUID,
     payload: StoryCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, project_id, need="projects:write")
@@ -177,7 +177,7 @@ def create_story_bible(
     project_id: UUID,
     payload: StoryBibleCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, project_id, need="projects:write")
@@ -205,7 +205,7 @@ def create_script(
     episode_id: UUID,
     payload: ScriptCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(
@@ -240,7 +240,7 @@ def create_script_version(
     script_id: UUID,
     payload: ScriptVersionCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(
@@ -277,7 +277,7 @@ def list_script_scenes(
 def create_script_scene(
     version_id: UUID,
     payload: ScriptSceneCreate,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(
@@ -302,7 +302,7 @@ def create_script_scene(
 def create_dialogue(
     scene_id: UUID,
     payload: ScriptDialogueCreate,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(
@@ -345,7 +345,7 @@ def create_character(
     project_id: UUID,
     payload: AssetCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     return _create_asset(db, principal, project_id, payload, "character", request)
@@ -355,7 +355,7 @@ def create_character(
 def create_character_version(
     character_id: UUID,
     payload: AssetVersionCreate,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     return _create_asset_version(db, principal, "character", character_id, payload)
@@ -398,7 +398,7 @@ def create_production_scene(
     project_id: UUID,
     payload: AssetCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     return _create_asset(db, principal, project_id, payload, "scene", request)
@@ -408,7 +408,7 @@ def create_production_scene(
 def create_scene_version(
     scene_id: UUID,
     payload: AssetVersionCreate,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     return _create_asset_version(db, principal, "scene", scene_id, payload)
@@ -434,7 +434,7 @@ def create_prop(
     project_id: UUID,
     payload: AssetCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     return _create_asset(db, principal, project_id, payload, "prop", request)
@@ -444,7 +444,7 @@ def create_prop(
 def create_prop_version(
     prop_id: UUID,
     payload: AssetVersionCreate,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     return _create_asset_version(db, principal, "prop", prop_id, payload)
@@ -503,7 +503,7 @@ def create_storyboard(
     episode_id: UUID,
     payload: StoryboardCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(
@@ -541,7 +541,7 @@ def create_shot(
     storyboard_id: UUID,
     payload: ShotCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(
@@ -587,7 +587,7 @@ def create_shot_contract(
     shot_id: UUID,
     payload: ShotContractCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission(projects:write)),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, creation_service.project_of_shot(db, shot_id), need="projects:write")
