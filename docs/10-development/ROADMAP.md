@@ -357,3 +357,6 @@ R0 的运行时 OpenAPI、ORM/Migration 自动差异核查和页面 API 映射�
 
 
 CI 调试记录：PR #56 首次 Run #206 的 backend-quality、frontend-quality、compose-validation 均通过；Playwright job 在启动前端服务时发现项目没有 `npm run preview` script。已将 Playwright webServer 命令修正为直接调用 `npx vite preview`，等待更新后的完整 CI 复验。该失败属于测试环境启动命令问题，不是浏览器用例通过证据。
+
+
+第二次 Playwright 调试记录：Run #208 的真实 API 已正常启动，失败原因是 Playwright APIRequestContext 对以斜杠开头的 URL 重置了 `/api/v1` 前缀，导致 bootstrap 请求落到 `/auth/bootstrap` 并得到 404。已将 fixture 改为基于带尾斜杠的 API base URL 使用相对路径，并修正浏览器页面导航为绝对站内路径；更新后继续重跑。
