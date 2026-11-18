@@ -29,7 +29,8 @@ services:
       <<: *backend-env
       RUN_MIGRATIONS: "1"
     ports:
-      - "8000:8000"
+      # Host port follows API_PORT; the container listens on its fixed 8000.
+      - "${API_PORT:-8000}:8000"
     volumes:
       - media_storage:/data/storage
     networks:
