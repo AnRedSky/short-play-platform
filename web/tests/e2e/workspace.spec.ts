@@ -31,3 +31,11 @@ test('leaving a project clears the project context from the workspace shell', as
   await page.goto('/projects')
   await expect(page.locator('.project-context')).toHaveCount(0)
 })
+
+
+test('production routes never display local demo records as real project data', async ({ page }) => {
+  await page.goto('/projects/project-b/stories')
+  await expect(page.getByText('故事圣经尚未接入真实业务数据')).toBeVisible()
+  await expect(page.getByText('雨夜来信')).toHaveCount(0)
+  await expect(page.getByText('演示数据')).toHaveCount(0)
+})
