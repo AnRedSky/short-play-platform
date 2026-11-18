@@ -32,4 +32,4 @@ class RoleDetailRead(RoleRead):
 
 
 class RoleAssignment(BaseModel):
-    role_id: UUID
+    user_id: UUID
