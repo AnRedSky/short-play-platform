@@ -4,6 +4,7 @@ import { ref } from 'vue'
 export interface ProjectRequestContext {
   signal: AbortSignal
   isCurrent: () => boolean
+  abort: () => void
   release: () => void
 }
 
@@ -46,6 +47,7 @@ export const useProjectStore = defineStore('project', () => {
     return {
       signal: controller.signal,
       isCurrent: () => version === contextVersion.value && !controller.signal.aborted,
+      abort: () => controller.abort(),
       release: () => controllers.delete(controller),
     }
   }
