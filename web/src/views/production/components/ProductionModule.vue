@@ -30,7 +30,7 @@
             <div v-else class="table-wrap"><table><thead><tr><th>故事名称</th><th>Logline</th><th>状态</th><th>Story ID</th><th>操作</th></tr></thead><tbody><tr v-for="s in stories" :key="s.id"><td><strong>{{ s.title }}</strong><small class="cell-sub">{{ s.synopsis || '未填写梗概' }}</small></td><td>{{ s.logline || '—' }}</td><td><span class="status-pill">{{ s.status }}</span></td><td class="mono">{{ s.id }}</td><td><button class="text-action" @click="selectedStory=s">查看</button></td></tr></tbody></table></div>
           </div>
           <div v-else>
-            <div class="card-heading"><h2>故事圣经版本</h2><button class="secondary-button small" @click="load">刷新</button></div>
+            <div class="card-heading"><h2>故事圣经版本</h2><div class="inline-actions"><button class="secondary-button small" @click="load">刷新</button><button class="primary-button" @click="openCreate">创建新版本</button></div></div>
             <div v-if="!bibles.length" class="empty-state">暂无故事圣经版本。新建版本将以不可变快照保存。</div>
             <div v-for="b in bibles" :key="b.id" class="record-card"><div><strong>版本 {{ b.version_number }}</strong><small class="cell-sub">{{ b.status }} · {{ b.id }}</small></div><button class="text-action" @click="selectedBible=b">查看 JSON</button></div>
           </div>
@@ -102,7 +102,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ApiError } from '../../../api'
-import { productionApi, type AssetVersion, type Dialogue, type Episode, type ProductionAsset, type Script, type ScriptScene, type ScriptVersion, type Shot, type ShotContract, type Story, type StoryBible, type Storyboard, type Task, type WorkflowRun, type ProviderHealth } from '../../../api/production'
+import { productionApi, type Episode, type ProductionAsset, type Script, type ScriptScene, type ScriptVersion, type Shot, type ShotContract, type Story, type StoryBible, type Storyboard, type Task, type WorkflowRun, type ProviderHealth } from '../../../api/production'
 
 type ModuleKey='stories'|'episodes'|'assets'|'storyboards'|'tasks'|'reviews'|'editor'|'exports'
 const props=defineProps<{module:ModuleKey}>()
@@ -155,7 +155,6 @@ async function createScript(){if(!selectedEpisode.value)return;await run(()=>pro
 async function loadScripts(){if(!selectedEpisode.value)return;/* Script list is not exposed by the current API; keep only a newly created script in the active interaction. */pageError.value='剧本列表读取接口尚未提供。新建剧本已由服务端保存，但刷新后无法查询历史剧本；需要补充 GET /episodes/{id}/scripts。';}
 async function selectScript(s:Script){selectedScript.value=s;scriptVersions.value=await productionApi.scriptVersions(s.id)}
 async function createScriptVersion(){if(!selectedScript.value)return;await run(()=>productionApi.createScriptVersion(selectedScript.value!.id,scriptContent.value),async v=>{scriptContent.value='';if(v)await selectScript(selectedScript.value!)})}
-async function selectVersion(v:ScriptVersion){selectedVersion.value=v;scenes.value=await productionApi.scenes(v.id)}
 async function createScene(){if(!selectedVersion.value)return;await run(()=>productionApi.createScene(selectedVersion.value!.id,{...sceneForm}),async()=>{await selectVersion(selectedVersion.value!)})}
 async function createDialogue(){if(!selectedScene.value)return;await run(()=>productionApi.createDialogue(selectedScene.value!.id,{...dialogueForm}),()=>{pageError.value='对白已由服务端创建。当前 API 未提供对白列表读取接口，无法在此展示已保存对白。'})}
 async function createProductionAsset(){await run(()=>productionApi.createProductionAsset(projectId.value,assetKind.value as 'characters'|'scenes'|'props',{...assetForm}),async()=>{Object.assign(assetForm,{name:'',description:''});await load()})}
@@ -175,7 +174,6 @@ async function cancelTask(){if(!taskDetail.value)return;await run(()=>production
 async function createWorkflow(){await run(()=>productionApi.createWorkflow(projectId.value,workflowCode.value,{}),async()=>{await load()})}
 async function openWorkflow(id:string){await run(()=>productionApi.workflow(id),v=>{workflowDetail.value=v})}
 async function runWorkflowAction(id:string,action:'cancel'|'recover'){if(!window.confirm(action==='cancel'?'确认请求取消此工作流？':'确认尝试恢复该工作流的孤儿任务？'))return;await run(()=>action==='cancel'?productionApi.cancelWorkflow(id):productionApi.recoverWorkflow(id),async()=>{await load()})}
-function selectVersionContent(v:ScriptVersion){scriptContent.value=v.content}
 function selectVersion(v:ScriptVersion){selectedVersion.value=v;scenes.value=[];productionApi.scenes(v.id).then(v=>scenes.value=v).catch(e=>pageError.value=message(e))}
 function formatBytes(n:number){if(!Number.isFinite(n))return '—';if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';return (n/1048576).toFixed(1)+' MB'}
 watch(()=>[props.module,projectId.value],()=>{showCreateForm.value=false;selectedEpisode.value=null;storyboard.value=null;taskDetail.value=null;void load()})
