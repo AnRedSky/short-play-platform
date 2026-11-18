@@ -1,6 +1,6 @@
 import { expect, request as playwrightRequest, test } from '@playwright/test'
 
-const apiBase = process.env.E2E_API_BASE_URL ?? 'http://127.0.0.1:8000/api/v1'
+const apiBase = (process.env.E2E_API_BASE_URL ?? 'http://127.0.0.1:8000/api/v1').replace(/\/?$/, '/')
 const readerEmail = 'project-reader@example.test'
 const readerPassword = 'ProjectReader-Password-123!'
 
@@ -30,7 +30,7 @@ test.describe.configure({ mode: 'serial' })
 test.beforeAll(async () => {
   api = await playwrightRequest.newContext({ baseURL: apiBase })
 
-  const bootstrap = await api.post('/auth/bootstrap', {
+  const bootstrap = await api.post('auth/bootstrap', {
     data: {
       email: 'ci-admin@example.test',
       password: 'CI-Administrator-Password-123!',
@@ -40,13 +40,13 @@ test.beforeAll(async () => {
   })
   expect(bootstrap.status(), await bootstrap.text()).toBe(200)
 
-  const adminLogin = await api.post('/auth/login', {
+  const adminLogin = await api.post('auth/login', {
     data: { email: 'ci-admin@example.test', password: 'CI-Administrator-Password-123!' },
   })
   const admin = (await payload(adminLogin)).access_token
   const adminHeaders = { Authorization: `Bearer ${admin}` }
 
-  const roleResponse = await api.post('/roles', {
+  const roleResponse = await api.post('roles', {
     headers: adminHeaders,
     data: {
       code: 'project_reader_e2e',
@@ -56,7 +56,7 @@ test.beforeAll(async () => {
   })
   const role = await payload(roleResponse)
 
-  const userResponse = await api.post('/users', {
+  const userResponse = await api.post('users', {
     headers: adminHeaders,
     data: {
       email: readerEmail,
@@ -68,7 +68,7 @@ test.beforeAll(async () => {
   const reader = await payload(userResponse)
 
   const createProject = async (code: string, title: string) =>
-    payload(await api.post('/projects', {
+    payload(await api.post('projects', {
       headers: adminHeaders,
       data: { code, title, summary: 'Playwright project authorization fixture' },
     }))
@@ -81,14 +81,14 @@ test.beforeAll(async () => {
   projectWithoutMembership = c.id
 
   for (const projectId of [projectA, projectB]) {
-    const member = await api.post(`/projects/${projectId}/members`, {
+    const member = await api.post(`projects/${projectId}/members`, {
       headers: adminHeaders,
       data: { user_id: reader.id, project_role: 'viewer' },
     })
     expect(member.status(), await member.text()).toBe(201)
   }
 
-  const assetResponse = await api.post(`/projects/${projectWithoutMembership}/assets`, {
+  const assetResponse = await api.post(`projects/${projectWithoutMembership}/assets`, {
     headers: adminHeaders,
     multipart: {
       title: 'Private project C asset',
@@ -105,7 +105,7 @@ test.beforeAll(async () => {
   const asset = await payload(assetResponse)
   foreignAssetId = asset.id
 
-  const readerLogin = await api.post('/auth/login', {
+  const readerLogin = await api.post('auth/login', {
     data: { email: readerEmail, password: readerPassword },
   })
   readerToken = (await payload(readerLogin)).access_token
@@ -116,7 +116,7 @@ test.afterAll(async () => {
 })
 
 test('anonymous users are redirected away from project workspaces', async ({ page }) => {
-  await page.goto(`/projects/${projectA}/stories`)
+  await page.goto(`projects/${projectA}/stories`)
   await expect(page).toHaveURL(/\/login\?redirect=/)
   await expect(page.getByRole('heading', { name: '欢迎回来' })).toBeVisible()
 })
@@ -124,17 +124,17 @@ test('anonymous users are redirected away from project workspaces', async ({ pag
 test('a project member can switch projects but cannot open a project without membership', async ({ page }) => {
   await loginAsProjectReader(page)
 
-  await page.goto(`/projects/${projectA}/stories`)
+  await page.goto(`projects/${projectA}/stories`)
   await expect(page.locator('.project-context')).toContainText(projectA)
 
-  await page.goto(`/projects/${projectB}/assets`)
+  await page.goto(`projects/${projectB}/assets`)
   await expect(page.locator('.project-context')).toContainText(projectB)
   await expect(page.locator('.module-tabs').getByRole('link', { name: '故事圣经' })).toHaveAttribute(
     'href',
-    `/projects/${projectB}/stories`,
+    `projects/${projectB}/stories`,
   )
 
-  await page.goto(`/projects/${projectWithoutMembership}/assets`)
+  await page.goto(`projects/${projectWithoutMembership}/assets`)
   await expect(page).toHaveURL(/\/access-error\?reason=forbidden/)
   await expect(page.getByRole('heading', { name: '无权访问此项目' })).toBeVisible()
   await expect(page.getByText(`项目 ID：${projectWithoutMembership}`)).toBeVisible()
@@ -145,8 +145,8 @@ test('browser requests cannot read or download an asset from another project', a
 
   const results = await page.evaluate(async ({ apiUrl, assetId, token }) => {
     const headers = { Authorization: `Bearer ${token}` }
-    const detail = await fetch(`${apiUrl}/assets/${assetId}`, { headers })
-    const download = await fetch(`${apiUrl}/assets/${assetId}/download`, { headers })
+    const detail = await fetch(`${apiUrl}assets/${assetId}`, { headers })
+    const download = await fetch(`${apiUrl}assets/${assetId}/download`, { headers })
     return { detail: detail.status, download: download.status }
   }, { apiUrl: apiBase, assetId: foreignAssetId, token: readerToken })
 
