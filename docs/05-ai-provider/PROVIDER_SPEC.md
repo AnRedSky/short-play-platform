@@ -20,3 +20,11 @@ P0 contracts + Mock Text/Image/Video/TTS；P0 Registry/Router/Policy；P0 Genera
 
 ## 验收
 Mock 与真实 Provider 可替换而不修改业务模块；错误/超时/限流归一；异步任务可查询；凭据不泄露；每次调用有 Attempt、审计和用量记录；故障切换不绕过数据外发策略。
+
+## 2026-11-18 默认 Provider 决策
+
+MVP 默认适配器为 Mork。Adapter 负责 Mork API 鉴权、请求/响应 Schema 转换、异步任务状态映射、错误归一、超时和限流处理。具体模型 ID、能力、价格和参数必须来自供应商文档/受控实测/管理员配置；未知值标记 unknown，不得推测。
+
+配置至少包含 provider_key、base_url（受域名白名单约束）、secret_ref、model_id、capabilities、timeout、rate_limit、enabled 和配置版本。密钥通过安全环境/密钥管理注入或加密引用，不进入 Git、日志或前端。
+
+Mork 未配置或凭据无效时返回 `PROVIDER_NOT_CONFIGURED` 或明确的凭据错误；禁止静默 fallback 到 Mock 或其他供应商。Mock 仅供 CI 和显式标识的演示环境。Provider 不写业务数据库；Generation Application Service 负责 Task/Attempt、资产产物、用量和审计。

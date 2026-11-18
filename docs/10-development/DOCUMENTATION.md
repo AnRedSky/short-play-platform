@@ -17,3 +17,9 @@
 
 ## 版本
 当前有效内容只保留一个正式入口。历史通过 Git 提交追溯；被替代内容不得继续作为当前操作规范或重复维护的“最新版”。被接受 ADR 不覆盖，后续新 ADR 明确取代关系。
+
+## 2026-11-18 文档唯一基线补充
+
+当前实施基线唯一入口为 `docs/01-architecture/IMPLEMENTATION_BASELINE.md`；页面级功能与交互唯一入口为 `docs/02-requirements/FEATURE_INTERACTION_SPEC.md`；阶段交付顺序以 `docs/10-development/ROADMAP.md` 为准。具体领域文档负责细节，不得重新定义与基线冲突的项目边界。
+
+所有功能文档必须区分“当前代码状态”和“目标要求”；接口目录/页面入口/ORM 模型存在不等于功能完成。状态更新需附对应 commit、迁移、测试和 CI 证据。

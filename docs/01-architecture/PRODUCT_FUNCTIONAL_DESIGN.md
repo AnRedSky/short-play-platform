@@ -138,7 +138,7 @@
 
 ### 4.3 内容审核与质量门禁
 
-质量结果枚举：PASS、REVIEW_REQUIRED、FAIL。MVP 不提供 豁免 豁免通道；质量检查失败必须修复后重新检查。
+质量结果枚举：PASS、REVIEW_REQUIRED、FAIL。MVP 不提供豁免通道；质量检查失败必须修复后重新检查。
 
 - 结构质量：必填字段、引用完整性、唯一编号、schema 版本。
 - 剧本质量：场次完整、人物出场一致、对白归属、场景切换、时长估算。
@@ -171,7 +171,7 @@
 | 音视频探测 | p95 ≤ 10 秒/文件（不含全片转码） |
 | 任务入队至可查询 | p95 ≤ 1 秒 |
 | 任务状态快照 API | p95 ≤ 300 ms |
-| Webhook 事件重复处理 | 业务副作用为 0 次重复 |
+| Provider 轮询状态重复处理 | 业务副作用为 0 次重复 |
 | 质量规则 | 10 秒短媒体 p95 ≤ 15 秒；长媒体异步并报告阶段进度 |
 | 失败可观测性 | 100% 失败有 error_code、request_id、stage、retryable 和 trace/correlation_id |
 
@@ -348,7 +348,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 
 ### 7.7 AI Provider、模型、任务与工作流
 
-- 默认行为：未配置真实 API 时由 Mork Provider Adapter 作为默认 Provider Adapter；真实模型 API 通过配置接入 Mork 或切换到其他已配置 Adapter。未完成有效配置时明确报 PROVIDER_NOT_CONFIGURED，不伪造生成结果。
+- 默认行为：Mork Provider Adapter 是唯一默认生产适配器；真实模型 API 通过 Mork Provider 配置接入。未完成有效配置时明确报 PROVIDER_NOT_CONFIGURED，不伪造生成结果、不静默切换供应商。
 - 来源：内部工作流/用户命令；默认 Provider 为 Mork Provider Adapter；后续真实模型通过配置启用，配置项包括 provider_key、base_url、secret_ref、model_id、capabilities、timeout、rate_limit、enabled。
 - 处理：能力路由、策略/预算检查、Prompt 模板渲染、参数 schema 校验、幂等、限流、调用、Attempt、产物校验。
 - 输出：Task/Attempt 状态、成本、Artifact、失败诊断、事件通知。
@@ -393,7 +393,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 
 - 来源：Provider Usage 回执、任务成本估算、系统事件、用户偏好。
 - 处理：按组织/项目/用户/Provider 聚合 token、时长、金额；预算阈值；异常成本检测；审计不可变。
-- 输出：用量报表、预算告警、操作审计、站内通知/Webhook。
+- 输出：用量报表、预算告警、操作审计、站内通知。
 - 联动：生成任务创建前检查预算；超预算阻断或要求授权；通知失败不回滚业务事实。
 - 生命周期：usage event append-only；预算周期 open → warning → exceeded → closed。
 - 异常：供应商账单延迟需标记 estimated/final；重复账单按外部 ID 幂等；通知失败进入重试/死信。
@@ -447,7 +447,7 @@ API 输出遵循现有规范：成功为 data/meta；错误为 error(code/messag
 | 版本与血缘 | 上游新版本、资产撤回、依赖循环、旧版引用 | stale 正确传播；无静默覆盖；历史快照可重建 |
 | 权限安全 | 跨组织/项目 IDOR、下载 URL 复用、角色撤销 | 越权 100% 拒绝；短时 URL 过期失效 |
 | 工作流可靠性 | 重复消息、Worker 崩溃、超时、取消、供应商回调乱序 | 无重复业务产物；可恢复；状态最终一致 |
-| QA/审核 | 规则服务不可用、审核拒绝、重复审核决策/无权限审核 | 故障不误判 PASS；拒绝可返工；豁免有审计 |
+| QA/审核 | 规则服务不可用、审核拒绝、重复审核决策/无权限审核 | 故障不误判 PASS；拒绝可返工；不提供豁免 |
 | 媒体与导出 | 损坏源文件、无音轨、时码越界、磁盘不足、FFmpeg 中断 | 文件未校验不得成功；失败可诊断；快照可追溯 |
 | E2E | 创建项目至 MP4 下载 | 项目隔离、剧本/资产/镜头/生成/审核/时间线/导出闭环成功 |
 | 迁移与恢复 | 空库升级、备份恢复、对象存储引用恢复 | 迁移可重复验证；元数据与文件 checksum 一致 |
@@ -498,3 +498,15 @@ E2E 主场景：
 - 状态机、幂等、重试、取消、恢复和 stale 规则与现有工作流规范一致。
 - 所有待建设项明确标记，不将方案描述为现有实现。
 - 通过产品/架构评审后，拆分为可交付 Issue，再进入实现阶段。
+
+## 2026-11-18 实施状态与决策对齐
+
+本文为产品功能设计基线；具体模块边界、技术选型、代码现状和分阶段 DoD 以 [统一实施基线](IMPLEMENTATION_BASELINE.md) 为准，页面级交互以 [功能页面与交互流程规范](../02-requirements/FEATURE_INTERACTION_SPEC.md) 为准。
+
+必须遵守：保留当前仓库目录；本期不建设第三方业务系统/Webhook/爬虫接入及内容版权管理；资产严格项目内隔离；审核为项目统一 review permission，不做多级会签/WAIVED；QA 仅 PASS、REVIEW_REQUIRED、FAIL；默认 Mork Provider，未配置报 PROVIDER_NOT_CONFIGURED 且不回退 Mock；时间线以整数 PTS + 有理数 time_base 为唯一权威时间。
+
+本文中任何目标能力、数据模型或 API 描述均不代表已经开发。代码状态必须引用实施基线的已实现/部分实现/原型/待建设矩阵，并以对应 commit 的测试证据确认。
+
+## 页面交互与代码映射
+
+前端目标页面、当前演示/真实状态、操作状态机和异常交互统一维护于 [功能页面与交互流程规范](../02-requirements/FEATURE_INTERACTION_SPEC.md)。不得仅因页面路由存在就把业务能力标记为已交付。

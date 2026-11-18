@@ -14,3 +14,7 @@ MVP 使用 PostgreSQL 持久化业务工作流状态 + Outbox + Celery 执行队
 
 ## 迁移原则
 如采用 Temporal，由 ADR 定义流程迁移范围、业务状态映射、历史运行完成策略、回滚路径和数据一致性。Temporal 接管编排后不再双写两套流程引擎。Celery 可保留为短任务执行器，但职责必须明确。
+
+## 2026-11-18 供应商异步任务边界
+
+MVP 不建设第三方业务 Webhook 集成。外部 Provider 异步任务由 Provider Adapter 轮询查询供应商状态，轮询任务由 Celery 调度并持久化状态；如供应商协议强制要求回调，必须另行 ADR 和安全评估，不得默认开放通用 Webhook。Mork 未配置时失败关闭，返回 PROVIDER_NOT_CONFIGURED。
