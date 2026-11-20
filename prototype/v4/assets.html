@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>资产库 · 长夜将明 · 长夜制作台 V4</title>
+  <link rel="stylesheet" href="assets/css/studio.css">
+  <style>
+    .asset-card { background:#fff;border:1px solid var(--line);border-radius:13px;overflow:hidden;cursor:pointer;transition:border-color .16s,box-shadow .16s,transform .16s;display:flex;flex-direction:column }
+    .asset-card:hover { border-color:#c9c1af;box-shadow:0 10px 24px rgba(23,24,28,.07);transform:translateY(-1px) }
+    .asset-card .abody { padding:10px 12px 12px }
+    .asset-card .aname { font-family:var(--font-serif);font-size:14px;font-weight:600;line-height:1.4 }
+    .asset-card .ameta { font-size:10px;color:var(--muted);margin-top:2px }
+    .asset-card .afoot { display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:7px;border-top:1px solid #f0ece3 }
+    .asset-thumb { aspect-ratio:4/3 }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main class="page">
+      <div class="page-head">
+        <div class="ph-main">
+          <span class="eyebrow">Asset library · project scoped</span>
+          <h1 class="page-title">资产库</h1>
+          <p class="page-desc">角色、场景、道具与服装的视觉锚点。所有引用固定版本，资产只在项目内共享，不跨项目搜索或引用。</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="checkBtn">一致性检查</button>
+          <button class="btn" id="genBatch">批量生成参考</button>
+          <button class="btn btn-primary" id="newAsset">＋ 新增资产</button>
+        </div>
+      </div>
+
+      <div class="grid g4">
+        <div class="card stat"><div class="s-label">资产总数</div><div class="s-val" id="sTotal">20<small>项</small></div><div class="s-delta">角色 6 · 场景 6 · 道具 5 · 服装 1</div></div>
+        <div class="card stat"><div class="s-label">已锁定</div><div class="s-val" id="sLocked">6<small>项</small></div><div class="s-delta">可安全引用</div></div>
+        <div class="card stat"><div class="s-label">待补参考</div><div class="s-val" id="sTodo">2<small>项</small></div><div class="s-delta">沈知白、铅字盘</div></div>
+        <div class="card stat"><div class="s-label">镜头引用</div><div class="s-val">63<small>次</small></div><div class="s-delta">覆盖 EP01–EP03</div></div>
+      </div>
+
+      <section class="card mt-16">
+        <div class="card-head">
+          <div class="row wrap" id="typeFilters" style="gap:6px">
+            <button class="chip on" data-t="all">全部</button>
+            <button class="chip" data-t="character">角色</button>
+            <button class="chip" data-t="scene">场景</button>
+            <button class="chip" data-t="prop">道具</button>
+            <button class="chip" data-t="costume">服装</button>
+          </div>
+          <div class="row">
+            <div style="position:relative"><input class="input" id="search" placeholder="搜索名称或描述" style="height:32px;width:220px;padding-left:30px;font-size:11.5px"><span style="position:absolute;left:9px;top:8px;color:var(--muted)">⌕</span></div>
+            <div class="seg" id="statusFilters" style="margin-left:4px">
+              <button class="active" data-s="all">全部</button><button data-s="locked">已锁定</button><button data-s="review">待审核</button><button data-s="draft">待补充</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="grid g4" id="assetGrid"></div>
+        </div>
+        <div class="card-foot"><span class="tiny muted" id="resultCount">20 项资产</span><span class="tiny muted">引用版本固定 · 修改不会静默影响已生成镜头</span></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(function(){
+  SP.ui.mount('assets','资产库');
+  var type='all', status='all', q='';
+
+  function allAssets(){
+    var s=SP.get();
+    var chars=s.characters.map(function(c){ return Object.assign({},c,{type:'character',cats:'角色'}); });
+    var rest=s.assets.map(function(a){ return Object.assign({},a,{cats:{scene:'场景',prop:'道具',costume:'服装'}[a.type]||'道具'}); });
+    return chars.concat(rest);
+  }
+  function typeName(t){ return {character:'角色',scene:'场景',prop:'道具',costume:'服装'}[t]||t; }
+  function statusBadge(st){
+    var map={locked:['b-done','已锁定'],ready:['b-teal','已就绪'],review:['b-warn','待审核'],draft:['b-todo','待补充']};
+    var m=map[st]||['b-todo',st];
+    return '<span class="badge '+m[0]+'" style="height:19px">'+m[1]+'</span>';
+  }
+
+  function render(){
+    var items=allAssets().filter(function(a){
+      return (type==='all'||a.type===type) && (status==='all'||a.status===status) &&
+        (!q || (a.name+a.desc+'').toLowerCase().indexOf(q.toLowerCase())>-1);
+    });
+    var total=allAssets();
+    document.getElementById('sTotal').innerHTML=total.length+'<small>项</small>';
+    document.getElementById('sLocked').innerHTML=total.filter(function(a){return a.status==='locked';}).length+'<small>项</small>';
+    document.getElementById('sTodo').innerHTML=total.filter(function(a){return a.status==='draft';}).length+'<small>项</small>';
+    document.getElementById('resultCount').textContent=items.length+' 项资产';
+    document.getElementById('assetGrid').innerHTML=items.length?items.map(function(a){
+      var color=a.color||'#7a6a55';
+      return '<div class="asset-card" data-id="'+a.id+'">'+
+        '<div class="asset-thumb" style="background:linear-gradient(155deg,'+SP.ui.hexA(color,.18)+','+color+')">'+
+          '<span class="at-glyph" style="font-size:34px">'+(a.initial||a.name.charAt(0))+'</span>'+
+          '<span class="at-badge">'+statusBadge(a.status)+'</span>'+
+          '<span class="badge" style="position:absolute;left:7px;bottom:7px;background:rgba(255,255,255,.86);color:#5c5449;height:18px">'+a.version+'</span>'+
+        '</div>'+
+        '<div class="abody"><div class="between"><span class="aname truncate">'+a.name+'</span><span class="tag">'+typeName(a.type)+'</span></div>'+
+        '<div class="ameta">'+(a.type==='character'?a.role:(a.type==='scene'?'场景参考':'道具 / 服装参考'))+'</div>'+
+        '<div class="afoot"><span class="tiny muted">引用 '+a.refs+' 次</span><span class="tiny" style="color:var(--accent)">详情 →</span></div></div></div>';
+    }).join('') : '<div style="grid-column:1/-1">'+SP.ui.empty('没有符合条件的资产','调整筛选条件，或新增一个资产。')+'</div>';
+
+    var st=allAssets();
+    document.getElementById('sTodo').parentElement.querySelector('.s-delta').textContent =
+      st.filter(function(a){return a.status==='draft';}).map(function(a){return a.name;}).join('、')+' 待补';
+  }
+
+  document.getElementById('typeFilters').addEventListener('click',function(e){
+    var b=e.target.closest('[data-t]'); if(!b) return; type=b.getAttribute('data-t');
+    document.querySelectorAll('#typeFilters .chip').forEach(function(c){c.classList.toggle('on',c===b);}); render();
+  });
+  document.getElementById('statusFilters').addEventListener('click',function(e){
+    var b=e.target.closest('[data-s]'); if(!b) return; status=b.getAttribute('data-s');
+    document.querySelectorAll('#statusFilters button').forEach(function(c){c.classList.toggle('active',c===b);}); render();
+  });
+  document.getElementById('search').addEventListener('input',function(){ q=this.value.trim(); render(); });
+
+  document.getElementById('assetGrid').addEventListener('click',function(e){
+    var c=e.target.closest('[data-id]'); if(!c) return; openAsset(c.getAttribute('data-id'));
+  });
+
+  function findAsset(id){
+    var s=SP.get();
+    return s.characters.filter(function(x){return x.id===id;})[0] || s.assets.filter(function(x){return x.id===id;})[0];
+  }
+
+  function openAsset(id){
+    var a=findAsset(id); if(!a) return;
+    var isChar=a.type==='character';
+    var color=a.color||'#7a6a55';
+    var refShots=SP.get().shots.slice(0,4);
+    var body='<div style="border-radius:12px;overflow:hidden;margin-bottom:16px;position:relative;height:210px;background:linear-gradient(155deg,'+SP.ui.hexA(color,.16)+','+color+');display:grid;place-items:center">'+
+        '<span style="font-family:var(--font-serif);font-size:56px;color:rgba(255,255,255,.92);text-shadow:0 6px 24px rgba(0,0,0,.18)">'+(a.initial||a.name.charAt(0))+'</span>'+
+        '<span class="badge" style="position:absolute;left:12px;top:12px;background:rgba(255,255,255,.9);color:#5c5449">'+a.version+'</span>'+
+        '<span class="badge" style="position:absolute;right:12px;top:12px;background:rgba(20,20,24,.45);color:#f2ecdf;border-color:rgba(255,255,255,.2)">'+statusBadge(a.status).replace(/<[^>]+>/g,'')+'</span>'+
+        '<span style="position:absolute;left:14px;right:14px;bottom:12px;color:#f5efe3;font-family:var(--font-serif);font-size:15px">'+a.name+'</span></div>'+
+      '<div class="form-grid">'+
+        '<div class="field span2"><label>设定描述</label><textarea class="textarea" id="afDesc" rows="3">'+SP.escape(a.desc)+'</textarea></div>'+
+        (isChar
+          ? '<div class="field span2"><label>视觉锚点</label><textarea class="textarea" id="afAnchor" rows="2">'+SP.escape(a.anchor||'')+'</textarea><span class="hint">至少 3 个稳定特征，用于角色一致性检查。</span></div>'
+          : '<div class="field span2"><label>生成提示词</label><textarea class="textarea" id="afPrompt" rows="2">'+SP.escape(a.prompt||'')+'</textarea></div>')+
+      '</div>'+
+      '<div style="border-top:1px solid var(--line);margin:16px 0 12px"></div>'+
+      '<div class="between mb-8"><span class="tiny muted">当前版本引用</span><span class="tiny muted">'+a.refs+' 次 · 固定版本</span></div>'+
+      '<div class="stack" style="gap:7px">'+refShots.map(function(sh){
+        return '<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid #efece4"><span class="tiny">'+sh.id+' '+sh.title+'</span><span class="badge b-teal" style="height:18px">'+sh.status+'</span></div>';
+      }).join('')+'</div>'+
+      '<div class="notice info mt-12"><span>资产被引用后禁止物理删除。更新参考会产生新版本，需重新确认受影响的镜头。</span></div>';
+    SP.ui.drawer({eyebrow:typeName(a.type)+' · '+a.id,title:a.name,sub:a.version+' · 引用 '+a.refs+' 次 · 最近更新 今天 00:02',
+      body:body,
+      footer:'<button class="btn" data-close>关闭</button><button class="btn" id="lockRef">锁定参考</button><button class="btn btn-primary" id="regenRef">生成新参考</button>',
+      onMount:function(el,close){
+        el.querySelector('#lockRef').addEventListener('click',function(){
+          SP.update(function(st){
+            var it=findIn(st,id); if(it){ it.status='locked'; }
+            st.activity.unshift([SP.ui.nowStamp(),'陈默','锁定资产「'+a.name+'」参考版本','asset']);
+          });
+          close(); render(); SP.ui.toast('参考已锁定',a.name+' 的 '+a.version+' 已锁定，可安全引用。','success');
+        });
+        el.querySelector('#regenRef').addEventListener('click',function(){
+          close(); regen(a);
+        });
+      }});
+  }
+
+  function findIn(st,id){ return st.characters.filter(function(x){return x.id===id;})[0] || st.assets.filter(function(x){return x.id===id;})[0]; }
+
+  function regen(a){
+    var pct=0;
+    var m=SP.ui.modal({title:'生成新参考 · '+a.name,sub:'mork-image-3 · 4 张候选 · 通过一致性检查后写入新版本',
+      body:'<div class="between mb-8"><span class="small" id="rgStage">准备参考图与锁版设定…</span><span class="mono small" id="rgPct">0%</span></div>'+
+        '<div class="progress"><i id="rgBar" style="width:0%"></i></div>'+
+        '<div class="row mt-16" style="gap:8px" id="rgCands">'+[1,2,3,4].map(function(i){return '<div style="flex:1;aspect-ratio:4/5;border-radius:8px;background:var(--paper-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted-2);font-size:10px">候选 '+i+'</div>';}).join('')+'</div>',
+      footer:'<button class="btn" data-close>后台运行</button>'});
+    var timer=setInterval(function(){
+      pct+=6;
+      var bar=m.el.querySelector('#rgBar'); if(bar) bar.style.width=Math.min(pct,100)+'%';
+      var p=m.el.querySelector('#rgPct'); if(p) p.textContent=Math.round(Math.min(pct,100))+'%';
+      var s=m.el.querySelector('#rgStage'); if(s) s.textContent = pct<30?'生成候选 1–4…':pct<62?'一致性检查中…':pct<90?'选择最佳候选…':'写入新版本…';
+      if(pct>=100){ clearInterval(timer);
+        var v=(a.version||'REF v1').replace(/[^0-9]/g,''); var nv='REF v'+(Number(v)+1);
+        SP.update(function(st){
+          var it=findIn(st,a.id); if(it){ it.version=nv; it.status='review'; it.refs=(it.refs||0)+1; }
+          st.activity.unshift([SP.ui.nowStamp(),'白露','生成「'+a.name+'」'+nv+' 参考','asset']);
+        });
+        setTimeout(function(){
+          m.close(); render();
+          SP.ui.toast('新参考已生成',a.name+' 的 '+nv+' 已写入，状态为待审核。','success');
+        },500);
+      }
+    },260);
+  }
+
+  document.getElementById('checkBtn').addEventListener('click',function(){
+    SP.ui.modal({title:'资产一致性检查',sub:'qa-rules-2026.11 · 20 项资产 · 完成于 今天 00:02',size:'lg',
+      body:'<div class="row" style="gap:24px;align-items:center;margin-bottom:14px"><div class="ring" style="--p:94;--size:64px"><span>94</span></div><div><div class="strong">整体一致</div><div class="small muted">2 项提醒 · 0 项阻断</div></div></div>'+
+        '<div class="stack">'+
+          [['周砚 · 左眉疤','通过','b-done','12 个镜头中 12 个可见，位置一致'],['长夜书店 · 橱窗光位','通过','b-done','2700K 暖光，与剧本第 1 场一致'],['林晚 · 红围巾','待确认','b-warn','湿透后颜色偏亮，建议降低饱和度 12%'],['沈知白 · 视觉锚点','缺失','b-danger','REF v0 无有效参考，第 6 集起阻断生成'],['铅字盘 · 缺字','待补','b-warn','尚未确认缺失的三个字']].map(function(x){
+            return '<div class="list-row"><span class="lr-main"><span class="lr-title">'+x[0]+'</span><span class="lr-sub">'+x[3]+'</span></span><span class="badge '+x[2]+'" style="height:20px">'+x[1]+'</span></div>';
+          }).join('')+'</div>',
+      footer:'<button class="btn" data-close>关闭</button><a class="btn btn-primary" href="storyboard.html">去处理受影响的镜头</a>'});
+  });
+
+  document.getElementById('genBatch').addEventListener('click',function(){
+    var s=SP.get(); var drafts=s.characters.concat(s.assets).filter(function(x){return x.status==='draft';});
+    if(!drafts.length){ SP.ui.toast('没有待补资产','所有资产都已有有效参考。','warn'); return; }
+    SP.ui.confirm({title:'批量生成参考图',message:'为 '+drafts.length+' 项待补资产生成参考（'+drafts.map(function(x){return x.name;}).join('、')+'）。',
+      detail:'预计消耗 ¥'+(drafts.length*0.32).toFixed(2)+'，约 3 分钟。生成结果需要人工审核后才可锁定。',okText:'开始生成'}).then(function(ok){
+      if(!ok) return;
+      var pct=0; var m=SP.ui.modal({title:'批量生成参考图',sub:'任务运行中',
+        body:'<div class="between mb-8"><span class="small" id="bgS">准备…</span><span class="mono small" id="bgP">0%</span></div><div class="progress"><i id="bgBar" style="width:0%"></i></div>',
+        footer:'<button class="btn" data-close>后台运行</button>'});
+      var t=setInterval(function(){
+        pct+=8; var bar=m.el.querySelector('#bgBar'); if(bar) bar.style.width=Math.min(pct,100)+'%';
+        var p=m.el.querySelector('#bgP'); if(p) p.textContent=Math.round(Math.min(pct,100))+'%';
+        if(pct>=100){ clearInterval(t); SP.update(function(st){ st.characters.concat(st.assets).forEach(function(x){ if(x.status==='draft'){ x.status='review'; x.version='REF v1'; } }); st.activity.unshift([SP.ui.nowStamp(),'白露','批量生成待补资产参考','asset']); }); m.close(); render(); SP.ui.toast('参考已生成',drafts.length+' 项资产进入待审核。','success'); }
+      },250);
+    });
+  });
+
+  document.getElementById('newAsset').addEventListener('click',function(){
+    var m=SP.ui.modal({title:'新增资产',sub:'资产只在当前项目内共享',
+      body:'<div class="form-grid">'+
+        '<div class="field"><label>类型</label><select class="select" id="naType"><option value="character">角色</option><option value="scene">场景</option><option value="prop">道具</option><option value="costume">服装</option></select></div>'+
+        '<div class="field"><label>名称 <span class="req">*</span></label><input class="input" id="naName" placeholder="例如：第三枚铜钥匙"></div>'+
+        '<div class="field span2"><label>描述 <span class="req">*</span></label><textarea class="textarea" id="naDesc" rows="2" placeholder="视觉特征、材质、在故事中的作用。"></textarea></div>'+
+        '<div class="field span2"><label>生成提示词</label><textarea class="textarea" id="naPrompt" rows="2" placeholder="用于生成参考图的描述。"></textarea></div>'+
+        '<div class="err-msg span2" id="naErr">请填写名称与描述</div>'+
+      '</div>',
+      footer:'<button class="btn" data-close>取消</button><button class="btn btn-primary" id="naSave">创建资产</button>'});
+    m.el.querySelector('#naSave').addEventListener('click',function(){
+      var name=m.el.querySelector('#naName').value.trim(), desc=m.el.querySelector('#naDesc').value.trim(), type=m.el.querySelector('#naType').value;
+      if(!name||!desc){ m.el.querySelector('#naErr').classList.add('show'); return; }
+      var color={character:'#6f6253',scene:'#4f6157',prop:'#7a6547',costume:'#5b5f6a'}[type];
+      SP.update(function(st){
+        if(type==='character'){
+          st.characters.push({id:SP.uid('ch'),name:name,role:'新角色',age:30,type:'character',status:'draft',refs:0,version:'REF v0',desc:desc,anchor:'待确认',voice:'待确认',color:color,initial:name.charAt(0)});
+        } else {
+          st.assets.push({id:SP.uid('a'),name:name,type:type,status:'draft',version:'REF v0',refs:0,shots:0,desc:desc,prompt:m.el.querySelector('#naPrompt').value||desc,color:color,initial:name.charAt(0)});
+        }
+        st.activity.unshift([SP.ui.nowStamp(),'陈默','新增资产「'+name+'」','asset']);
+      });
+      m.close(); type=type==='character'?'character':'all'; render(); SP.ui.toast('资产已创建','「'+name+'」等待补充参考图。','success');
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

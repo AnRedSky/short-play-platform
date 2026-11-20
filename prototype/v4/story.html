@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>故事圣经 · 长夜将明 · 长夜制作台 V4</title>
+  <link rel="stylesheet" href="assets/css/studio.css">
+  <style>
+    .entity-card { text-align:left; padding:0; overflow:hidden; display:flex; flex-direction:column; background:#fff; border:1px solid var(--line); border-radius:14px; }
+    .entity-card:hover { border-color:#c9c1af; box-shadow:0 8px 22px rgba(23,24,28,.06); }
+    .entity-card .ec-body { padding:12px 14px 14px; }
+    .entity-card .ec-name { font-family:var(--font-serif); font-size:16px; font-weight:600; }
+    .graph-node { cursor:pointer; }
+    .graph-node circle { transition:r .15s, stroke .15s; }
+    .graph-node:hover circle { stroke:#e2553d; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main class="page">
+      <div class="page-head">
+        <div class="ph-main">
+          <span class="eyebrow">Story bible · v5</span>
+          <h1 class="page-title">故事圣经</h1>
+          <p class="page-desc">全剧唯一的世界观与角色设定来源。人物、场景、道具的视觉锚点会被镜头合同引用，修改后需要重新检查受影响的镜头。</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="versionBtn">版本记录</button>
+          <button class="btn" id="checkBtn">设定检查 · 3</button>
+          <button class="btn btn-primary" id="newEntity">＋ 新增设定</button>
+        </div>
+      </div>
+
+      <div class="grid g-3-1">
+        <div class="stack">
+          <section class="card">
+            <div class="card-head" style="align-items:flex-end">
+              <div>
+                <div class="seg" id="tabs">
+                  <button class="active" data-tab="character">人物 <span class="tiny muted">6</span></button>
+                  <button data-tab="scene">场景 <span class="tiny muted">6</span></button>
+                  <button data-tab="prop">道具与服装 <span class="tiny muted">6</span></button>
+                  <button data-tab="relation">人物关系</button>
+                </div>
+              </div>
+              <div class="row" id="filters">
+                <button class="chip on" data-filter="all">全部</button>
+                <button class="chip" data-filter="locked">已锁定</button>
+                <button class="chip" data-filter="review">待审核</button>
+                <button class="chip" data-filter="draft">待补充</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="grid g3" id="entityGrid"></div>
+              <div id="relationWrap" style="display:none">
+                <div class="between mb-12"><div class="small muted">关系图按当前设定生成，点击节点可查看人物卡</div><span class="tiny muted">7 条关系 · 2 条未解</span></div>
+                <div style="background:var(--surface-2);border:1px solid var(--line);border-radius:12px;overflow:hidden" id="graph"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><div><h3>设定摘要</h3><div class="ch-sub">被下游引用的核心字段</div></div><span class="badge b-done">已锁定</span></div>
+            <div class="card-body">
+              <div class="grid g2">
+                <div>
+                  <div class="tiny muted">世界 / 时间</div>
+                  <div style="font-family:var(--font-serif);font-size:15px;margin-top:3px">南方江城 · 旧城区 · 连续的十二个雨夜</div>
+                </div>
+                <div>
+                  <div class="tiny muted">核心悬念</div>
+                  <div style="font-family:var(--font-serif);font-size:15px;margin-top:3px">账簿上的名字，是否可以被改写？</div>
+                </div>
+                <div>
+                  <div class="tiny muted">情绪基调</div>
+                  <div style="font-family:var(--font-serif);font-size:15px;margin-top:3px">克制的悬疑，最后落在人的选择上</div>
+                </div>
+                <div>
+                  <div class="tiny muted">视觉规则</div>
+                  <div style="font-family:var(--font-serif);font-size:15px;margin-top:3px">只允许暖黄（书店）与青黑（街道）两种主光</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="stack">
+          <section class="card card-pad" style="background:#17181d;color:#eee8db;border-color:#272a31">
+            <div class="eyebrow" style="color:#8c8882">Story lock</div>
+            <div class="display" style="font-size:20px;color:#f4eee1;margin-top:6px" id="storyTitle">STORY v5 已锁定</div>
+            <p class="small" style="color:#a9a49b;margin-top:8px;line-height:1.7">故事圣经变更会影响 12 个镜头与 18 项资产。保存将产生新版本，旧版本仍可追溯。</p>
+            <button class="btn btn-sm mt-12" id="newVersion" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#f2ecdf">保存新版本</button>
+          </section>
+          <section class="card">
+            <div class="card-head"><div><h3>设定检查</h3><div class="ch-sub">3 个提醒 · 0 个阻断</div></div></div>
+            <div class="card-body" style="padding:8px 18px">
+              <div class="list-row"><span class="badge b-warn" style="height:20px">待补</span><span class="lr-main"><span class="lr-title">沈知白缺少视觉锚点</span><span class="lr-sub">REF v0 · 无有效参考图</span></span></div>
+              <div class="list-row"><span class="badge b-warn" style="height:20px">待补</span><span class="lr-main"><span class="lr-title">天台场景未锁定参考</span><span class="lr-sub">第 7、9 集将引用此场景</span></span></div>
+              <div class="list-row"><span class="badge b-info" style="height:20px">建议</span><span class="lr-main"><span class="lr-title">时间线存在一处矛盾</span><span class="lr-sub">第 2 场 23:20 → 第 5 场 23:48，缺失 28 分钟</span></span></div>
+            </div>
+          </section>
+          <section class="card">
+            <div class="card-head"><div><h3>最近变更</h3></div></div>
+            <div class="card-body" style="padding:8px 18px">
+              <div class="list-row"><span class="avatar sm">顾</span><span class="lr-main"><span class="lr-title">顾青 · 更新人物关系</span><span class="lr-sub">今天 10:24 · v5</span></span></div>
+              <div class="list-row"><span class="avatar sm blue">苏</span><span class="lr-main"><span class="lr-title">苏禾 · 锁定周砚锚点</span><span class="lr-sub">昨天 22:10 · v4 → v5</span></span></div>
+              <div class="list-row"><span class="avatar sm red">白</span><span class="lr-main"><span class="lr-title">白露 · 新增铅字盘</span><span class="lr-sub">昨天 18:32 · v3 → v4</span></span></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(function(){
+  SP.ui.mount('story','故事圣经');
+  var state = SP.init();
+  var tab = SP.query('tab') === 'scene' ? 'scene' : 'character';
+  var filter = 'all';
+
+  function chars(){ return SP.get().characters; }
+  function scenes(){ return SP.get().assets.filter(function(a){return a.type==='scene';}); }
+  function props(){ return SP.get().assets.filter(function(a){return a.type==='prop'||a.type==='costume';}); }
+  function list(){ return tab==='character'?chars():tab==='scene'?scenes():props(); }
+
+  function statusBadge(st){
+    var map={locked:['b-done','已锁定'],ready:['b-teal','已就绪'],review:['b-warn','待审核'],draft:['b-todo','待补充']};
+    var m=map[st]||['b-todo',st];
+    return '<span class="badge '+m[0]+'" style="height:20px">'+m[1]+'</span>';
+  }
+
+  function render(){
+    document.querySelectorAll('#tabs button').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tab')===tab); });
+    var wrap = document.getElementById('entityGrid');
+    var rel = document.getElementById('relationWrap');
+    if(tab==='relation'){
+      wrap.style.display='none'; rel.style.display='block'; renderGraph();
+      document.getElementById('filters').style.visibility='hidden';
+      return;
+    }
+    wrap.style.display='grid'; rel.style.display='none'; document.getElementById('filters').style.visibility='visible';
+    var items = list().filter(function(x){ return filter==='all' || x.status===filter; });
+    if(!items.length){ wrap.innerHTML = '<div style="grid-column:1/-1">'+SP.ui.empty('没有符合条件的设定','切换筛选条件，或新增一个设定。')+'</div>'; return; }
+    wrap.innerHTML = items.map(function(x){
+      var isChar = tab==='character';
+      var desc = isChar ? x.desc : x.desc;
+      return '<button class="entity-card" data-id="'+x.id+'">'+
+        (isChar
+          ? '<div style="height:132px;background:linear-gradient(155deg,'+SP.ui.hexA(x.color,.18)+','+x.color+');position:relative;display:grid;place-items:center"><span style="font-family:var(--font-serif);font-size:38px;color:rgba(255,255,255,.9);text-shadow:0 2px 12px rgba(0,0,0,.2)">'+x.initial+'</span>'+
+            '<span class="badge" style="position:absolute;right:8px;top:8px;background:rgba(255,255,255,.88);color:#5e574b">'+x.version+'</span></div>'
+          : '<div style="height:132px;background:linear-gradient(155deg,'+SP.ui.hexA(x.color,.2)+','+x.color+');position:relative;display:grid;place-items:center"><span style="font-family:var(--font-serif);font-size:32px;color:rgba(255,255,255,.9)">'+x.initial+'</span>'+
+            '<span class="badge" style="position:absolute;right:8px;top:8px;background:rgba(255,255,255,.88);color:#5e574b">'+x.version+'</span></div>')+
+        '<div class="ec-body"><div class="between"><span class="ec-name">'+x.name+'</span>'+statusBadge(x.status)+'</div>'+
+        '<div class="tiny muted" style="margin-top:3px">'+(isChar?x.role:(x.type==='scene'?'场景':'道具 / 服装'))+'</div>'+
+        '<div class="small mt-8" style="font-size:11px;color:var(--muted);line-height:1.6;height:52px;overflow:hidden">'+desc+'</div>'+
+        '<div class="between tiny muted" style="margin-top:8px;border-top:1px solid #f0ece3;padding-top:8px"><span>引用 '+x.refs+' 次</span><span>'+(isChar?x.age+' 岁':x.shots+' 镜头')+'</span></div></div></button>';
+    }).join('');
+  }
+
+  function renderGraph(){
+    var s = SP.get();
+    var nodes = [
+      {id:'周砚',x:400,y:210,r:38,color:'#6f6253'},
+      {id:'林晚',x:214,y:92,r:32,color:'#a35d4d'},
+      {id:'阿棠',x:590,y:92,r:32,color:'#c08a4e'},
+      {id:'陈叙',x:190,y:330,r:32,color:'#4c5763'},
+      {id:'老秦',x:610,y:330,r:30,color:'#7d7468'},
+      {id:'沈知白',x:740,y:212,r:30,color:'#44484f'},
+      {id:'长夜书店',x:400,y:360,r:26,color:'#8a6137'}
+    ];
+    var pos = {}; nodes.forEach(function(n){ pos[n.id]=n; });
+    var lines = s.relations.map(function(r){
+      var a=pos[r.from], b=pos[r.to];
+      if(!a||!b) return '';
+      var color = r.type==='mystery'?'#a35d4d':r.type==='conflict'?'#7b7f88':'#8b8172';
+      var dash = r.type==='mystery'?'stroke-dasharray="5 5"':'';
+      var mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+      return '<line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="'+color+'" stroke-width="1.1" opacity=".55" '+dash+'/>'+
+        '<text x="'+mx+'" y="'+my+'" font-size="8.5" fill="#8b8172" text-anchor="middle" paint-order="stroke" stroke="#fbf9f4" stroke-width="4">'+r.label+'</text>';
+    }).join('');
+    var dots = nodes.map(function(n){
+      var color=n.color;
+      return '<g class="graph-node" data-char="'+n.id+'"><circle cx="'+n.x+'" cy="'+n.y+'" r="'+n.r+'" fill="'+color+'" stroke="#fff" stroke-width="3"/>'+
+        '<text x="'+n.x+'" y="'+(n.y+7)+'" text-anchor="middle" font-family="Songti SC, serif" font-size="'+(n.r>34?17:14)+'" fill="#fff">'+n.id.slice(0,1)+'</text>'+
+        '<text x="'+n.x+'" y="'+(n.y+n.r+16)+'" text-anchor="middle" font-size="11" fill="#3c3e44">'+n.id+'</text></g>';
+    }).join('');
+    document.getElementById('graph').innerHTML = '<svg viewBox="0 0 860 430" style="width:100%;height:auto">'+lines+dots+
+      '<g><rect x="20" y="392" width="8" height="8" fill="#a35d4d" opacity=".6"/><text x="34" y="400" font-size="9" fill="#8b8172">未解关系</text>'+
+      '<rect x="110" y="392" width="8" height="8" fill="#7b7f88" opacity=".6"/><text x="124" y="400" font-size="9" fill="#8b8172">冲突</text>'+
+      '<rect x="180" y="392" width="8" height="8" fill="#8b8172" opacity=".6"/><text x="194" y="400" font-size="9" fill="#8b8172">羁绊</text></g></svg>';
+  }
+
+  document.getElementById('tabs').addEventListener('click', function(e){
+    var b=e.target.closest('[data-tab]'); if(!b) return; tab=b.getAttribute('data-tab'); filter='all';
+    document.querySelectorAll('#filters .chip').forEach(function(c){c.classList.toggle('on',c.getAttribute('data-filter')==='all');});
+    render();
+  });
+  document.getElementById('filters').addEventListener('click', function(e){
+    var b=e.target.closest('[data-filter]'); if(!b) return; filter=b.getAttribute('data-filter');
+    document.querySelectorAll('#filters .chip').forEach(function(c){c.classList.toggle('on',c===b);}); render();
+  });
+
+  document.getElementById('entityGrid').addEventListener('click', function(e){
+    var b=e.target.closest('[data-id]'); if(!b) return;
+    openEntity(b.getAttribute('data-id'));
+  });
+  document.getElementById('relationWrap').addEventListener('click', function(e){
+    var g=e.target.closest('[data-char]'); if(!g) return;
+    var name=g.getAttribute('data-char');
+    var c=SP.get().characters.filter(function(x){return x.name===name;})[0];
+    if(c) openEntity(c.id);
+    else SP.ui.toast('场景设定','「'+name+'」属于场景，请在「场景」标签中查看。','warn');
+  });
+
+  function openEntity(id){
+    var s=SP.get();
+    var item = s.characters.filter(function(x){return x.id===id;})[0];
+    var isChar = !!item;
+    if(!item) item = s.assets.filter(function(x){return x.id===id;})[0];
+    if(!item) return;
+    var body = isChar
+      ? '<div class="row" style="gap:14px;margin-bottom:16px"><span class="avatar lg" style="background:'+item.color+';color:#fff">'+item.initial+'</span>'+
+        '<div><div style="font-family:var(--font-serif);font-size:20px">'+item.name+'</div><div class="small muted">'+item.role+' · '+item.age+' 岁 · '+item.version+'</div></div></div>'+
+        '<div class="form-grid">'+
+          '<div class="field span2"><label>角色定位</label><input class="input" id="efRole" value="'+SP.escape(item.role)+'"></div>'+
+          '<div class="field span2"><label>人物小传</label><textarea class="textarea" id="efDesc" rows="4">'+SP.escape(item.desc)+'</textarea></div>'+
+          '<div class="field span2"><label>视觉锚点（会被镜头合同引用）</label><textarea class="textarea" id="efAnchor" rows="2">'+SP.escape(item.anchor)+'</textarea><span class="hint">至少 3 个稳定特征，避免生成时角色漂移。</span></div>'+
+          '<div class="field span2"><label>声音 / 说话方式</label><input class="input" id="efVoice" value="'+SP.escape(item.voice)+'"></div>'+
+        '</div>'+
+        '<div class="notice info mt-16">此设定已被 <b>'+item.refs+'</b> 个镜头引用。保存修改会产生新版本，受影响的镜头会被标记待检查。</div>'
+      : '<div class="row" style="gap:14px;margin-bottom:16px"><span class="avatar lg" style="background:'+item.color+';color:#fff">'+item.initial+'</span>'+
+        '<div><div style="font-family:var(--font-serif);font-size:20px">'+item.name+'</div><div class="small muted">'+(item.type==='scene'?'场景':'道具 / 服装')+' · '+item.version+' · 引用 '+item.refs+' 次</div></div></div>'+
+        '<div class="form-grid">'+
+          '<div class="field span2"><label>设定描述</label><textarea class="textarea" id="efDesc" rows="4">'+SP.escape(item.desc)+'</textarea></div>'+
+          '<div class="field span2"><label>生成提示词</label><textarea class="textarea" id="efPrompt" rows="3">'+SP.escape(item.prompt)+'</textarea><span class="hint">用于参考图与画面生成，修改后需重新生成参考。</span></div>'+
+        '</div>'+
+        '<div class="notice warn mt-16">引用该资产的 '+item.shots+' 个镜头会标记为 stale，确认后才会替换引用版本。</div>';
+    var m=SP.ui.drawer({
+      eyebrow: isChar?'角色设定':'资产设定',
+      title:item.name,
+      sub:'设定版本 '+item.version+' · 最近更新 今天 10:24',
+      body:body,
+      footer:'<button class="btn" data-close>关闭</button><button class="btn btn-primary" id="saveEntity">保存设定</button>',
+      onMount:function(el,close){
+        el.querySelector('#saveEntity').addEventListener('click',function(){
+          var desc=el.querySelector('#efDesc').value.trim();
+          if(!desc){ SP.ui.toast('无法保存','设定描述不能为空。','danger'); return; }
+          SP.update(function(st){
+            var it = isChar ? st.characters.filter(function(x){return x.id===id;})[0] : st.assets.filter(function(x){return x.id===id;})[0];
+            it.desc=desc;
+            if(isChar){ it.role=el.querySelector('#efRole').value.trim(); it.anchor=el.querySelector('#efAnchor').value.trim(); it.voice=el.querySelector('#efVoice').value.trim(); it.version='REF v'+(parseInt(it.version.replace(/[^0-9]/g,''),10)+1); it.status='review'; }
+            else { it.prompt=el.querySelector('#efPrompt').value.trim(); it.status='review'; }
+            st.activity.unshift([SP.ui.nowStamp(),'陈默','更新「'+it.name+'」设定并保存新版本','script']);
+          });
+          close(); render(); SP.ui.toast('设定已保存','新版本已生成，受影响的下游对象已标记待检查。','success');
+        });
+      }
+    });
+  }
+
+  document.getElementById('newEntity').addEventListener('click',function(){
+    var m=SP.ui.modal({
+      title:'新增设定',sub:'先建立单一事实来源，再允许被剧本与镜头引用。',
+      body:'<div class="form-grid">'+
+        '<div class="field"><label>类型</label><select class="select" id="neType"><option value="character">人物</option><option value="scene">场景</option><option value="prop">道具 / 服装</option></select></div>'+
+        '<div class="field"><label>名称 <span class="req">*</span></label><input class="input" id="neName" placeholder="例如：沈知白的书房"></div>'+
+        '<div class="field span2"><label>一句话定位</label><input class="input" id="neRole" placeholder="例如：旧城改造的投资人"></div>'+
+        '<div class="field span2"><label>设定描述 <span class="req">*</span></label><textarea class="textarea" id="neDesc" rows="3" placeholder="写清楚它在故事里的作用、视觉特征或关键道具属性。"></textarea></div>'+
+        '<div class="err-msg span2" id="neErr">请填写名称与设定描述</div>'+
+      '</div>',
+      footer:'<button class="btn" data-close>取消</button><button class="btn btn-primary" id="neSave">创建设定</button>'
+    });
+    m.el.querySelector('#neSave').addEventListener('click',function(){
+      var name=m.el.querySelector('#neName').value.trim(), desc=m.el.querySelector('#neDesc').value.trim();
+      if(!name||!desc){ m.el.querySelector('#neErr').classList.add('show'); return; }
+      var type=m.el.querySelector('#neType').value;
+      SP.update(function(st){
+        if(type==='character'){
+          var c={id:SP.uid('ch'),name:name,role:m.el.querySelector('#neRole').value||'新角色',age:30,type:'character',status:'draft',refs:0,version:'REF v0',desc:desc,anchor:'待确认视觉锚点',voice:'待确认',color:'#7a6a55',initial:name.charAt(0)};
+          st.characters.push(c);
+        } else {
+          st.assets.push({id:SP.uid('a'),name:name,type:type,status:'draft',version:'REF v0',refs:0,shots:0,desc:desc,prompt:desc,color:'#6d6250',initial:name.charAt(0)});
+        }
+        st.activity.unshift([SP.ui.nowStamp(),'陈默','新增设定「'+name+'」','script']);
+      });
+      m.close(); tab=type==='character'?'character':type; render();
+      SP.ui.toast('设定已创建','「'+name+'」已加入故事圣经，等待补充参考图。','success');
+    });
+  });
+
+  document.getElementById('checkBtn').addEventListener('click',function(){
+    SP.ui.modal({title:'设定检查',sub:'检查 18 个字段 · 3 个提醒 · 0 个阻断项',
+      body:'<div class="stack">'+
+        '<div class="notice warn">'+SP.ui.icon('alert',15)+'<span><b>沈知白缺少视觉锚点。</b>第 6 集开始引用该角色，建议在进入分镜前补齐。</span></div>'+
+        '<div class="notice warn">'+SP.ui.icon('alert',15)+'<span><b>天台场景 REF v1 未锁定。</b>第 7、9 集有 5 个镜头引用，锁定后可避免漂移。</span></div>'+
+        '<div class="notice info">'+SP.ui.icon('clock',15)+'<span><b>时间线存在 28 分钟空档。</b>不影响当前版本，但建议在第 2 场补一句时间提示。</span></div>'+
+        '<div class="notice success">'+SP.ui.icon('check',15)+'<span>核心人物锚点、场景光位、道具连续性检查均通过。</span></div></div>',
+      footer:'<a class="btn" href="assets.html">去补资产参考</a><button class="btn btn-primary" data-close>知道了</button>'});
+  });
+
+  document.getElementById('newVersion').addEventListener('click',function(){
+    var s=SP.get(); var v=parseInt((s.storyVersion||'v5').replace(/[^0-9]/g,''),10);
+    SP.update(function(st){st.storyVersion='v'+(v+1); st.activity.unshift([SP.ui.nowStamp(),'陈默','保存故事圣经新版本 v'+(v+1),'script']);});
+    SP.ui.toast('已保存 STORY v'+(v+1),'新版本已生成，旧版本仍可追溯。','success');
+    document.querySelector('main .eyebrow').textContent='Story bible · v'+(v+1);
+    document.getElementById('storyTitle').textContent='STORY v'+(v+1)+' 已锁定';
+  });
+
+  document.getElementById('versionBtn').addEventListener('click',function(){
+    SP.ui.modal({title:'版本记录',sub:'故事圣经 · 最近 5 个版本',
+      body:'<div class="stack">'+
+        [['v5','2026-11-20 22:10','苏禾','锁定周砚视觉锚点；补充第 7 场红围巾设定','当前'],['v4','2026-11-19 18:32','白露','新增铅字盘与旧印刷厂场景'],['v3','2026-11-18 16:05','顾青','修正人物关系，新增沈知白'],['v2','2026-11-16 11:20','顾青','分集钩子调整，EP07 提前'],['v1','2026-11-12 09:40','陈默','导入小说后生成初稿']].map(function(v){
+          return '<div class="list-row"><span class="mono tiny muted" style="width:28px">'+v[0]+'</span><span class="lr-main"><span class="lr-title">'+v[3]+'</span><span class="lr-sub">'+v[1]+' · '+v[2]+'</span></span>'+(v[4]?'<span class="badge b-active">当前</span>':'<button class="btn btn-xs">对比</button>')+'</div>';
+        }).join('')+'</div>',
+      footer:'<button class="btn" data-close>关闭</button>'});
+  });
+
+  render();
+  var sv=SP.get().storyVersion;
+  if(sv){
+    document.getElementById('storyTitle').textContent='STORY '+sv+' 已锁定';
+    document.querySelector('main .eyebrow').textContent='Story bible · '+sv;
+  }
+})();
+</script>
+</body>
+</html>

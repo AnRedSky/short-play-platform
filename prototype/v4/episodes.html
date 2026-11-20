@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分集与剧本 · 长夜将明 · 长夜制作台 V4</title>
+  <link rel="stylesheet" href="assets/css/studio.css">
+  <style>
+    .season-card { background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .16s,box-shadow .16s,transform .16s;cursor:pointer }
+    .season-card:hover { border-color:#c9c1af;box-shadow:0 10px 24px rgba(23,24,28,.07);transform:translateY(-1px) }
+    .season-card .cover { height:112px;position:relative;background-size:cover;background-position:center 30% }
+    .season-card .cover::after { content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,20,24,.1),rgba(20,20,24,.62)) }
+    .season-card .body { padding:12px 14px 13px;flex:1;display:flex;flex-direction:column }
+    .season-card .epbig { position:absolute;left:12px;bottom:7px;z-index:1;font-family:var(--font-serif);color:#f5efe3;font-size:25px;letter-spacing:.02em;text-shadow:0 2px 10px rgba(0,0,0,.4) }
+    .season-card .statusrow { position:absolute;left:9px;top:9px;z-index:1 }
+    .season-card .check { position:absolute;right:9px;top:9px;z-index:2;width:20px;height:20px;border-radius:6px;border:1px solid rgba(255,255,255,.65);background:rgba(20,20,24,.35);display:grid;place-items:center;color:#fff;font-size:10px;cursor:pointer }
+    .season-card .check.on { background:var(--accent);border-color:var(--accent) }
+    .season-card .ep-body-title { font-family:var(--font-serif);font-size:16px;font-weight:600;line-height:1.35 }
+    .season-card .hook { font-size:10.5px;color:var(--muted);line-height:1.55;height:33px;overflow:hidden;margin-top:4px }
+    .season-card .foot { margin-top:auto;padding-top:9px;border-top:1px solid #f0ece3;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--muted) }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main class="page">
+      <div class="page-head">
+        <div class="ph-main">
+          <span class="eyebrow">Season planning · 12 episodes</span>
+          <h1 class="page-title">分集与剧本</h1>
+          <p class="page-desc">先确认章节归属与钩子，再批量生成逐集剧本。已锁版的剧本才会解锁该集的资产与分镜生产。</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="mapBtn">章节映射</button>
+          <button class="btn" id="batchBtn">批量生成 <span id="batchCount" class="tag" style="margin-left:4px">0</span></button>
+          <button class="btn btn-primary" id="replanBtn">重分集</button>
+        </div>
+      </div>
+
+      <div class="grid g4">
+        <div class="card stat"><div class="s-label">已锁版</div><div class="s-val" id="sLocked">1<small>集</small></div><div class="s-delta">EP01 · 可进入生产</div></div>
+        <div class="card stat"><div class="s-label">草稿</div><div class="s-val" id="sDraft">2<small>集</small></div><div class="s-delta">EP02–EP03 · 待导演确认</div></div>
+        <div class="card stat"><div class="s-label">待生成</div><div class="s-val" id="sPending">9<small>集</small></div><div class="s-delta">批量生成约需 8 分钟</div></div>
+        <div class="card stat"><div class="s-label">季卡完成度</div><div class="s-val" id="sPct">8<small>%</small></div><div class="s-delta">12 集中 1 集完成制作</div></div>
+      </div>
+
+      <section class="card mt-16">
+        <div class="card-head">
+          <div class="row wrap" id="filters" style="gap:6px">
+            <button class="chip on" data-f="all">全部 12</button>
+            <button class="chip" data-f="locked">已锁版 1</button>
+            <button class="chip" data-f="draft">草稿 2</button>
+            <button class="chip" data-f="pending">待生成 9</button>
+          </div>
+          <div class="row">
+            <button class="btn btn-sm" id="selectAll">全选待生成</button>
+            <a class="btn btn-sm" href="script.html?ep=01">打开 EP01 剧本</a>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="grid g3" id="epGrid"></div>
+        </div>
+        <div class="card-foot"><span class="tiny muted">分集状态保存在本地演示数据中 · 最近更新 今天 00:12</span><span class="tiny muted">点击卡片查看分集详情与生成设置</span></div>
+      </section>
+
+      <div class="grid g-2-1 mt-16">
+        <section class="card">
+          <div class="card-head"><div><h3>章节 → 分集映射</h3><div class="ch-sub">24 章平均分配到 12 集，单集 2 章</div></div><button class="btn btn-sm" id="mapBtn2">调整映射</button></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th style="width:60px">集数</th><th>章节来源</th><th>钩子</th><th style="width:90px">状态</th><th style="width:76px"></th></tr></thead>
+              <tbody id="mapTable"></tbody>
+            </table>
+          </div>
+        </section>
+        <div class="stack">
+          <section class="card">
+            <div class="card-head"><div><h3>最近生成</h3><div class="ch-sub">剧本生成任务</div></div><a class="btn btn-sm" href="tasks.html">任务中心</a></div>
+            <div class="card-body" style="padding:6px 18px" id="recent"></div>
+          </section>
+          <section class="card card-pad">
+            <div class="eyebrow">Season settings</div>
+            <div class="kv mt-12" style="grid-template-columns:80px 1fr">
+              <span class="k">画幅</span><span class="v">竖屏 9:16 · 1080×1920</span>
+              <span class="k">单集时长</span><span class="v">90–120 秒</span>
+              <span class="k">钩子策略</span><span class="v">强钩子 · 每集留悬念</span>
+              <span class="k">交付日期</span><span class="v">2026-12-12</span>
+            </div>
+            <button class="btn btn-sm btn-block mt-16" id="seasonSettings">修改季卡设置</button>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(function(){
+  SP.ui.mount('episodes','分集与剧本');
+  var filter='all';
+  var selected={};
+  var covers={ '01':'still-bookstore.svg','02':'still-alley.svg','03':'still-room.svg' };
+
+  function statusBadge(s){ return SP.ui.statusBadge(s); }
+
+  function render(){
+    var s=SP.get();
+    document.getElementById('sLocked').innerHTML=s.episodes.filter(function(e){return e.status==='locked';}).length+'<small>集</small>';
+    document.getElementById('sDraft').innerHTML=s.episodes.filter(function(e){return e.status==='draft';}).length+'<small>集</small>';
+    document.getElementById('sPending').innerHTML=s.episodes.filter(function(e){return e.status==='pending';}).length+'<small>集</small>';
+    document.getElementById('sPct').innerHTML=Math.round(s.episodes.filter(function(e){return e.status==='locked';}).length/12*100)+'<small>%</small>';
+    document.getElementById('batchCount').textContent=Object.keys(selected).filter(function(k){return selected[k];}).length;
+
+    var eps=s.episodes.filter(function(e){return filter==='all'||e.status===filter;});
+    document.getElementById('epGrid').innerHTML=eps.map(function(e){
+      var coverStyle = covers[e.no]
+        ? 'background-image:url(assets/img/'+covers[e.no]+')'
+        : 'background:linear-gradient(145deg,#45433f,#222329)';
+      var sel = selected[e.no] ? ' on' : '';
+      return '<div class="season-card" data-ep="'+e.no+'">'+
+        '<div class="cover" style="'+coverStyle+'">'+
+          '<span class="statusrow">'+statusBadge(e.status, e.status==='locked'?'已锁版':'')+'</span>'+
+          (e.status==='pending'?'<span class="check'+sel+'" data-select="'+e.no+'" title="选择此集">✓</span>':'')+
+          '<span class="epbig">EP'+e.no+'</span>'+
+        '</div>'+
+        '<div class="body">'+
+          '<div class="ep-body-title">'+e.title+'</div>'+
+          '<div class="tiny muted" style="margin-top:2px">'+e.chapters+' · '+(e.status==='locked'?'8 场 · 剧本 v6':e.status==='draft'?'草稿 · 待锁版':'尚未生成')+'</div>'+
+          '<div class="hook">'+e.hook+'</div>'+
+          '<div class="foot"><span>'+(e.status==='locked'?'QA 94 分':e.status==='draft'?'导演确认中':'—')+'</span>'+
+            (e.status==='pending'
+              ? '<button class="btn btn-xs" data-gen="'+e.no+'">生成剧本</button>'
+              : '<a class="btn btn-xs" href="script.html?ep='+e.no+'" data-open>打开剧本 →</a>')+
+          '</div>'+
+        '</div></div>';
+    }).join('');
+
+    document.getElementById('mapTable').innerHTML=s.episodes.map(function(e){
+      return '<tr><td class="mono" style="color:var(--muted)">EP'+e.no+'</td><td>'+e.chapters+'</td>'+
+        '<td class="truncate" style="max-width:300px;color:var(--muted);font-size:11.5px">'+e.hook+'</td>'+
+        '<td>'+statusBadge(e.status)+'</td>'+
+        '<td class="right"><a class="btn btn-xs" href="'+(e.status==='pending'?'#':'script.html?ep='+e.no)+'" '+(e.status==='pending'?'data-mapgen="'+e.no+'"':'')+'>'+(e.status==='pending'?'生成':'查看')+'</a></td></tr>';
+    }).join('');
+
+    var recent=s.tasks.filter(function(t){return t.name.indexOf('剧本')>-1||t.name.indexOf('分集')>-1;}).slice(0,4);
+    document.getElementById('recent').innerHTML=recent.map(function(t){
+      return '<div class="list-row"><span class="lr-main"><span class="lr-title">'+t.name+'</span><span class="lr-sub">'+t.model+' · '+t.started+' · '+t.duration+'</span></span>'+statusBadge(t.status)+'</div>';
+    }).join('') || SP.ui.empty('暂无生成任务','点击「批量生成」创建第一批剧本。');
+  }
+
+  document.getElementById('filters').addEventListener('click',function(e){
+    var b=e.target.closest('[data-f]'); if(!b) return; filter=b.getAttribute('data-f');
+    document.querySelectorAll('#filters .chip').forEach(function(c){c.classList.toggle('on',c===b);}); render();
+  });
+
+  document.getElementById('epGrid').addEventListener('click',function(e){
+    var check=e.target.closest('[data-select]');
+    if(check){ e.stopPropagation(); var no=check.getAttribute('data-select'); selected[no]=!selected[no]; render(); return; }
+    if(e.target.closest('[data-open]')){ return; }
+    var gen=e.target.closest('[data-gen]');
+    if(gen){ e.stopPropagation(); openGenerate(gen.getAttribute('data-gen')); return; }
+    var card=e.target.closest('[data-ep]');
+    if(card) openEp(card.getAttribute('data-ep'));
+  });
+
+  document.getElementById('mapTable').addEventListener('click',function(e){
+    var g=e.target.closest('[data-mapgen]');
+    if(g){ e.preventDefault(); openGenerate(g.getAttribute('data-mapgen')); }
+  });
+
+  document.getElementById('selectAll').addEventListener('click',function(){
+    var s=SP.get(); var any=false;
+    s.episodes.forEach(function(e){ if(e.status==='pending'){ selected[e.no]=true; any=true; } });
+    if(!any) SP.ui.toast('没有待生成剧集','当前所有剧集都已生成。','warn');
+    render();
+  });
+
+  document.getElementById('batchBtn').addEventListener('click',function(){
+    var s=SP.get();
+    var targets=Object.keys(selected).filter(function(k){return selected[k];});
+    if(!targets.length){
+      targets=s.episodes.filter(function(e){return e.status==='pending';}).map(function(e){return e.no;});
+    }
+    if(!targets.length){ SP.ui.toast('没有可生成剧集','请先选择待生成的剧集。','warn'); return; }
+    batchGenerate(targets);
+  });
+
+  function openGenerate(no){
+    var e=SP.get().episodes.filter(function(x){return x.no===no;})[0];
+    var m=SP.ui.modal({title:'生成 EP'+no+' 剧本',sub:'以分集钩子与章节来源为契约，生成后进入草稿状态。',
+      body:'<div class="notice info mb-16">'+SP.ui.icon('spark',15)+'<span><b>'+e.title+'</b> · '+e.chapters+'<br>'+e.hook+'</span></div>'+
+        '<div class="form-grid">'+
+          '<div class="field"><label>生成模型</label><select class="select"><option>mork-llm-7b（默认）</option><option>mork-llm-13b</option></select></div>'+
+          '<div class="field"><label>目标时长</label><select class="select"><option>110 秒</option><option>90 秒</option><option>120 秒</option></select></div>'+
+          '<div class="field span2"><label>额外要求</label><textarea class="textarea" rows="2" placeholder="例如：保留第 2 章结尾的雨声留白，不要提前揭示账簿来源。"></textarea></div>'+
+        '</div>'+
+        '<label class="checkline mt-12"><input type="checkbox" checked><span>生成后自动创建草稿并通知编剧，不自动锁版。</span></label>',
+      footer:'<button class="btn" data-close>取消</button><button class="btn btn-primary" id="genOne">开始生成</button>'});
+    m.el.querySelector('#genOne').addEventListener('click',function(){
+      m.close();
+      runGen([no],false);
+    });
+  }
+
+  function batchGenerate(targets){
+    var m=SP.ui.confirm({title:'批量生成 '+targets.length+' 集剧本',
+      message:'将为 EP'+targets.join(' / EP')+' 生成逐集剧本草稿，预计消耗 ¥'+(targets.length*0.54).toFixed(2)+'。',
+      detail:'生成会按并发上限排队，可在任务中心取消；已锁版剧集不会被覆盖。',
+      okText:'开始批量生成'});
+    m.then(function(ok){ if(ok) runGen(targets,true); });
+  }
+
+  function runGen(targets,isBatch){
+    var idx=0;
+    var m=SP.ui.modal({title:isBatch?'批量生成剧本':'生成剧本',sub:'任务运行中 · 可关闭窗口后台运行',
+      body:'<div class="between mb-8"><span class="small" id="gStage">准备输入契约…</span><span class="mono small" id="gPct">0%</span></div>'+
+        '<div class="progress"><i id="gBar" style="width:0%"></i></div>'+
+        '<div class="stack mt-16" style="gap:6px;max-height:220px;overflow:auto" id="gList">'+targets.map(function(no){return '<div class="row tiny" data-no="'+no+'" style="justify-content:space-between;color:var(--muted)"><span>EP'+no+' · 排队中</span><span>—</span></div>';}).join('')+'</div>',
+      footer:'<button class="btn" data-close>后台运行</button>'});
+    var pct=0, active=0;
+    var timer=setInterval(function(){
+      pct+=4;
+      if(pct>=100){ clearInterval(timer); finish(); return; }
+      var bar=m.el.querySelector('#gBar'); if(bar) bar.style.width=pct+'%';
+      var pp=m.el.querySelector('#gPct'); if(pp) pp.textContent=Math.round(pct)+'%';
+      var now=Math.min(targets.length-1,Math.floor(pct/100*targets.length));
+      var rows=m.el.querySelectorAll('[data-no]');
+      rows.forEach(function(r,i){
+        if(i<now){ r.style.color='var(--success)'; r.innerHTML='<span>EP'+targets[i]+' · 已生成草稿</span><span>v1</span>'; }
+        else if(i===now){ r.style.color='var(--ink-2)'; r.innerHTML='<span>EP'+targets[i]+' · 生成中…</span><span>'+Math.round(pct)+'%</span>'; }
+      });
+      var st=m.el.querySelector('#gStage'); if(st) st.textContent='正在生成 EP'+targets[now]+' · '+Math.round(pct)+'%';
+    },260);
+    function finish(){
+      SP.update(function(s){
+        targets.forEach(function(no){
+          var e=s.episodes.filter(function(x){return x.no===no;})[0];
+          if(e && e.status==='pending'){ e.status='draft'; e.scenes=8; }
+        });
+        s.tasks.unshift({id:'T-'+(2042+s.tasks.length),name:(isBatch?'批量生成剧本 · ':'生成剧本 · ')+'EP'+targets.join('/EP'),type:'文本生成',model:'mork-llm-7b',status:'succeeded',progress:100,cost:targets.length*0.54,started:SP.ui.nowStamp(),duration:(targets.length*0.8).toFixed(0)+'m 04s',target:'Season / '+targets.length+' 集',logs:[[SP.ui.nowStamp(),'生成完成，产出 '+targets.length+' 份剧本草稿']]});
+        s.activity.unshift([SP.ui.nowStamp(),'系统',(isBatch?'批量生成 ':'生成 ')+targets.length+' 集剧本草稿','ok']);
+      });
+      Object.keys(selected).forEach(function(k){ if(targets.indexOf(k)>-1) selected[k]=false; });
+      m.close(); render();
+      SP.ui.toast('剧本已生成',targets.length+' 集草稿已创建，可在分集卡中打开编辑。','success');
+    }
+  }
+
+  function openEp(no){
+    var s=SP.get(); var e=s.episodes.filter(function(x){return x.no===no;})[0];
+    var body='<div class="grid g2" style="gap:12px;margin-bottom:16px">'+
+      '<div class="card card-pad" style="padding:12px"><div class="tiny muted">章节来源</div><div class="strong mt-4">'+e.chapters+'</div></div>'+
+      '<div class="card card-pad" style="padding:12px"><div class="tiny muted">状态</div><div class="mt-4">'+statusBadge(e.status)+'</div></div></div>'+
+      '<div class="field"><label>本集钩子</label><div class="card card-pad" style="padding:12px;font-family:var(--font-serif);font-size:14px;line-height:1.7">'+e.hook+'</div></div>'+
+      '<div class="grid g2 mt-16" style="gap:12px"><div><div class="tiny muted">场次</div><div class="strong">'+(e.status==='pending'?'—':'8 场')+'</div></div>'+
+      '<div><div class="tiny muted">对白</div><div class="strong">'+(e.status==='locked'?'19 条':'—')+'</div></div>'+
+      '<div><div class="tiny muted">镜头</div><div class="strong">'+(e.status==='locked'?'12 个':'—')+'</div></div>'+
+      '<div><div class="tiny muted">时长</div><div class="strong">'+(e.duration||'—')+'</div></div></div>'+
+      (e.status==='pending'?'<div class="notice warn mt-16"><span>该集尚未生成剧本。生成后会进入草稿，需编剧确认后锁版。</span></div>':'');
+    SP.ui.drawer({eyebrow:'EP'+no,title:e.title,sub:e.chapters+' · '+SP.epStatus(e.status),
+      body:body,
+      footer:e.status==='pending'
+        ? '<button class="btn" data-close>关闭</button><button class="btn btn-primary" id="dGen">生成剧本</button>'
+        : '<button class="btn" data-close>关闭</button><a class="btn btn-primary" href="script.html?ep='+no+'">打开剧本 →</a>',
+      onMount:function(el){
+        var g=el.querySelector('#dGen'); if(g) g.addEventListener('click',function(){ el.closest('.drawer-wrap').remove(); openGenerate(no); });
+      }});
+  }
+
+  // 章节映射
+  function openMap(){
+    var s=SP.get();
+    var rows=s.episodes.map(function(e,i){
+      var start=i*2+1,end=i*2+2;
+      return '<div class="row" style="gap:8px;padding:7px 0;border-bottom:1px solid #efece4"><span class="mono tiny" style="width:34px;color:var(--muted)">EP'+e.no+'</span>'+
+        '<select class="select mapStart" data-i="'+i+'" style="height:30px;font-size:11px;width:72px">'+opt(start)+'</select>'+
+        '<span class="tiny muted">至</span>'+
+        '<select class="select mapEnd" data-i="'+i+'" style="height:30px;font-size:11px;width:72px">'+opt(end)+'</select>'+
+        '<span class="tiny" style="flex:1;color:var(--muted)">'+e.title+'</span></div>';
+    }).join('');
+    function opt(sel){ return SP.get().chapters.map(function(c){return '<option '+(Number(c.no)===sel?'selected':'')+'>'+Number(c.no)+'</option>';}).join(''); }
+    var m=SP.ui.modal({title:'章节映射',sub:'调整每集起始章节。保存后需重新确认分集钩子，已锁版剧本不受影响。',size:'lg',
+      body:'<div class="notice warn mb-12"><span>修改映射会让未生成的剧集按新章节来源生成剧本；已锁版剧集不会回滚。</span></div><div style="max-height:420px;overflow:auto">'+rows+'</div>',
+      footer:'<button class="btn" data-close>取消</button><button class="btn btn-primary" id="mapSave">保存映射</button>'});
+    m.el.querySelector('#mapSave').addEventListener('click',function(){
+      var starts={},ends={};
+      m.el.querySelectorAll('.mapStart').forEach(function(el){starts[el.getAttribute('data-i')]=Number(el.value);});
+      m.el.querySelectorAll('.mapEnd').forEach(function(el){ends[el.getAttribute('data-i')]=Number(el.value);});
+      var bad=false;
+      Object.keys(starts).forEach(function(k){ if(ends[k]<starts[k]) bad=true; });
+      if(bad){ SP.ui.toast('映射无效','结束章节不能早于起始章节。','danger'); return; }
+      SP.update(function(st){
+        st.episodes.forEach(function(e,i){
+          if(starts[i]!==undefined) e.chapters='第 '+starts[i]+'–'+ends[i]+' 章';
+        });
+        st.activity.unshift([SP.ui.nowStamp(),'陈默','调整章节到分集映射','script']);
+      });
+      m.close(); render(); SP.ui.toast('映射已保存','未生成的剧集将使用新章节来源。','success');
+    });
+  }
+  document.getElementById('mapBtn').addEventListener('click',openMap);
+  document.getElementById('mapBtn2').addEventListener('click',openMap);
+
+  document.getElementById('replanBtn').addEventListener('click',function(){
+    SP.ui.modal({title:'重分集',sub:'重新规划会影响整季结构，这是一项高影响操作。',
+      body:'<div class="notice danger">'+SP.ui.icon('alert',15)+'<span>重分集会重新计算章节归属与每集钩子。已锁版剧本、已生成资产与镜头会保留，但需要重新确认是否仍然匹配。</span></div>'+
+        '<div class="form-grid mt-16"><div class="field span2"><label>重分集策略</label><select class="select"><option>12 集 · 每集 2 章（推荐）</option><option>12 集 · 按剧情节点重排</option><option>10 集 · 合并支线</option></select></div>'+
+        '<label class="checkline span2"><input type="checkbox" id="replanRisk"><span>我确认理解：重分集后 EP02–EP12 的草稿会标记为需重新确认。</span></label></div>',
+      footer:'<button class="btn" data-close>取消</button><button class="btn btn-danger" id="replanOk">执行重分集</button>'});
+    var el=document.querySelector('.overlay.open .modal');
+    el.querySelector('#replanOk').addEventListener('click',function(){
+      if(!el.querySelector('#replanRisk').checked){ SP.ui.toast('需要确认','请先勾选影响确认。','danger'); return; }
+      SP.update(function(st){
+        st.episodes.forEach(function(e){ if(e.status==='draft') e.status='pending'; });
+        st.activity.unshift([SP.ui.nowStamp(),'陈默','执行重分集，草稿集标记为待确认','alert']);
+      });
+      el.closest('.overlay').remove(); render();
+      SP.ui.toast('重分集已执行','2 集草稿已标记为需重新确认。','warn');
+    });
+  });
+
+  document.getElementById('seasonSettings').addEventListener('click',function(){
+    var m=SP.ui.modal({title:'季卡设置',sub:'影响后续所有剧集的生成契约',
+      body:'<div class="form-grid">'+
+        '<div class="field"><label>画幅</label><select class="select"><option>竖屏 9:16</option><option>横屏 16:9</option><option>方形 1:1</option></select></div>'+
+        '<div class="field"><label>帧率</label><select class="select"><option>30 fps</option><option>24 fps</option><option>25 fps</option></select></div>'+
+        '<div class="field"><label>单集时长</label><select class="select"><option>90–120 秒</option><option>60–90 秒</option></select></div>'+
+        '<div class="field"><label>生成并发上限</label><select class="select"><option>3 个任务</option><option>2 个任务</option><option>1 个任务</option></select></div>'+
+      '</div><div class="notice info mt-16"><span>修改画幅会让已生成的画面镜头标记为 stale，需要重新生成。</span></div>',
+      footer:'<button class="btn" data-close>取消</button><button class="btn btn-primary" id="seasonSave">保存设置</button>'});
+    m.el.querySelector('#seasonSave').addEventListener('click',function(){ m.close(); SP.ui.toast('设置已保存','新的季卡设置将在下一次生成时生效。','success'); });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

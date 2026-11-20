@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>项目设置 · 长夜将明 · 长夜制作台 V4</title>
+  <link rel="stylesheet" href="assets/css/studio.css">
+  <style>
+    .settings-wrap { display:grid;grid-template-columns:200px minmax(0,1fr);gap:22px;align-items:start }
+    .settings-wrap > *, .settings-wrap .card { min-width:0 }
+    .settings-wrap .table-wrap { max-width:100%; overflow-x:auto }
+    .settings-wrap .model-table { min-width:680px }
+    .settings-nav { position:sticky;top:78px;display:flex;flex-direction:column;gap:2px }
+    .settings-nav a { padding:9px 11px;border-radius:8px;font-size:11.5px;color:var(--ink-2);display:flex;align-items:center;gap:8px }
+    .settings-nav a:hover { background:#efeade }
+    .settings-nav a.on { background:var(--ink);color:#fff }
+    .settings-nav .sn-group { font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:14px 11px 5px }
+    .model-table td { font-size:11px }
+    .bar-chart { display:flex;align-items:flex-end;gap:7px;height:104px;padding-top:8px }
+    .bar-chart .bc { flex:1;display:flex;flex-direction:column;align-items:center;gap:4px }
+    .bar-chart .bc i { display:block;width:100%;background:linear-gradient(180deg,#e2553d,#f08a6f);border-radius:3px 3px 0 0;min-height:3px }
+    .bar-chart .bc span { font-size:8px;color:var(--muted) }
+    .cost-row { display:grid;grid-template-columns:80px 1fr 74px;gap:10px;align-items:center;padding:7px 0 }
+    @media (max-width:900px){ .settings-wrap{grid-template-columns:1fr} .settings-nav{position:static;flex-direction:row;flex-wrap:wrap} .settings-nav .sn-group{display:none} }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main class="page">
+      <div class="page-head">
+        <div class="ph-main">
+          <span class="eyebrow">Settings · NYJM-26</span>
+          <h1 class="page-title">项目设置</h1>
+          <p class="page-desc">项目信息、模型接入、成本预算与演示数据。修改只影响当前项目，不会波及其他项目。</p>
+        </div>
+        <div class="page-actions"><button class="btn" id="stateDl">导出项目状态</button><button class="btn btn-primary" id="saveAll">保存设置</button></div>
+      </div>
+
+      <div class="settings-wrap">
+        <nav class="settings-nav" id="setNav">
+          <div class="sn-group">项目</div>
+          <a href="#sec-info" class="on">项目信息</a>
+          <a href="#sec-models">模型接入</a>
+          <a href="#sec-cost">用量与预算</a>
+          <div class="sn-group">协作</div>
+          <a href="#sec-notify">通知偏好</a>
+          <a href="#sec-team">团队权限</a>
+          <div class="sn-group">演示</div>
+          <a href="#sec-demo">演示数据</a>
+          <a href="#sec-danger">危险操作</a>
+        </nav>
+
+        <div class="stack" style="gap:16px">
+          <section class="card" id="sec-info">
+            <div class="card-head"><div><h3>项目信息</h3><div class="ch-sub">会显示在工作台、导出清单与团队邀请中</div></div><span class="badge b-active">进行中</span></div>
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="field"><label>项目名称 <span class="req">*</span></label><input class="input" id="stName" value="长夜将明"><div class="err-msg" id="stNameErr">项目名称不能为空</div></div>
+                <div class="field"><label>项目编号</label><input class="input mono" id="stCode" value="NYJM-26" disabled><span class="hint">创建后不可修改</span></div>
+                <div class="field"><label>类型 / 标签</label><input class="input" id="stGenre" value="悬疑 / 都市 / 温情"></div>
+                <div class="field"><label>集数与画幅</label><div class="row" style="gap:8px"><input class="input" id="stEps" type="number" value="12" style="width:76px"><select class="select" id="stRatio" style="flex:1"><option selected>9:16</option><option>16:9</option><option>1:1</option><option>4:5</option></select></div></div>
+                <div class="field"><label>帧率</label><select class="select" id="stFps"><option selected>30 fps</option><option>25 fps</option><option>24 fps</option><option>60 fps</option></select></div>
+                <div class="field"><label>计划交付</label><input class="input" id="stDue" type="date" value="2026-12-12"></div>
+                <div class="field span2"><label>一句话卖点</label><input class="input" id="stTag" value="一间只在雨夜营业的旧书店，一本提前写好名字的账簿。"></div>
+                <div class="field span2"><label>项目简介</label><textarea class="textarea" rows="3" id="stSyn">周砚在暴雨夜收到一本没有署名的黑皮账簿，第一页写着他自己的名字和死期。十二个夜晚，十二个名字，他必须在天亮之前决定：谁被写进最后一页。</textarea><span class="hint">用于工作台项目卡与提案材料，最多 200 字。</span></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" id="sec-models">
+            <div class="card-head"><div><h3>模型接入</h3><div class="ch-sub">全部为项目级配置 · API Key 仅写不读</div></div><div class="row"><span class="badge b-done" id="modelHealth">6 / 7 已连接</span><button class="btn btn-sm" id="addModel">＋ 接入模型</button></div></div>
+            <div class="table-wrap">
+              <table class="model-table">
+                <thead><tr><th>能力</th><th>模型</th><th>版本</th><th>状态</th><th>延迟</th><th>单价</th><th>默认</th><th style="width:112px"></th></tr></thead>
+                <tbody id="modelRows"></tbody>
+              </table>
+            </div>
+            <div class="card-foot"><span class="tiny muted">连通性测试会发送一条最小请求，不产生内容费用</span><a class="tiny" href="#" id="modelHelp">配置指南 →</a></div>
+          </section>
+
+          <section class="card" id="sec-cost">
+            <div class="card-head"><div><h3>用量与预算</h3><div class="ch-sub">2026 年 11 月 · 按任务计费</div></div><span class="badge b-info" id="budgetBadge">57% 已使用</span></div>
+            <div class="card-body">
+              <div class="grid g2" style="gap:24px">
+                <div>
+                  <div class="between"><span class="small muted">本月支出</span><span class="strong" id="costNow">¥6,842 / ¥12,000</span></div>
+                  <div class="progress mt-8" style="height:6px"><i id="costBar" style="width:57%"></i></div>
+                  <div class="cost-row mt-12"><span class="tiny muted">文本生成</span><div class="progress" style="height:4px"><i style="width:18%"></i></div><span class="tiny mono">¥1,240</span></div>
+                  <div class="cost-row"><span class="tiny muted">图像生成</span><div class="progress" style="height:4px"><i style="width:56%"></i></div><span class="tiny mono">¥3,860</span></div>
+                  <div class="cost-row"><span class="tiny muted">视频生成</span><div class="progress" style="height:4px"><i style="width:22%"></i></div><span class="tiny mono">¥1,502</span></div>
+                  <div class="cost-row"><span class="tiny muted">语音合成</span><div class="progress" style="height:4px"><i style="width:9%"></i></div><span class="tiny mono">¥240</span></div>
+                  <div class="between mt-16"><span class="tiny muted">月度预算</span><div class="row" style="gap:6px"><span class="tiny">¥</span><input class="input" id="budgetInput" type="number" value="12000" style="width:96px;height:30px"><button class="btn btn-xs" id="budgetSave">更新</button></div></div>
+                  <div class="notice mt-12"><span>达到预算 80% 会通知项目所有者，达到 100% 会暂停新任务，已运行任务继续完成。</span></div>
+                </div>
+                <div>
+                  <div class="between"><span class="small muted">近 14 天支出</span><span class="tiny muted">单位：元</span></div>
+                  <div class="bar-chart" id="chart"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" id="sec-notify">
+            <div class="card-head"><div><h3>通知偏好</h3><div class="ch-sub">仅影响当前账号</div></div></div>
+            <div class="card-body">
+              <label class="checkline"><input type="checkbox" checked> AI 任务失败或进入重试等待</label>
+              <label class="checkline mt-12"><input type="checkbox" checked> 审核结论（通过 / 退回）</label>
+              <label class="checkline mt-12"><input type="checkbox" checked> 导出完成或校验失败</label>
+              <label class="checkline mt-12"><input type="checkbox"> 成员加入与权限变更</label>
+              <label class="checkline mt-12"><input type="checkbox" checked> 每周一 09:00 制作周报</label>
+              <div class="between mt-16"><span class="tiny muted">通知渠道</span><div class="row" style="gap:8px"><span class="chip on">站内</span><span class="chip on">邮件</span><span class="chip">飞书</span></div></div>
+            </div>
+          </section>
+
+          <section class="card" id="sec-team">
+            <div class="card-head"><div><h3>团队权限</h3><div class="ch-sub">当前 6 名成员 · 6 种角色</div></div><a class="btn btn-sm" href="team.html">管理团队 →</a></div>
+            <div class="card-body" style="padding:10px 20px">
+              <div class="kv" style="grid-template-columns:100px 1fr"><span class="k">项目所有者</span><span class="v">陈默 · chenmo@studio.cn</span><span class="k">默认审核员</span><span class="v">周可 · 只审核，不导出</span><span class="k">默认剪辑师</span><span class="v">程野 · 剪辑与导出，不审核</span></div>
+            </div>
+          </section>
+
+          <section class="card" id="sec-demo">
+            <div class="card-head"><div><h3>演示数据</h3><div class="ch-sub">所有状态保存在浏览器 localStorage</div></div><span class="badge b-todo">本地</span></div>
+            <div class="card-body">
+              <div class="notice info"><span>这个 V4 原型不连接后端。刷新页面后状态仍保留，重置会恢复种子数据（12 集、8 场、12 镜头、4 条导出记录）。</span></div>
+              <div class="row mt-12" style="gap:8px"><button class="btn" id="exportState">导出状态 JSON</button><button class="btn" id="resetDemo">重置演示数据</button></div>
+            </div>
+          </section>
+
+          <section class="card" id="sec-danger" style="border-color:#efd1c8">
+            <div class="card-head"><div><h3 style="color:#a33a29">危险操作</h3><div class="ch-sub">需要项目所有者确认</div></div></div>
+            <div class="card-body">
+              <div class="between"><div><div class="small strong">归档项目</div><div class="tiny muted mt-4">项目变为只读，导出产物仍可下载。</div></div><button class="btn btn-sm" id="archiveBtn">归档</button></div>
+              <div style="border-top:1px solid var(--line);margin:14px 0"></div>
+              <div class="between"><div><div class="small strong">删除项目</div><div class="tiny muted mt-4">删除全部剧集、资产、任务与产物，不可恢复。</div></div><button class="btn btn-sm btn-danger" id="deleteBtn">删除</button></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(function(){
+  SP.ui.mount('settings','项目设置');
+
+  function renderModels(){
+    var s=SP.get();
+    document.getElementById('modelRows').innerHTML=s.models.map(function(m,i){
+      return '<tr><td><span class="badge b-todo">'+m.cap+'</span></td><td class="mono">'+m.name+'</td><td class="mono tiny">'+m.version+'</td>'+
+        '<td>'+(m.status==='已连接'?'<span class="badge b-done">已连接</span>':'<span class="badge b-warn">未配置</span>')+'</td>'+
+        '<td class="mono tiny">'+m.latency+'</td><td class="mono tiny">'+m.cost+'</td>'+
+        '<td>'+(m.def?'<span class="badge b-active">默认</span>':'<button class="btn btn-xs" data-def="'+i+'">设为默认</button>')+'</td>'+
+        '<td><div class="cell-actions"><button class="btn btn-xs" data-test="'+i+'">测试</button><button class="btn btn-xs" data-cfg="'+i+'">'+(m.status==='已连接'?'配置':'去配置')+'</button></div></td></tr>';
+    }).join('');
+    var ok=s.models.filter(function(m){return m.status==='已连接';}).length;
+    document.getElementById('modelHealth').textContent=ok+' / '+s.models.length+' 已连接';
+  }
+
+  document.getElementById('modelRows').addEventListener('click',function(e){
+    var t=e.target.closest('[data-test]');
+    if(t){
+      var i=Number(t.getAttribute('data-test')); var m=SP.get().models[i];
+      if(m.status!=='已连接'){ SP.ui.toast('尚未配置','先填写 Endpoint 与 API Key。','warn'); return; }
+      t.textContent='测试中…'; t.disabled=true;
+      setTimeout(function(){ t.textContent='测试'; t.disabled=false; SP.ui.toast('连通正常',m.name+' · '+m.latency,'success'); },900);
+      return;
+    }
+    var d=e.target.closest('[data-def]');
+    if(d){
+      var j=Number(d.getAttribute('data-def'));
+      SP.update(function(st){ var cap=st.models[j].cap; st.models.forEach(function(x){ if(x.cap===cap) x.def=(x.name===st.models[j].name); }); });
+      renderModels(); SP.ui.toast('默认模型已切换',SP.get().models[j].name,'success'); return;
+    }
+    var c=e.target.closest('[data-cfg]'); if(c) configModel(Number(c.getAttribute('data-cfg')));
+  });
+
+  function configModel(i){
+    var m=SP.get().models[i];
+    var md=SP.ui.modal({title:'配置模型',sub:m.name+' · '+m.cap,
+      body:'<div class="form-grid"><div class="field span2"><label>Endpoint <span class="req">*</span></label><input class="input mono" id="cfUrl" placeholder="https://gateway.local/v1" value="'+(m.status==='已连接'?'https://gateway.local/v1':'')+'"></div>'+
+        '<div class="field"><label>API Key</label><input class="input" id="cfKey" type="password" placeholder="sk-••••••••"><span class="hint">保存后不再回显</span></div>'+
+        '<div class="field"><label>区域</label><select class="select"><option>本地网关</option><option>华东</option><option>华北</option></select></div>'+
+        '<div class="field span2"><label>超时（秒）</label><input class="input" id="cfTimeout" type="number" value="120"></div></div>'+
+        '<div class="notice info mt-12"><span>配置仅作用于当前项目。测试请求不会写入用量。</span></div>',
+      footer:'<button class="btn" data-close>取消</button><button class="btn btn-primary" id="cfSave">保存并测试</button>'});
+    md.el.querySelector('#cfSave').addEventListener('click',function(){
+      var url=md.el.querySelector('#cfUrl').value.trim();
+      if(!url){ SP.ui.toast('缺少 Endpoint','请填写网关地址。','danger'); return; }
+      SP.update(function(s){ s.models[i].status='已连接'; s.models[i].latency=m.cap==='视频生成'?'2m 40s':m.cap==='图像生成'?'12s':'1.4s'; });
+      md.close(); renderModels(); SP.ui.toast('配置已保存',m.name+' 连通正常。','success');
+    });
+  }
+
+  document.getElementById('addModel').addEventListener('click',function(){
+    var md=SP.ui.modal({title:'接入新模型',sub:'同一能力可以有多个模型，只有一个默认',
+      body:'<div class="form-grid"><div class="field"><label>能力</label><select class="select" id="amCap"><option>文本生成</option><option>图像生成</option><option>视频生成</option><option>语音合成</option><option>质检规则</option></select></div>'+
+        '<div class="field"><label>模型名称</label><input class="input mono" id="amName" placeholder="例如 mork-image-4"></div>'+
+        '<div class="field"><label>版本</label><input class="input" id="amVer" value="2026.11"></div>'+
+        '<div class="field"><label>单价</label><input class="input" id="amCost" placeholder="¥0.10 / 张"></div>'+
+        '<div class="field span2"><label>Endpoint</label><input class="input mono" id="amUrl" placeholder="https://gateway.local/v1"></div></div>',
+      footer:'<button class="btn" data-close>取消</button><button class="btn btn-primary" id="amAdd">接入</button>'});
+    md.el.querySelector('#amAdd').addEventListener('click',function(){
+      var name=md.el.querySelector('#amName').value.trim(), url=md.el.querySelector('#amUrl').value.trim();
+      if(!name||!url){ SP.ui.toast('信息不完整','模型名称与 Endpoint 必填。','danger'); return; }
+      SP.update(function(s){ s.models.push({name:name,cap:md.el.querySelector('#amCap').value,version:md.el.querySelector('#amVer').value,status:'已连接',latency:'—',cost:md.el.querySelector('#amCost').value||'按量',def:false}); });
+      md.close(); renderModels(); SP.ui.toast('模型已接入',name,'success');
+    });
+  });
+
+  function renderCost(){
+    var p=SP.get().project;
+    var pct=Math.round(p.spend/p.budget*100);
+    document.getElementById('costNow').textContent='¥'+Number(p.spend).toLocaleString()+' / ¥'+Number(p.budget).toLocaleString();
+    document.getElementById('costBar').style.width=Math.min(100,pct)+'%';
+    document.getElementById('budgetBadge').textContent=pct+'% 已使用';
+    document.getElementById('budgetBadge').className='badge '+(pct>=80?'b-warn':'b-info');
+    document.getElementById('budgetInput').value=p.budget;
+    var days=[320,180,260,410,290,530,470,620,380,710,540,420,680,652];
+    document.getElementById('chart').innerHTML=days.map(function(v,i){
+      var h=Math.max(6,v/760*92);
+      return '<div class="bc" title="¥'+v+'"><i style="height:'+h+'px"></i><span>'+(i===13?'今天':(i%2===0?(14-i)+'d':''))+'</span></div>';
+    }).join('');
+  }
+
+  document.getElementById('budgetSave').addEventListener('click',function(){
+    var v=Number(document.getElementById('budgetInput').value);
+    if(!isFinite(v)||v<1000){ SP.ui.toast('预算过低','月度预算至少 ¥1,000。','danger'); return; }
+    SP.update(function(s){ s.project.budget=v; });
+    renderCost(); SP.ui.toast('预算已更新','¥'+v.toLocaleString(),'success');
+  });
+
+  document.getElementById('saveAll').addEventListener('click',function(){
+    var name=document.getElementById('stName').value.trim();
+    if(!name){ document.getElementById('stNameErr').classList.add('show'); document.getElementById('stName').classList.add('err'); return; }
+    document.getElementById('stNameErr').classList.remove('show'); document.getElementById('stName').classList.remove('err');
+    SP.update(function(s){
+      s.project.name=name;
+      s.project.genre=document.getElementById('stGenre').value;
+      s.project.episodes=Number(document.getElementById('stEps').value)||12;
+      s.project.ratio=document.getElementById('stRatio').value;
+      s.project.fps=parseInt(document.getElementById('stFps').value,10)||30;
+      s.project.due=document.getElementById('stDue').value;
+      s.project.tagline=document.getElementById('stTag').value;
+      s.project.synopsis=document.getElementById('stSyn').value;
+      s.activity.unshift([SP.ui.nowStamp(),'陈默','更新项目设置','settings']);
+    });
+    document.getElementById('rail').innerHTML=''; document.getElementById('topbar').innerHTML='';
+    SP.ui.mount('settings','项目设置');
+    bindNav();
+    SP.ui.toast('设置已保存','项目信息已更新到本地演示状态。','success');
+  });
+
+  document.getElementById('exportState').addEventListener('click',function(){
+    var blob=new Blob([JSON.stringify(SP.get(),null,2)],{type:'application/json'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='NYJM-26_state.json';a.click();
+    SP.ui.toast('状态已导出','NYJM-26_state.json','success');
+  });
+
+  document.getElementById('resetDemo').addEventListener('click',function(){
+    SP.ui.confirm({title:'重置演示数据',message:'恢复 V4 种子状态？',detail:'当前所有本地修改、任务进度与审核结论都会丢失。',danger:true,okText:'重置'}).then(function(ok){
+      if(!ok) return; SP.reset(); location.reload();
+    });
+  });
+
+  document.getElementById('stateDl').addEventListener('click',function(){ document.getElementById('exportState').click(); });
+
+  document.getElementById('archiveBtn').addEventListener('click',function(){
+    SP.ui.confirm({title:'归档项目',message:'归档「长夜将明」？',detail:'归档后项目只读，任务停止创建，产物仍可下载。',okText:'归档'}).then(function(ok){
+      if(!ok) return; SP.ui.toast('项目已归档','演示环境不改变导航中的项目状态。','warn');
+    });
+  });
+
+  document.getElementById('deleteBtn').addEventListener('click',function(){
+    SP.ui.confirm({title:'删除项目',message:'此操作不可恢复。',detail:'将删除 12 集、8 场、12 镜头、全部资产与 4 条导出记录。演示环境只给出确认流程，不真正删除。',danger:true,okText:'我确认删除'}).then(function(ok){
+      if(ok) SP.ui.toast('演示保护','删除流程已确认，但原型不执行真实删除。','warn');
+    });
+  });
+
+  document.getElementById('modelHelp').addEventListener('click',function(e){
+    e.preventDefault();
+    SP.ui.modal({title:'模型接入说明',sub:'项目级配置与最小权限',
+      body:'<div class="stack"><div class="notice info"><span>所有模型通过项目网关访问，Key 存储在项目密钥库，接口只返回掩码。</span></div><div class="kv" style="grid-template-columns:86px 1fr"><span class="k">文本</span><span class="v">用于剧本拆解、提示词与质检摘要</span><span class="k">图像</span><span class="v">角色参考、场景概念、分镜首帧</span><span class="k">视频</span><span class="v">镜头生成与增强，按 5 秒计费</span><span class="k">语音</span><span class="v">对白与环境音，按时长计费</span></div><div class="notice warn"><span>切换默认模型不会重跑历史任务，只影响新创建任务。</span></div></div>',
+      footer:'<button class="btn btn-primary" data-close>关闭</button>'});
+  });
+
+  function bindNav(){
+    document.querySelectorAll('#setNav a').forEach(function(a){
+      a.addEventListener('click',function(){
+        document.querySelectorAll('#setNav a').forEach(function(x){x.classList.remove('on');});
+        a.classList.add('on');
+      });
+    });
+  }
+
+  renderModels(); renderCost(); bindNav();
+})();
+</script>
+</body>
+</html>

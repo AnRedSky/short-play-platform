@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>剪辑时间线 · 长夜将明 · 长夜制作台 V4</title>
+  <link rel="stylesheet" href="assets/css/studio.css">
+  <style>
+    .tl2-scroll { overflow-x:auto; padding-bottom:4px }
+    .tl2-row { display:flex; height:46px; border-bottom:1px solid #262a31; position:relative }
+    .tl2-label { width:112px;flex:0 0 112px;position:sticky;left:0;z-index:6;background:#1c1f24;border-right:1px solid #2b2e35;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:10px;color:#a9a5af }
+    .tl2-lane { position:relative;flex:1;background-image:repeating-linear-gradient(90deg,#20232a 0 1px,transparent 1px 60px) }
+    .tl2-clip { position:absolute;top:6px;height:34px;border-radius:5px;padding:4px 7px;overflow:hidden;font-size:9.5px;cursor:grab;user-select:none;border:1px solid;color:#eef4f0 }
+    .tl2-clip.video { background:linear-gradient(180deg,#5a4a3a,#43382c);border-color:#8b7357 }
+    .tl2-clip.audio { background:linear-gradient(180deg,#324a5c,#263849);border-color:#4f6d84 }
+    .tl2-clip.sub { background:linear-gradient(180deg,#4b3c52,#392e40);border-color:#6f5b79 }
+    .tl2-clip.selected { outline:2px solid var(--accent);outline-offset:1px }
+    .tl2-clip .c-name { font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3 }
+    .tl2-clip .c-meta { font-size:8px;opacity:.68;font-family:var(--font-mono) }
+    .tl2-handle { position:absolute;right:0;top:0;bottom:0;width:6px;cursor:ew-resize;background:rgba(255,255,255,.12) }
+    .tl2-playhead { position:absolute;top:0;bottom:0;width:1px;background:var(--accent);z-index:7;pointer-events:none }
+    .tl2-playhead::before { content:"";position:absolute;top:0;left:-4px;border-left:4.5px solid transparent;border-right:4.5px solid transparent;border-top:6px solid var(--accent) }
+    .tl2-ruler { height:24px;position:relative;border-bottom:1px solid #2b2e35;background:#1c1f24 }
+    .tl2-ruler span { position:absolute;top:4px;font-family:var(--font-mono);font-size:8.5px;color:#737780;transform:translateX(-50%) }
+    .tl2-grid { display:grid;grid-template-columns:190px minmax(0,1fr) 292px;gap:16px;align-items:start }
+    .tl2-grid > .card { align-self:start }
+    .mini-player { aspect-ratio:9/16;border-radius:12px;position:relative;overflow:hidden;background:#1a1b20 center/cover }
+    .mini-player::after { content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,14,.1),rgba(10,10,14,.78)) }
+    @media (max-width:1150px){ .tl2-grid{grid-template-columns:170px 1fr} .tl2-grid > .stack:last-child{display:none} }
+    @media (max-width:800px){ .tl2-grid{grid-template-columns:1fr} .mini-player{max-height:360px} }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main class="page">
+      <div class="page-head">
+        <div class="ph-main">
+          <span class="eyebrow">Timeline · TL v4</span>
+          <h1 class="page-title">剪辑时间线</h1>
+          <p class="page-desc" id="tlDesc">EP01 · 雨夜书店 · 粗剪 4 轨 · 1'32" · 整数 PTS + 有理数 time_base。拖动片段调整位置，保存生成不可变版本。</p>
+        </div>
+        <div class="page-actions">
+          <a class="btn" href="review.html" id="reviewLink">质检状态 · 待审核</a>
+          <button class="btn" id="saveVersion">保存新版本</button>
+          <button class="btn btn-primary" id="exportBtn">导出成片 →</button>
+        </div>
+      </div>
+
+      <div class="tl2-grid">
+        <div class="stack">
+          <div class="mini-player" id="miniPlayer" style="background-image:url('assets/img/still-bookstore.svg')">
+            <span class="pl-scene" id="miniScene" style="position:absolute;z-index:2;left:10px;top:10px;font-size:8.5px;color:#f1eadf;background:rgba(12,12,14,.42);border:1px solid rgba(255,255,255,.18);padding:1px 6px;border-radius:4px">S0101 · 雨夜书店</span>
+            <div class="pl-caption" id="miniCap" style="position:absolute;z-index:2;left:8px;right:8px;bottom:34px;text-align:center;font-family:var(--font-serif);font-size:10.5px;line-height:1.5;text-shadow:0 2px 8px rgba(0,0,0,.6)">雨砸在玻璃上，像有人用指节敲门。</div>
+            <button class="pl-play" id="miniPlay" style="position:absolute;z-index:3;left:8px;bottom:8px;width:24px;height:24px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.14);color:#fff;font-size:8px">▶</button>
+            <span id="miniTime" style="position:absolute;z-index:3;right:8px;bottom:12px;font-family:var(--font-mono);font-size:8px;color:#d6d0c6">00:00 / 01:32</span>
+          </div>
+          <div class="between" style="padding:0 2px"><span class="tiny muted">预览 · 跟随播放头</span><button class="btn btn-xs" id="regenPreview">重新生成缩略</button></div>
+        </div>
+
+        <section class="card card-pad">
+          <div class="eyebrow">Current clip</div>
+          <div id="clipInspector"></div>
+        </section>
+
+        <div class="stack">
+          <section class="card">
+            <div class="card-head" style="padding:13px 16px"><h3 style="font-size:12px">导出检查</h3><span class="badge b-locked" id="exportBadge">未解锁</span></div>
+            <div class="card-body" style="padding:8px 16px" id="checks"></div>
+            <div style="padding:10px 16px;border-top:1px solid var(--line);background:#fbf8f1">
+              <div class="between"><span class="tiny muted">当前版本</span><span style="font-family:var(--font-serif);font-size:14px" id="verName">TL v4 粗剪</span></div>
+              <div class="between mt-4"><span class="tiny muted" id="verMeta">保存于 今天 00:08 · 陈默</span><span class="tiny mono" id="clipCount">18 个</span></div>
+              <button class="btn btn-xs mt-8" id="historyBtn" style="width:100%">查看历史版本</button>
+            </div>
+            <div class="card-foot" style="padding:10px 16px"><span class="tiny muted">FFmpeg · H.264</span><button class="btn btn-sm" id="checkBtn">运行检查</button></div>
+          </section>
+        </div>
+      </div>
+
+      <section class="card mt-16" style="padding:0;overflow:hidden">
+        <div class="tl-shell" style="border:0;border-radius:0">
+          <div class="tl-toolbar">
+            <button class="tl-btn" id="tlPlay">▶ 播放</button>
+            <span class="tl-tc" id="tlTc">00:00:00</span>
+            <span style="width:1px;height:16px;background:#343842"></span>
+            <button class="tl-btn" id="addClip">＋ 片段</button>
+            <button class="tl-btn" id="snapBtn">吸附 0.5s · 开</button>
+            <div class="spacer"></div>
+            <span class="tiny" style="color:#8b8f98">缩放</span>
+            <input type="range" class="tl-zoom" id="zoom" min="6" max="22" value="12">
+            <span class="tiny" style="color:#8b8f98;font-family:var(--font-mono)" id="zoomVal">12 px/s</span>
+          </div>
+          <div class="tl2-scroll" id="tlScroll"></div>
+        </div>
+      </section>
+
+      <div class="grid g2 mt-16">
+        <section class="card">
+          <div class="card-head"><div><h3>字幕文本</h3><div class="ch-sub">SRT · 19 条 · 按 18 字 / 行重排</div></div><button class="btn btn-sm" id="editSub">编辑字幕</button></div>
+          <div class="card-body" style="padding:4px 20px" id="subLines"></div>
+        </section>
+        <section class="card">
+          <div class="card-head"><div><h3>轨道与素材</h3><div class="ch-sub">每个片段固定引用 AssetVersion</div></div></div>
+          <div class="card-body" style="padding:6px 20px">
+            <div class="list-row"><span class="badge b-teal" style="height:18px">V2</span><span class="lr-main"><span class="lr-title">主画面</span><span class="lr-sub">7 个片段 · 引用 S0101–S0112</span></span><span class="tiny muted">video</span></div>
+            <div class="list-row"><span class="badge b-info" style="height:18px">V1</span><span class="lr-main"><span class="lr-title">字幕 / 标题</span><span class="lr-sub">3 个片段 · SRT + 片名卡</span></span><span class="tiny muted">subtitle</span></div>
+            <div class="list-row"><span class="badge b-warn" style="height:18px">A1</span><span class="lr-main"><span class="lr-title">对白</span><span class="lr-sub">5 个片段 · moss-tts-cn</span></span><span class="tiny muted">audio</span></div>
+            <div class="list-row"><span class="badge b-active" style="height:18px">A2</span><span class="lr-main"><span class="lr-title">环境 / 音乐</span><span class="lr-sub">3 个片段 · 雨声 / 低频</span></span><span class="tiny muted">audio</span></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(function(){
+  SP.ui.mount('timeline','剪辑时间线');
+  var zoom=12, snap=true, playhead=0, playing=false, timer=null;
+  var selected=null;
+  var stills={'S0101':'still-bookstore.svg','S0102':'still-bookstore.svg','S0107':'still-alley.svg','S0109':'still-room.svg','S0111':'still-room.svg','S0112':'still-bookstore.svg'};
+  var captions=[[0,'S0101 · 雨夜书店','雨砸在玻璃上，像有人用指节敲门。'],[9,'S0102 · 门把手','打烊了。明天再来。'],[20,'S0104 · 第一页','周砚。今晚 23:40。'],[28,'S0109 · 审讯','一个失踪了三周的人。林晚。'],[42,'S0111 · 天台','林晚。明晚 23:40。'],[60,'S0112 · 黎明','别翻下一页。'],[78,'S0112 · 黎明','老板，你这家店，不是第一次开张了。']];
+
+  function tl(){ return SP.get().timeline; }
+  function width(){ return Math.round(tl().duration*zoom); }
+
+  function clipColor(type){
+    return type==='video'?'video':type==='audio'?'audio':'sub';
+  }
+
+  function renderTimeline(){
+    var t=tl();
+    var w=width();
+    var tracks=t.tracks.map(function(tr){
+      return '<div class="tl2-row"><div class="tl2-label"><span class="badge" style="height:17px;background:#2a2e36;color:#c9c5cd;border-color:#3a3e47">'+tr.name.split(' · ')[0]+'</span><span class="truncate">'+tr.name.split(' · ')[1]+'</span></div>'+
+        '<div class="tl2-lane" data-lane="'+tr.id+'" style="width:'+w+'px">'+tr.clips.map(function(c){
+          var sel = selected && selected.track===tr.id && selected.clip===c.id ? ' selected':'';
+          return '<div class="tl2-clip '+clipColor(tr.type)+sel+'" data-track="'+tr.id+'" data-clip="'+c.id+'" style="left:'+(c.start*zoom)+'px;width:'+Math.max(18,c.dur*zoom)+'px">'+
+            '<div class="c-name">'+c.name+'</div><div class="c-meta">'+SP.fmtTime(c.start)+' · '+c.dur+'s</div><span class="tl2-handle" data-handle="1"></span></div>';
+        }).join('')+'</div></div>';
+    }).join('');
+    var marks='';
+    for(var sec=0;sec<=t.duration;sec+=10){ marks+='<span style="left:'+(112+sec*zoom)+'px">'+SP.fmtTime(sec)+'</span>'; }
+    document.getElementById('tlScroll').innerHTML='<div style="position:relative;width:'+(112+w)+'px;min-width:100%">'+
+      '<div class="tl2-ruler" style="width:'+(112+w)+'px;position:sticky;top:0;z-index:8">'+
+        '<span style="left:56px;transform:none;color:#9a9ea6">TC</span>'+marks+'</div>'+tracks+
+      '<div class="tl2-playhead" id="playhead" style="left:'+(112+playhead*zoom)+'px"></div></div>';
+    document.getElementById('tlTc').textContent=toTc(playhead);
+    document.getElementById('zoomVal').textContent=zoom+' px/s';
+    document.getElementById('clipCount').textContent=t.tracks.reduce(function(a,tr){return a+tr.clips.length;},0)+' 个片段';
+    document.getElementById('verName').textContent=t.version+' 粗剪';
+    document.getElementById('verMeta').textContent='保存于 今天 00:08 · 陈默';
+    renderInspector();
+  }
+
+  function toTc(sec){ var f=Math.floor((sec%1)*30); return '00:'+SP.fmtTime(sec)+':'+String(f).padStart(2,'0'); }
+
+  function renderInspector(){
+    var t=tl();
+    if(!selected){ document.getElementById('clipInspector').innerHTML='<div class="empty" style="padding:26px 10px"><div class="e-title">未选择片段</div><div class="e-desc">点击时间线中的片段，查看源素材、入出点与版本。</div></div>'; return; }
+    var track=t.tracks.filter(function(x){return x.id===selected.track;})[0];
+    var clip=track.clips.filter(function(x){return x.id===selected.clip;})[0];
+    if(!clip){ selected=null; return renderInspector(); }
+    document.getElementById('clipInspector').innerHTML=
+      '<div style="font-family:var(--font-serif);font-size:18px;margin-top:4px">'+clip.name+'</div>'+
+      '<div class="row wrap mt-8" style="gap:6px"><span class="badge b-teal">'+track.type+'</span><span class="badge b-info">源 '+clip.source+'</span><span class="badge b-todo">固定版本</span></div>'+
+      '<div class="form-grid mt-12" style="gap:10px">'+
+        '<div class="field"><label>时间线起点（秒）</label><input class="input" id="ciStart" type="number" step="0.5" min="0" value="'+clip.start+'"></div>'+
+        '<div class="field"><label>片段时长（秒）</label><input class="input" id="ciDur" type="number" step="0.5" min="1" value="'+clip.dur+'"></div>'+
+      '</div>'+
+      '<div class="kv mt-12" style="grid-template-columns:70px 1fr;font-size:11px"><span class="k">轨道</span><span class="v">'+track.name+'</span><span class="k">素材</span><span class="v mono">'+clip.source+' · REF v3</span><span class="k">时间基</span><span class="v mono">1/30 · 整数 PTS</span></div>'+
+      '<div class="row mt-12" style="gap:8px"><button class="btn btn-sm btn-primary" id="ciApply">应用修改</button><button class="btn btn-sm" id="ciDelete">移除片段</button></div>';
+    document.getElementById('ciApply').addEventListener('click',function(){
+      var st=Number(document.getElementById('ciStart').value), du=Number(document.getElementById('ciDur').value);
+      if(!isFinite(st)||st<0||!isFinite(du)||du<1){ SP.ui.toast('参数无效','起点需 ≥ 0，时长需 ≥ 1 秒。','danger'); return; }
+      SP.update(function(s){
+        var tr=s.timeline.tracks.filter(function(x){return x.id===selected.track;})[0];
+        var c=tr.clips.filter(function(x){return x.id===selected.clip;})[0];
+        c.start=st; c.dur=du;
+      });
+      renderTimeline(); syncPlayhead(); SP.ui.toast('片段已更新','时间线已标记未保存，保存后生成新版本。','success');
+    });
+    document.getElementById('ciDelete').addEventListener('click',function(){
+      SP.ui.confirm({title:'移除片段',message:'从时间线移除「'+clip.name+'」？',detail:'只移除引用，不删除源资产。保存版本后生效。',danger:true,okText:'移除'}).then(function(ok){
+        if(!ok) return;
+        SP.update(function(s){
+          var tr=s.timeline.tracks.filter(function(x){return x.id===selected.track;})[0];
+          tr.clips=tr.clips.filter(function(x){return x.id!==selected.clip;});
+        });
+        selected=null; renderTimeline(); SP.ui.toast('片段已移除','保存新版本以固定这次变更。','warn');
+      });
+    });
+  }
+
+  // 拖动 & 拉伸
+  document.addEventListener('mousedown',function(e){
+    var clipEl=e.target.closest('.tl2-clip'); if(!clipEl) return;
+    var trackId=clipEl.getAttribute('data-track'), clipId=clipEl.getAttribute('data-clip');
+    var tr=tl().tracks.filter(function(x){return x.id===trackId;})[0];
+    var clip=tr.clips.filter(function(x){return x.id===clipId;})[0];
+    var isResize=!!e.target.closest('[data-handle]');
+    e.preventDefault();
+    selected={track:trackId,clip:clipId};
+    document.querySelectorAll('.tl2-clip').forEach(function(c){c.classList.remove('selected');});
+    clipEl.classList.add('selected');
+    renderInspector();
+
+    var startX=e.clientX, origStart=clip.start, origDur=clip.dur, moved=false;
+    function move(ev){
+      var dx=ev.clientX-startX;
+      if(Math.abs(dx)<2) return;
+      moved=true;
+      if(isResize){
+        var nd=Math.max(1,origDur+dx/zoom);
+        if(snap) nd=Math.round(nd*2)/2;
+        clipEl.style.width=Math.max(18,nd*zoom)+'px';
+        clipEl.querySelector('.c-meta').textContent=SP.fmtTime(origStart)+' · '+nd.toFixed(1)+'s';
+        clip._tempDur=nd;
+      } else {
+        var ns=Math.max(0,origStart+dx/zoom);
+        if(snap) ns=Math.round(ns*2)/2;
+        ns=Math.min(tl().duration-clip.dur,ns);
+        clipEl.style.left=(ns*zoom)+'px';
+        clipEl.querySelector('.c-meta').textContent=SP.fmtTime(ns)+' · '+clip.dur+'s';
+        clip._tempStart=ns;
+      }
+    }
+    function up(){
+      document.removeEventListener('mousemove',move);
+      document.removeEventListener('mouseup',up);
+      if(!moved) return;
+      SP.update(function(s){
+        var tr2=s.timeline.tracks.filter(function(x){return x.id===trackId;})[0];
+        var c2=tr2.clips.filter(function(x){return x.id===clipId;})[0];
+        if(c2){ if(clip._tempStart!==undefined) c2.start=clip._tempStart; if(clip._tempDur!==undefined) c2.dur=clip._tempDur; delete clip._tempStart; delete clip._tempDur; }
+      });
+      renderTimeline(); SP.ui.toast('时间线已修改','记得保存新版本。','success');
+    }
+    document.addEventListener('mousemove',move);
+    document.addEventListener('mouseup',up);
+  });
+
+  function syncPlayhead(){
+    var ph=document.getElementById('playhead'); if(ph) ph.style.left=(112+playhead*zoom)+'px';
+    document.getElementById('tlTc').textContent=toTc(playhead);
+    renderPreview();
+  }
+
+  function renderPreview(){
+    var cap=captions[0];
+    for(var i=0;i<captions.length;i++){ if(playhead>=captions[i][0]) cap=captions[i]; }
+    document.getElementById('miniCap').textContent=cap[2];
+    document.getElementById('miniScene').textContent=cap[1];
+    document.getElementById('miniTime').textContent=SP.fmtTime(playhead)+' / 01:32';
+    var still=stills[cap[1].split(' · ')[0]] || 'still-bookstore.svg';
+    document.getElementById('miniPlayer').style.backgroundImage="url('assets/img/"+still+"')";
+  }
+
+  document.getElementById('tlPlay').addEventListener('click',function(){
+    playing=!playing; this.textContent=playing?'❚❚ 暂停':'▶ 播放';
+    document.getElementById('miniPlay').textContent=playing?'❚❚':'▶';
+    if(playing){ timer=setInterval(function(){ playhead=Math.min(tl().duration,playhead+0.5); syncPlayhead(); if(playhead>=tl().duration){ playing=false; clearInterval(timer); document.getElementById('tlPlay').textContent='▶ 播放'; document.getElementById('miniPlay').textContent='▶'; } },500); }
+    else clearInterval(timer);
+  });
+  document.getElementById('miniPlay').addEventListener('click',function(){ document.getElementById('tlPlay').click(); });
+
+  document.getElementById('zoom').addEventListener('input',function(){ zoom=Number(this.value); renderTimeline(); syncPlayhead(); });
+  document.getElementById('snapBtn').addEventListener('click',function(){ snap=!snap; this.textContent='吸附 0.5s · '+(snap?'开':'关'); });
+
+  document.getElementById('tlScroll').addEventListener('click',function(e){
+    if(e.target.closest('.tl2-clip')) return;
+    var lane=e.target.closest('.tl2-lane'); var ruler=e.target.closest('.tl2-ruler');
+    var rect=(lane||ruler).getBoundingClientRect();
+    var x=e.clientX-rect.left;
+    playhead=Math.max(0,Math.min(tl().duration,x/zoom));
+    if(snap) playhead=Math.round(playhead*2)/2;
+    syncPlayhead();
+  });
+
+  function renderChecks(){
+    var t=tl();
+    var approved=SP.get().qa.status==='approved';
+    document.getElementById('exportBadge').className='badge '+(approved?'b-done':'b-locked');
+    document.getElementById('exportBadge').textContent=approved?'已解锁':'未解锁';
+    document.getElementById('reviewLink').textContent='质检状态 · '+(approved?'已通过':'待审核');
+    document.getElementById('checks').innerHTML=[
+      ['时间线完整','92s / 92s','b-done'],
+      ['音画同步','A1 5 片段已对齐','b-done'],
+      ['字幕覆盖','19 / 19 条','b-done'],
+      ['质检审核',approved?'已通过':'等待通过','b-'+(approved?'done':'locked')]
+    ].map(function(x){return '<div class="list-row" style="padding:7px 0"><span class="lr-main"><span class="lr-title">'+x[0]+'</span><span class="lr-sub">'+x[1]+'</span></span><span class="badge '+x[2]+'" style="height:19px">'+({'b-done':'通过','b-locked':'锁定'}[x[2]]||'通过')+'</span></div>';}).join('');
+  }
+
+  document.getElementById('checkBtn').addEventListener('click',function(){
+    SP.ui.modal({title:'导出前检查',sub:'时间线 TL v4 · 92 秒 · 4 轨',
+      body:'<div class="stack">'+
+        '<div class="notice success">'+SP.ui.icon('check',15)+'<span>时间线无空隙，音频与画面首尾对齐。</span></div>'+
+        '<div class="notice success">'+SP.ui.icon('check',15)+'<span>19 条字幕均在有效时间范围内，无重叠。</span></div>'+
+        '<div class="notice success">'+SP.ui.icon('check',15)+'<span>所有片段引用固定 AssetVersion，无 stale 引用。</span></div>'+
+        (SP.get().qa.status==='approved'?'<div class="notice success"><span>质检已通过，可创建导出任务。</span></div>':'<div class="notice warn"><span>质检尚未通过，导出按钮保持锁定。请先完成审核。</span></div>')+'</div>',
+      footer:'<button class="btn" data-close>关闭</button><a class="btn btn-primary" href="review.html">前往审核</a>'});
+  });
+
+  document.getElementById('saveVersion').addEventListener('click',function(){
+    var v=parseInt(tl().version.replace(/[^0-9]/g,''),10)+1;
+    SP.update(function(s){
+      s.timeline.version='TL v'+v;
+      s.activity.unshift([SP.ui.nowStamp(),'陈默','保存时间线 TL v'+v,'timeline']);
+    });
+    renderTimeline(); renderChecks(); SP.ui.toast('已保存 TL v'+v,'新的不可变版本已生成，旧版本仍可回溯。','success');
+  });
+
+  document.getElementById('exportBtn').addEventListener('click',function(){
+    if(SP.get().qa.status!=='approved'){
+      SP.ui.toast('导出被锁定','质检审核通过后才能创建导出任务。','warn');
+      setTimeout(function(){ window.location.href='review.html'; },800);
+      return;
+    }
+    window.location.href='export.html';
+  });
+
+  document.getElementById('historyBtn').addEventListener('click',function(){
+    SP.ui.modal({title:'时间线版本',sub:'每个版本固定片段引用与 PTS',
+      body:'<div class="stack">'+[['TL v4','今天 00:08','陈默','粗剪 · 18 个片段','当前'],['TL v3','昨天 22:31','程野','补齐 A2 环境轨'],['TL v2','昨天 19:12','程野','V2 画面重排，加入片名卡'],['TL v1','11-19 16:40','程野','首版粗剪']].map(function(x,i){
+        return '<div class="list-row"><span class="mono tiny muted" style="width:34px">'+x[0]+'</span><span class="lr-main"><span class="lr-title">'+x[3]+'</span><span class="lr-sub">'+x[1]+' · '+x[2]+'</span></span>'+(i===0?'<span class="badge b-active">当前</span>':'<button class="btn btn-xs">恢复</button>')+'</div>';
+      }).join('')+'</div>',
+      footer:'<button class="btn" data-close>关闭</button>',
+      onMount:function(el){ el.querySelectorAll('button.btn-xs').forEach(function(b){b.addEventListener('click',function(){SP.ui.toast('版本恢复','演示环境不覆盖当前版本，请复制为新版本。','warn');});}); }});
+  });
+
+  document.getElementById('addClip').addEventListener('click',function(){
+    var t=tl();
+    var m=SP.ui.modal({title:'添加片段',sub:'片段引用项目内固定资产版本',
+      body:'<div class="form-grid">'+
+        '<div class="field"><label>轨道</label><select class="select" id="acTrack">'+t.tracks.map(function(tr){return '<option value="'+tr.id+'">'+tr.name+'</option>';}).join('')+'</select></div>'+
+        '<div class="field"><label>素材来源</label><select class="select" id="acSource"><option>S0103 账簿落地</option><option>S0104 第一页</option><option>AMB03 钟声</option><option>SRT 新字幕</option></select></div>'+
+        '<div class="field"><label>起点（秒）</label><input class="input" id="acStart" type="number" value="30"></div>'+
+        '<div class="field"><label>时长（秒）</label><input class="input" id="acDur" type="number" value="6"></div>'+
+        '<div class="field span2"><label>片段名称</label><input class="input" id="acName" placeholder="例如：S0103 账簿落地"></div>'+
+      '</div>',
+      footer:'<button class="btn" data-close>取消</button><button class="btn btn-primary" id="acAdd">添加</button>'});
+    m.el.querySelector('#acAdd').addEventListener('click',function(){
+      var tid=m.el.querySelector('#acTrack').value, name=m.el.querySelector('#acName').value.trim()||m.el.querySelector('#acSource').value;
+      var start=Number(m.el.querySelector('#acStart').value), dur=Number(m.el.querySelector('#acDur').value);
+      if(start<0||dur<1){ SP.ui.toast('参数无效','起点需 ≥0，时长需 ≥1。','danger'); return; }
+      SP.update(function(s){
+        var tr=s.timeline.tracks.filter(function(x){return x.id===tid;})[0];
+        tr.clips.push({id:SP.uid('c'),name:name,start:start,dur:dur,source:m.el.querySelector('#acSource').value.split(' ')[0]});
+      });
+      m.close(); renderTimeline(); SP.ui.toast('片段已添加','拖动可调整位置，保存生成新版本。','success');
+    });
+  });
+
+  document.getElementById('regenPreview').addEventListener('click',function(){
+    var pct=0;
+    var m=SP.ui.modal({title:'重新生成缩略预览',sub:'仅重建代理文件，不改变时间线',
+      body:'<div class="between mb-8"><span class="small" id="pvStage">读取时间线快照…</span><span class="mono small" id="pvPct">0%</span></div><div class="progress"><i id="pvBar" style="width:0%"></i></div>',
+      footer:'<button class="btn" data-close>后台运行</button>'});
+    var t2=setInterval(function(){
+      pct+=10; var bar=m.el.querySelector('#pvBar'); if(bar) bar.style.width=Math.min(pct,100)+'%';
+      var p=m.el.querySelector('#pvPct'); if(p) p.textContent=Math.round(Math.min(pct,100))+'%';
+      var s=m.el.querySelector('#pvStage'); if(s) s.textContent=pct<40?'抽取关键帧…':'生成代理文件…';
+      if(pct>=100){clearInterval(t2); setTimeout(function(){m.close(); SP.ui.toast('缩略已更新','预览与时间线快照一致。','success');},500);}
+    },220);
+  });
+
+  // 字幕
+  var subs=[
+    ['00:00','00:09','雨砸在玻璃上，像有人用指节敲门。'],
+    ['00:09','00:20','打烊了。明天再来。'],
+    ['00:20','00:28','周砚。今晚 23:40。'],
+    ['00:28','00:42','一个失踪了三周的人。林晚。'],
+    ['00:42','00:60','林晚。明晚 23:40。']
+  ];
+  function renderSubs(){
+    document.getElementById('subLines').innerHTML=subs.map(function(s,i){
+      return '<div class="list-row" style="padding:8px 0"><span class="mono tiny muted" style="width:88px">'+s[0]+' → '+s[1]+'</span><span class="lr-main"><span class="lr-title" style="font-weight:400">'+s[2]+'</span></span><button class="icon-btn" data-sub="'+i+'" style="width:24px;height:24px">'+SP.ui.icon('edit',13)+'</button></div>';
+    }).join('');
+  }
+  document.getElementById('subLines').addEventListener('click',function(e){
+    var b=e.target.closest('[data-sub]'); if(!b) return; var i=Number(b.getAttribute('data-sub'));
+    var m=SP.ui.modal({title:'编辑字幕',sub:'时间码与文本会写入 SRT',
+      body:'<div class="form-grid"><div class="field"><label>开始</label><input class="input" id="sStart" value="'+subs[i][0]+'"></div><div class="field"><label>结束</label><input class="input" id="sEnd" value="'+subs[i][1]+'"></div><div class="field span2"><label>字幕文本</label><textarea class="textarea" id="sText" rows="2">'+SP.escape(subs[i][2])+'</textarea><span class="hint">建议每行不超过 18 个字。</span></div></div>',
+      footer:'<button class="btn" data-close>取消</button><button class="btn btn-primary" id="sSave">保存</button>'});
+    m.el.querySelector('#sSave').addEventListener('click',function(){
+      subs[i]=[m.el.querySelector('#sStart').value,m.el.querySelector('#sEnd').value,m.el.querySelector('#sText').value.trim()];
+      m.close(); renderSubs(); SP.ui.toast('字幕已更新','记得保存时间线版本。','success');
+    });
+  });
+  document.getElementById('editSub').addEventListener('click',function(){ SP.ui.toast('字幕编辑器','已展开字幕列表，点击任意行编辑。','success'); });
+
+  renderTimeline(); renderChecks(); renderSubs(); syncPlayhead();
+  setInterval(function(){ if(document.visibilityState==='visible' && !document.querySelector('.overlay.open')) renderChecks(); },5000);
+})();
+</script>
+</body>
+</html>

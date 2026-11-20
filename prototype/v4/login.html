@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 · 长夜制作台 V4</title>
+  <link rel="stylesheet" href="assets/css/studio.css">
+  <style>
+    .auth-visual .av-logo { width:40px;height:40px;border-radius:12px;background:linear-gradient(145deg,#f0704f,#c9341f);display:grid;place-items:center;box-shadow:0 8px 26px rgba(226,85,61,.35) }
+    .auth-visual .av-steps { display:flex;gap:26px;margin-top:28px;font-size:10.5px;color:#a9a39a;letter-spacing:.04em }
+    .auth-visual .av-steps b { display:block;font-family:var(--font-mono);font-size:10px;color:#e7c79a;letter-spacing:.14em;margin-bottom:3px }
+  </style>
+</head>
+<body>
+<div class="auth">
+  <section class="auth-visual">
+    <div class="av-bg"></div>
+    <div class="av-brand">
+      <span class="av-logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M5 19V8.5L12 4l7 4.5V19"/><path d="M9 19v-6h6v6"/></svg></span>
+      <div><div style="font-family:var(--font-serif);font-size:18px;letter-spacing:.06em">长夜制作台</div><div class="tiny" style="color:#8f8a84;letter-spacing:.2em">LONG NIGHT STUDIO · V4</div></div>
+    </div>
+    <div>
+      <div class="eyebrow" style="color:#8f8a84">企业级 AI 短剧生产平台</div>
+      <p class="av-quote mt-12">从一句梗概到一集成片，<br>把每个创作决定<span>留在系统里</span>。</p>
+      <div class="av-steps">
+        <span><b>01</b>故事与分集</span><span><b>02</b>剧本与分镜</span><span><b>03</b>生成与审核</span><span><b>04</b>剪辑与交付</span>
+      </div>
+    </div>
+    <div class="av-foot"><span>仅限工作室内网 · 私有化部署</span><span>SHORT PLAY / 2026</span></div>
+  </section>
+
+  <section class="auth-form-wrap">
+    <div class="auth-card">
+      <div class="logo-sm">
+        <span class="brand-mark"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M5 19V8.5L12 4l7 4.5V19"/><path d="M9 19v-6h6v6"/></svg></span>
+        <span style="font-family:var(--font-serif);font-size:16px">长夜制作台</span>
+      </div>
+      <span class="eyebrow">Sign in</span>
+      <h1 class="mt-8">继续你的长夜。</h1>
+      <p class="sub">使用工作室账号登录。项目权限由成员关系决定，未授权项目不会出现在工作台。</p>
+
+      <form class="auth-form" id="loginForm" novalidate>
+        <div class="field">
+          <label for="email">邮箱</label>
+          <input class="input" id="email" type="email" value="chenmo@studio.cn" autocomplete="username">
+          <div class="err-msg" id="emailErr">请输入有效的工作邮箱</div>
+        </div>
+        <div class="field">
+          <label for="password">密码</label>
+          <input class="input" id="password" type="password" value="demo-2026" autocomplete="current-password">
+          <div class="err-msg" id="pwdErr">密码至少 6 位</div>
+        </div>
+        <div class="between">
+          <label class="checkline"><input type="checkbox" checked> 记住此设备 7 天</label>
+          <a class="tiny muted" href="#" id="forgot">忘记密码？</a>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit" id="loginBtn">进入工作台</button>
+        <button class="btn btn-block" type="button" id="ssoBtn">使用企业 SSO 登录</button>
+      </form>
+
+      <div class="auth-demo">
+        <b>演示模式</b> · 任意有效邮箱与 6 位以上密码均可进入；账号、项目与任务均为本地演示数据。
+      </div>
+
+      <div class="row" style="justify-content:space-between;margin-top:26px">
+        <a class="tiny muted" href="index.html">跳过登录，直接查看演示 →</a>
+        <span class="tiny muted">V4 · Prototype</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(function(){
+  var form = document.getElementById('loginForm');
+  var email = document.getElementById('email');
+  var pwd = document.getElementById('password');
+
+  function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var ok = true;
+    email.classList.remove('err'); document.getElementById('emailErr').classList.remove('show');
+    pwd.classList.remove('err'); document.getElementById('pwdErr').classList.remove('show');
+    if(!validEmail(email.value.trim())){ email.classList.add('err'); document.getElementById('emailErr').classList.add('show'); ok=false; }
+    if(pwd.value.length<6){ pwd.classList.add('err'); document.getElementById('pwdErr').classList.add('show'); ok=false; }
+    if(!ok) return;
+
+    var btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = '正在验证账号…';
+    SP.update(function(s){
+      s.user.email = email.value.trim();
+      if(s.user.email.split('@')[0] === 'chenmo'){ s.user.name = '陈默'; s.user.role = '制作总监'; s.user.initial = '陈'; }
+    });
+    setTimeout(function(){
+      btn.textContent = '登录成功，正在进入…';
+      SP.ui.toast('登录成功','欢迎回来，' + SP.get().user.name + '。','success');
+      var redirect = SP.query('redirect');
+      setTimeout(function(){ window.location.href = redirect || 'index.html'; }, 500);
+    }, 700);
+  });
+
+  document.getElementById('ssoBtn').addEventListener('click', function(){
+    SP.ui.toast('企业 SSO','原型环境未接入真实身份提供方，演示中请使用邮箱登录。','warn');
+  });
+  document.getElementById('forgot').addEventListener('click', function(e){
+    e.preventDefault();
+    SP.ui.modal({title:'重置密码',sub:'演示环境不会发送邮件。联系工作室管理员在「团队与权限」中重置。',body:'<div class="notice info">请联系项目所有者 <b>陈默</b>（chenmo@studio.cn）或 IT 支持。</div>',footer:'<button class="btn btn-primary" data-close>知道了</button>'});
+  });
+})();
+</script>
+</body>
+</html>

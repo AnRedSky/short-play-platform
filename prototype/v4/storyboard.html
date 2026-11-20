@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分镜台 · 长夜将明 · 长夜制作台 V4</title>
+  <link rel="stylesheet" href="assets/css/studio.css">
+  <style>
+    .shot-card { background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .16s,box-shadow .16s,transform .16s }
+    .shot-card:hover { border-color:#c9c1af;box-shadow:0 10px 24px rgba(23,24,28,.07);transform:translateY(-1px) }
+    .shot-frame { aspect-ratio:9/16;position:relative;overflow:hidden;display:grid;place-items:center;background:#26272c }
+    .shot-grid { display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px }
+    @media (max-width:1300px){ .shot-grid{grid-template-columns:repeat(5,minmax(0,1fr))} }
+    @media (max-width:1080px){ .shot-grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
+    @media (max-width:880px){ .shot-grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+    @media (max-width:600px){ .shot-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+    .shot-frame .grain { position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.08),transparent 45%),linear-gradient(160deg,rgba(0,0,0,.1),rgba(0,0,0,.55)) }
+    .shot-frame .num { position:absolute;left:9px;top:8px;font-family:var(--font-mono);font-size:8.5px;color:#fff;background:rgba(15,15,18,.42);border:1px solid rgba(255,255,255,.18);padding:1px 5px;border-radius:4px }
+    .shot-frame .size { position:absolute;right:8px;top:8px;font-size:8.5px;color:#f2ecdf;background:rgba(15,15,18,.42);border:1px solid rgba(255,255,255,.18);padding:1px 5px;border-radius:4px }
+    .shot-frame .frame-title { position:relative;color:rgba(255,255,255,.92);font-family:var(--font-serif);font-size:15px;text-align:center;padding:0 14px;line-height:1.5;text-shadow:0 2px 10px rgba(0,0,0,.5) }
+    .shot-frame .silhouette { position:absolute;bottom:0;left:0;right:0;height:58%;background:linear-gradient(180deg,transparent,rgba(0,0,0,.72)) }
+    .shot-body { padding:9px 11px 10px }
+    .shot-body .sname { font-size:11.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+    .shot-body .smeta { font-size:9.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+    .shot-body .sfoot { margin-top:7px;display:flex;align-items:center;justify-content:space-between }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main class="page">
+      <div class="page-head">
+        <div class="ph-main">
+          <span class="eyebrow">Shot contracts · EP01</span>
+          <h1 class="page-title">分镜台</h1>
+          <p class="page-desc">每个镜头是一份可执行的 Shot Contract：景别、运镜、时长与参考版本都被冻结。修改镜头会产生新版本，不覆盖已生成画面。</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="importBtn">从剧本重新拆解</button>
+          <button class="btn" id="submitBtn">批量送审</button>
+          <button class="btn btn-primary" id="genShots">生成缺失分镜</button>
+        </div>
+      </div>
+
+      <div class="grid g4">
+        <div class="card stat"><div class="s-label">镜头总数</div><div class="s-val" id="stTotal">12<small>个</small></div><div class="s-delta">EP01 · 8 场拆解</div></div>
+        <div class="card stat"><div class="s-label">已就绪</div><div class="s-val" id="stReady">6<small>个</small></div><div class="s-delta">可进入画面生成</div></div>
+        <div class="card stat"><div class="s-label">待确认</div><div class="s-val" id="stReview">3<small>个</small></div><div class="s-delta">导演未锁定合同</div></div>
+        <div class="card stat"><div class="s-label">生成中 / 未开始</div><div class="s-val" id="stOther">3<small>个</small></div><div class="s-delta">1 个运行中 · 2 个待生成</div></div>
+      </div>
+
+      <section class="card mt-16">
+        <div class="card-head">
+          <div class="row wrap" id="filters" style="gap:6px">
+            <button class="chip on" data-f="all">全部 12</button>
+            <button class="chip" data-f="ready">已就绪 5</button>
+            <button class="chip" data-f="review">待确认 3</button>
+            <button class="chip" data-f="generating">生成中 1</button>
+            <button class="chip" data-f="todo">未开始 3</button>
+          </div>
+          <div class="row">
+            <span class="tiny muted">镜头按叙事顺序排列</span>
+            <div class="seg" id="viewToggle"><button class="active" data-v="grid">网格</button><button data-v="list">列表</button></div>
+          </div>
+        </div>
+        <div class="card-body" id="shotBody">
+          <div class="grid g4" id="shotGrid"></div>
+        </div>
+        <div class="card-foot"><span class="tiny muted">合同版本 v2 · 12 个镜头 · 由剧本 v6 自动拆解</span><span class="tiny muted" id="selInfo">点击镜头查看合同参数</span></div>
+      </section>
+
+      <div class="grid g2 mt-16">
+        <section class="card">
+          <div class="card-head"><div><h3>本集镜头节奏</h3><div class="ch-sub">时长累计 1'32" · 最长镜头 6.0s · 平均 3.6s</div></div><span class="badge b-teal">节奏正常</span></div>
+          <div class="card-body">
+            <div style="display:flex;gap:3px;height:34px;align-items:flex-end" id="rhythm"></div>
+            <div class="between tiny muted mt-8"><span>雨夜书店</span><span>雨巷 / 审讯</span><span>天台 / 黎明</span></div>
+            <div class="notice info mt-16"><span>第 5 场到第 6 场转场偏快，质检建议延长 0.4s；可在时间线中调整。</span></div>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-head"><div><h3>合同版本</h3><div class="ch-sub">镜头合同 v2 · 已锁定 6 个</div></div><button class="btn btn-sm" id="contractBtn">查看合同规范</button></div>
+          <div class="card-body" style="padding:6px 18px" id="contractList"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/ui.js"></script>
+<script>
+(function(){
+  SP.ui.mount('storyboard','分镜台');
+  var filter='all', view='grid';
+
+  function badge(st){
+    var map={ready:['b-teal','已就绪'],review:['b-warn','待确认'],generating:['b-active','生成中'],todo:['b-todo','未开始']};
+    var m=map[st]||['b-todo',st];
+    return '<span class="badge '+m[0]+'" style="height:19px">'+m[1]+'</span>';
+  }
+  function moodGradient(id){
+    var palettes={
+      'S0101':'linear-gradient(160deg,#2b2f36,#0d1014)',
+      'S0102':'linear-gradient(150deg,#4d3b2a,#1a1511)',
+      'S0103':'linear-gradient(160deg,#3b3026,#13100c)',
+      'S0104':'linear-gradient(160deg,#5a4530,#1c1710)',
+      'S0105':'linear-gradient(160deg,#4a3a2c,#17130f)',
+      'S0106':'linear-gradient(160deg,#4b4234,#1b1712)',
+      'S0107':'linear-gradient(160deg,#243c3c,#0c1414)',
+      'S0108':'linear-gradient(160deg,#2f3b3d,#0e1415)',
+      'S0109':'linear-gradient(160deg,#343a32,#11140f)',
+      'S0110':'linear-gradient(160deg,#5b3826,#1d110b)',
+      'S0111':'linear-gradient(160deg,#2c2f36,#101217)',
+      'S0112':'linear-gradient(160deg,#3c444d,#191d22)'
+    };
+    return palettes[id]||'linear-gradient(160deg,#3a3c42,#17181c)';
+  }
+
+  function render(){
+    var s=SP.get();
+    document.getElementById('stTotal').innerHTML=s.shots.length+'<small>个</small>';
+    document.getElementById('stReady').innerHTML=s.shots.filter(function(x){return x.status==='ready';}).length+'<small>个</small>';
+    document.getElementById('stReview').innerHTML=s.shots.filter(function(x){return x.status==='review';}).length+'<small>个</small>';
+    document.getElementById('stOther').innerHTML=s.shots.filter(function(x){return x.status==='generating'||x.status==='todo';}).length+'<small>个</small>';
+
+    var list=s.shots.filter(function(x){return filter==='all'||x.status===filter;});
+    var wrap=document.getElementById('shotBody');
+    if(view==='list'){
+      wrap.innerHTML='<div class="table-wrap"><table><thead><tr><th>镜头</th><th>说明</th><th>景别 / 运镜</th><th>时长</th><th>状态</th><th></th></tr></thead><tbody>'+list.map(function(sh){
+        return '<tr><td class="mono tiny">'+sh.id+'</td><td><b class="t-strong">'+sh.title+'</b><span class="t-sub">'+sh.params+'</span></td><td>'+sh.size+' / '+sh.move+'</td><td class="mono">'+sh.duration+'s</td><td>'+badge(sh.status)+'</td><td class="right"><button class="btn btn-xs" data-shot="'+sh.id+'">合同</button></td></tr>';
+      }).join('')+'</tbody></table></div>';
+    } else {
+      wrap.innerHTML='<div class="shot-grid">'+list.map(function(sh){
+        return '<div class="shot-card" data-shot="'+sh.id+'">'+
+          '<div class="shot-frame" style="background:'+moodGradient(sh.id)+'"><div class="grain"></div><div class="silhouette"></div>'+
+            '<span class="num">'+sh.id+'</span><span class="size">'+sh.size+' · '+sh.duration+'s</span>'+
+            '<div class="frame-title">'+sh.title.split(' · ')[0]+'</div></div>'+
+          '<div class="shot-body"><div class="sname">'+sh.title+'</div><div class="smeta">'+sh.move+' · '+sh.params+'</div>'+
+            '<div class="sfoot">'+badge(sh.status)+'<span class="tiny muted">合同 v2</span></div></div></div>';
+      }).join('')+'</div>';
+    }
+    // 节奏条
+    document.getElementById('rhythm').innerHTML=s.shots.map(function(sh,i){
+      var h=20+Number(sh.duration)/6*40;
+      var color=sh.status==='ready'?'#2f6f68':sh.status==='review'?'#b57a22':sh.status==='generating'?'#e2553d':'#d8d2c5';
+      return '<div title="'+sh.id+' · '+sh.duration+'s" style="flex:1;height:'+h+'px;background:'+color+';border-radius:3px;opacity:.9"></div>';
+    }).join('');
+    document.getElementById('contractList').innerHTML=[
+      ['合同版本','v2 · 2026-11-19','b-info'],
+      ['已锁定镜头','6 / 12','b-done'],
+      ['参考资产版本','14 个版本','b-teal'],
+      ['待处理 stale','0','b-done'],
+      ['质检规则','qa-rules-2026.11','b-todo']
+    ].slice(0,4).map(function(x){return '<div class="list-row" style="padding:7px 0"><span class="lr-main"><span class="lr-title" style="font-weight:400;color:var(--muted)">'+x[0]+'</span></span><span class="small strong">'+x[1]+'</span></div>';}).join('');
+  }
+
+  document.getElementById('filters').addEventListener('click',function(e){
+    var b=e.target.closest('[data-f]'); if(!b) return; filter=b.getAttribute('data-f');
+    document.querySelectorAll('#filters .chip').forEach(function(c){c.classList.toggle('on',c===b);}); render();
+  });
+  document.getElementById('viewToggle').addEventListener('click',function(e){
+    var b=e.target.closest('[data-v]'); if(!b) return; view=b.getAttribute('data-v');
+    document.querySelectorAll('#viewToggle button').forEach(function(c){c.classList.toggle('active',c===b);}); render();
+  });
+  document.getElementById('shotBody').addEventListener('click',function(e){
+    var b=e.target.closest('[data-shot]'); if(!b) return; openShot(b.getAttribute('data-shot'));
+  });
+
+  function openShot(id){
+    var s=SP.get(); var sh=s.shots.filter(function(x){return x.id===id;})[0]; if(!sh) return;
+    var refs=s.assets.slice(0,3);
+    var body='<div style="height:220px;border-radius:12px;position:relative;overflow:hidden;background:'+moodGradient(sh.id)+';display:grid;place-items:center;margin-bottom:16px">'+
+      '<div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,.75))"></div>'+
+      '<span class="badge" style="position:absolute;left:12px;top:12px;background:rgba(15,15,18,.5);color:#f2ecdf;border-color:rgba(255,255,255,.2)">'+sh.id+' · 合同 v2</span>'+
+      '<span style="position:relative;color:#f3ecdf;font-family:var(--font-serif);font-size:20px;text-align:center;line-height:1.6;padding:0 26px;text-shadow:0 2px 12px rgba(0,0,0,.5)">'+sh.title+'</span>'+
+      '<span style="position:absolute;left:14px;right:14px;bottom:12px;color:#bdb5a7;font-size:10.5px;line-height:1.6">'+sh.note+'</span></div>'+
+      '<div class="grid g2" style="gap:12px">'+
+        '<div class="field"><label>景别</label><select class="select" id="shSize">'+['大远景','全景','中景','中近景','近景','特写','大特写','双人中景'].map(function(x){return '<option '+(x===sh.size?'selected':'')+'>'+x+'</option>';}).join('')+'</select></div>'+
+        '<div class="field"><label>运镜</label><select class="select" id="shMove">'+['固定','缓推','缓升','横移','手持跟','手持长跟','俯拍下压','固定渐亮'].map(function(x){return '<option '+(x===sh.move?'selected':'')+'>'+x+'</option>';}).join('')+'</select></div>'+
+        '<div class="field"><label>时长（秒）</label><input class="input" id="shDur" type="number" step="0.5" min="1" max="12" value="'+sh.duration+'"></div>'+
+        '<div class="field"><label>镜头焦段 / 光位</label><input class="input" id="shParams" value="'+SP.escape(sh.params)+'"></div>'+
+        '<div class="field span2"><label>参考资产（固定版本）</label><div class="row wrap mt-4">'+refs.map(function(a){return '<span class="chip">'+a.name+' <span class="tag">'+a.version+'</span></span>';}).join('')+'</div></div>'+
+        '<div class="field span2"><label>镜头描述 / 执行要点</label><textarea class="textarea" id="shNote" rows="2">'+SP.escape(sh.note)+'</textarea></div>'+
+      '</div>'+
+      '<div class="between mt-16 mb-8"><span class="tiny muted">生成候选 · mork-video-2</span><span class="tiny muted">成本约 ¥0.86 / 5s</span></div>'+
+      '<div class="row" style="gap:8px" id="cands">'+[1,2,3,4].map(function(i){return '<div style="flex:1;aspect-ratio:9/16;border-radius:8px;background:var(--paper-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted-2);font-size:10px">候选 '+i+'</div>';}).join('')+'</div>';
+    var d=SP.ui.drawer({eyebrow:'Shot contract',title:sh.id,sub:sh.title+' · 当前状态 '+({ready:'已就绪',review:'待确认',generating:'生成中',todo:'未开始'}[sh.status]),
+      body:body,
+      footer:'<button class="btn" data-close>关闭</button><button class="btn" id="sendShot">送审</button><button class="btn btn-primary" id="genCand">生成候选</button>',
+      onMount:function(el,close){
+        el.querySelector('#genCand').addEventListener('click',function(){
+          var pct=0; var box=el.querySelector('#cands');
+          var t=setInterval(function(){
+            pct+=5;
+            box.querySelectorAll('div').forEach(function(c,i){
+              if(pct> (i+1)*22 && !c.getAttribute('done')){
+                c.setAttribute('done','1');
+                c.style.background=moodGradient(sh.id);
+                c.style.borderColor='#c9c1af';
+                c.innerHTML='<span style="position:relative;color:#f1eadf;font-size:9px;background:rgba(0,0,0,.4);padding:2px 5px;border-radius:4px">候选 '+String.fromCharCode(65+i)+'</span>';
+              }
+            });
+            if(pct>=100){ clearInterval(t);
+              SP.update(function(st){ var it=st.shots.filter(function(x){return x.id===id;})[0]; if(it) it.status='review'; });
+              render(); SP.ui.toast('候选已生成','4 个候选已写入，选择一个锁定后送审。','success');
+            }
+          },160);
+        });
+        el.querySelector('#sendShot').addEventListener('click',function(){
+          var dur=Number(el.querySelector('#shDur').value);
+          SP.update(function(st){
+            var it=st.shots.filter(function(x){return x.id===id;})[0];
+            if(it){ it.duration=String(dur); it.params=el.querySelector('#shParams').value; it.note=el.querySelector('#shNote').value; it.status='review'; }
+            st.qa.comments.unshift({id:SP.uid('c'),time:'00:00',shot:id,author:'陈默',role:'制作总监',text:'镜头合同已更新并送审，请导演确认。',level:'建议',resolved:false});
+          });
+          close(); render(); SP.ui.toast('已送审',sh.id+' 进入审核队列。','success');
+        });
+      }});
+  }
+
+  document.getElementById('genShots').addEventListener('click',function(){
+    var todo=SP.get().shots.filter(function(x){return x.status==='todo';});
+    if(!todo.length){ SP.ui.toast('无需生成','EP01 的镜头都已创建。','warn'); return; }
+    SP.ui.confirm({title:'生成缺失分镜',message:'将按剧本 v6 重新拆解缺失的 '+todo.length+' 个镜头，并生成 Shot Contract 草稿。',
+      detail:'不会覆盖已锁定的镜头。生成后可逐个确认景别与时长。',okText:'开始拆解'}).then(function(ok){
+      if(!ok) return;
+      var pct=0; var m=SP.ui.modal({title:'拆解剧本 → 生成分镜',sub:'mork-llm-7b · 12 个镜头',
+        body:'<div class="between mb-8"><span class="small" id="ds">读取剧本 v6…</span><span class="mono small" id="dp">0%</span></div><div class="progress"><i id="dbar" style="width:0%"></i></div><div class="tiny muted mt-12" id="dlog">正在识别场次与对白…</div>',
+        footer:'<button class="btn" data-close>后台运行</button>'});
+      var t=setInterval(function(){
+        pct+=6; var bar=m.el.querySelector('#dbar'); if(bar) bar.style.width=Math.min(pct,100)+'%';
+        var p=m.el.querySelector('#dp'); if(p) p.textContent=Math.round(Math.min(pct,100))+'%';
+        var s=m.el.querySelector('#ds'); if(s) s.textContent=pct<35?'拆解第 6–8 场…':pct<70?'生成镜头合同草稿…':'校验参考资产版本…';
+        if(pct>=100){ clearInterval(t);
+          SP.update(function(st){
+            st.shots.forEach(function(x){ if(x.status==='todo') x.status='review'; });
+            st.tasks.unshift({id:'T-2043',name:'分镜契约解析 · EP01 补生成',type:'文本生成',model:'mork-llm-7b',status:'succeeded',progress:100,cost:0.42,started:SP.ui.nowStamp(),duration:'52s',target:'EP01 / '+todo.length+' 镜头',logs:[[SP.ui.nowStamp(),'生成 '+todo.length+' 份镜头合同草稿']]});
+            st.activity.unshift([SP.ui.nowStamp(),'系统','补生成 '+todo.length+' 个镜头合同','ok']);
+          });
+          m.close(); render(); SP.ui.toast('分镜已生成',todo.length+' 个镜头进入待确认。','success');
+        }
+      },220);
+    });
+  });
+
+  document.getElementById('submitBtn').addEventListener('click',function(){
+    var review=SP.get().shots.filter(function(x){return x.status==='review';});
+    if(!review.length){ SP.ui.toast('没有待确认镜头','所有镜头都已就绪。','warn'); return; }
+    SP.ui.confirm({title:'批量送审',message:'将 '+review.length+' 个待确认镜头提交导演审核？',
+      detail:'审核通过后镜头才可进入画面生成；拒绝会产生返工任务。',okText:'提交审核'}).then(function(ok){
+      if(!ok) return;
+      SP.update(function(st){ st.activity.unshift([SP.ui.nowStamp(),'陈默','批量送审 '+review.length+' 个镜头','review']); });
+      SP.ui.toast('已提交审核',review.length+' 个镜头已进入导演审核队列。','success');
+    });
+  });
+
+  document.getElementById('importBtn').addEventListener('click',function(){
+    SP.ui.modal({title:'从剧本重新拆解',sub:'当前剧本 v6 · 8 场 / 19 条对白',
+      body:'<div class="notice warn">'+SP.ui.icon('alert',15)+'<span>重新拆解会生成新的镜头合同草稿，已锁定的 6 个镜头保留。差异会列在任务详情中。</span></div>'+
+        '<div class="form-grid mt-16"><div class="field span2"><label>拆解粒度</label><select class="select"><option>按对白与动作切分（推荐）</option><option>按场次切分</option><option>按情绪节拍切分</option></select></div>'+
+        '<label class="checkline span2"><input type="checkbox" checked><span>保留已锁定的镜头合同与生成结果</span></label></div>',
+      footer:'<button class="btn" data-close>取消</button><button class="btn btn-primary" id="reCut">开始拆解</button>'});
+    var el=document.querySelector('.overlay.open .modal');
+    el.querySelector('#reCut').addEventListener('click',function(){ el.closest('.overlay').remove(); SP.ui.toast('拆解已排队','任务已创建，可在任务中心查看进度。','success'); });
+  });
+
+  document.getElementById('contractBtn').addEventListener('click',function(){
+    SP.ui.modal({title:'Shot Contract 规范',sub:'镜头是生成系统的最小执行单元',size:'lg',
+      body:'<div class="stack"><div class="notice info"><span>每个镜头必须固定：景别、运镜、时长、焦段、光位、情绪、参考资产版本。任何字段变更都会产生新合同版本。</span></div>'+
+        '<div class="kv" style="grid-template-columns:110px 1fr"><span class="k">景别</span><span class="v">大远景 / 全景 / 中景 / 近景 / 特写 / 大特写</span><span class="k">运镜</span><span class="v">固定 / 缓推 / 横移 / 手持 / 俯拍</span><span class="k">时长</span><span class="v">1.0–12.0 秒，整数或 0.5 秒</span><span class="k">参考</span><span class="v">AssetVersion 固定 ID，不允许按名字匹配</span><span class="k">一致性</span><span class="v">角色锚点 ≥ 3 个稳定特征</span></div>'+
+        '<div class="notice warn"><span>未配置 Provider 时任务返回 PROVIDER_NOT_CONFIGURED，不展示“已生成”。</span></div></div>',
+      footer:'<button class="btn btn-primary" data-close>知道了</button>'});
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
