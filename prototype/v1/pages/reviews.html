@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>质量与审核 · 长夜将明 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+</head>
+<body data-page="reviews" data-project="1">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+    <nav class="module-tabs" data-tabs></nav>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Quality &amp; review</p>
+          <h1>质量与审核</h1>
+          <p class="lede">自动质量检查绑定不可变对象版本，结果为 PASS / REVIEW_REQUIRED / FAIL。人工审核使用项目级统一权限，记录 reviewer、decision、reason 与时间。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-toast="原型：选择对象版本 + RuleSet 版本重新运行质量检查">重新检查</button>
+          <button class="btn btn-primary" type="button" onclick="var r=document.getElementById('rv-reason'); if(r){r.focus(); r.scrollIntoView({block:'center'});}">填写决定</button>
+        </div>
+      </div>
+
+      <div class="grid g-side">
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>待审核队列</h2><span class="sub" id="q-count">7</span></div>
+          <div class="card-body tight">
+            <div class="tree" id="review-queue">
+              <div class="tree-item on" data-idx="0" data-subject="shot 1-05 · 巷口鞋尖 · 大特写" data-verdict="REVIEW_REQUIRED"><span class="n">镜头</span><span class="t">shot 1-05 · 待审核<small>QA: REVIEW_REQUIRED · 2h 18m</small></span><span class="pill review">待审</span></div>
+              <div class="tree-item" data-idx="1" data-subject="shot 1-03 · 抬眼 · 特写" data-verdict="FAIL"><span class="n">镜头</span><span class="t">shot 1-03 · 生成失败<small>QA: FAIL · 画幅不一致</small></span><span class="pill fail">阻断</span></div>
+              <div class="tree-item" data-idx="2" data-subject="EP02 剧本 v4" data-verdict="REVIEW_REQUIRED"><span class="n">剧本</span><span class="t">EP02 剧本 v4<small>QA: REVIEW_REQUIRED · 3 条意见</small></span><span class="pill review">待审</span></div>
+              <div class="tree-item" data-idx="3" data-subject="陈九参考图 v1" data-verdict="REVIEW_REQUIRED"><span class="n">资产</span><span class="t">陈九参考图 v1<small>QA: REVIEW_REQUIRED · 连续性</small></span><span class="pill review">待审</span></div>
+              <div class="tree-item" data-idx="4" data-subject="时间线 tl_v4" data-verdict="REVIEW_REQUIRED"><span class="n">时间线</span><span class="t">时间线 tl_v4<small>QA: REVIEW_REQUIRED · 字幕重叠</small></span><span class="pill review">待审</span></div>
+              <div class="tree-item" data-idx="5" data-subject="EP01 成片 ej_5b12" data-verdict="PASS"><span class="n">成片</span><span class="t">EP01 成片 ej_5b12<small>QA: PASS · 待交付确认</small></span><span class="pill pass">通过</span></div>
+            </div>
+          </div>
+          <div class="card-foot"><span>按最早提交排序</span><span class="mono">SLA 24h</span></div>
+        </section>
+
+        <div>
+          <section class="card">
+            <div class="card-head">
+              <div><h2 id="rv-title">shot 1-05 · 巷口鞋尖 · 大特写</h2><span class="sub" id="rv-sub">SUBJECT VERSION · av_31c7 · CONTRACT v1</span></div>
+              <div class="actions">
+                <span class="pill review" id="rv-verdict">REVIEW_REQUIRED</span>
+                <span class="tag">ruleset qr_2026_11</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="banner warn" id="rv-banner">
+                <i data-icon="alert"></i>
+                <div><b>质量检查结论：REVIEW_REQUIRED。</b>2 项提示级问题不阻断进入人工审核，但必须在决定中逐项处置；规则服务不可用时不得默认 PASS。</div>
+              </div>
+
+              <div class="section-label">检查结果</div>
+              <div id="rv-issues"></div>
+
+              <div class="section-label">审核决定</div>
+              <div class="form-grid">
+                <label class="field"><span>决定</span><select class="control" id="rv-decision"><option value="approved">approved（通过）</option><option value="rejected">rejected（拒绝并返工）</option></select></label>
+                <label class="field"><span>审核人</span><input class="control" value="陆行 · reviewer" readonly /></label>
+                <label class="field full"><span>原因 / 处置说明 <b style="color: var(--fail)">*</b></span><textarea class="control" rows="3" id="rv-reason" placeholder="拒绝时必填；通过时需说明已处置的问题项">鞋面雨渍与 1-04 不一致，先通过以满足集次节奏，返工任务跟踪替换；本版本保留为已审通过版本。</textarea></label>
+              </div>
+              <div class="form-foot">
+                <button class="btn btn-primary" type="button" data-act="approve">通过并记录</button>
+                <button class="btn btn-danger" type="button" data-act="reject">拒绝并返工</button>
+                <span class="hint">决定不可篡改；不提供 WAIVED，不支持多级会签</span>
+              </div>
+            </div>
+            <div class="card-foot">
+              <span>审核记录绑定版本：新版本重新检查，旧结论不继承</span>
+              <span class="mono" id="rv-record">rv_39c2 · 待提交</span>
+            </div>
+          </section>
+
+          <div class="grid g-2">
+            <section class="card" style="margin-bottom: 0">
+              <div class="card-head"><h2>审核历史</h2><span class="sub">IMMUTABLE</span></div>
+              <div class="card-body">
+                <div class="kv" id="rv-history">
+                  <div class="row"><dt>11-16 15:02 · 陆行</dt><dd><span class="pill pass">approved</span> v3</dd></div>
+                  <div class="row"><dt>11-15 10:31 · 陆行</dt><dd><span class="pill failed">rejected</span> v2 · 对白未绑定</dd></div>
+                  <div class="row"><dt>11-13 17:20 · 王斌</dt><dd><span class="pill pass">approved</span> v2 · 分镜确认</dd></div>
+                </div>
+                <p class="lede" style="font-size: 10px; margin-top: 10px">历史结论不随新版本失效，也不会被新决定覆盖；检查审计日志可看到全部决定。</p>
+              </div>
+            </section>
+
+            <section class="card" style="margin-bottom: 0">
+              <div class="card-head"><h2>门禁规则</h2><span class="sub">GATE</span></div>
+              <div class="card-body">
+                <div class="pass-row"><span class="pm">✓</span><span>PASS 才可进入时间线 / 导出</span></div>
+                <div class="pass-row"><span class="pm">✓</span><span>FAIL 阻断，必须修复后重新检查</span></div>
+                <div class="pass-row"><span class="pm">✓</span><span>规则服务故障 → 不得判 PASS</span></div>
+                <div class="pass-row"><span class="pm">✓</span><span>未审核产物显著标识，不可静默入片</span></div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var DATA = {
+    0: { sub: 'SUBJECT VERSION · av_31c7 · CONTRACT v1', verdict: 'REVIEW_REQUIRED',
+      banner: '质量检查结论：REVIEW_REQUIRED。1 项提示级问题不阻断进入人工审核，但必须在决定中处置；规则服务不可用时不得默认 PASS。',
+      issues: [
+        { sev: 'block', title: '画幅与项目配置不一致', text: '输出 1920×1080（16:9），项目与合同要求 1080×1920（9:16）。该问题此前判 FAIL，修复后重新检查。', evi: 'detector media.ratio · score 0.0 · resolved 11-18 12:40', action: 'resolved' },
+        { sev: 'warn', title: '服装连续性：鞋面雨渍与 1-04 不一致', text: '1-04 鞋面为干燥状态，本镜头出现明显雨渍。不阻断，但建议统一后方可进入成片。', evi: 'detector continuity.costume · score 0.62 · span 00:00:04–00:00:11', action: 'rework' },
+        { sev: 'info', title: '黑帧检测通过，静音段符合预期', text: '首帧 2 帧黑场为转场设计；音频 -58 dB 静音 0.8s 与合同一致。', evi: 'detector media.blackframe / audio.silence · pass', action: 'pass' }
+      ] },
+    1: { sub: 'SUBJECT VERSION · av_2c91 · CONTRACT v3', verdict: 'FAIL',
+      banner: '质量检查结论：FAIL。存在阻断级问题，不能进入审核通过路径；修复后需重新 QA。',
+      issues: [
+        { sev: 'block', title: '画幅与合同不一致', text: '输出 1920×1080（16:9），合同要求 1080×1920（9:16）；属可诊断失败，需修订合同或调整参数后重试。', evi: 'detector media.ratio · score 0.0 · unresolved', action: 'retry' },
+        { sev: 'block', title: '时长超出合同上限', text: '输出 41.0s，合同 duration 上限 38s。', evi: 'detector media.duration · 41.0s > 38s', action: 'retry' }
+      ] },
+    2: { sub: 'SCRIPT VERSION · scr_ep02_v4 · 3 条意见', verdict: 'REVIEW_REQUIRED',
+      banner: '质量检查结论：REVIEW_REQUIRED。剧本类问题不阻断，但需编剧确认后再进入分镜拆解。',
+      issues: [
+        { sev: 'warn', title: '对白未绑定角色', text: 'SCENE 3 有 2 条对白缺少 speaker 字段，拆镜时会退化为空镜。', evi: 'rule script.dialogue · 2 hits', action: 'rework' },
+        { sev: 'warn', title: '场景跳转缺少过渡', text: 'SCENE 2 → SCENE 3 由室内直接切雨夜巷口，建议补一个转场镜头说明。', evi: 'rule script.transition · 1 hit', action: 'rework' },
+        { sev: 'info', title: '单集时长在目标区间', text: '预计 2′18″，位于 2′00″–2′30″ 目标区间。', evi: 'rule script.duration · pass', action: 'pass' }
+      ] },
+    3: { sub: 'ASSET VERSION · ast_c9_v1 · 角色参考', verdict: 'REVIEW_REQUIRED',
+      banner: '质量检查结论：REVIEW_REQUIRED。参考图连续性存疑，需与已锁定角色形象比对后决定。',
+      issues: [
+        { sev: 'warn', title: '参考图与锁定形象存在差异', text: '发际线与 1-04 使用的沈砚 v2 不一致，可能影响镜头连续性。', evi: 'detector face.continuity · score 0.58', action: 'rework' }
+      ] },
+    4: { sub: 'TIMELINE VERSION · tl_v4 · 12 轨', verdict: 'REVIEW_REQUIRED',
+      banner: '质量检查结论：REVIEW_REQUIRED。存在未审核片段与字幕重叠，导出前必须处置。',
+      issues: [
+        { sev: 'block', title: '时间线含未审核片段', text: 'shot 1-05 处于待审核状态，直接导出会违反门禁。', evi: 'gate review.required · 1 clip', action: 'retry' },
+        { sev: 'warn', title: '字幕区间重叠', text: '00:12–00:14 两条字幕同时出现，阅读不可辨。', evi: 'detector subtitle.overlap · 1 hit', action: 'rework' }
+      ] },
+    5: { sub: 'EXPORT VERSION · exp_5b12 · EP01', verdict: 'PASS',
+      banner: '质量检查结论：PASS。ffprobe 与完整解码均通过，等待交付确认。',
+      issues: [
+        { sev: 'info', title: '全部检查项通过', text: '画幅、码率、音轨、黑帧、字幕均符合 Profile 要求。', evi: 'checksum sha256:9f2c… · ffprobe ok', action: 'pass' }
+      ] }
+  };
+
+  var queue = document.getElementById('review-queue');
+  var current = queue.querySelector('.tree-item.on');
+  var issuesBox = document.getElementById('rv-issues');
+  var history = document.getElementById('rv-history');
+
+  function renderIssues(list) {
+    issuesBox.innerHTML = list.map(function (it) {
+      var act = it.action === 'rework'
+        ? '<button class="btn btn-default btn-sm" type="button" data-act="rework">转返工</button>'
+        : it.action === 'retry'
+          ? '<button class="btn btn-default btn-sm" type="button" data-act="recheck">重新检查</button>'
+          : it.action === 'resolved'
+            ? '<span class="pill pass" data-fixed>已修复</span>'
+            : '<span class="pill pass">通过</span>';
+      return '<div class="issue-row"><span class="issue-sev ' + it.sev + '">' + it.sev.toUpperCase() + '</span>' +
+        '<div class="issue-body"><strong>' + it.title + '</strong><p>' + it.text + '</p><span class="evi">' + it.evi + '</span></div>' +
+        '<div class="issue-act">' + act + '</div></div>';
+    }).join('');
+  }
+
+  function show(idx) {
+    var item = queue.querySelector('.tree-item[data-idx="' + idx + '"]');
+    var d = DATA[idx];
+    if (!item || !d) return;
+    current = item;
+    queue.querySelectorAll('.tree-item').forEach(function (n) { n.classList.remove('on'); });
+    item.classList.add('on');
+    document.getElementById('rv-title').textContent = item.dataset.subject;
+    document.getElementById('rv-sub').textContent = d.sub;
+    document.getElementById('rv-verdict').textContent = d.verdict;
+    var vp = document.getElementById('rv-verdict');
+    vp.className = 'pill ' + (d.verdict === 'PASS' ? 'pass' : d.verdict === 'FAIL' ? 'fail' : 'review');
+    document.getElementById('rv-banner').className = 'banner ' + (d.verdict === 'PASS' ? 'ok' : d.verdict === 'FAIL' ? 'error' : 'warn');
+    document.getElementById('rv-banner').querySelector('div').innerHTML = '<b>质量检查结论：' + d.verdict + '。</b>' + d.banner.replace('质量检查结论：' + d.verdict + '。', '');
+    renderIssues(d.issues);
+    document.getElementById('rv-record').textContent = 'rv_' + Math.random().toString(16).slice(2, 6) + ' · 待提交';
+  }
+
+  queue.addEventListener('click', function (e) {
+    var item = e.target.closest('.tree-item');
+    if (item) show(item.dataset.idx);
+  });
+
+  renderIssues(DATA[0].issues);
+
+  document.addEventListener('proto:act', function (e) {
+    var act = e.detail.act;
+    var name = current.dataset.subject;
+    var reason = document.getElementById('rv-reason').value.trim();
+
+    if (act === 'rework') {
+      var E = e.detail.el.closest('.issue-row');
+      if (E) {
+        var sev = E.querySelector('.issue-sev').textContent;
+        E.querySelector('.issue-act').innerHTML = '<span class="pill review">已转返工</span>';
+        P.toast('已创建 ReworkTask（' + sev + '）：绑定 ' + name + '，新版本需重新 QA 与审核');
+      }
+      return;
+    }
+    if (act === 'recheck') {
+      P.toast('已重新运行 quality.check：规则集 qr_2026_11，结果将在任务完成后刷新');
+      return;
+    }
+    if (act === 'approve' || act === 'reject') {
+      if (!reason) { P.toast('原因 / 处置说明必填：决定需可追溯'); document.getElementById('rv-reason').focus(); return; }
+      if (current.dataset.verdict === 'FAIL') { P.toast('该对象存在阻断级问题（FAIL），不能通过；请先修复并重新检查'); return; }
+      var ok = act === 'approve';
+      var rec = document.getElementById('rv-record').textContent.split('·')[0].trim();
+      current.querySelector('.pill').className = 'pill ' + (ok ? 'pass' : 'fail');
+      current.querySelector('.pill').textContent = ok ? 'approved' : 'rejected';
+      current.dataset.verdict = ok ? 'PASS' : 'FAIL';
+      document.getElementById('rv-verdict').className = 'pill ' + (ok ? 'pass' : 'fail');
+      document.getElementById('rv-verdict').textContent = ok ? 'approved' : 'rejected';
+      document.getElementById('rv-record').textContent = rec + ' · 已提交';
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<dt>' + P.time() + ' · 陆行</dt><dd><span class="pill ' + (ok ? 'pass' : 'fail') + '">' + (ok ? 'approved' : 'rejected') + '</span> ' + name + '</dd>';
+      history.insertBefore(row, history.firstElementChild);
+      var q = parseInt(document.getElementById('q-count').textContent, 10);
+      document.getElementById('q-count').textContent = Math.max(0, q - 1);
+      P.toast(ok ? '已记录 approved 并绑定当前版本；该结论不继承到新版本' : '已记录 rejected 并创建 ReworkTask；新版本需重新 QA');
+    }
+  });
+</script>
+</body>
+</html>

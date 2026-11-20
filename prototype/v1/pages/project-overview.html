@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>生产概览 · 长夜将明 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+</head>
+<body data-page="project-overview" data-project="1">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+    <nav class="module-tabs" data-tabs></nav>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Project overview</p>
+          <h1>生产概览</h1>
+          <p class="lede">长夜将明 · 12 集都市悬疑短剧，竖屏 9:16 / 30fps。当前卡在第 1 集镜头 1-03 的画幅约束，其余分集并行推进。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-toast="项目设置：成员与角色、默认 Provider、导出 Profile、预算周期">项目设置</button>
+          <a class="btn btn-primary" href="flow.html">进入制作流程<i data-icon="arrowRight"></i></a>
+        </div>
+      </div>
+
+      <div class="banner error">
+        <i data-icon="alert"></i>
+        <div><b>阻塞：1-03 镜头生成结果画幅 16:9，与项目配置 9:16 不一致。</b>质量检查判定 FAIL，已阻断进入时间线；需修改 Shot Contract 画幅约束后重新生成。</div>
+        <a class="btn btn-default btn-sm b-act" href="reviews.html">去处理</a>
+      </div>
+
+      <div class="banner info" style="margin-bottom: 12px">
+        <i data-icon="play"></i>
+        <div><b>操作入口：制作流程。</b>一集拆成 7 步，每步确认输入后点一次生成，模型自动产出并解锁下一步；只有质检后的审核需要你点通过。</div>
+        <a class="btn btn-default btn-sm b-act" href="flow.html">按流程制作 →</a>
+      </div>
+
+      <div class="pipeline">
+        <div class="stage">
+          <div class="idx">01 / SETUP</div>
+          <div class="name">设定与故事</div>
+          <div><span class="num">v3</span><span class="unit">approved</span></div>
+          <div class="bar"><i style="width: 100%"></i></div>
+        </div>
+        <div class="stage">
+          <div class="idx">02 / SCRIPT</div>
+          <div class="name">剧本场次</div>
+          <div><span class="num">38</span><span class="unit">场</span></div>
+          <div class="bar"><i style="width: 72%"></i></div>
+        </div>
+        <div class="stage">
+          <div class="idx">03 / ASSET + BOARD</div>
+          <div class="name">资产与分镜</div>
+          <div><span class="num">146</span><span class="unit">shot · 63 项</span></div>
+          <div class="bar"><i style="width: 61%"></i></div>
+        </div>
+        <div class="stage warn">
+          <div class="idx">04 / RENDER</div>
+          <div class="name">画面生成</div>
+          <div><span class="num">89</span><span class="unit">/ 146</span></div>
+          <div class="bar"><i style="width: 61%"></i></div>
+        </div>
+        <div class="stage">
+          <div class="idx">05 / VOICE</div>
+          <div class="name">配音与字幕</div>
+          <div><span class="num">89</span><span class="unit">/ 146</span></div>
+          <div class="bar"><i style="width: 61%"></i></div>
+        </div>
+        <div class="stage warn">
+          <div class="idx">06 / QA + REVIEW</div>
+          <div class="name">质检与审核</div>
+          <div><span class="num">81</span><span class="unit">/ 89</span></div>
+          <div class="bar"><i style="width: 91%"></i></div>
+        </div>
+        <div class="stage idle">
+          <div class="idx">07 / EXPORT</div>
+          <div class="name">时间线与交付</div>
+          <div><span class="num">2</span><span class="unit">/ 12 集</span></div>
+          <div class="bar"><i style="width: 16%"></i></div>
+        </div>
+      </div>
+
+      <div class="grid g-main" style="margin-top: 14px">
+        <div>
+          <section class="card">
+            <div class="card-head">
+              <div><h2>分集生产进度</h2><span class="sub">EPISODE STATUS</span></div>
+              <div class="actions">
+                <a class="btn btn-quiet btn-sm" href="episodes.html">剧集与剧本 →</a>
+              </div>
+            </div>
+            <div class="card-body tight">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr><th>集</th><th>剧本版本</th><th>场次</th><th>镜头</th><th>已生成</th><th>已审核</th><th>状态</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    <tr data-row>
+                      <td><span class="row-title">EP01 雨夜书店</span><span class="sub">2'18" · 目标 2'30"</span></td>
+                      <td><span class="tag">v5</span><span class="sub">approved</span></td>
+                      <td class="num">8</td>
+                      <td class="num">24</td>
+                      <td class="num">22</td>
+                      <td class="num">19</td>
+                      <td><span class="pill fail">受阻</span></td>
+                      <td class="t-actions"><a class="btn btn-default btn-sm" href="storyboards.html">分镜</a></td>
+                    </tr>
+                    <tr data-row>
+                      <td><span class="row-title">EP02 怀表停在三点</span><span class="sub">2'06" · 目标 2'30"</span></td>
+                      <td><span class="tag">v4</span><span class="sub">in_review</span></td>
+                      <td class="num">7</td>
+                      <td class="num">21</td>
+                      <td class="num">18</td>
+                      <td class="num">17</td>
+                      <td><span class="pill review">审核中</span></td>
+                      <td class="t-actions"><a class="btn btn-default btn-sm" href="reviews.html">审核</a></td>
+                    </tr>
+                    <tr data-row>
+                      <td><span class="row-title">EP03 第三个人</span><span class="sub">2'24" · 目标 2'30"</span></td>
+                      <td><span class="tag">v3</span><span class="sub">approved</span></td>
+                      <td class="num">9</td>
+                      <td class="num">26</td>
+                      <td class="num">24</td>
+                      <td class="num">21</td>
+                      <td><span class="pill run">生成中</span></td>
+                      <td class="t-actions"><a class="btn btn-default btn-sm" href="tasks.html">任务</a></td>
+                    </tr>
+                    <tr data-row>
+                      <td><span class="row-title">EP04 空白档案</span><span class="sub">草稿 · 未拆镜</span></td>
+                      <td><span class="tag">v2</span><span class="sub">draft</span></td>
+                      <td class="num">6</td>
+                      <td class="num">—</td>
+                      <td class="num">—</td>
+                      <td class="num">—</td>
+                      <td><span class="pill draft">待拆镜</span></td>
+                      <td class="t-actions"><a class="btn btn-default btn-sm" href="episodes.html">剧本</a></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card-foot">
+              <span>镜头总时长与分集目标差异可计算；不达标的集次会在审核报告中标出。</span>
+              <span class="mono">146 shots · 38 scenes</span>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><div><h2>依赖与 stale 影响</h2><span class="sub">DEPENDENCY GRAPH</span></div><span class="pill stale pill">3 项待确认</span></div>
+            <div class="card-body">
+              <div class="issue-row">
+                <span class="issue-sev warn">STALE</span>
+                <div class="issue-body">
+                  <strong>角色 · 沈砚 参考图 v3 已更新</strong>
+                  <p>引用 v2 的 12 个 Shot 被标记 <span class="mono">stale_candidate</span>；已审核的 9 个产物保持历史有效，不静默撤销。</p>
+                  <span class="evi">asset a_41e2 · v2 → v3 · affected: shot 1-01…1-08, 2-01…2-04</span>
+                </div>
+                <div class="issue-act"><button class="btn btn-default btn-sm" type="button" data-drawer="drawer-stale">查看影响</button></div>
+              </div>
+              <div class="issue-row">
+                <span class="issue-sev info">STALE</span>
+                <div class="issue-body">
+                  <strong>故事圣经 v3 → 剧本 v4 已采用新设定</strong>
+                  <p>EP02 剧本记录 StoryBibleVersion v3；EP01 仍引用 v2，不影响已冻结版本。</p>
+                  <span class="evi">story_bible v3 · script ep02 v4</span>
+                </div>
+              </div>
+              <div class="issue-row">
+                <span class="issue-sev info">提示</span>
+                <div class="issue-body">
+                  <strong>时间线 tl_v3 引用已撤回素材 1 个</strong>
+                  <p>该素材被撤回后，tl_v3 禁止新导出，需替换引用；已完成的 ej_4a08 不受影响。</p>
+                  <span class="evi">timeline tl_v3 · asset a_2f77 revoked</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div>
+          <section class="card">
+            <div class="card-head"><h2>项目成员</h2><span class="sub">6</span></div>
+            <div class="card-body">
+              <div class="ref-line"><span class="avatar">陈</span><span>陈默</span><span class="tag">producer</span><span class="lock">项目 owner</span></div>
+              <div class="ref-line"><span class="avatar">苏</span><span>苏禾</span><span class="tag">writer</span><span class="lock">剧本/故事</span></div>
+              <div class="ref-line"><span class="avatar">方</span><span>方屿</span><span class="tag">artist</span><span class="lock">资产/参考图</span></div>
+              <div class="ref-line"><span class="avatar">顾</span><span>顾青</span><span class="tag">editor</span><span class="lock">时间线/导出</span></div>
+              <div class="ref-line"><span class="avatar">陆</span><span>陆行</span><span class="tag">reviewer</span><span class="lock">统一审核</span></div>
+              <div class="ref-line"><span class="avatar">王</span><span>王斌</span><span class="tag">director</span><span class="lock">确认 Shot</span></div>
+              <p class="lede" style="font-size: 10.5px; margin-top: 10px">审核使用项目级统一 review 权限，不按内容类型划分角色，不支持多级会签。</p>
+            </div>
+            <div class="card-foot"><a class="btn btn-quiet btn-sm" href="users.html">管理成员</a><span class="mono">projects:manage</span></div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><h2>预算与用量</h2><span class="sub">NOV 2026</span></div>
+            <div class="card-body">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px">
+                <span class="num" style="font-size: 20px; font-weight: 600">¥ 6,204</span>
+                <span class="mono" style="font-size: 10px; color: var(--text-3)">/ ¥ 10,000</span>
+              </div>
+              <div class="progress"><i style="width: 62%"></i></div>
+              <div class="kv" style="margin-top: 12px">
+                <div class="row"><dt>视频生成</dt><dd class="mono">¥ 4,180 · 71%</dd></div>
+                <div class="row"><dt>图像生成</dt><dd class="mono">¥ 1,102 · 18%</dd></div>
+                <div class="row"><dt>语音合成</dt><dd class="mono">¥ 604 · 10%</dd></div>
+                <div class="row"><dt>文本补全</dt><dd class="mono">¥ 318 · 5%</dd></div>
+              </div>
+              <div class="banner warn" style="margin: 12px 0 0"><i data-icon="alert"></i><div>达到预算上限后生成任务阻断并通知制片人；已产生的费用不回滚。</div></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><h2>里程碑</h2><span class="sub">MILESTONE</span></div>
+            <div class="card-body tight">
+              <div style="padding: 4px 16px 12px">
+                <div class="ref-line"><span class="tag">11-22</span><span>EP01–03 全镜头审核完成</span><span class="lock">进行中</span></div>
+                <div class="ref-line"><span class="tag">11-25</span><span>EP01 成片交付（含字幕）</span><span class="lock">待开始</span></div>
+                <div class="ref-line"><span class="tag">12-02</span><span>全 12 集成片归档</span><span class="lock">待开始</span></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="drawer-backdrop" id="drawer-stale-backdrop" data-close-drawer="drawer-stale"></div>
+<aside class="drawer" id="drawer-stale">
+  <div class="drawer-head">
+    <div><p class="eyebrow">Impact analysis</p><h2>角色 · 沈砚 v3 的影响范围</h2></div>
+    <button class="close-x" type="button" data-close-drawer="drawer-stale"><i data-icon="x"></i></button>
+  </div>
+  <div class="drawer-body">
+    <div class="banner stale"><i data-icon="alert"></i><div>上游版本变化只标记下游为 stale，不自动重跑、不自动替换引用。</div></div>
+    <div class="section-label">受影响的 Shot（12）</div>
+    <div class="ref-line"><span class="tag">1-01</span><span>沈砚 近景 · 书店柜台</span><span class="pill stale">stale_candidate</span></div>
+    <div class="ref-line"><span class="tag">1-02</span><span>沈砚 中景 · 转身取书</span><span class="pill stale">stale_candidate</span></div>
+    <div class="ref-line"><span class="tag">1-03</span><span>沈砚 特写 · 抬眼</span><span class="pill failed">已阻断</span></div>
+    <div class="ref-line"><span class="tag">1-04</span><span>沈砚/林晚 双人 · 门口</span><span class="pill pass">已交付</span></div>
+    <div class="section-label">不受影响</div>
+    <div class="ref-line"><span class="tag">2-05</span><span>陈九 单人 · 走廊</span><span class="pill plain">unaffected</span></div>
+    <p class="lede" style="font-size: 10.5px; margin-top: 12px">已审核通过的版本保持历史有效；若要统一外观，需重新生成并重新审核，产生新的 Attempt 与 Artifact。</p>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn btn-default" type="button" data-close-drawer="drawer-stale">保留旧版</button>
+    <button class="btn btn-primary" type="button" data-close-drawer="drawer-stale" data-toast="原型：已创建 12 个重生成任务（进入队列，不覆盖历史产物）">标记重新生成</button>
+  </div>
+</aside>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+</body>
+</html>

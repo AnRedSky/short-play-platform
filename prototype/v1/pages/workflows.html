@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>生产流水线 · 长夜将明 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+<style>
+  .wf-row { cursor: pointer; }
+  .wf-row.on td { background: var(--accent-soft); }
+  .dag-legend { display: flex; gap: 14px; font-size: 10px; color: var(--text-3); margin-top: 10px; flex-wrap: wrap; }
+  .dag-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .dag-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  #wf-dag { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #wf-dag .node { border-bottom: 1px solid var(--line-soft); }
+  #wf-dag .node:nth-child(2n) { border-right: 0; }
+  #wf-dag .node:nth-child(n + 5) { border-bottom: 0; }
+</style>
+</head>
+<body data-page="workflows" data-project="1">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+    <nav class="module-tabs" data-tabs></nav>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Workflow runs</p>
+          <h1>生产流水线</h1>
+          <p class="lede">一次流水线 = 一条可恢复的编排记录。节点只消费已冻结的输入版本；人工审核是显式 gate，不通过不会自动放行。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-toast="模板只读：script_to_shots / shots_to_video / qa_and_export"><i data-icon="layers"></i>查看模板</button>
+          <button class="btn btn-primary" type="button" data-act="new-run"><i data-icon="play"></i>发起流水线</button>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="k"><span>运行中</span></div><p class="v" id="wf-running">3</p><p class="d">最长 6m12s · 未超时</p></div>
+        <div class="stat"><div class="k"><span>等待审核</span></div><p class="v" id="wf-waiting">2</p><p class="d">review.gate 阻塞</p></div>
+        <div class="stat"><div class="k"><span>今日完成</span></div><p class="v">18</p><p class="d">失败 1 · 取消 0</p></div>
+        <div class="stat"><div class="k"><span>平均耗时</span></div><p class="v">4m32<span class="unit">s</span></p><p class="d">P50 · 近 7 日</p></div>
+      </div>
+
+      <div class="grid g-main">
+        <section class="card" style="margin: 0">
+          <div class="card-head">
+            <div><h2>流水线运行</h2><span class="sub">按开始时间倒序</span></div>
+            <div class="actions" data-filter-group="wf"><button class="chip active" type="button" data-filter="all">全部</button><button class="chip" type="button" data-filter="running">运行中</button><button class="chip" type="button" data-filter="failed">失败</button></div>
+          </div>
+          <div class="table-wrap" data-status-group="wf">
+            <table class="table">
+              <thead><tr><th>RUN</th><th>模板</th><th>触发</th><th>进度</th><th>状态</th><th>开始</th></tr></thead>
+              <tbody id="wf-body">
+                <tr class="wf-row on" data-open="wf-detail" data-open-group="wf" data-run="wf_1024" data-template="script_to_shots" data-owner="陈默" data-status="running" data-state="running" data-stage="4" data-progress="4 / 6">
+                  <td class="mono">wf_1024</td><td>script_to_shots</td><td>陈默 · 手动</td><td><span class="mono">4 / 6</span></td><td><span class="pill info">running</span></td><td class="mono">11-18 15:58</td>
+                </tr>
+                <tr class="wf-row" data-open="wf-detail" data-open-group="wf" data-run="wf_1019" data-template="shots_to_video" data-owner="顾青" data-status="paused" data-state="paused" data-stage="5" data-progress="5 / 6">
+                  <td class="mono">wf_1019</td><td>shots_to_video</td><td>顾青 · 手动</td><td><span class="mono">5 / 6</span></td><td><span class="pill review">paused</span></td><td class="mono">11-18 15:12</td>
+                </tr>
+                <tr class="wf-row" data-open="wf-detail" data-open-group="wf" data-run="wf_1012" data-template="qa_and_export" data-owner="系统 · 计划" data-status="waiting" data-state="waiting" data-stage="2" data-progress="2 / 5">
+                  <td class="mono">wf_1012</td><td>qa_and_export</td><td>系统 · 计划</td><td><span class="mono">2 / 5</span></td><td><span class="pill review">waiting</span></td><td class="mono">11-18 14:40</td>
+                </tr>
+                <tr class="wf-row" data-open="wf-detail" data-open-group="wf" data-run="wf_1008" data-template="shots_to_video" data-owner="陈默" data-status="failed" data-state="failed" data-stage="3" data-progress="3 / 6">
+                  <td class="mono">wf_1008</td><td>shots_to_video</td><td>陈默 · 手动</td><td><span class="mono">3 / 6</span></td><td><span class="pill fail">failed</span></td><td class="mono">11-18 13:20</td>
+                </tr>
+                <tr class="wf-row" data-open="wf-detail" data-open-group="wf" data-run="wf_0996" data-template="script_to_shots" data-owner="苏禾" data-status="succeeded" data-state="succeeded" data-stage="6" data-progress="6 / 6">
+                  <td class="mono">wf_0996</td><td>script_to_shots</td><td>苏禾 · 手动</td><td><span class="mono">6 / 6</span></td><td><span class="pill pass">succeeded</span></td><td class="mono">11-18 11:05</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card-foot"><span>运行记录保留 90 天；节点日志与 attempt 同步保留</span><span class="mono">5 / 41</span></div>
+        </section>
+
+        <div>
+          <section class="card" style="margin-bottom: 14px">
+            <div class="card-head">
+              <div><h2><span class="mono" data-bind="run" id="wf-run">wf_1024</span> · 节点运行</h2><span class="sub">TEMPLATE <span data-bind="template">script_to_shots</span></span></div>
+              <span class="pill info" id="wf-state">running</span>
+            </div>
+            <div class="card-body">
+              <div class="dag" id="wf-dag">
+                <div class="node ok" data-node="0"><span class="nid">01</span><strong>解析剧本</strong><span class="nn">script.extract</span><span class="nn">6.2s · 12 场</span></div>
+                <div class="node ok" data-node="1"><span class="nid">02</span><strong>解析资产</strong><span class="nn">asset.resolve</span><span class="nn">2.8s · 73 项</span></div>
+                <div class="node ok" data-node="2"><span class="nid">03</span><strong>拆解镜头</span><span class="nn">shot.generate</span><span class="nn">48s · 24 镜</span></div>
+                <div class="node running" data-node="3"><span class="nid">04</span><strong>质量检查</strong><span class="nn">qa.check</span><span class="nn">运行中 · 2m10s</span></div>
+                <div class="node waiting" data-node="4"><span class="nid">05</span><strong>人工审核</strong><span class="nn">review.gate</span><span class="nn">等待决定</span></div>
+                <div class="node" data-node="5"><span class="nid">06</span><strong>写入时间线</strong><span class="nn">timeline.commit</span><span class="nn">未开始 · 建议版本</span></div>
+              </div>
+              <div class="dag-legend">
+                <span><i style="background: var(--ok-soft)"></i>succeeded</span>
+                <span><i style="background: var(--info-soft)"></i>running</span>
+                <span><i style="background: var(--warn-soft)"></i>waiting_review</span>
+                <span><i style="background: var(--fail-soft)"></i>failed</span>
+                <span><i style="background: var(--line)"></i>pending / skipped</span>
+              </div>
+              <div class="kv" style="margin-top: 14px">
+                <div class="row"><dt>当前节点</dt><dd id="wf-node">qa.check · 质量检查</dd></div>
+                <div class="row"><dt>并发 / 重试</dt><dd>并发 2 · 最多重试 3 次（指数退避）</dd></div>
+                <div class="row"><dt>输入快照</dt><dd>Script v5 · Shot Contract v3 ×24 · Asset v2 ×19</dd></div>
+                <div class="row"><dt>输出</dt><dd id="wf-output">未产出；审核通过后写 TimelineVersion v5 建议稿</dd></div>
+              </div>
+            </div>
+            <div class="card-foot">
+              <button class="btn btn-default btn-sm" type="button" data-act="pause">暂停</button>
+              <button class="btn btn-default btn-sm" type="button" data-act="resume">恢复</button>
+              <button class="btn btn-danger btn-sm" type="button" data-act="cancel">取消运行</button>
+              <span style="margin-left: auto" class="hint">取消不回滚已产出节点</span>
+            </div>
+          </section>
+
+          <section class="card" style="margin: 0">
+            <div class="card-head"><h2>节点事件</h2><span class="sub">最近 6 条</span></div>
+            <div class="card-body">
+              <div class="attempt-list" id="wf-log">
+                <div class="attempt"><div class="a-head"><span class="mono">qa.check</span><span class="a-meta">15:59:04 · 2m10s</span></div><div class="a-body">开始执行；输入 shot_contract v3 ×24</div></div>
+                <div class="attempt"><div class="a-head"><span class="mono">shot.generate</span><span class="a-meta">15:58:16 · 48s</span></div><div class="a-body">产出 24 个镜头，跳过 2 个未绑定资产的场次（skipped）</div></div>
+                <div class="attempt"><div class="a-head"><span class="mono">asset.resolve</span><span class="a-meta">15:58:13 · 2.8s</span></div><div class="a-body">命中 19 个资产版本，2 个 stale_candidate 仅标记</div></div>
+                <div class="attempt"><div class="a-head"><span class="mono">script.extract</span><span class="a-meta">15:58:07 · 6.2s</span></div><div class="a-body">解析 12 场 / 38 条对白</div></div>
+              </div>
+            </div>
+            <div class="card-foot"><span>事件按节点顺序追加，不覆盖历史</span><span class="mono">tail -f 等价</span></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="grid g-3">
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>失败与恢复</h2><span class="sub">POLICY</span></div>
+          <div class="card-body">
+            <div class="pass-row"><span class="pm">✓</span><span>失败节点重试只新建 attempt，不伪造成功</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>取消后已产出节点保留，可另起 run 复用</span></div>
+            <div class="pass-row"><span class="pm warn">!</span><span>qa.check 失败即整条 run failed，不进入审核</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>恢复运行必须同一输入快照，否则要求新建 run</span></div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>审核 gate</h2><span class="sub">REVIEW</span></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px; margin: 0 0 10px">review.gate 是唯一的人工阻塞点：项目级统一 review 权限，通过 / 拒绝 / 退回返工三选一，必须给理由。</p>
+            <div class="banner warn" style="margin: 0"><i data-icon="alert"></i><div>无多级会签、无 WAIVED；gate 未决定时 run 状态保持 paused，不自动超时放行。</div></div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>幂等与并发</h2><span class="sub">IDEMPOTENCY</span></div>
+          <div class="card-body">
+            <div class="kv">
+              <div class="row"><dt>run 幂等键</dt><dd>project + 输入版本集合</dd></div>
+              <div class="row"><dt>重复提交</dt><dd>返回既有 run，409 冲突</dd></div>
+              <div class="row"><dt>单项目并发</dt><dd>最多 2 条 run 同时执行</dd></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var body = document.getElementById('wf-body');
+  var dag = document.getElementById('wf-dag');
+  var statePill = document.getElementById('wf-state');
+  var current = body.querySelector('.wf-row.on');
+
+  var SCENARIOS = {
+    wf_1024: { status: 'running', label: 'running', cls: ['ok','ok','ok','running','waiting',''], node: 'qa.check · 质量检查' },
+    wf_1019: { status: 'paused', label: 'paused', cls: ['ok','ok','ok','ok','waiting',''], node: 'review.gate · 等待人工审核（已暂停）' },
+    wf_1012: { status: 'waiting', label: 'waiting', cls: ['ok','ok','ok','waiting','',''], node: 'qa.check · 2 项提示级问题待处理' },
+    wf_1008: { status: 'failed', label: 'failed', cls: ['ok','ok','fail','','',''], node: 'shot.generate · PROVIDER_429 上游限流' },
+    wf_0996: { status: 'succeeded', label: 'succeeded', cls: ['ok','ok','ok','ok','ok','ok'], node: '全部节点完成' }
+  };
+
+  function paint(run) {
+    var s = SCENARIOS[run.dataset.run];
+    if (!s) return;
+    statePill.className = 'pill ' + (s.status === 'failed' ? 'fail' : s.status === 'succeeded' ? 'pass' : s.status === 'running' ? 'info' : 'review');
+    statePill.textContent = s.label;
+    var nodes = dag.querySelectorAll('.node');
+    nodes.forEach(function (n, i) {
+      n.className = 'node' + (s.cls[i] ? ' ' + s.cls[i] : '');
+    });
+    document.getElementById('wf-node').textContent = s.node;
+  }
+
+  document.addEventListener('proto:select', function (e) {
+    if (!e.detail.el.classList.contains('wf-row')) return;
+    current = e.detail.el;
+    paint(current);
+  });
+
+  document.addEventListener('proto:act', function (e) {
+    var act = e.detail.act;
+    var s = SCENARIOS[current.dataset.run];
+    if (!s) return;
+    if (act === 'pause') {
+      if (s.status !== 'running') { P.toast('仅 running 可暂停（当前 ' + s.label + '）'); return; }
+      s.status = 'paused'; s.label = 'paused'; s.cls[3] = 'waiting'; s.node = '已暂停于 qa.check · 输入快照保持';
+      paint(current); current.dataset.status = 'paused';
+      P.setPill(current.querySelector('td .pill'), 'paused', 'paused');
+      P.count('#wf-running', 2); P.count('#wf-waiting', 3);
+      P.toast('已暂停；正在执行的节点跑完当前批次后停止，不丢中间结果');
+    }
+    if (act === 'resume') {
+      if (s.status !== 'paused') { P.toast('仅 paused 可恢复（当前 ' + s.label + '）'); return; }
+      s.status = 'running'; s.label = 'running'; s.cls[3] = 'running'; s.node = 'qa.check · 质量检查';
+      paint(current); current.dataset.status = 'running';
+      P.setPill(current.querySelector('td .pill'), 'running', 'running');
+      P.count('#wf-running', 3); P.count('#wf-waiting', 2);
+      P.toast('已恢复：继续使用 wf_1024 的输入快照，不重新拉取上游');
+    }
+    if (act === 'cancel') {
+      if (s.status === 'succeeded' || s.label === 'cancelled') { P.toast('已完成或已取消的 run 不可再取消'); return; }
+      s.status = 'cancelled'; s.label = 'cancelled'; s.cls = ['ok','ok','ok','','','']; s.node = '已取消';
+      paint(current); current.dataset.status = 'cancelled';
+      P.setPill(current.querySelector('td .pill'), 'cancelled', 'cancelled');
+      P.count('#wf-running', Math.max(0, parseInt(document.getElementById('wf-running').textContent, 10) - 1));
+      P.toast('运行已取消；已产出的 24 个镜头保留，可被新 run 复用');
+    }
+    if (act === 'new-run') {
+      var id = 'wf_' + (1025 + Math.floor(Math.random() * 4));
+      var row = P.addRow(body, '<tr class="wf-row" data-open="wf-detail" data-open-group="wf" data-run="' + id + '" data-template="script_to_shots" data-owner="陈默" data-status="running" data-stage="1" data-progress="1 / 6">' +
+        '<td class="mono">' + id + '</td><td>script_to_shots</td><td>陈默 · 手动</td><td><span class="mono">1 / 6</span></td><td><span class="pill info">running</span></td><td class="mono">' + P.time() + '</td></tr>');
+      SCENARIOS[id] = { status: 'running', label: 'running', cls: ['running','','','','',''], node: 'script.extract · 解析剧本' };
+      P.count('#wf-running', parseInt(document.getElementById('wf-running').textContent, 10) + 1);
+      if (row) P.toast('已发起 ' + id + '：使用当前 Script v5 与资产 v2 快照，幂等键已登记');
+    }
+  });
+</script>
+</body>
+</html>

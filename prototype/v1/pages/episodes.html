@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>剧集与剧本 · 长夜将明 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+</head>
+<body data-page="episodes" data-project="1">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+    <nav class="module-tabs" data-tabs></nav>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Episodes &amp; scripts</p>
+          <h1>剧集与剧本</h1>
+          <p class="lede">Episode 是生产管理单元。剧本以不可变版本推进：保存即产生新版本，已批准版本不可原位编辑，对白必须绑定角色。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-toast="原型：从模板新建集（继承画幅、时长与场次编号规则）">新建剧集</button>
+          <button class="btn btn-primary" type="button" data-act="save-script">保存剧本</button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 214px minmax(0, 1fr) 286px; gap: 14px">
+        <!-- 集次 -->
+        <section class="card" style="margin: 0">
+          <div class="card-head" style="padding: 11px 13px"><h2 style="font-size: 13px">剧集</h2><span class="sub">12</span></div>
+          <div class="card-body tight">
+            <div class="tree">
+              <div class="tree-item on"><span class="n">01</span><span class="t">雨夜书店<small>8 场 · 2'18"</small></span><span class="pill pass">approved</span></div>
+              <div class="tree-item"><span class="n">02</span><span class="t">怀表停在三点<small>7 场 · 2'06"</small></span><span class="pill review">in_review</span></div>
+              <div class="tree-item"><span class="n">03</span><span class="t">第三个人<small>9 场 · 2'24"</small></span><span class="pill pass">approved</span></div>
+              <div class="tree-item"><span class="n">04</span><span class="t">空白档案<small>6 场 · —</small></span><span class="pill draft">draft</span></div>
+              <div class="tree-item"><span class="n">05</span><span class="t">雨停之前<small>0 场</small></span><span class="pill draft">draft</span></div>
+            </div>
+          </div>
+          <div class="card-foot"><span>编号唯一</span><span class="mono">12 eps</span></div>
+        </section>
+
+        <!-- 剧本 -->
+        <section class="card" style="margin: 0; display: flex; flex-direction: column">
+          <div class="card-head">
+            <div><h2>EP01 · 雨夜书店</h2><span class="sub" id="ep-sub">SCRIPT v5 · APPROVED · 2'18"</span></div>
+            <div class="actions">
+              <span class="tag">引用 sb_03</span>
+              <button class="btn btn-quiet btn-sm" type="button" id="btn-scene" style="background: var(--accent-soft); color: var(--accent-hover)" data-act="view-scene">场次视图</button>
+              <button class="btn btn-quiet btn-sm" type="button" id="btn-raw" data-act="view-raw">剧本原文</button>
+            </div>
+          </div>
+          <div class="card-body" style="flex: 1">
+            <div class="script-sheet" id="script-sheet">
+              <div class="meta-row" id="ep-meta">
+                <span>v5 · 2026-11-16 14:20</span><span>苏禾</span><span>approved</span><span>base v4</span><span>hash 8c1e…</span>
+              </div>
+              <div class="scene-head">SCENE 1 <b>旧书店内景 · 夜</b><span>场次编号 1-01 · 目标 28s</span><span class="pill pass">PASS</span></div>
+              <p class="action">雨在玻璃上走成一条线。沈砚把「暂停营业」的牌子翻过来，手指停在木牌边缘。</p>
+              <div class="character">沈砚</div>
+              <div class="dialogue">（低声）今天不卖了。……你也不该来。</div>
+              <div class="character">林晚</div>
+              <div class="dialogue">我来还书。上个月借的，一直没还。</div>
+              <p class="action">她把一本旧书放在柜台上，书脊里掉出一张对折的报纸。沈砚没有去看那张纸。</p>
+
+              <div class="scene-head">SCENE 2 <b>旧书店内景 · 夜</b><span>场次编号 1-02 · 目标 34s</span><span class="pill pass">PASS</span></div>
+              <p class="action">收音机在响，播的是三年前的旧案。沈砚伸手关掉，噪声却没有停。</p>
+              <div class="character">林晚</div>
+              <div class="dialogue">你也听到了？那天晚上，三点整，表停了。</div>
+              <div class="character">沈砚</div>
+              <div class="dialogue">我没有表。</div>
+              <p class="action">他撒谎的时候会把手插进兜里。林晚看见了，但没有说。</p>
+
+              <div class="scene-head">SCENE 3 <b>书店后门 · 巷口 · 夜 · 雨</b><span>场次编号 1-03 · 目标 41s</span><span class="pill review">REVIEW</span></div>
+              <p class="action">巷口的灯坏了。雨水顺着招牌往下滴。第三人站在檐下，只露出鞋尖。</p>
+              <div class="character">陈九</div>
+              <div class="dialogue">这么晚还开门，是做买卖，还是等人？</div>
+              <p class="action">沈砚没有回答。他把钥匙攥进掌心，金属的边缘压出红痕。</p>
+            </div>
+          </div>
+          <div class="card-foot">
+            <span class="mono">saved 11-16 14:20 · no unsaved changes</span>
+            <span>保存前离开会提示：保存 / 丢弃 / 取消</span>
+          </div>
+        </section>
+
+        <!-- 侧栏：场次与版本 -->
+        <div>
+          <section class="card" style="margin-bottom: 14px">
+            <div class="card-head" style="padding: 11px 13px"><h2 style="font-size: 13px">场次与对白</h2><span class="sub">8 场</span></div>
+            <div class="card-body tight">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead><tr><th>场次</th><th>对白</th><th>绑定</th></tr></thead>
+                  <tbody>
+                    <tr data-row><td><span class="mono">1-01</span><span class="sub">书店内景</span></td><td class="num">2</td><td><span class="pill pass">100%</span></td></tr>
+                    <tr data-row><td><span class="mono">1-02</span><span class="sub">书店内景</span></td><td class="num">2</td><td><span class="pill pass">100%</span></td></tr>
+                    <tr data-row><td><span class="mono">1-03</span><span class="sub">巷口 · 雨</span></td><td class="num">3</td><td><span class="pill review">2/3</span></td></tr>
+                    <tr data-row><td><span class="mono">1-04</span><span class="sub">书店门口</span></td><td class="num">4</td><td><span class="pill review">3/4</span></td></tr>
+                    <tr data-row><td><span class="mono">1-05</span><span class="sub">街对面 · 车内</span></td><td class="num">1</td><td><span class="pill pass">100%</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="banner warn" style="margin: 10px 12px">
+                <i data-icon="alert"></i>
+                <div><b>3 条对白未绑定角色。</b>审核要求对白角色引用有效率 100%，未绑定项会阻断批准。</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" style="margin-bottom: 14px">
+            <div class="card-head" style="padding: 11px 13px"><h2 style="font-size: 13px">版本历史</h2><span class="sub" id="ver-count">5</span></div>
+            <div class="card-body tight">
+              <div class="tree" id="ver-tree">
+                <div class="tree-item on"><span class="n">v5</span><span class="t">approved<small>苏禾 · 11-16 14:20</small></span><span class="pill pass">当前</span></div>
+                <div class="tree-item"><span class="n">v4</span><span class="t">rejected<small>陆行 · 11-15 · 3 条意见</small></span><span class="pill fail">拒绝</span></div>
+                <div class="tree-item"><span class="n">v3</span><span class="t">approved<small>11-11</small></span><span class="pill draft">历史</span></div>
+              </div>
+            </div>
+            <div class="card-foot"><span>审核不继承旧版结论</span></div>
+          </section>
+
+          <section class="card" style="margin-bottom: 0">
+            <div class="card-head" style="padding: 11px 13px"><h2 style="font-size: 13px">并发与冲突</h2><span class="sub">409</span></div>
+            <div class="card-body">
+              <p class="lede" style="font-size: 10.5px">保存携带 <span class="mono">If-Match</span> 版本号。若他人已保存，返回 409 并展示差异，不以后写覆盖前写。</p>
+              <button class="btn btn-default btn-sm btn-block" style="margin-top: 10px" type="button" data-modal="modal-conflict">查看冲突样例</button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="banner info" style="margin-top: 14px">
+        <i data-icon="info"></i>
+        <div><b>剧集编号与时长约束：</b>编号唯一（同一项目内 409 冲突）；剧本总时长与分集目标差异 &gt; 15% 时，审核报告标为风险项，不自动阻断。</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-conflict-backdrop" data-close-modal="modal-conflict"></div>
+<div class="modal" id="modal-conflict" role="dialog" aria-modal="true" style="width: 520px">
+  <div class="modal-head"><p class="eyebrow">409 Conflict</p><h2>版本冲突：当前内容已被更新</h2></div>
+  <div class="modal-body">
+    <p style="margin-bottom: 10px">你的 <span class="mono">base_version = v5</span>，服务端当前为 <span class="mono">v6</span>（苏禾 14:32 保存）。</p>
+    <div class="contract-grid">
+      <div class="contract-cell"><small>你的修改</small><p>SCENE 2 对白：沈砚「我没有表。」→ 保留</p></div>
+      <div class="contract-cell"><small>对方修改</small><p>SCENE 3 增补陈九 1 条对白</p></div>
+      <div class="contract-cell"><small>差异行</small><strong class="mono">2 处</strong></div>
+      <div class="contract-cell"><small>建议动作</small><strong>比较后合并</strong></div>
+    </div>
+    <p class="lede" style="font-size: 10.5px; margin-top: 10px">不会丢失任何一方的改动：可以选择载入服务端版本重新比较，或保留本地为草稿。</p>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-quiet" type="button" data-close-modal="modal-conflict" data-toast="原型：已把本地内容存为草稿 draft_copy">存为草稿</button>
+    <button class="btn btn-default" type="button" data-close-modal="modal-conflict" data-toast="原型：载入 v6 并展示逐行差异">载入最新版</button>
+    <button class="btn btn-primary" type="button" data-close-modal="modal-conflict" data-toast="原型：进入比较合并视图">比较并合并</button>
+  </div>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var version = 5;
+  var sheet = document.getElementById('script-sheet');
+  var sceneHTML = sheet.innerHTML;
+  var rawHTML = '<pre class="code" style="white-space: pre-wrap; font-size: 11px; line-height: 1.9; padding: 6px 2px">EP01 雨夜书店\n\n1-01 旧书店内景 · 夜（目标 28s）\n　　雨在玻璃上走成一条线。沈砚把「暂停营业」的牌子翻过来。\n沈砚：（低声）今天不卖了。……你也不该来。\n林晚：我来还书。上个月借的，一直没还。\n\n1-02 旧书店内景 · 夜（目标 34s）\n林晚：你也听到了？那天晚上，三点整，表停了。\n沈砚：我没有表。\n\n1-03 书店后门 · 巷口 · 夜 · 雨（目标 41s）\n陈九：这么晚还开门，是做买卖，还是等人？</pre>';
+
+  document.addEventListener('proto:act', function (e) {
+    var act = e.detail.act;
+    if (act === 'view-raw' || act === 'view-scene') {
+      var raw = act === 'view-raw';
+      sheet.innerHTML = raw ? rawHTML : sceneHTML;
+      if (!raw) { document.getElementById('script-sheet').innerHTML = sceneHTML; }
+      document.getElementById('btn-scene').style.background = raw ? '' : 'var(--accent-soft)';
+      document.getElementById('btn-scene').style.color = raw ? '' : 'var(--accent-hover)';
+      document.getElementById('btn-raw').style.background = raw ? 'var(--accent-soft)' : '';
+      document.getElementById('btn-raw').style.color = raw ? 'var(--accent-hover)' : '';
+      return;
+    }
+    if (act === 'save-script') {
+      version += 1;
+      var now = P.time();
+      document.getElementById('ep-sub').textContent = "SCRIPT v" + version + " · DRAFT · 2'18\"";
+      document.getElementById('ep-meta').innerHTML = '<span>v' + version + ' · 2026-' + now.slice(0, 5) + '</span><span>陈默</span><span>draft</span><span>base v' + (version - 1) + '</span><span>hash ' + Math.random().toString(16).slice(2, 6) + '…</span>';
+      var tree = document.getElementById('ver-tree');
+      tree.querySelectorAll('.tree-item').forEach(function (n) { n.classList.remove('on'); var p = n.querySelector('.pill'); if (p) { p.className = 'pill draft'; p.textContent = '历史'; } });
+      var item = document.createElement('div');
+      item.className = 'tree-item on';
+      item.innerHTML = '<span class="n">v' + version + '</span><span class="t">draft<small>陈默 · ' + now + '</small></span><span class="pill draft">当前</span>';
+      tree.insertBefore(item, tree.firstElementChild);
+      document.getElementById('ver-count').textContent = version;
+      P.toast('已保存 v' + version + '（base_version = v' + (version - 1) + '）：新版本需重新审核，旧版审核结论不继承');
+    }
+  });
+</script>
+</body>
+</html>

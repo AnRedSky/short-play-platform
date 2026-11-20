@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>项目空间 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+</head>
+<body data-page="projects">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Projects</p>
+          <h1>项目空间</h1>
+          <p class="lede">项目是协作与授权的边界：资产、任务、时间线与导出的隔离根。离开项目范围后，任何生产数据都不可见。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-toast="原型：展示项目模板（都市悬疑 / 治愈爱情 / 古装）与默认词表绑定">从模板创建</button>
+          <button class="btn btn-primary" type="button" data-modal="modal-newproject"><i data-icon="plus"></i>新建项目</button>
+        </div>
+      </div>
+
+      <section class="card">
+        <div class="toolbar">
+          <div class="search"><i data-icon="search"></i><input placeholder="搜索项目名称或编码" /></div>
+          <div data-filter-group="projects" style="display: flex; gap: 6px">
+            <button class="chip active" data-filter="all" type="button">全部<span class="c">6</span></button>
+            <button class="chip" data-filter="active" type="button">进行中<span class="c">4</span></button>
+            <button class="chip" data-filter="on_hold" type="button">搁置<span class="c">1</span></button>
+            <button class="chip" data-filter="archived" type="button">已归档<span class="c">1</span></button>
+          </div>
+          <div class="spacer"></div>
+          <span class="count">按最近活动降序 · 稳定排序</span>
+        </div>
+
+        <div class="table-wrap" data-status-group="projects">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width: 30%">项目</th>
+                <th>状态</th>
+                <th>生产阶段</th>
+                <th>成员</th>
+                <th>集数 / 镜头</th>
+                <th>预算</th>
+                <th>最近活动</th>
+                <th style="width: 116px"></th>
+              </tr>
+            </thead>
+            <tbody id="proj-body">
+              <tr data-row data-status="active">
+                <td>
+                  <a class="row-title" href="project-overview.html">长夜将明</a>
+                  <span class="sub mono">NYJM-26 · 都市悬疑 · 竖屏 9:16 · 30fps</span>
+                </td>
+                <td><span class="pill pass">active</span></td>
+                <td><span class="pill run">分镜与生成</span></td>
+                <td>陈默 · 苏禾 · 陆行 <span class="sub">共 6 人</span></td>
+                <td class="num">12 / 146</td>
+                <td class="num">62%</td>
+                <td class="mono">12 分钟前</td>
+                <td class="t-actions">
+                  <a class="btn btn-default btn-sm" href="project-overview.html">进入项目</a>
+                </td>
+              </tr>
+              <tr data-row data-status="active">
+                <td>
+                  <a class="row-title" href="project-overview.html">春日回信</a>
+                  <span class="sub mono">CRHX-26 · 治愈爱情 · 竖屏 9:16 · 30fps</span>
+                </td>
+                <td><span class="pill pass">active</span></td>
+                <td><span class="pill pass">剪辑导出</span></td>
+                <td>顾青 · 苏禾 <span class="sub">共 4 人</span></td>
+                <td class="num">8 / 96</td>
+                <td class="num">81%</td>
+                <td class="mono">1 小时前</td>
+                <td class="t-actions"><a class="btn btn-default btn-sm" href="project-overview.html">进入项目</a></td>
+              </tr>
+              <tr data-row data-status="active">
+                <td>
+                  <a class="row-title" href="project-overview.html">深夜食堂·番外</a>
+                  <span class="sub mono">SYST-26 · 都市温情 · 横屏 16:9 · 25fps</span>
+                </td>
+                <td><span class="pill pass">active</span></td>
+                <td><span class="pill draft">剧本创作</span></td>
+                <td>苏禾 <span class="sub">共 2 人</span></td>
+                <td class="num">4 / 0</td>
+                <td class="num">12%</td>
+                <td class="mono">昨天</td>
+                <td class="t-actions"><a class="btn btn-default btn-sm" href="project-overview.html">进入项目</a></td>
+              </tr>
+              <tr data-row data-status="active">
+                <td>
+                  <a class="row-title" href="project-overview.html">无声证词</a>
+                  <span class="sub mono">WSZZ-26 · 悬疑 · 竖屏 9:16 · 30fps</span>
+                </td>
+                <td><span class="pill pass">active</span></td>
+                <td><span class="pill fail">生成受阻</span></td>
+                <td>陈默 · 方屿 · 陆行 <span class="sub">共 5 人</span></td>
+                <td class="num">10 / 118</td>
+                <td class="num" style="color: var(--fail)">94%</td>
+                <td class="mono">2 天前</td>
+                <td class="t-actions"><a class="btn btn-default btn-sm" href="project-overview.html">进入项目</a></td>
+              </tr>
+              <tr data-row data-status="on_hold">
+                <td>
+                  <a class="row-title" href="#">午夜来电</a>
+                  <span class="sub mono">WYLD-25 · 悬疑 · 竖屏 9:16 · 30fps</span>
+                </td>
+                <td><span class="pill review">on_hold</span></td>
+                <td><span class="pill draft">剧本创作</span></td>
+                <td>苏禾 <span class="sub">共 3 人</span></td>
+                <td class="num">6 / 0</td>
+                <td class="num">7%</td>
+                <td class="mono">3 周前</td>
+                <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="项目已搁置：禁止新建任务与写入，恢复需制片人权限">查看</button></td>
+              </tr>
+              <tr data-row data-status="archived">
+                <td>
+                  <a class="row-title" href="#">第一缕光</a>
+                  <span class="sub mono">DYLV-25 · 治愈 · 竖屏 9:16 · 30fps</span>
+                </td>
+                <td><span class="pill draft">archived</span></td>
+                <td><span class="pill pass">已交付</span></td>
+                <td>陈默 <span class="sub">共 3 人</span></td>
+                <td class="num">10 / 132</td>
+                <td class="num">—</td>
+                <td class="mono">2026-08-14</td>
+                <td class="t-actions"><button class="btn btn-quiet btn-sm" type="button" data-toast="已归档项目只读：历史产物、审核记录与导出快照保留">只读查看</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pager"><span>显示 6 / 6</span><div class="pages"><span class="on">1</span><span>2</span><span>3</span></div></div>
+      </section>
+
+      <div class="grid g-2">
+        <section class="card">
+          <div class="card-head"><h2>项目生命周期</h2><span class="sub">STATE MACHINE</span></div>
+          <div class="card-body">
+            <div class="kv">
+              <div class="row"><dt><span class="pill draft">draft</span></dt><dd>已创建，尚未授予成员；不可进入生产工作区</dd></div>
+              <div class="row"><dt><span class="pill pass">active</span></dt><dd>正常生产；可创建任务、审核与导出</dd></div>
+              <div class="row"><dt><span class="pill review">on_hold</span></dt><dd>暂停写入与新任务；已有任务可继续完成</dd></div>
+              <div class="row"><dt><span class="pill draft">archived</span></dt><dd>只读；恢复需显式权限并写审计</dd></div>
+            </div>
+            <div class="banner stale" style="margin: 12px 0 0"><i data-icon="alert"></i><div>归档后创建任务返回业务错误；不会静默删除已有产物与审核记录。</div></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2>空态：无项目权限</h2><span class="sub">403 / EMPTY</span></div>
+          <div class="card-body tight">
+            <div class="empty-state">
+              <span class="mark"><i data-icon="lock"></i></span>
+              <strong>没有可访问的项目</strong>
+              <p>你的组织角色已生效，但尚未被授予任何项目成员关系。项目权限由组织角色与项目角色求交集，不会因为组织成员身份自动获得。</p>
+              <button class="btn btn-default btn-sm" type="button" data-toast="原型：向制片人发起项目成员申请">申请加入项目</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-newproject-backdrop" data-close-modal="modal-newproject"></div>
+<div class="modal" id="modal-newproject" role="dialog" aria-modal="true">
+  <div class="modal-head"><p class="eyebrow">New project</p><h2>新建项目</h2></div>
+  <form data-form="project">
+  <div class="modal-body">
+    <div class="form-grid">
+      <label class="field"><span>项目名称</span><input class="control" name="name" value="无名之辈" required /></label>
+      <label class="field"><span>项目编码</span><input class="control mono" name="code" value="WMBZ-26" required /><span class="hint">组织内唯一，冲突返回 409</span></label>
+      <label class="field"><span>题材</span><select class="control" name="genre"><option>都市悬疑</option><option>都市温情</option><option>古装</option></select></label>
+      <label class="field"><span>画幅与帧率</span><select class="control" name="ratio"><option>竖屏 9:16 · 30fps</option><option>横屏 16:9 · 25fps</option></select></label>
+      <label class="field"><span>目标集数</span><input class="control num" name="eps" value="12" /></label>
+      <label class="field"><span>默认 Provider</span><select class="control" name="provider"><option>Mork（组织默认）</option></select></label>
+    </div>
+    <div class="banner info" style="margin-top: 12px"><i data-icon="info"></i><div>创建后项目为 draft：授予成员后才可进入生产工作区，资产与任务均不预生成。</div></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-default" type="button" data-close-modal="modal-newproject">取消</button>
+    <button class="btn btn-primary" type="submit">创建项目</button>
+  </div>
+  </form>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var body = document.getElementById('proj-body');
+
+  function projectRow(name, code, genre, ratio, eps, state) {
+    var statePill = state === 'hero' ? 'active' : state;
+    var label = state === 'hero' ? 'active' : state;
+    return '<tr data-row data-status="' + statePill + '"><td><a class="row-title" href="project-overview.html">' + P.esc(name) + '</a><span class="sub mono">' + P.esc(code) + ' · ' + P.esc(genre) + ' · ' + P.esc(ratio) + '</span></td>' +
+      '<td><span class="pill ' + (state === 'active' ? 'pass' : state === 'on_hold' ? 'review' : 'draft') + '">' + label + '</span></td>' +
+      '<td><span class="pill draft">刚创建</span></td><td>陈默 <span class="sub">共 1 人</span></td>' +
+      '<td class="num">0 / 0</td><td class="num">0%</td><td class="mono">刚刚</td>' +
+      '<td class="t-actions"><a class="btn btn-default btn-sm" href="project-overview.html">进入项目</a></td></tr>';
+  }
+
+  var saved = P.store.get('projects_created', []);
+  saved.forEach(function (p) {
+    var tmp = document.createElement('tbody');
+    tmp.innerHTML = projectRow(p.name, p.code, p.genre, p.ratio, p.eps, p.state);
+    body.insertBefore(tmp.firstElementChild, body.firstElementChild);
+  });
+  if (saved.length) {
+    var all = document.querySelector('[data-filter="all"] .c');
+    var act = document.querySelector('[data-filter="active"] .c');
+    if (all) all.textContent = 6 + saved.length;
+    if (act) act.textContent = 4 + saved.length;
+  }
+
+  document.addEventListener('proto:submit', function (e) {
+    if (e.detail.name !== 'project') return;
+    var d = e.detail.data;
+    var code = (d.code || '').trim().toUpperCase();
+    var existing = Array.prototype.map.call(body.querySelectorAll('.sub.mono'), function (n) { return n.textContent; }).join(' ');
+    if (existing.indexOf(code) > -1) {
+      P.toast('创建失败（409）：项目编码 ' + code + ' 已存在，组织内必须唯一');
+      return;
+    }
+    var list = P.store.get('projects_created', []);
+    list.unshift({ name: d.name, code: code, genre: d.genre, ratio: d.ratio, eps: d.eps, state: 'draft' });
+    P.store.set('projects_created', list);
+    var tmp = document.createElement('tbody');
+    tmp.innerHTML = projectRow(d.name, code, d.genre, d.ratio, d.eps, 'draft');
+    body.insertBefore(tmp.firstElementChild, body.firstElementChild);
+    var all = document.querySelector('[data-filter="all"] .c');
+    if (all) all.textContent = parseInt(all.textContent, 10) + 1;
+    P.toast('已创建项目「' + d.name + '」（draft）：授予成员后才可进入生产，资产与任务不预生成');
+  });
+</script>
+</body>
+</html>

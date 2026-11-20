@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>项目设置 · 长夜将明 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+<style>
+  .setting-nav button { font-size: 11.5px; }
+  .member-role { width: 118px; }
+  .danger-zone { border: 1px solid var(--fail); border-radius: var(--r-surface); background: #fff; }
+  .danger-zone .card-head { border-bottom-color: var(--fail-soft); }
+  .danger-zone .card-head h2 { color: var(--fail); }
+  .profile-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line-soft); }
+  .profile-row:last-child { border-bottom: 0; }
+  .profile-row .p-main { flex: 1; }
+  .profile-row .p-main strong { display: block; font-size: 12px; }
+  .profile-row .p-main span { font-size: 10px; color: var(--text-3); font-family: var(--mono); }
+</style>
+</head>
+<body data-page="settings" data-project="1">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+    <nav class="module-tabs" data-tabs></nav>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Project settings</p>
+          <h1>项目设置</h1>
+          <p class="lede">项目是授权与数据隔离的边界：这里的每个开关只影响本项目，不影响组织内其他项目与全局 Provider 配置。</p>
+        </div>
+        <div class="head-actions">
+          <span class="pill review" id="dirty" hidden>未保存</span>
+          <button class="btn btn-primary" type="button" data-act="save-all" data-save>保存全部</button>
+        </div>
+      </div>
+
+      <div class="setting-nav" id="setting-nav">
+        <button class="active" type="button" data-tab-btn="basic">基本信息</button>
+        <button type="button" data-tab-btn="members">成员与权限</button>
+        <button type="button" data-tab-btn="gen">生成配置</button>
+        <button type="button" data-tab-btn="profiles">导出 Profile</button>
+        <button type="button" data-tab-btn="budget">预算与用量</button>
+        <button type="button" data-tab-btn="danger">危险操作</button>
+      </div>
+
+      <!-- 基本信息 -->
+      <div class="grid g-main" data-tab-panel="basic">
+        <section class="card" style="margin: 0">
+          <div class="card-head"><div><h2>项目基本信息</h2><span class="sub">PROJECT PROFILE</span></div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <label class="field"><span>项目名称</span><input class="control" id="f-name" value="长夜将明" /></label>
+              <label class="field"><span>项目编码</span><input class="control" value="NYJM-26" readonly /><span class="hint">不可修改，作为资产与导出文件名前缀</span></label>
+              <label class="field"><span>画面形态</span><select class="control" id="f-ratio"><option selected>竖屏 9:16 · 1080×1920</option><option>横屏 16:9 · 1920×1080</option><option>方屏 1:1</option></select></label>
+              <label class="field"><span>帧率</span><select class="control"><option selected>30 fps</option><option>25 fps</option><option>24 fps</option></select><span class="hint">时间线以整数 PTS 存储，帧率影响换算</span></label>
+              <label class="field"><span>剧集数量</span><input class="control" value="12" /></label>
+              <label class="field"><span>单集时长上限</span><input class="control" value="2′30″" /></label>
+              <label class="field full"><span>项目描述</span><textarea class="control" rows="3">都市悬疑竖屏短剧：旧书店、记账本、两个互相隐瞒的人。</textarea></label>
+            </div>
+            <div class="form-foot">
+              <button class="btn btn-primary" type="button" data-act="save" data-save>保存</button>
+              <button class="btn btn-default" type="button" data-act="revert">撤销修改</button>
+              <span class="hint">保存只影响元数据，不重建剧集与资产</span>
+            </div>
+          </div>
+        </section>
+
+        <div>
+          <section class="card" style="margin-bottom: 14px">
+            <div class="card-head"><h2>隔离边界</h2><span class="sub">SCOPE</span></div>
+            <div class="card-body">
+              <div class="pass-row"><span class="pm">✓</span><span>项目内资产不得被其他项目引用或搜索</span></div>
+              <div class="pass-row"><span class="pm">✓</span><span>成员权限按项目单独授予，组织角色不自动继承</span></div>
+              <div class="pass-row"><span class="pm">✓</span><span>导出产物与时间线版本按项目归档</span></div>
+              <div class="pass-row"><span class="pm warn">!</span><span>跨项目复制资产需先导出再导入，且重新审核</span></div>
+            </div>
+          </section>
+          <section class="card" style="margin: 0">
+            <div class="card-head"><h2>项目状态</h2><span class="sub">STATE</span></div>
+            <div class="card-body">
+              <div class="kv">
+                <div class="row"><dt>当前状态</dt><dd><span class="pill pass">active</span></dd></div>
+                <div class="row"><dt>创建时间</dt><dd class="mono">2026-10-28</dd></div>
+                <div class="row"><dt>所属组织</dt><dd>星野文化传播</dd></div>
+                <div class="row"><dt>项目负责人</dt><dd>陈默 · owner</dd></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- 成员 -->
+      <section class="card" data-tab-panel="members" hidden>
+        <div class="card-head"><div><h2>项目成员</h2><span class="sub">6 人 · 项目角色</span></div><div class="actions"><button class="btn btn-primary btn-sm" type="button" data-modal="modal-member"><i data-icon="plus"></i>添加成员</button></div></div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>成员</th><th>组织角色</th><th>项目角色</th><th>加入时间</th><th>操作</th></tr></thead>
+            <tbody id="member-body">
+              <tr><td><div class="user-chip"><span class="avatar">陈</span><div class="user-chip-text"><strong>陈默</strong><span>制片人</span></div></div></td><td><span class="tag">producer</span></td><td><span class="tag">owner</span></td><td class="mono">10-28</td><td><span class="hint">项目创建者，不可移除</span></td></tr>
+              <tr><td><div class="user-chip"><span class="avatar">苏</span><div class="user-chip-text"><strong>苏禾</strong><span>编剧</span></div></div></td><td><span class="tag">writer</span></td><td><select class="control member-role"><option>writer</option><option>director</option><option>reviewer</option></select></td><td class="mono">10-28</td><td><button class="btn btn-quiet btn-sm" type="button" data-act="remove-member">移除</button></td></tr>
+              <tr><td><div class="user-chip"><span class="avatar">方</span><div class="user-chip-text"><strong>方屿</strong><span>美术</span></div></div></td><td><span class="tag">artist</span></td><td><select class="control member-role"><option>artist</option><option>director</option><option>reviewer</option></select></td><td class="mono">10-29</td><td><button class="btn btn-quiet btn-sm" type="button" data-act="remove-member">移除</button></td></tr>
+              <tr><td><div class="user-chip"><span class="avatar">顾</span><div class="user-chip-text"><strong>顾青</strong><span>后期</span></div></div></td><td><span class="tag">editor</span></td><td><select class="control member-role"><option>editor</option><option>reviewer</option></select></td><td class="mono">10-29</td><td><button class="btn btn-quiet btn-sm" type="button" data-act="remove-member">移除</button></td></tr>
+              <tr><td><div class="user-chip"><span class="avatar">陆</span><div class="user-chip-text"><strong>陆行</strong><span>制片</span></div></div></td><td><span class="tag">reviewer</span></td><td><select class="control member-role"><option>reviewer</option><option>producer</option></select></td><td class="mono">11-02</td><td><button class="btn btn-quiet btn-sm" type="button" data-act="remove-member">移除</button></td></tr>
+              <tr><td><div class="user-chip"><span class="avatar">王</span><div class="user-chip-text"><strong>王斌</strong><span>导演</span></div></div></td><td><span class="tag">producer</span></td><td><select class="control member-role"><option>director</option><option>producer</option><option>reviewer</option></select></td><td class="mono">11-05</td><td><button class="btn btn-quiet btn-sm" type="button" data-act="remove-member">移除</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-foot"><span>项目角色决定可执行动作；审核使用项目级统一 review 权限</span><span class="mono" id="member-count">6 人</span></div>
+      </section>
+
+      <!-- 生成配置 -->
+      <div class="grid g-main" data-tab-panel="gen" hidden>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><div><h2>生成与审核</h2><span class="sub">GENERATION</span></div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <label class="field"><span>默认视频 Provider</span><select class="control" id="g-provider"><option>Mork · mork-video-2（未配置）</option><option>Mork · mork-video-1</option></select><span class="hint">缺失配置时返回 PROVIDER_NOT_CONFIGURED，不回退 Mock</span></label>
+              <label class="field"><span>默认图片 Provider</span><select class="control"><option>Mork · mork-image-3</option><option>Mork · mork-image-2</option></select></label>
+              <label class="field"><span>单项目并发上限</span><input class="control" value="2" /></label>
+              <label class="field"><span>自动重试次数</span><input class="control" value="3" /></label>
+              <label class="field"><span>QA 规则集</span><input class="control" value="qa-rules-2026.11" readonly /></label>
+              <label class="field"><span>stale 处理</span><input class="control" value="仅标记，不自动重跑" readonly /></label>
+            </div>
+            <div class="section-label">审核策略</div>
+            <div class="pass-row"><span class="pm">✓</span><span>项目级统一 review 权限，无多级会签</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>新版本必须重新 QA 并重新审核，旧结论不继承</span></div>
+            <div class="pass-row"><span class="pm warn">!</span><span>不存在 WAIVED 状态；规则服务故障不得判 PASS</span></div>
+            <div class="form-foot">
+              <button class="btn btn-primary" type="button" data-act="save" data-save>保存</button>
+              <button class="btn btn-default" type="button" data-toast="已打开能力与 Provider 配置页">管理 Provider</button>
+            </div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>时间线与时码</h2><span class="sub">TIME</span></div>
+          <div class="card-body">
+            <div class="kv">
+              <div class="row"><dt>主时钟</dt><dd class="mono">1 / 70,560,000</dd></div>
+              <div class="row"><dt>帧率</dt><dd class="mono">{30, 1}</dd></div>
+              <div class="row"><dt>区间语义</dt><dd>左闭右开 [start, end)</dd></div>
+              <div class="row"><dt>权威值</dt><dd>整数 PTS + 有理数 time_base</dd></div>
+            </div>
+            <div class="banner warn" style="margin-top: 12px"><i data-icon="alert"></i><div>禁止以浮点秒作为权威时间；浮点只用于展示。</div></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 导出 Profile -->
+      <section class="card" data-tab-panel="profiles" hidden>
+        <div class="card-head"><div><h2>导出 Profile</h2><span class="sub">2 个已启用</span></div><div class="actions"><button class="btn btn-primary btn-sm" type="button" data-modal="modal-profile"><i data-icon="plus"></i>新增 Profile</button></div></div>
+        <div class="card-body" id="profile-list">
+          <div class="profile-row"><div class="p-main"><strong>竖屏交付 · 1080×1920</strong><span>H.264 high · 6 Mbps · AAC 128k · 30fps · faststart</span></div><span class="pill pass">默认</span><button class="btn btn-quiet btn-sm" type="button" data-toast="Profile 只读，修改需新建版本">查看</button></div>
+          <div class="profile-row"><div class="p-main"><strong>审核预览 · 720×1280</strong><span>H.264 main · 2 Mbps · AAC 96k · 水印「审核样片」</span></div><span class="pill draft">备用</span><button class="btn btn-quiet btn-sm" type="button" data-toast="Profile 只读，修改需新建版本">查看</button></div>
+        </div>
+        <div class="card-foot"><span>导出必须冻结 TimelineVersion + Profile 快照，发布前跑 ffprobe 与完整解码</span></div>
+      </section>
+
+      <!-- 预算 -->
+      <section class="card" data-tab-panel="budget" hidden>
+        <div class="card-head"><div><h2>预算与阈值</h2><span class="sub">本月 · 已用 62%</span></div></div>
+        <div class="card-body">
+          <div class="form-grid" style="max-width: 720px">
+            <label class="field"><span>月度预算（元）</span><input class="control" value="10000" /></label>
+            <label class="field"><span>预警阈值（%）</span><input class="control" value="80" /></label>
+            <label class="field"><span>硬阻断阈值（%）</span><input class="control" value="100" /></label>
+            <label class="field"><span>单次任务上限（元）</span><input class="control" value="120" /></label>
+          </div>
+          <div class="form-foot"><button class="btn btn-primary" type="button" data-act="save" data-save>保存</button><button class="btn btn-default" type="button" data-toast="已跳转用量与成本">查看明细</button></div>
+        </div>
+      </section>
+
+      <!-- 危险操作 -->
+      <section class="card danger-zone" data-tab-panel="danger" hidden>
+        <div class="card-head"><div><h2>危险操作</h2><span class="sub">不可逆动作，需二次确认并写审计</span></div></div>
+        <div class="card-body">
+          <div class="issue-row"><span class="issue-sev warn">归档</span><div class="issue-body"><strong>归档项目</strong><p>项目转为只读：停止新任务与导出，资产与历史版本保留可查。</p></div><div class="issue-act"><button class="btn btn-default btn-sm" type="button" data-act="archive">归档项目</button></div></div>
+          <div class="issue-row"><span class="issue-sev warn">转移</span><div class="issue-body"><strong>转移所有权</strong><p>把 owner 转给另一位项目成员；转出后你只剩被授予的角色。</p></div><div class="issue-act"><button class="btn btn-default btn-sm" type="button" data-modal="modal-transfer">转移</button></div></div>
+          <div class="issue-row"><span class="issue-sev">删除</span><div class="issue-body"><strong>删除项目</strong><p>删除项目及其资产引用、导出产物与运行记录。该动作不可恢复。</p></div><div class="issue-act"><button class="btn btn-danger btn-sm" type="button" data-modal="modal-delete">删除项目</button></div></div>
+          <div class="banner info" style="margin-top: 12px"><i data-icon="info"></i><div>所有危险操作都会记录 actor、resource、request_id 与变更前后值；审核类结论不随归档失效。</div></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-member-backdrop" data-close-modal="modal-member"></div>
+<div class="modal" id="modal-member" role="dialog" aria-modal="true">
+  <div class="modal-head"><p class="eyebrow">Add member</p><h2>添加项目成员</h2></div>
+  <form data-form="member">
+    <div class="modal-body">
+      <div class="form-grid">
+        <label class="field full"><span>成员邮箱</span><input class="control" name="email" placeholder="name@xingye.studio" required /></label>
+        <label class="field"><span>项目角色</span><select class="control" name="role"><option>writer</option><option>director</option><option>artist</option><option>editor</option><option>reviewer</option><option>producer</option></select></label>
+        <label class="field"><span>组织角色</span><input class="control" name="org" value="writer" readonly /></label>
+      </div>
+      <div class="banner info" style="margin-top: 12px"><i data-icon="info"></i><div>组织角色不会自动获得项目权限；项目角色单独授予。</div></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-default" type="button" data-close-modal="modal-member">取消</button><button class="btn btn-primary" type="submit">添加</button></div>
+  </form>
+</div>
+
+<div class="modal-backdrop" id="modal-profile-backdrop" data-close-modal="modal-profile"></div>
+<div class="modal" id="modal-profile" role="dialog" aria-modal="true">
+  <div class="modal-head"><p class="eyebrow">New profile</p><h2>新增导出 Profile</h2></div>
+  <form data-form="profile">
+    <div class="modal-body">
+      <div class="form-grid">
+        <label class="field"><span>名称</span><input class="control" name="name" placeholder="如 竖屏交付 · 720p" required /></label>
+        <label class="field"><span>分辨率</span><select class="control" name="res"><option>1080×1920</option><option>720×1280</option><option>1920×1080</option></select></label>
+        <label class="field"><span>码率</span><input class="control" name="bitrate" value="6 Mbps" /></label>
+        <label class="field"><span>编码</span><input class="control" name="codec" value="H.264 high" /></label>
+        <label class="field"><span>音频</span><input class="control" name="audio" value="AAC 128k" /></label>
+        <label class="field"><span>用途</span><select class="control" name="usage"><option>正式交付</option><option>审核预览</option></select></label>
+      </div>
+      <div class="banner warn" style="margin-top: 12px"><i data-icon="alert"></i><div>Profile 创建后不可修改，调整需新增版本；导出任务只引用快照。</div></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-default" type="button" data-close-modal="modal-profile">取消</button><button class="btn btn-primary" type="submit">创建</button></div>
+  </form>
+</div>
+
+<div class="modal-backdrop" id="modal-transfer-backdrop" data-close-modal="modal-transfer"></div>
+<div class="modal" id="modal-transfer" role="dialog" aria-modal="true">
+  <div class="modal-head"><p class="eyebrow">Transfer ownership</p><h2>转移项目所有权</h2></div>
+  <form data-form="transfer">
+    <div class="modal-body">
+      <label class="field full"><span>目标成员</span><select class="control" name="to"><option>王斌 · director</option><option>陆行 · reviewer</option><option>苏禾 · writer</option></select></label>
+      <div class="banner warn" style="margin-top: 12px"><i data-icon="alert"></i><div>转移后你将失去 owner 权限，仅保留被授予的角色；该动作写审计且不可撤销。</div></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-default" type="button" data-close-modal="modal-transfer">取消</button><button class="btn btn-primary" type="submit">确认转移</button></div>
+  </form>
+</div>
+
+<div class="modal-backdrop" id="modal-delete-backdrop" data-close-modal="modal-delete"></div>
+<div class="modal" id="modal-delete" role="dialog" aria-modal="true">
+  <div class="modal-head"><p class="eyebrow">Delete project</p><h2>删除项目</h2></div>
+  <form data-form="delete">
+    <div class="modal-body">
+      <p class="lede" style="font-size: 12px">删除会移除项目、资产引用、导出产物与运行记录，且不可恢复。请输入项目名以确认。</p>
+      <label class="field full" style="margin-top: 10px"><span>项目名</span><input class="control" name="confirm" placeholder="长夜将明" required /><span class="hint">输入不一致时提交会被拒绝</span></label>
+    </div>
+    <div class="modal-foot"><button class="btn btn-default" type="button" data-close-modal="modal-delete">取消</button><button class="btn btn-danger" type="submit">永久删除</button></div>
+  </form>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var nav = document.getElementById('setting-nav');
+  nav.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tab-btn]');
+    if (!b) return;
+    nav.querySelectorAll('button').forEach(function (x) { x.classList.remove('active'); });
+    b.classList.add('active');
+    document.querySelectorAll('[data-tab-panel]').forEach(function (p) {
+      p.hidden = p.dataset.tabPanel !== b.dataset.tabBtn;
+    });
+  });
+
+  function markDirty() {
+    var d = document.getElementById('dirty');
+    if (d) d.hidden = false;
+  }
+  document.querySelectorAll('[data-tab-panel] input, [data-tab-panel] select, [data-tab-panel] textarea').forEach(function (f) {
+    f.addEventListener('input', markDirty);
+    f.addEventListener('change', markDirty);
+  });
+
+  document.addEventListener('proto:act', function (e) {
+    var act = e.detail.act;
+    if (act === 'save' || act === 'save-all') {
+      document.getElementById('dirty').hidden = true;
+      P.toast('已保存：' + (act === 'save-all' ? '6 组设置' : '当前分组') + '（原型内不落库）');
+    }
+    if (act === 'revert') {
+      document.getElementById('f-name').value = '长夜将明';
+      document.getElementById('f-ratio').selectedIndex = 0;
+      document.getElementById('dirty').hidden = true;
+      P.toast('已撤销未保存的修改');
+    }
+    if (act === 'remove-member') {
+      var row = e.detail.el.closest('tr');
+      var name = row.querySelector('strong').textContent;
+      row.remove();
+      var n = document.querySelectorAll('#member-body tr').length;
+      document.getElementById('member-count').textContent = n + ' 人';
+      P.toast('已移除 ' + name + '：其项目权限即时失效，已签发链接不可用');
+    }
+    if (act === 'archive') {
+      if (!window.confirm('归档后项目转为只读，停止新任务与导出。继续？')) return;
+      P.toast('项目已归档（owner 可在项目空间恢复）');
+    }
+  });
+
+  document.addEventListener('proto:submit', function (e) {
+    var name = e.detail.name;
+    if (name === 'member') {
+      var d = e.detail.data;
+      P.addRow('#member-body', '<tr><td><div class="user-chip"><span class="avatar">' + P.esc(d.email.slice(0, 1).toUpperCase()) + '</span><div class="user-chip-text"><strong>' + P.esc(d.email.split('@')[0]) + '</strong><span>新成员</span></div></div></td><td><span class="tag">' + P.esc(d.org) + '</span></td><td><span class="tag">' + P.esc(d.role) + '</span></td><td class="mono">' + P.time().slice(0, 5) + '</td><td><button class="btn btn-quiet btn-sm" type="button" data-act="remove-member">移除</button></td></tr>');
+      document.getElementById('member-count').textContent = document.querySelectorAll('#member-body tr').length + ' 人';
+      P.toast('已添加成员并授予项目角色 ' + d.role);
+    }
+    if (name === 'profile') {
+      var p = e.detail.data;
+      var row = document.createElement('div');
+      row.className = 'profile-row';
+      row.innerHTML = '<div class="p-main"><strong>' + P.esc(p.name) + '</strong><span>' + P.esc(p.codec) + ' · ' + P.esc(p.bitrate) + ' · ' + P.esc(p.audio) + ' · ' + P.esc(p.res) + ' · ' + P.esc(p.usage) + '</span></div><span class="pill draft">待启用</span><button class="btn btn-quiet btn-sm" type="button" data-toast="Profile 只读，修改需新建版本">查看</button>';
+      var list = document.getElementById('profile-list');
+      list.insertBefore(row, list.firstElementChild);
+      P.toast('Profile 已创建：导出任务只能引用其快照');
+    }
+    if (name === 'transfer') {
+      P.toast('所有权已转移给 ' + e.detail.data.to + '；已写审计');
+    }
+    if (name === 'delete') {
+      if (e.detail.data.confirm.trim() !== '长夜将明') {
+        P.toast('项目名不一致，删除被拒绝；项目未发生任何变化');
+        return;
+      }
+      P.toast('删除请求已提交：需 administrator 二次确认后执行（原型到此为止）');
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>角色与权限 · 企业 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+<style>
+  .matrix th, .matrix td { text-align: center; }
+  .matrix th:first-child, .matrix td:first-child { text-align: left; }
+  .matrix .yes { color: var(--ok); font-family: var(--mono); font-size: 11px; }
+  .matrix .no { color: var(--line-strong); font-family: var(--mono); font-size: 11px; }
+  .role-head-card { padding: 14px 16px; border-bottom: 1px solid var(--line-soft); }
+  .role-head-card strong { font-size: 12.5px; display: block; }
+  .role-head-card small { font-family: var(--mono); font-size: 9px; color: var(--text-3); letter-spacing: 0.06em; display: block; margin-top: 4px; }
+</style>
+</head>
+<body data-page="roles">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Roles &amp; permissions</p>
+          <h1>角色与权限</h1>
+          <p class="lede">权限码是唯一事实来源（<span class="mono">PERMISSION_CATALOG</span>）。角色只是权限集合模板；项目内还有 producer / writer / director / artist / editor / reviewer 等项目角色。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-toast="原型：权限变更写审计；已登录会话按新权限重新计算">审计记录</button>
+          <button class="btn btn-primary" type="button" data-modal="modal-role">新建角色</button>
+        </div>
+      </div>
+
+      <section class="card">
+        <div class="card-head"><div><h2>权限矩阵</h2><span class="sub">6 角色 × 10 权限码</span></div><span class="mono" style="font-size: 10px; color: var(--text-3)">GET /api/v1/roles · POST /roles/{role_id}/assignments</span></div>
+        <div class="card-body tight">
+          <div class="table-wrap">
+            <table class="table matrix">
+              <thead>
+                <tr>
+                  <th style="width: 26%">权限码</th>
+                  <th>administrator</th>
+                  <th>producer</th>
+                  <th>writer</th>
+                  <th>artist</th>
+                  <th>editor</th>
+                  <th>reviewer</th>
+                </tr>
+              </thead>
+              <tbody id="matrix-body">
+                <tr><td><span class="mono">users:read</span><span class="sub">读取组织成员</span></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+                <tr><td><span class="mono">users:write</span><span class="sub">创建、更新、禁用成员</span></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+                <tr><td><span class="mono">roles:read</span><span class="sub">读取角色与权限</span></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+                <tr><td><span class="mono">roles:write</span><span class="sub">分配权限与角色</span></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+                <tr><td><span class="mono">organizations:read</span><span class="sub">读取组织与部门</span></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+                <tr><td><span class="mono">organizations:write</span><span class="sub">维护组织结构</span></td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+                <tr><td><span class="mono">projects:read</span><span class="sub">读取项目与项目资源</span></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+                <tr><td><span class="mono">projects:write</span><span class="sub">创建与更新项目内容</span></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+                <tr><td><span class="mono">projects:manage</span><span class="sub">管理项目成员与生命周期</span></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+                <tr><td><span class="mono">audit:read</span><span class="sub">读取审计记录</span></td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card-foot">
+          <span>矩阵与 <span class="mono">ROLE_TEMPLATES</span> 对齐；新增权限码必须同步角色模板与测试</span>
+          <span class="pill accent">review 权限不在 catalog，按项目级配置</span>
+        </div>
+      </section>
+
+      <div class="grid g-3">
+        <section class="card">
+          <div class="role-head-card"><strong>项目角色 · producer</strong><small>PROJECT ROLE</small></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px">制片人：项目生命周期、成员、预算与交付确认。</p>
+            <div class="permission-list" style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px">
+              <span class="tag">项目设置</span><span class="tag">成员授权</span><span class="tag">预算授权</span><span class="tag">交付归档</span>
+            </div>
+          </div>
+        </section>
+        <section class="card">
+          <div class="role-head-card"><strong>项目角色 · writer</strong><small>PROJECT ROLE</small></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px">编剧：故事圣经、剧本版本、场次与对白；不可审批自己的提交。</p>
+            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px">
+              <span class="tag">故事圣经</span><span class="tag">剧本</span><span class="tag">场次/对白</span>
+            </div>
+          </div>
+        </section>
+        <section class="card">
+          <div class="role-head-card"><strong>项目角色 · reviewer</strong><small>PROJECT ROLE</small></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px">审核：项目级统一 review 权限；对具体版本作出决定，拒绝产生返工。</p>
+            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px">
+              <span class="tag">质量检查</span><span class="tag">审核决定</span><span class="tag">返工</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="grid g-2">
+        <section class="card" style="margin-bottom: 0">
+          <div class="card-head"><h2>权限边界说明</h2><span class="sub">BOUNDARY</span></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11.5px; margin-bottom: 10px">前端隐藏按钮不是授权手段。所有项目资源接口在服务端再次校验：用户身份、项目成员关系、资源 <span class="mono">project_id</span> 一致性。</p>
+            <div class="kv">
+              <div class="row"><dt>跨项目读取</dt><dd><span class="pill fail">403</span></dd></div>
+              <div class="row"><dt>跨项目资产引用</dt><dd><span class="pill fail">403</span></dd></div>
+              <div class="row"><dt>URL 复用下载</dt><dd><span class="pill fail">401 / 过期失效</span></dd></div>
+              <div class="row"><dt>角色撤销后的请求</dt><dd><span class="pill fail">403 · 60s 内生效</span></dd></div>
+            </div>
+          </div>
+        </section>
+        <section class="card" style="margin-bottom: 0">
+          <div class="card-head"><h2>角色分配记录</h2><span class="sub">ASSIGNMENT</span></div>
+          <div class="card-body tight">
+            <div style="padding: 4px 16px 10px">
+              <div class="ref-line"><span class="tag">11-18 09:30</span><span>王斌 授予 苏禾 <b>writer</b>（长夜将明）</span></div>
+              <div class="ref-line"><span class="tag">11-17 16:02</span><span>王斌 授予 陆行 <b>reviewer</b>（长夜将明）</span></div>
+              <div class="ref-line"><span class="tag">11-02 10:11</span><span>王斌 停用 何雨（suspended）</span></div>
+            </div>
+          </div>
+          <div class="card-foot"><span>历史审计不随业务删除级联丢失</span><a class="btn btn-quiet btn-sm" href="dashboard.html">返回工作台</a></div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-role-backdrop" data-close-modal="modal-role"></div>
+<div class="modal" id="modal-role" role="dialog" aria-modal="true">
+  <div class="modal-head"><p class="eyebrow">New role</p><h2>新建组织角色</h2></div>
+  <form data-form="role">
+  <div class="modal-body">
+    <label class="field"><span>角色名称</span><input class="control" name="role" placeholder="如：外包剪辑" required /></label>
+    <div class="section-label">权限</div>
+    <div class="check-row"><input type="checkbox" name="perm" value="projects:read" /><span>projects:read <span class="code">读取项目资源</span></span></div>
+    <div class="check-row"><input type="checkbox" name="perm" value="projects:write" /><span>projects:write <span class="code">创建与更新内容</span></span></div>
+    <div class="check-row"><input type="checkbox" name="perm" value="projects:manage" /><span>projects:manage <span class="code">成员与生命周期</span></span></div>
+    <div class="check-row"><input type="checkbox" name="perm" value="audit:read" /><span>audit:read <span class="code">审计记录</span></span></div>
+    <div class="banner warn" style="margin-top: 10px"><i data-icon="alert"></i><div>新增角色必须同步更新权限矩阵文档、OpenAPI 权限声明与负向测试，否则不允许合并。</div></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-default" type="button" data-close-modal="modal-role">取消</button>
+    <button class="btn btn-primary" type="submit">创建角色</button>
+  </div>
+  </form>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  document.addEventListener('proto:submit', function (e) {
+    if (e.detail.name !== 'role') return;
+    var d = e.detail.data;
+    var name = (d.role || '').trim();
+    if (!name) { e.detail.keepOpen = true; P.toast('角色名称必填'); return; }
+    var thead = document.querySelector('.matrix thead tr');
+    var exists = Array.prototype.some.call(thead.querySelectorAll('th'), function (th) { return th.textContent.trim() === name; });
+    if (exists) { e.detail.keepOpen = true; P.toast('409：角色 ' + name + ' 已存在，未重复创建'); return; }
+    var perms = d.perm ? (Array.isArray(d.perm) ? d.perm : [d.perm]) : [];
+    var th = document.createElement('th');
+    th.textContent = name;
+    thead.appendChild(th);
+    document.querySelectorAll('#matrix-body tr').forEach(function (tr) {
+      var code = tr.querySelector('td .mono').textContent.trim();
+      var td = document.createElement('td');
+      var has = perms.indexOf(code) > -1;
+      td.className = has ? 'yes' : 'no';
+      td.textContent = has ? '✓' : '—';
+      tr.appendChild(td);
+    });
+    var sub = document.querySelector('.card-head .sub');
+    if (sub) sub.textContent = (thead.querySelectorAll('th').length - 1) + ' 角色 × 10 权限码';
+    P.toast('角色「' + name + '」已创建：授予 ' + (perms.length ? perms.join('、') : '0 项权限') + '；需补文档与负向测试方可合并');
+  });
+</script>
+</body>
+</html>

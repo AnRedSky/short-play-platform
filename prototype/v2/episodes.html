@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分集规划 · 长夜将明</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="episodes" data-crumb="分集规划">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <nav class="tabs" id="tabs"></nav>
+    <main class="content">
+      <div class="board-head">
+        <div>
+          <div class="eyebrow">SEASON PLAN · 12 EPISODES</div>
+          <h1>分集规划</h1>
+          <div class="sub">24 章 → 12 集 · 单集 2′18″ · 总时长 27′36″ · 分集 v2 已确认 · 剧本 <span id="lock-count">2 / 12</span> 已锁定</div>
+        </div>
+        <div class="board-tools">
+          <span class="chip green" id="season-chip"><span class="dot green"></span>分集已锁定</span>
+          <button class="btn btn-sm" data-open="drawer-map"><span data-i="layers"></span>章节映射</button>
+          <a class="btn btn-sm" href="import.html"><span data-i="list"></span>原著与实体</a>
+          <button class="btn btn-sm" data-open="modal-resplit"><span data-i="refresh"></span>重分集</button>
+          <button class="btn btn-primary btn-sm" id="btn-batch"><span data-i="sparkles"></span>批量生成剧本</button>
+        </div>
+      </div>
+
+      <div class="season-overview">
+        <div class="panel" style="padding:12px 14px"><div class="sub">章节覆盖</div><div style="font-size:20px;margin-top:4px">24 / 24</div><div class="note">无遗漏 · 2 章 / 集</div></div>
+        <div class="panel" style="padding:12px 14px"><div class="sub">单集时长</div><div style="font-size:20px;margin-top:4px">2′18″</div><div class="note">9:16 · 30fps · 竖屏</div></div>
+        <div class="panel" style="padding:12px 14px"><div class="sub">整季时长</div><div style="font-size:20px;margin-top:4px">27′36″</div><div class="note">12 集合计 · 不含片头</div></div>
+        <div class="panel" style="padding:12px 14px"><div class="sub">剧本预算</div><div style="font-size:20px;margin-top:4px">¥10.80</div><div class="note">¥0.90 / 集 · 文本模型</div></div>
+      </div>
+
+      <div class="season-bar" id="season-bar"></div>
+
+      <div class="batch-panel" id="batch-panel" style="display:none">
+        <span data-i="cpu"></span>
+        <div style="min-width:150px"><b>批量生成 12 集剧本</b><br><span id="batch-note">准备中</span></div>
+        <div class="bar"><i id="batch-bar"></i></div>
+        <b class="mono" id="batch-count">0 / 9</b>
+        <button class="btn btn-sm" id="btn-batch-stop">取消</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px">
+        <div class="seg" id="ep-filter">
+          <button class="is-active" data-f="all">全部 12</button>
+          <button data-f="locked">已锁定 2</button>
+          <button data-f="draft">草稿 1</button>
+          <button data-f="pending">待生成 9</button>
+        </div>
+        <span class="spacer" style="flex:1"></span>
+        <span class="sub">点击集卡打开剧本 · 待生成集可单独生成</span>
+      </div>
+
+      <div class="ep-grid" id="ep-grid"></div>
+    </main>
+  </div>
+</div>
+
+<div class="drawer" id="drawer-map">
+  <div class="drawer-head"><div><div class="eyebrow">CHAPTER → EPISODE</div><h2>章节映射</h2><div class="sub" style="margin-top:4px">24 章 → 12 集 · 修改后保存为分集 v3 草稿</div></div><button class="icon-btn" data-close data-i="x"></button></div>
+  <div class="drawer-body">
+    <div class="banner" style="margin-bottom:10px"><span data-i="alert"></span><div class="grow">改动只调整章节归属，不改写原著。保存后，受影响的剧本会标记为「章节映射已变化」。</div></div>
+    <div class="map-sum"><span>已分配 <b id="map-count">24 / 24</b></span><span>改动 <b id="map-changed">0</b> 处</span></div>
+    <div class="map-head"><span>CHAPTER</span><span>章节标题</span><span>字数</span><span>归属集</span></div>
+    <div id="map-list"></div>
+  </div>
+  <div class="drawer-foot"><button class="btn" data-close>取消</button><button class="btn btn-primary" id="btn-map-save">保存分集 v3 <span data-i="arrowRight"></span></button></div>
+</div>
+
+<div class="scrim"></div>
+
+<div class="modal" id="modal-batch">
+  <div class="modal-head"><div><div class="eyebrow">BATCH GENERATION</div><h2 style="margin:4px 0 0;font-size:18px">批量生成整季剧本</h2></div><button class="icon-btn" data-close data-i="x"></button></div>
+  <div class="modal-body">
+    <div class="input-grid">
+      <label class="field"><span>生成范围</span><select><option>全部待生成 · 9 集</option><option>仅选中的 3 集</option><option>仅失败的 0 集</option></select></label>
+      <label class="field"><span>并发</span><select><option>3 集并行</option><option>串行 · 更省预算</option></select></label>
+      <label class="field"><span>单集场次</span><select><option>8 场</option><option>6 场</option><option>10 场</option></select></label>
+      <label class="field"><span>结尾钩子</span><select><option>沿用分集规划</option><option>物件型</option><option>反转型</option></select></label>
+    </div>
+    <div class="banner" style="margin-top:12px"><span data-i="wallet"></span><div class="grow">9 集 × ¥0.90 = ¥8.10 · 预计 5 分钟 · 不生成画面。单集失败不影响其他集。</div></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>取消</button><button class="btn btn-primary" id="btn-batch-start">开始生成 9 集 <span data-i="arrowRight"></span></button></div>
+</div>
+
+<div class="modal" id="modal-resplit">
+  <div class="modal-head"><div><div class="eyebrow">RE-SPLIT</div><h2 style="margin:4px 0 0;font-size:18px">重新分集</h2></div><button class="icon-btn" data-close data-i="x"></button></div>
+  <div class="modal-body">
+    <div class="banner danger"><span data-i="alert"></span><div class="grow">重分集会生成新的分集版本，已锁定的 2 集剧本不会自动改写，但会标记为「章节映射已变化」。下游分镜与画面需要重新校验。</div></div>
+    <div class="input-grid" style="margin-top:12px">
+      <label class="field"><span>分集策略</span><select><option>章节对齐 · 2 章 / 集</option><option>钩子优先</option><option>人物弧优先</option></select></label>
+      <label class="field"><span>目标集数</span><select><option>12 集</option><option>8 集</option><option>16 集</option></select></label>
+    </div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>取消</button><button class="btn btn-primary" id="btn-resplit">生成分集 v3 草稿 <span data-i="arrowRight"></span></button></div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const EPS = [
+    { no: '01', title: '雨夜归人', log: '林未在雨夜走进旧书店，发现一本没有编号的借阅册。', src: '第 1–2 章', hook: '借阅册里被擦掉的名字', dur: '2′18″', scenes: 8, lines: 19, status: 'locked', act: '起' },
+    { no: '02', title: '没有编号的册子', log: '周砚拒绝解释借阅册的来源，林未在后巷被人跟踪。', src: '第 3–4 章', hook: '陌生人说：有人让我带句话', dur: '2′16″', scenes: 6, lines: 14, status: 'locked', act: '起' },
+    { no: '03', title: '后巷的陌生人', log: '一盘没有录完的磁带，把七年前的失踪案重新拉回两人面前。', src: '第 5–6 章', hook: '磁带最后两个字：别回去', dur: '2′20″', scenes: 6, lines: 12, status: 'draft', act: '起' },
+    { no: '04', title: '天台上的同谋', log: '林未与周砚第一次摊牌，决定共同查清被删除的记忆。', src: '第 7–8 章', hook: '门口出现第二把一模一样的伞', dur: '2′17″', scenes: 6, lines: 13, status: 'pending', act: '承' },
+    { no: '05', title: '失物招领', log: '旧城区失物招领处里，一只保存七年的牛皮纸袋被取走。', src: '第 9–10 章', hook: '取件签名栏是空的', dur: '2′19″', scenes: 6, lines: 11, status: 'pending', act: '承' },
+    { no: '06', title: '陈九的账本', log: '陈九的账本上没有金额，只有日期、名字和一串编号。', src: '第 11–12 章', hook: '林未的名字，日期是明天', dur: '2′18″', scenes: 6, lines: 15, status: 'pending', act: '承' },
+    { no: '07', title: '借阅规则', log: '借阅册扉页的三条规则，第三条被墨水涂掉，只剩“归还”。', src: '第 13–14 章', hook: '借阅册重 1.7 公斤', dur: '2′15″', scenes: 6, lines: 12, status: 'pending', act: '转' },
+    { no: '08', title: '第七个夜晚', log: '旧书店停电，周砚在黑暗里说出自己七年前做了什么。', src: '第 15–16 章', hook: '停电时，借阅册自己翻了一页', dur: '2′22″', scenes: 6, lines: 16, status: 'pending', act: '转' },
+    { no: '09', title: '归还', log: '林未第一次尝试把名字从纸上取下来，失败并触发记忆反噬。', src: '第 17–18 章', hook: '她想起了不属于自己的童年', dur: '2′18″', scenes: 6, lines: 14, status: 'pending', act: '转' },
+    { no: '10', title: '没有寄出的信', log: '一封七年前写给林未的信，寄件人一栏被撕掉。', src: '第 19–20 章', hook: '信封里只有一张旧书店收据', dur: '2′17″', scenes: 6, lines: 13, status: 'pending', act: '合' },
+    { no: '11', title: '红线的另一端', log: '红线系着的钥匙，打开的是柜台最下层那只抽屉。', src: '第 21–22 章', hook: '抽屉里是第二本借阅册', dur: '2′19″', scenes: 6, lines: 12, status: 'pending', act: '合' },
+    { no: '12', title: '长夜将明', log: '雨停之前，林未在最后一页看见自己的名字，日期是明天。', src: '第 23–24 章', hook: '她第一次没有把借阅册带走', dur: '2′24″', scenes: 7, lines: 17, status: 'pending', act: '合' }
+  ];
+
+  let filter = 'all';
+  const MAP = [
+    ['01', '雨夜归人', '3,820', '01'], ['02', '没有编号的借阅册', '3,410', '01'],
+    ['03', '被擦掉的名字', '3,760', '02'], ['04', '后巷的陌生人', '3,240', '02'],
+    ['05', '一盘没有录完的磁带', '3,980', '03'], ['06', '天台上的同谋', '3,650', '03'],
+    ['07', '第二把伞', '3,310', '04'], ['08', '旧城区的失物招领', '4,120', '04'],
+    ['09', '陈九的账本', '3,870', '05'], ['10', '那场没有发生的火灾', '4,050', '05'],
+    ['11', '删除记忆的人', '3,930', '06'], ['12', '雨停之前', '4,180', '06'],
+    ['13', '借阅规则', '3,540', '07'], ['14', '名字的重量', '3,690', '07'],
+    ['15', '第七个夜晚', '3,880', '08'], ['16', '归还', '4,020', '08'],
+    ['17', '失物招领处', '3,470', '09'], ['18', '没有寄出的信', '3,760', '09'],
+    ['19', '红线的另一端', '3,620', '10'], ['20', '最后一页', '4,140', '10'],
+    ['21', '天亮以后', '3,580', '11'], ['22', '第二个名字', '3,820', '11'],
+    ['23', '还书人', '4,060', '12'], ['24', '长夜将明', '4,220', '12']
+  ];
+  const MAP_ORIGIN = MAP.map(x => x[3]);
+  let batchTimer = null;
+  let batchQueue = [];
+  let batchIndex = 0;
+
+  try {
+    const saved = JSON.parse(localStorage.getItem('sp_v2_eps') || '[]');
+    EPS.forEach(e => {
+      const s = saved.find(x => x.no === e.no);
+      if (s && s.status && s.status !== 'running') e.status = s.status;
+    });
+  } catch (err) {}
+
+  function statusMeta(s) {
+    if (s === 'locked') return { chip: 'green', label: '已锁定' };
+    if (s === 'draft') return { chip: 'yellow', label: '草稿' };
+    if (s === 'running') return { chip: 'yellow', label: '生成中' };
+    return { chip: '', label: '待生成' };
+  }
+
+  function cardHTML(e) {
+    const m = statusMeta(e.status);
+    const on = e.status === 'locked' || e.status === 'draft';
+    return '<article class="ep-card' + (e.status === 'locked' ? ' is-done' : e.status === 'draft' ? ' is-draft' : e.status === 'running' ? ' is-running' : '') + '" data-ep="' + e.no + '" data-status="' + e.status + '">' +
+      '<div class="ep-top"><span class="no">EP' + e.no + '</span><span class="chip">' + e.act + '</span><span class="chip ' + m.chip + '">' + m.label + '</span></div>' +
+      '<h3>' + e.title + '</h3>' +
+      '<p class="ep-log">' + e.log + '</p>' +
+      '<div class="ep-source">' + e.src + ' · ' + e.dur + '</div>' +
+      '<div class="ep-beats"><span class="on"></span><span class="on"></span><span class="on"></span><span class="' + (e.status === 'pending' ? '' : 'on') + '"></span></div>' +
+      '<div class="ep-hook">' + e.hook + '</div>' +
+      '<div class="ep-foot"><span>' + e.scenes + ' 场 · ' + e.lines + ' 对白</span>' +
+      '<button class="btn btn-sm ' + (on ? '' : 'btn-primary') + '" data-action="' + (on ? 'open' : 'gen') + '">' + (on ? '打开剧本' : '生成剧本') + '</button></div></article>';
+  }
+
+  function counts() {
+    const c = { locked: 0, draft: 0, pending: 0 };
+    EPS.forEach(e => { if (e.status === 'locked') c.locked++; else if (e.status === 'draft' || e.status === 'running') c.draft++; else c.pending++; });
+    return c;
+  }
+
+  function renderBar() {
+    document.getElementById('season-bar').innerHTML = EPS.map(e =>
+      '<div class="season-seg ' + (e.status === 'locked' ? 'is-locked' : e.status === 'draft' || e.status === 'running' ? 'is-draft' : 'is-pending') + '"><b>EP' + e.no + '</b><span>' + e.hook.slice(0, 6) + '</span></div>'
+    ).join('');
+  }
+
+  function renderGrid() {
+    const list = EPS.filter(e => filter === 'all' || (filter === 'locked' && e.status === 'locked') || (filter === 'draft' && (e.status === 'draft' || e.status === 'running')) || (filter === 'pending' && e.status === 'pending'));
+    document.getElementById('ep-grid').innerHTML = list.map(cardHTML).join('');
+    try { localStorage.setItem('sp_v2_eps', JSON.stringify(EPS.map(e => ({ no: e.no, status: e.status, version: 1 })))); } catch (err) {}
+    const c = counts();
+    document.getElementById('lock-count').textContent = c.locked + ' / 12';
+    document.querySelectorAll('#ep-filter button').forEach(b => {
+      if (b.dataset.f === 'locked') b.textContent = '已锁定 ' + c.locked;
+      if (b.dataset.f === 'draft') b.textContent = '草稿 ' + c.draft;
+      if (b.dataset.f === 'pending') b.textContent = '待生成 ' + c.pending;
+    });
+    if (hydrateIcons) hydrateIcons(document.getElementById('ep-grid'));
+  }
+
+  function openEp(e) {
+    if (e.status === 'pending') { P.toast('该集还没有剧本，请先生成或批量生成'); return; }
+    location.href = 'script.html?ep=' + e.no;
+  }
+
+  function generateOne(e) {
+    if (e.status === 'running') return;
+    e.status = 'running';
+    renderGrid(); renderBar();
+    P.toast('EP' + e.no + ' 剧本生成中 · 约 35 秒');
+    setTimeout(() => {
+      e.status = 'draft';
+      renderGrid(); renderBar();
+      P.toast('EP' + e.no + ' 剧本草稿已生成，可打开精修');
+    }, 1300);
+  }
+
+  document.getElementById('ep-grid').addEventListener('click', e => {
+    const card = e.target.closest('[data-ep]');
+    if (!card) return;
+    const ep = EPS.find(x => x.no === card.dataset.ep);
+    const btn = e.target.closest('[data-action]');
+    if (btn && btn.dataset.action === 'gen') { generateOne(ep); return; }
+    if (e.target.closest('button')) { openEp(ep); return; }
+    openEp(ep);
+  });
+
+  document.querySelectorAll('#ep-filter button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#ep-filter button').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      filter = btn.dataset.f;
+      renderGrid();
+    });
+  });
+
+  document.getElementById('btn-batch').addEventListener('click', () => P.openModal('modal-batch'));
+  document.getElementById('btn-batch-start').addEventListener('click', () => {
+    P.closeModals();
+    startBatch();
+  });
+
+  function startBatch() {
+    if (batchTimer) return;
+    batchQueue = EPS.filter(e => e.status === 'pending');
+    if (!batchQueue.length) { P.toast('没有待生成的集'); return; }
+    batchIndex = 0;
+    filter = 'all';
+    document.querySelectorAll('#ep-filter button').forEach(b => b.classList.toggle('is-active', b.dataset.f === 'all'));
+    document.getElementById('batch-panel').style.display = 'flex';
+    document.getElementById('batch-count').textContent = '0 / ' + batchQueue.length;
+    document.getElementById('batch-note').textContent = '生成第 1 集 · 并发 3';
+    batchQueue[0].status = 'running';
+    renderGrid(); renderBar();
+    batchTimer = setInterval(() => {
+      const cur = batchQueue[batchIndex];
+      if (cur && cur.status === 'running') cur.status = 'draft';
+      batchIndex += 1;
+      if (batchIndex >= batchQueue.length) {
+        clearInterval(batchTimer); batchTimer = null;
+        document.getElementById('batch-bar').style.width = '100%';
+        document.getElementById('batch-count').textContent = batchQueue.length + ' / ' + batchQueue.length;
+        document.getElementById('batch-note').textContent = '完成 · 9 集草稿已生成';
+        document.getElementById('btn-batch-stop').textContent = '关闭';
+        renderGrid(); renderBar();
+        document.getElementById('season-chip').innerHTML = '<span class="dot green"></span>9 集草稿待审';
+        P.toast('9 集剧本草稿已生成 · 共 ¥8.10');
+        return;
+      }
+      batchQueue[batchIndex].status = 'running';
+      document.getElementById('batch-count').textContent = batchIndex + ' / ' + batchQueue.length;
+      document.getElementById('batch-note').textContent = '生成 EP' + batchQueue[batchIndex].no + ' · 并发 3';
+      document.getElementById('batch-bar').style.width = Math.round(batchIndex / batchQueue.length * 100) + '%';
+      renderGrid(); renderBar();
+    }, 700);
+  }
+
+  document.getElementById('btn-batch-stop').addEventListener('click', () => {
+    if (batchTimer) {
+      clearInterval(batchTimer); batchTimer = null;
+      batchQueue.forEach(e => { if (e.status === 'running') e.status = 'draft'; });
+      P.toast('已取消批量生成，已完成的集保留草稿');
+      renderGrid(); renderBar();
+    } else {
+      document.getElementById('batch-panel').style.display = 'none';
+    }
+  });
+
+  document.getElementById('btn-resplit').addEventListener('click', () => {
+    P.closeModals();
+    P.toast('分集 v3 草稿已生成 · 已锁定剧本已标记为章节映射变化');
+    document.getElementById('season-chip').innerHTML = '<span class="dot yellow"></span>分集 v3 草稿';
+  });
+
+  function renderMap() {
+    document.getElementById('map-list').innerHTML = MAP.map((m, i) => {
+      const assigned = !!m[3];
+      return '<div class="map-row' + (m[3] !== MAP_ORIGIN[i] ? ' is-changed' : '') + '">' +
+        '<span class="no">' + m[0] + '</span><span>' + m[1] + '</span><span class="mono" style="font-size:8px;color:var(--dim)">' + m[2] + '</span>' +
+        '<select data-map="' + i + '"><option value=""' + (!assigned ? ' selected' : '') + '>未分配</option>' +
+        EPS.map(e => '<option value="' + e.no + '"' + (m[3] === e.no ? ' selected' : '') + '>EP' + e.no + ' · ' + e.title + '</option>').join('') +
+        '</select></div>';
+    }).join('');
+    updateMapSum();
+  }
+
+  function updateMapSum() {
+    const assigned = MAP.filter(m => m[3]).length;
+    const changed = MAP.filter((m, i) => m[3] !== MAP_ORIGIN[i]).length;
+    document.getElementById('map-count').textContent = assigned + ' / 24';
+    document.getElementById('map-changed').textContent = changed;
+    document.getElementById('btn-map-save').innerHTML = '保存分集 v3 ' + (changed ? '（' + changed + ' 处改动）' : '') + ' <span data-i="arrowRight"></span>';
+    hydrateIcons(document.getElementById('btn-map-save'));
+  }
+
+  document.getElementById('map-list').addEventListener('change', e => {
+    const sel = e.target.closest('[data-map]');
+    if (!sel) return;
+    MAP[parseInt(sel.dataset.map, 10)][3] = sel.value;
+    renderMap();
+  });
+
+  document.getElementById('btn-map-save').addEventListener('click', () => {
+    const changed = MAP.filter((m, i) => m[3] !== MAP_ORIGIN[i]).length;
+    if (!changed) { P.toast('章节映射没有改动'); return; }
+    P.closeDrawers();
+    document.getElementById('season-chip').innerHTML = '<span class="dot yellow"></span>分集 v3 草稿';
+    document.getElementById('season-chip').className = 'chip yellow';
+    P.toast('已保存分集 v3 · ' + changed + ' 章改归属，受影响剧本标记为章节映射变化');
+  });
+
+  renderBar();
+  renderGrid();
+  renderMap();
+  if (location.hash === '#map') P.openDrawer('drawer-map');
+})();
+</script>
+</body>
+</html>

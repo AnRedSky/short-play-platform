@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI 任务 · 长夜将明 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+</head>
+<body data-page="tasks" data-project="1">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+    <nav class="module-tabs" data-tabs></nav>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Generation tasks</p>
+          <h1>AI 任务</h1>
+          <p class="lede">任务与每次外部调用分开记录：Task 保存输入快照，Attempt 记录真实调用、成本与错误。查询快照是最终事实，事件只用于通知。</p>
+        </div>
+        <div class="head-actions">
+          <a class="btn btn-default" href="providers.html">Provider 配置</a>
+          <button class="btn btn-primary" type="button" data-act="new-task">新建任务</button>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat">
+          <div class="k"><span>运行中</span><span class="pill running plain">live</span></div>
+          <p class="v" id="c-running">6</p>
+          <p class="d">队列等待 3 · 执行 4 · 超时 0</p>
+        </div>
+        <div class="stat">
+          <div class="k"><span>今日成功率</span><span class="pill pass plain">88.3%</span></div>
+          <p class="v">113<small>/ 128</small></p>
+          <p class="d">失败 9 · 取消 2 · 重试 4</p>
+        </div>
+        <div class="stat">
+          <div class="k"><span>今日成本</span><span class="pill review plain">含估算</span></div>
+          <p class="v">¥ 1,102</p>
+          <p class="d">已结算 ¥ 986 · 估算 ¥ 116</p>
+        </div>
+        <div class="stat">
+          <div class="k"><span>平均耗时</span><span class="pill plain">p95</span></div>
+          <p class="v">01:12</p>
+          <p class="d">视频 01:12 · 图像 00:19 · TTS 00:06</p>
+        </div>
+      </div>
+
+      <div class="banner info">
+        <i data-icon="info"></i>
+        <div><b>Mork Provider 已配置 3 项能力。</b>凭据以 <span class="mono">secret_ref</span> 保存，数据库不存明文；未配置的能力调用返回 <span class="mono">PROVIDER_NOT_CONFIGURED</span>，不回退 Mock。</div>
+        <button class="btn btn-default btn-sm b-act" type="button" data-toggle="demo-nc">演示未配置态</button>
+      </div>
+
+      <div class="banner error" id="demo-nc" hidden>
+        <i data-icon="alert"></i>
+        <div><b>PROVIDER_NOT_CONFIGURED：</b>能力 <span class="mono">audio.speech</span> 缺少有效凭据，任务创建失败（HTTP 503 / 业务错误码）。页面不会显示“已生成”，也不会写入 Artifact。</div>
+      </div>
+
+      <section class="card">
+        <div class="toolbar">
+          <div class="search"><i data-icon="search"></i><input placeholder="搜索 task_id、Shot 编号或模型" /></div>
+          <div data-filter-group="tasks" style="display: flex; gap: 6px">
+            <button class="chip active" data-filter="all" type="button">全部<span class="c">128</span></button>
+            <button class="chip" data-filter="running" type="button">运行中<span class="c">6</span></button>
+            <button class="chip" data-filter="failed" type="button">失败<span class="c">9</span></button>
+            <button class="chip" data-filter="retry" type="button">等待重试<span class="c">4</span></button>
+            <button class="chip" data-filter="succeeded" type="button">成功<span class="c">109</span></button>
+          </div>
+          <div class="spacer"></div>
+          <select class="control" aria-label="按能力筛选">
+            <option>全部能力</option>
+            <option>video.generate</option>
+            <option>image.generate</option>
+            <option>audio.speech</option>
+            <option>text.complete</option>
+          </select>
+          <span class="count">近 7 日 · 按创建时间降序</span>
+        </div>
+
+        <div class="table-wrap" data-status-group="tasks">
+          <table class="table">
+            <thead>
+              <tr><th>任务</th><th>能力 / 模型</th><th>对象</th><th>状态</th><th>Attempt</th><th>耗时</th><th>成本</th><th style="width: 108px"></th></tr>
+            </thead>
+            <tbody id="task-body">
+              <tr data-row data-status="running" data-drawer="drawer-task">
+                <td><span class="mono">gt_7f31c8</span><span class="sub">11-18 15:02 · 陈默</span></td>
+                <td>video.generate<span class="sub mono">mork-video-2</span></td>
+                <td>shot 1-04 <span class="sub">合同 v2</span></td>
+                <td><span class="pill running">running</span></td>
+                <td class="num">#2</td>
+                <td class="mono">01:12</td>
+                <td class="mono">—</td>
+                <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-act="cancel">取消</button></td>
+              </tr>
+              <tr data-row data-status="retry" data-drawer="drawer-task">
+                <td><span class="mono">gt_7f2e04</span><span class="sub">11-18 14:31 · 陈默</span></td>
+                <td>video.generate<span class="sub mono">mork-video-2</span></td>
+                <td>shot 1-03 <span class="sub">合同 v3</span></td>
+                <td><span class="pill retry">retry_wait</span></td>
+                <td class="num">#2</td>
+                <td class="mono">00:48</td>
+                <td class="mono">¥ 4.20</td>
+                <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-act="retry">重试</button></td>
+              </tr>
+              <tr data-row data-status="failed" data-drawer="drawer-task">
+                <td><span class="mono">gt_7f2b71</span><span class="sub">11-18 14:12 · 苏禾</span></td>
+                <td>audio.speech<span class="sub mono">mork-tts</span></td>
+                <td>1-02 对白 · 林晚</span>
+                <td><span class="pill failed">failed</span></td>
+                <td class="num">#1</td>
+                <td class="mono">00:06</td>
+                <td class="mono">¥ 0.03</td>
+                <td class="t-actions"><button class="btn btn-quiet btn-sm" type="button" data-act="detail">详情</button></td>
+              </tr>
+              <tr data-row data-status="succeeded" data-drawer="drawer-task">
+                <td><span class="mono">gt_7f319a</span><span class="sub">11-18 13:58 · 方屿</span></td>
+                <td>image.generate<span class="sub mono">mork-image-3</span></td>
+                <td>角色 · 沈砚 v3</span></td>
+                <td><span class="pill succeeded">succeeded</span></td>
+                <td class="num">#1</td>
+                <td class="mono">00:19</td>
+                <td class="mono">¥ 0.42</td>
+                <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-drawer="drawer-task">产物</button></td>
+              </tr>
+              <tr data-row data-status="running" data-drawer="drawer-task">
+                <td><span class="mono">gt_7f3042</span><span class="sub">11-18 13:40 · 方屿</span></td>
+                <td>image.generate<span class="sub mono">mork-image-3</span></td>
+                <td>场景 · 旧书店 v3</span></td>
+                <td><span class="pill running">running</span></td>
+                <td class="num">#1</td>
+                <td class="mono">00:22</td>
+                <td class="mono">—</td>
+                <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-act="cancel">取消</button></td>
+              </tr>
+              <tr data-row data-status="succeeded" data-drawer="drawer-task">
+                <td><span class="mono">gt_7f2d18</span><span class="sub">11-18 11:05 · 苏禾</span></td>
+                <td>text.complete<span class="sub mono">mork-llm</span></td>
+                <td>EP02 剧本摘要</span></td>
+                <td><span class="pill succeeded">succeeded</span></td>
+                <td class="num">#1</td>
+                <td class="mono">00:04</td>
+                <td class="mono">¥ 0.06</td>
+                <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-drawer="drawer-task">产物</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pager"><span>显示 6 / 128</span><div class="pages"><span class="on">1</span><span>2</span><span>…</span><span>22</span></div></div>
+      </section>
+
+      <div class="grid g-2">
+        <section class="card">
+          <div class="card-head"><h2>任务状态机</h2><span class="sub">TASK / ATTEMPT</span></div>
+          <div class="card-body">
+            <div class="kv">
+              <div class="row"><dt><span class="pill queued">pending</span> → <span class="pill queued">queued</span></dt><dd>事务内写 Task + Outbox，Dispatcher 投递</dd></div>
+              <div class="row"><dt><span class="pill running">running</span></dt><dd>Worker 租约领取，创建 Attempt 后调用 Provider</dd></div>
+              <div class="row"><dt><span class="pill retry">retry_wait</span></dt><dd>429 / 5xx / 网络瞬断；指数退避 + jitter</dd></div>
+              <div class="row"><dt><span class="pill succeeded">succeeded</span></dt><dd>产物校验 checksum 与媒体可读性后登记</dd></div>
+              <div class="row"><dt><span class="pill failed">failed</span></dt><dd>不可重试错误，或超过最大重试次数</dd></div>
+              <div class="row"><dt><span class="pill draft">cancel_requested → cancelled</span></dt><dd>协作取消；供应商不支持时记录真实结果</dd></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2>可靠性边界</h2><span class="sub">RECOVERY</span></div>
+          <div class="card-body">
+            <div class="banner warn"><i data-icon="alert"></i><div><b>未知结果不重复收费。</b>供应商超时后先查询其真实状态，确认未产生结果再重试。</div></div>
+            <div class="banner info"><i data-icon="info"></i><div><b>Worker 崩溃：</b>心跳与租约识别孤儿任务，从 Checkpoint 恢复；重复回调按 <span class="mono">provider_task_id</span> 幂等。</div></div>
+            <div class="banner ok"><i data-icon="check"></i><div><b>产物原子发布：</b>先写临时对象 → 校验 → 再登记 AssetVersion，失败不产生可见产物。</div></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="drawer-backdrop" id="drawer-task-backdrop" data-close-drawer="drawer-task"></div>
+<aside class="drawer" id="drawer-task">
+  <div class="drawer-head">
+    <div><p class="eyebrow">Task detail</p><h2 id="task-title">gt_7f2e04 · 失败与重试</h2></div>
+    <button class="close-x" type="button" data-close-drawer="drawer-task"><i data-icon="x"></i></button>
+  </div>
+  <div class="drawer-body">
+    <div class="banner error"><i data-icon="alert"></i><div><b>最近一次失败：QA_FRAME_RATIO_MISMATCH</b>输出画幅 16:9，与合同要求 9:16 不一致；属可诊断失败，可通过修订合同或调整参数重试。</div></div>
+
+    <div class="section-label">任务</div>
+    <div class="kv">
+      <div class="row"><dt>能力 / 模型</dt><dd id="d-cap">video.generate · mork-video-2</dd></div>
+      <div class="row"><dt>对象</dt><dd id="d-obj">shot 1-03 · 合同 v3</dd></div>
+      <div class="row"><dt>输入快照</dt><dd class="mono">sc_1-03_v3 · 沈砚 v2 / 书店 v2 / 怀表 v2</dd></div>
+      <div class="row"><dt>幂等键</dt><dd class="mono">shot_1-03_v3_video</dd></div>
+      <div class="row"><dt>总成本</dt><dd class="mono">¥ 4.20（2 次 Attempt）</dd></div>
+      <div class="row"><dt>创建 / 更新</dt><dd class="mono">14:31:02 / 14:33:18</dd></div>
+    </div>
+
+    <div class="section-label">Attempts</div>
+    <div class="attempt-list">
+      <div class="attempt is-fail">
+        <div class="a-head"><span class="pill failed">failed</span><b>#2</b><span class="mono" style="font-size: 9px">00:48 · ¥ 2.10</span></div>
+        <div class="a-meta">provider_task_id pt_9c31 · 输出 artifact av_2c91 · checksum 校验通过</div>
+        <div class="a-err">QA_FRAME_RATIO_MISMATCH · 1920×1080 ≠ 1080×1920 · retryable=false（需修合同）</div>
+      </div>
+      <div class="attempt is-fail">
+        <div class="a-head"><span class="pill failed">failed</span><b>#1</b><span class="mono" style="font-size: 9px">01:02 · ¥ 2.10</span></div>
+        <div class="a-meta">provider_task_id pt_9b07 · 无产物</div>
+        <div class="a-err">PROVIDER_429 · 限流，退避 16s 后自动重试 · retryable=true</div>
+      </div>
+      <div class="attempt is-run">
+        <div class="a-head"><span class="pill queued">准备中</span><b>#3</b><span class="mono" style="font-size: 9px">待执行</span></div>
+        <div class="a-meta">手动重试 · 新 Attempt 不覆盖历史结果</div>
+      </div>
+    </div>
+
+    <div class="section-label">产物</div>
+    <div class="asset-thumb" style="aspect-ratio: 16/9; border-radius: 3px">
+      <span class="glyph">ARTIFACT av_2c91<br>1920×1080 · 41.0s · H.264</span>
+      <span class="stale-tag">FAIL · 不可用</span>
+    </div>
+    <p class="lede" style="font-size: 10px; margin-top: 8px">未通过质量门禁的产物保留在项目内供诊断，但不可被时间线引用，也不出现在导出候选里。</p>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn btn-danger" type="button" data-toast="原型：已请求取消；外部供应商不支持取消时会记录真实最终状态">取消任务</button>
+    <button class="btn btn-default" type="button" data-toast="原型：打开完整日志（含 request_id 与 correlation_id）">查看日志</button>
+    <button class="btn btn-primary" type="button" data-close-drawer="drawer-task" data-toast="原型：已创建 Attempt #3，进入 retry_wait">重试</button>
+  </div>
+</aside>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var tbody = document.getElementById('task-body');
+  var drawerTitle = document.getElementById('task-title');
+
+  function cells(tr) {
+    return {
+      id: tr.cells[0].querySelector('.mono').textContent.trim(),
+      cap: tr.cells[1].childNodes[0].textContent.trim(),
+      model: tr.cells[1].querySelector('.sub').textContent.trim(),
+      obj: tr.cells[2].childNodes[0].textContent.trim(),
+      state: tr.dataset.status
+    };
+  }
+
+  function setState(tr, state) {
+    tr.dataset.status = state;
+    tr.dataset.state = state;
+    var pill = tr.cells[3].querySelector('.pill');
+    P.setPill(pill, state, state);
+  }
+
+  tbody.addEventListener('click', function (e) {
+    if (e.target.closest('button,a')) return;
+    var tr = e.target.closest('tr');
+    if (!tr) return;
+    var c = cells(tr);
+    drawerTitle.textContent = c.id + ' · 任务详情';
+    document.getElementById('d-cap').textContent = c.cap + ' · ' + c.model;
+    document.getElementById('d-obj').textContent = c.obj;
+  });
+
+  document.addEventListener('proto:act', function (e) {
+    var act = e.detail.act;
+    var tr = e.detail.el.closest('tr');
+
+    if (act === 'new-task') {
+      var id = 'gt_' + Math.random().toString(16).slice(2, 8);
+      var row = P.addRow(tbody, '<tr data-row data-status="running" data-drawer="drawer-task">' +
+        '<td><span class="mono">' + id + '</span><span class="sub">' + P.time() + ' · 陈默</span></td>' +
+        '<td>video.generate<span class="sub mono">mork-video-2</span></td>' +
+        '<td>shot 1-05 <span class="sub">合同 v1</span></td>' +
+        '<td><span class="pill running">running</span></td><td class="num">#1</td><td class="mono">00:00</td><td class="mono">—</td>' +
+        '<td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-act="cancel">取消</button></td></tr>');
+      P.count('#c-running', parseInt(document.getElementById('c-running').textContent, 10) + 1);
+      P.toast('任务 ' + id + ' 已创建：输入快照 shot 1-05 contract v1，Attempt #1 已入队');
+      return;
+    }
+
+    if (!tr) return;
+    var c = cells(tr);
+
+    if (act === 'detail') {
+      if (c.state === 'failed') P.toast(c.id + '：PROVIDER_AUTH_FAILED（凭据无效，不可重试，需轮换密钥）');
+      else if (c.state === 'succeeded') P.toast(c.id + '：产物已登记 AssetVersion，可被时间线引用');
+      return;
+    }
+
+    if (act === 'cancel') {
+      if (c.state !== 'running') { P.toast('仅 running 任务可取消（当前 ' + c.state + '）'); return; }
+      setState(tr, 'cancel_requested');
+      tr.querySelector('td.t-actions').innerHTML = '<button class="btn btn-quiet btn-sm" type="button" data-act="detail">详情</button>';
+      P.toast('已请求取消（cancel_requested）：等待供应商确认，不提前伪造 cancelled');
+      setTimeout(function () {
+        setState(tr, 'cancelled');
+        P.count('#c-running', Math.max(0, parseInt(document.getElementById('c-running').textContent, 10) - 1));
+        P.toast('供应商已确认取消：任务最终为 cancelled，已产生的调用仍计费');
+      }, 2200);
+      return;
+    }
+
+    if (act === 'retry') {
+      if (c.state === 'failed' && tr.cells[3].textContent.indexOf('failed') > -1) {
+        P.toast('不可重试：凭据类失败需先修复 Provider 配置');
+        return;
+      }
+      var n = parseInt(tr.cells[4].textContent.replace('#', ''), 10) + 1;
+      tr.cells[4].textContent = '#' + n;
+      setState(tr, 'running');
+      tr.cells[5].textContent = '00:00';
+      tr.querySelector('td.t-actions').innerHTML = '<button class="btn btn-default btn-sm" type="button" data-act="cancel">取消</button>';
+      P.count('#c-running', parseInt(document.getElementById('c-running').textContent, 10) + 1);
+      P.toast('已创建 Attempt #' + n + '（退避 32s 后执行）；历史 Attempt 与失败原因保留');
+    }
+  });
+</script>
+</body>
+</html>

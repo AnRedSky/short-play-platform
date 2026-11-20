@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>成员 · 企业 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+</head>
+<body data-page="users">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Members</p>
+          <h1>成员</h1>
+          <p class="lede">组织成员与项目成员是两层关系：组织身份不自动获得项目权限。禁用成员会立即撤销会话，并阻止其创建新任务。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-toast="原型：批量导入为受限能力，仅接受模板格式，需管理员复核">批量导入</button>
+          <button class="btn btn-primary" type="button" data-modal="modal-invite"><i data-icon="plus"></i>添加成员</button>
+        </div>
+      </div>
+
+      <section class="card">
+        <div class="toolbar">
+          <div class="search"><i data-icon="search"></i><input placeholder="搜索姓名、邮箱或部门" /></div>
+          <select class="control" aria-label="按状态筛选"><option>全部状态</option><option>active</option><option>invited</option><option>suspended</option><option>deactivated</option></select>
+          <select class="control" aria-label="按组织角色筛选"><option>全部组织角色</option><option>administrator</option><option>producer</option><option>writer</option><option>artist</option><option>editor</option><option>reviewer</option></select>
+          <div class="spacer"></div>
+          <span class="count">9 名成员 · 1 个待接受邀请</span>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th style="width: 28%">成员</th><th>部门</th><th>组织角色</th><th>项目角色（长夜将明）</th><th>状态</th><th>最近登录</th><th style="width: 96px"></th></tr>
+            </thead>
+            <tbody id="member-body">
+              <tr data-row>
+                <td><span class="row-title">陈默</span><span class="sub mono">chen.mo@xingye.studio</span></td>
+                <td>制片部</td>
+                <td><span class="tag">producer</span></td>
+                <td>producer <span class="pill accent">owner</span></td>
+                <td><span class="pill pass">active</span></td>
+                <td class="mono">刚刚</td>
+                <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：编辑成员组织角色与项目角色（提交后立即影响后续请求）">编辑</button></td>
+              </tr>
+              <tr data-row>
+                <td><span class="row-title">苏禾</span><span class="sub mono">su.he@xingye.studio</span></td>
+                <td>编剧组</td>
+                <td><span class="tag">writer</span></td>
+                <td>writer</td>
+                <td><span class="pill pass">active</span></td>
+                <td class="mono">12 分钟前</td>
+                <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：编辑成员">编辑</button></td>
+              </tr>
+              <tr data-row>
+                <td><span class="row-title">方屿</span><span class="sub mono">fang.yu@xingye.studio</span></td>
+                <td>美术组</td>
+                <td><span class="tag">artist</span></td>
+                <td>artist</td>
+                <td><span class="pill pass">active</span></td>
+                <td class="mono">1 小时前</td>
+                <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：编辑成员">编辑</button></td>
+              </tr>
+              <tr data-row>
+                <td><span class="row-title">顾青</span><span class="sub mono">gu.qing@xingye.studio</span></td>
+                <td>后期组</td>
+                <td><span class="tag">editor</span></td>
+                <td>editor</td>
+                <td><span class="pill pass">active</span></td>
+                <td class="mono">2 小时前</td>
+                <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：编辑成员">编辑</button></td>
+              </tr>
+              <tr data-row>
+                <td><span class="row-title">陆行</span><span class="sub mono">lu.xing@xingye.studio</span></td>
+                <td>制片部</td>
+                <td><span class="tag">reviewer</span></td>
+                <td>reviewer <span class="tag">review 权限</span></td>
+                <td><span class="pill pass">active</span></td>
+                <td class="mono">3 小时前</td>
+                <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：编辑成员">编辑</button></td>
+              </tr>
+              <tr data-row>
+                <td><span class="row-title">王斌</span><span class="sub mono">wang.bin@xingye.studio</span></td>
+                <td>导演组</td>
+                <td><span class="tag">producer</span></td>
+                <td>director <span class="tag">review 权限</span></td>
+                <td><span class="pill pass">active</span></td>
+                <td class="mono">昨天</td>
+                <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：编辑成员">编辑</button></td>
+              </tr>
+              <tr data-row>
+                <td><span class="row-title">赵一</span><span class="sub mono">zhao.yi@xingye.studio</span></td>
+                <td>编剧组</td>
+                <td><span class="tag">writer</span></td>
+                <td>—</td>
+                <td><span class="pill review">invited</span></td>
+                <td class="mono">—</td>
+                <td class="t-actions"><button class="btn btn-quiet btn-sm" type="button" data-toast="原型：重发邀请邮件；重复邮箱返回 409">重发</button></td>
+              </tr>
+              <tr data-row>
+                <td><span class="row-title">何雨</span><span class="sub mono">he.yu@xingye.studio</span></td>
+                <td>后期组</td>
+                <td><span class="tag">editor</span></td>
+                <td>—</td>
+                <td><span class="pill fail">suspended</span></td>
+                <td class="mono">11-02</td>
+                <td class="t-actions"><button class="btn btn-quiet btn-sm" type="button" data-toast="原型：恢复成员需管理员权限并写审计">恢复</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pager"><span>显示 8 / 9</span><div class="pages"><span class="on">1</span><span>2</span></div></div>
+      </section>
+
+      <div class="grid g-3">
+        <section class="card">
+          <div class="card-head"><h2>成员生命周期</h2><span class="sub">STATE</span></div>
+          <div class="card-body">
+            <div class="kv">
+              <div class="row"><dt><span class="pill review">invited</span></dt><dd>已发出邀请，等待接受；无任何数据访问权</dd></div>
+              <div class="row"><dt><span class="pill pass">active</span></dt><dd>可登录；仍受项目成员关系限制</dd></div>
+              <div class="row"><dt><span class="pill fail">suspended</span></dt><dd>暂停：登录与新建任务被拒，历史产物保留原操作者</dd></div>
+              <div class="row"><dt><span class="pill draft">deactivated</span></dt><dd>已离职：撤销全部会话，不可恢复为同一身份</dd></div>
+            </div>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>权限计算</h2><span class="sub">INTERSECTION</span></div>
+          <div class="card-body">
+            <div class="pass-row"><span class="pm">✓</span><span>身份有效 + 会话未撤销</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>组织成员关系有效</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>项目成员关系有效</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>项目角色授予具体 permission</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>资源 classification 再收紧</span></div>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>高危操作</h2><span class="sub">AUDIT</span></div>
+          <div class="card-body">
+            <div class="banner warn"><i data-icon="alert"></i><div>禁用成员、撤销会话、变更角色均写审计（actor / action / resource / request_id）。</div></div>
+            <div class="banner info" style="margin-top: 10px"><i data-icon="info"></i><div>撤销后 60 秒内新请求不可访问（验收口径）；已签发的下载链接同样失效。</div></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-invite-backdrop" data-close-modal="modal-invite"></div>
+<div class="modal" id="modal-invite" role="dialog" aria-modal="true" style="width: 500px">
+  <div class="modal-head"><p class="eyebrow">Add member</p><h2>添加成员</h2></div>
+  <form data-form="invite">
+  <div class="modal-body">
+    <div class="form-grid">
+      <label class="field full"><span>工作邮箱</span><input class="control" name="email" placeholder="name@xingye.studio" required /><span class="hint">重复邮箱或已存在邀请返回 409</span></label>
+      <label class="field"><span>部门</span><select class="control" name="dept"><option>编剧组</option><option>制片部</option><option>美术组</option><option>后期组</option></select></label>
+      <label class="field"><span>组织角色</span><select class="control" name="role"><option>writer</option><option>artist</option><option>editor</option><option>reviewer</option></select></label>
+      <label class="field full"><span>同时加入项目</span><select class="control" name="project"><option>长夜将明 · writer</option><option>暂不加入项目</option></select></label>
+    </div>
+    <div class="banner info" style="margin-top: 12px"><i data-icon="info"></i><div>邀请链接 72 小时有效；对方接受后才成为 active 成员。</div></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-default" type="button" data-close-modal="modal-invite">取消</button>
+    <button class="btn btn-primary" type="submit">发送邀请</button>
+  </div>
+  </form>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  document.addEventListener('proto:submit', function (e) {
+    if (e.detail.name !== 'invite') return;
+    var d = e.detail.data;
+    var email = (d.email || '').trim();
+    if (!email) { e.detail.keepOpen = true; P.toast('工作邮箱必填'); return; }
+    if (email.indexOf('@') < 0) { e.detail.keepOpen = true; P.toast('邮箱格式不正确，邀请未发送'); return; }
+    var exists = Array.prototype.some.call(document.querySelectorAll('#member-body small, #member-body .sub'), function (n) {
+      return n.textContent.indexOf(email) > -1;
+    });
+    if (exists) { e.detail.keepOpen = true; P.toast('409：该邮箱已是成员或已收到邀请，未重复发送'); return; }
+    var name = email.split('@')[0];
+    var row = P.addRow('#member-body', '<tr><td><span class="mono">' + P.esc(name) + '</span><span class="sub">' + P.esc(email) + '</span></td>' +
+      '<td>' + P.esc(d.dept) + '</td><td><span class="tag">' + P.esc(d.role) + '</span></td><td>—</td>' +
+      '<td><span class="pill review">invited</span></td><td class="mono">—</td>' +
+      '<td><button class="btn btn-quiet btn-sm" type="button" data-toast="已重发邀请邮件；链接有效期重置为 72 小时">重发</button></td></tr>');
+    if (row) row.dataset.status = 'invited';
+    var foot = document.querySelector('.card-foot .count, .card-foot span');
+    P.toast('邀请已发送给 ' + email + '：状态 invited，不产生数据访问权；72 小时内有效');
+  });
+</script>
+</body>
+</html>

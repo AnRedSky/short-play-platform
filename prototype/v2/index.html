@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>项目 · 长夜制作台</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="index" data-crumb="项目库">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main class="content">
+<div class="landing">
+  <section class="projects-hero">
+    <div class="projects-hero-copy">
+      <div class="eyebrow">SHORT-PLAY STUDIO · PROTOTYPE V2</div>
+      <h1>把一集短剧<br>从一句话做到<em>成片</em></h1>
+      <p>剧本、资产、分镜、画面、配音、质检与时间线在同一条制作链上。每一步只确认输入、点一次生成，模型产出后自动解锁下一步。</p>
+      <div style="display:flex;gap:10px">
+        <a class="btn btn-primary btn-lg" href="studio.html"><span data-i="play"></span>继续制作 EP01</a>
+        <button class="btn btn-lg" data-open="modal-new"><span data-i="plus"></span>新建短剧</button>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><b>3</b><span>进行中</span></div>
+        <div class="hero-stat"><b>12</b><span>集 · 长夜将明</span></div>
+        <div class="hero-stat"><b>7</b><span>制作步骤</span></div>
+        <div class="hero-stat"><b>7</b><span>已接入模型</span></div>
+      </div>
+      <div class="hero-flow">
+        <span class="is-done"><i>01</i>设定</span><span class="is-done"><i>02</i>剧本</span><span class="is-done"><i>03</i>资产分镜</span><span class="is-now"><i>04</i>画面</span><span><i>05</i>配音</span><span><i>06</i>质检</span><span><i>07</i>导出</span>
+      </div>
+    </div>
+    <div class="projects-hero-art">
+      <img src="assets/img/hero-rain.jpg" alt="雨夜书店剧照">
+      <div class="caption"><b>长夜将明 · EP01</b>雨夜书店 / 24 SHOTS / 2′18″ / 9:16</div>
+    </div>
+  </section>
+
+  <section class="projects-section">
+    <div class="section-head">
+      <div>
+        <h2>我的项目</h2>
+        <p>4 个项目 · 按最近更新排序</p>
+      </div>
+      <div class="section-tools">
+        <div class="seg" id="proj-filter">
+          <button class="is-active" data-f="all">全部</button>
+          <button data-f="active">进行中</button>
+          <button data-f="done">已完成</button>
+        </div>
+        <button class="btn btn-sm"><span data-i="search"></span>搜索</button>
+        <button class="btn btn-sm btn-primary" data-open="modal-new"><span data-i="plus"></span>新建短剧</button>
+      </div>
+    </div>
+
+    <div class="project-grid" id="project-grid">
+      <article class="project-card" data-status="active" data-href="studio.html">
+        <div class="project-cover">
+          <img src="assets/img/hero-rain.jpg" alt="长夜将明">
+          <span class="stamp chip accent">制作中</span>
+          <span class="progress-badge">62%</span>
+          <div class="title"><h3>长夜将明</h3><span>NYJM-26 · 都市悬疑 · 竖屏 9:16</span></div>
+        </div>
+        <div class="project-body">
+          <div class="project-meta"><span><b>12</b> 集</span><span><b>24</b> 镜 / 集</span><span><b>¥3,796</b> 预算余额</span></div>
+          <div class="project-progress"><i style="width:62%"></i></div>
+          <div class="project-foot">
+            <span class="project-stage"><span class="dot accent"></span>04 画面生成 · 2 个任务运行中</span>
+            <a class="btn btn-sm" href="studio.html">进入 <span data-i="arrowRight"></span></a>
+          </div>
+        </div>
+      </article>
+
+      <article class="project-card" data-status="active" data-sample="春日回信">
+        <div class="project-cover">
+          <img src="assets/img/alley.jpg" alt="春日回信">
+          <span class="stamp chip green">质检通过</span>
+          <span class="progress-badge">81%</span>
+          <div class="title"><h3>春日回信</h3><span>CRHX-07 · 治愈爱情 · 竖屏 9:16</span></div>
+        </div>
+        <div class="project-body">
+          <div class="project-meta"><span><b>8</b> 集</span><span><b>19</b> 镜 / 集</span><span><b>¥1,284</b> 预算余额</span></div>
+          <div class="project-progress"><i style="width:81%"></i></div>
+          <div class="project-foot">
+            <span class="project-stage"><span class="dot green"></span>06 质检与审核 · 待人工通过</span>
+            <button class="btn btn-sm" data-sample="春日回信">去审核 <span data-i="arrowRight"></span></button>
+          </div>
+        </div>
+      </article>
+
+      <article class="project-card" data-status="active" data-sample="无声证词">
+        <div class="project-cover">
+          <img src="assets/img/rooftop.jpg" alt="无声证词">
+          <span class="stamp chip red">生成受阻</span>
+          <span class="progress-badge">34%</span>
+          <div class="title"><h3>无声证词</h3><span>WSZZ-26 · 犯罪悬疑 · 竖屏 9:16</span></div>
+        </div>
+        <div class="project-body">
+          <div class="project-meta"><span><b>10</b> 集</span><span><b>26</b> 镜 / 集</span><span><b>¥2,402</b> 预算余额</span></div>
+          <div class="project-progress"><i style="width:34%;background:var(--red)"></i></div>
+          <div class="project-foot">
+            <span class="project-stage"><span class="dot red"></span>04 画面生成 · 画幅不一致</span>
+            <button class="btn btn-sm" data-sample="无声证词">修复 <span data-i="arrowRight"></span></button>
+          </div>
+        </div>
+      </article>
+
+      <article class="project-card" data-status="done" data-sample="深夜食堂 · 番外">
+        <div class="project-cover">
+          <img src="assets/img/bookstore.jpg" alt="深夜食堂·番外">
+          <span class="stamp chip">已交付</span>
+          <span class="progress-badge">100%</span>
+          <div class="title"><h3>深夜食堂 · 番外</h3><span>SYST-26 · 美食温情 · 横屏 16:9</span></div>
+        </div>
+        <div class="project-body">
+          <div class="project-meta"><span><b>4</b> 集</span><span><b>18</b> 镜 / 集</span><span><b>¥0</b> 预算余额</span></div>
+          <div class="project-progress"><i style="width:100%;background:var(--green)"></i></div>
+          <div class="project-foot">
+            <span class="project-stage"><span class="dot green"></span>07 时间线与交付 · 4 集成片</span>
+            <button class="btn btn-sm" data-sample="深夜食堂 · 番外">查看 <span data-i="arrowRight"></span></button>
+          </div>
+        </div>
+      </article>
+
+      <button class="project-card is-new" data-open="modal-new">
+        <div>
+          <div style="font-size:26px;margin-bottom:8px">+</div>
+          <div style="font-size:12px">新建短剧项目</div>
+          <div style="font-size:9px;margin-top:4px;color:var(--dim)">从题材、画幅与集数开始</div>
+        </div>
+      </button>
+    </div>
+  </section>
+</div>
+    </main>
+  </div>
+</div>
+
+<div class="scrim"></div>
+<div class="modal" id="modal-new">
+  <div class="modal-head">
+    <div><div class="eyebrow">NEW PROJECT</div><h2 style="margin:4px 0 0;font-size:18px">新建短剧</h2></div>
+    <button class="icon-btn" data-close data-i="x"></button>
+  </div>
+  <div class="modal-body">
+    <div class="mode-tabs" id="np-mode">
+      <button class="is-active" data-mode="idea">一句话原创</button>
+      <button data-mode="novel">导入小说改编</button>
+    </div>
+    <div id="np-idea">
+      <label class="field"><span>一句话创意</span><textarea id="np-idea-text" placeholder="例如：雨夜旧书店里，每一本旧书都替失踪的人保管着一个名字。">雨夜旧书店里，每一本旧书都替失踪的人保管着一个名字。</textarea></label>
+    </div>
+    <div id="np-novel" style="display:none">
+      <div class="dropzone">
+        <div class="dz-icon" data-i="upload"></div>
+        <b>拖入小说文件，或点击选择</b>
+        <span>支持 DOCX / TXT / Markdown / PDF · 单文件 ≤ 20 MB<br>系统会先切章、抽取人物与设定，不会改写原文</span>
+      </div>
+      <div class="file-row">
+        <span class="ext">DOCX</span>
+        <div class="grow"><b>长夜将明_原著_24章.docx</b><span>86,420 字 · 24 章 · 边界置信度 96%</span></div>
+        <span class="chip green">可解析</span>
+      </div>
+      <div class="banner" style="margin-top:10px"><span data-i="alert"></span><div class="grow">导入后先切章、确认人物与分集边界，不会直接生成剧本；章节边界和实体都可以逐章修正。</div></div>
+    </div>
+    <div class="input-grid" style="margin-top:14px">
+      <label class="field"><span>项目名称</span><input value="长夜将明 · 第二季" id="np-name"></label>
+      <label class="field"><span>项目编码</span><input value="NYJM-S2" class="mono" id="np-code"></label>
+      <label class="field"><span>题材</span><select><option>都市悬疑</option><option>治愈爱情</option><option>犯罪悬疑</option><option>古风权谋</option></select></label>
+      <label class="field"><span>画幅 / 帧率</span><select><option>9:16 · 30fps</option><option>16:9 · 30fps</option><option>4:3 · 25fps</option></select></label>
+      <label class="field"><span>集数</span><input value="12" type="number" min="1" max="60"></label>
+      <label class="field"><span>单集时长</span><select><option>2–3 分钟</option><option>1–2 分钟</option><option>3–5 分钟</option></select></label>
+    </div>
+    <p style="color:var(--dim);font-size:10px;margin:14px 0 0" id="np-note">创建后进入制作台。第 01 步由剧本模型生成故事圣经，不需要先配置完整工作流。</p>
+  </div>
+  <div class="modal-foot">
+    <button class="btn" data-close>取消</button>
+    <button class="btn btn-primary" id="np-create">创建并进入 <span data-i="arrowRight"></span></button>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+  document.querySelectorAll('#proj-filter button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#proj-filter button').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      const f = btn.dataset.f;
+      document.querySelectorAll('#project-grid .project-card').forEach(card => {
+        const st = card.dataset.status;
+        card.style.display = (f === 'all' || st === f || (f === 'done' && st === 'done') || (f === 'active' && st === 'active')) ? '' : 'none';
+      });
+    });
+  });
+  document.querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', () => P.openModal(el.dataset.open)));
+  document.querySelectorAll('#project-grid .project-card[data-href]').forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.closest('a,button')) return;
+      location.href = card.dataset.href;
+    });
+  });
+  document.querySelectorAll('[data-sample]').forEach(el => {
+    el.addEventListener('click', e => {
+      if (el.matches('button')) e.stopPropagation();
+      P.toast('「' + el.dataset.sample + '」为展厅样例；完整可操作流程在《长夜将明》');
+    });
+  });
+  let npMode = 'idea';
+  document.querySelectorAll('#np-mode button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#np-mode button').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      npMode = btn.dataset.mode;
+      document.getElementById('np-idea').style.display = npMode === 'idea' ? '' : 'none';
+      document.getElementById('np-novel').style.display = npMode === 'novel' ? '' : 'none';
+      document.getElementById('np-name').value = npMode === 'novel' ? '长夜将明 · 小说改编' : '长夜将明 · 第二季';
+      document.getElementById('np-code').value = npMode === 'novel' ? 'NYJM-N24' : 'NYJM-S2';
+      document.getElementById('np-create').innerHTML = npMode === 'novel' ? '解析小说并进入 <span data-i="arrowRight"></span>' : '创建并进入 <span data-i="arrowRight"></span>';
+      document.getElementById('np-note').textContent = npMode === 'novel'
+        ? '创建后先进入小说改编：切章、实体确认、生成 12 集分集规划，再批量生成剧本。'
+        : '创建后进入制作台。第 01 步由剧本模型生成故事圣经，不需要先配置完整工作流。';
+      hydrateIcons(document.getElementById('np-create'));
+    });
+  });
+
+  document.querySelector('#np-novel .dropzone').addEventListener('click', () => {
+    P.toast('演示环境已载入《长夜将明》24 章示例文件，可直接开始解析');
+  });
+  document.getElementById('np-create').addEventListener('click', () => {
+    const name = document.getElementById('np-name').value.trim() || '未命名短剧';
+    const code = document.getElementById('np-code').value.trim() || 'NEW-01';
+    const target = npMode === 'novel' ? 'import.html' : 'studio.html';
+    P.toast(npMode === 'novel' ? '已创建「' + name + '」· 正在解析 24 章原著' : '已创建项目「' + name + '」· ' + code + '，演示环境将载入《长夜将明》示例数据');
+    P.closeModals();
+    setTimeout(() => location.href = target, 900);
+  });
+
+  if (location.hash === '#new' || location.hash === '#novel') {
+    setTimeout(() => {
+      P.openModal('modal-new');
+      if (location.hash === '#novel') document.querySelector('#np-mode [data-mode="novel"]').click();
+    }, 300);
+  }
+</script>
+</body>
+</html>

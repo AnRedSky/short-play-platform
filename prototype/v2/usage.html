@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>成本 · 长夜制作台</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="usage" data-crumb="成本">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <nav class="tabs" id="tabs"></nav>
+    <main class="content">
+      <div class="board-head">
+        <div>
+          <div class="eyebrow">COST & USAGE · PROJECT</div>
+          <h1>成本与用量</h1>
+          <div class="sub">按步骤、按集、按模型归集 · 只统计成功调用 · 失败调用单独列出</div>
+        </div>
+        <div class="board-tools">
+          <div class="seg" id="range-seg"><button class="is-active" data-r="month">本月</button><button data-r="last">上月</button><button data-r="quarter">本季</button></div>
+          <button class="btn btn-sm" id="btn-csv"><span data-i="download"></span>导出账单</button>
+        </div>
+      </div>
+
+      <div class="budget-grid" style="margin-bottom:14px">
+        <div class="kpi-card"><div class="label">本月消耗</div><div class="value">¥<span id="k-total">6,204</span><small>/ 10,000</small></div><div class="delta">预算使用 62% · 预计月底 8,900</div><div class="mini-bar" style="width:100%;margin-top:10px"><i style="width:62%"></i></div></div>
+        <div class="kpi-card"><div class="label">今日消耗</div><div class="value">¥<span id="k-today">41.30</span></div><div class="delta">视频 ¥31.20 · 图像 ¥8.60 · 语音 ¥1.50</div></div>
+        <div class="kpi-card"><div class="label">单集平均</div><div class="value">¥<span id="k-ep">517</span></div><div class="delta">12 集预计 ¥6,204</div></div>
+        <div class="kpi-card"><div class="label">失败浪费</div><div class="value">¥<span id="k-waste">86</span></div><div class="delta down">占总量 1.4% · 可优化</div></div>
+      </div>
+
+      <div class="usage-layout">
+        <section class="panel">
+          <div class="panel-head"><div><h2>按集消耗</h2><span class="sub">EPISODE · CNY</span></div><span class="chip">12 集</span></div>
+          <div class="panel-body">
+            <div class="usage-chart" id="usage-chart"></div>
+            <div class="usage-foot">
+              <div><span>最贵单集</span><b>EP03 · ¥604</b></div>
+              <div><span>单镜头平均</span><b>¥21.5</b></div>
+              <div><span>失败重跑</span><b>6 次 · ¥86</b></div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="side-stack">
+          <section class="panel">
+            <div class="panel-head"><h2>按能力</h2><span class="sub">CAPABILITY</span></div>
+            <div class="panel-body">
+              <div class="bar-row"><span>视频生成</span><div class="track"><i style="width:68%"></i></div><b>¥4,204</b></div>
+              <div class="bar-row"><span>图像生成</span><div class="track"><i style="width:18%"></i></div><b>¥1,104</b></div>
+              <div class="bar-row"><span>文本</span><div class="track"><i style="width:7%"></i></div><b>¥402</b></div>
+              <div class="bar-row"><span>语音</span><div class="track"><i style="width:5%"></i></div><b>¥314</b></div>
+              <div class="bar-row"><span>质检</span><div class="track"><i style="width:3%"></i></div><b>¥180</b></div>
+              <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft);font-size:10px;color:var(--dim);line-height:1.7">视频生成占 68%，是成本主因。缩短单条时长或提高 take 命中率可直接降本。</div>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>预算提醒</h2><span class="sub">ALERT</span></div>
+            <div class="panel-body">
+              <div class="qa-item" style="padding-top:0"><span class="qa-mark pass">✓</span><div class="txt"><b>50% 提醒</b><span>已于 11-08 触发 · 邮件</span></div></div>
+              <div class="qa-item"><span class="qa-mark warn">!</span><div class="txt"><b>80% 提醒</b><span>预计 11-24 触发</span></div></div>
+              <div class="qa-item"><span class="qa-mark">·</span><div class="txt"><b>停止阈值</b><span>100% 时暂停新视频任务</span></div></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <section class="panel" style="margin-top:14px">
+        <div class="panel-head"><div><h2>最近计费</h2><span class="sub">LEDGER</span></div><span class="sub">只统计成功调用</span></div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>时间</th><th>任务</th><th>能力 / 模型</th><th>对象</th><th>用量</th><th>金额</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr><td class="num">11-18 10:42</td><td class="name"><b>视频 · 1-04 借阅册</b><span>gt_7f31c8</span></td><td><span class="chip">video · mork-video-2</span></td><td>EP01 / SHOT 04</td><td class="num">5.0s</td><td class="num">¥3.20</td><td><span class="chip accent">运行中</span></td></tr>
+              <tr><td class="num">11-18 10:38</td><td class="name"><b>语音 · 对白 03</b><span>gt_7e88b2</span></td><td><span class="chip">speech · moss-tts-cn</span></td><td>EP01 / L03</td><td class="num">1.2k 字</td><td class="num">¥0.18</td><td><span class="chip accent">运行中</span></td></tr>
+              <tr><td class="num">11-18 10:22</td><td class="name"><b>图像 · 林未 REF v2</b><span>gt_7f319a</span></td><td><span class="chip">image · mork-image-3</span></td><td>角色 / 林未</td><td class="num">2 张</td><td class="num">¥0.84</td><td><span class="chip green">成功</span></td></tr>
+              <tr><td class="num">11-18 09:58</td><td class="name"><b>视频 · 1-10 天台</b><span>gt_7d91c0</span></td><td><span class="chip">video · mork-video-2</span></td><td>EP01 / SHOT 10</td><td class="num">3.0s</td><td class="num">¥3.60</td><td><span class="chip red">失败</span></td></tr>
+              <tr><td class="num">11-18 09:36</td><td class="name"><b>文本 · 剧本 v6</b><span>gt_7d7a33</span></td><td><span class="chip">text · mork-llm-7b</span></td><td>EP01 / 剧本</td><td class="num">28k tokens</td><td class="num">¥0.90</td><td><span class="chip green">成功</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const DATA = {
+    month: { total: '6,204', today: '41.30', ep: '517', waste: '86', pct: 62, vals: [512, 488, 604, 566, 418, 512, 508, 474, 542, 486, 394, 288] },
+    last: { total: '4,816', today: '—', ep: '401', waste: '62', pct: 48, vals: [402, 380, 468, 436, 330, 412, 455, 344, 428, 392, 285, 214] },
+    quarter: { total: '18,902', today: '41.30', ep: '525', waste: '244', pct: 63, vals: [578, 542, 662, 618, 466, 560, 604, 532, 596, 548, 442, 352] }
+  };
+
+  function renderBars(d) {
+    const max = Math.max.apply(null, d.vals);
+    document.getElementById('usage-chart').innerHTML = d.vals.map((v, i) =>
+      '<div class="ubar"><div class="col"><i class="' + (i === 2 ? 'hot' : '') + '" style="height:' + Math.round(v / max * 100) + '%"></i></div><span class="idx">EP' + String(i + 1).padStart(2, '0') + '<b>¥' + v + '</b></span></div>'
+    ).join('');
+  }
+
+  function apply(d) {
+    document.getElementById('k-total').textContent = d.total;
+    document.getElementById('k-today').textContent = d.today;
+    document.getElementById('k-ep').textContent = d.ep;
+    document.getElementById('k-waste').textContent = d.waste;
+    renderBars(d);
+  }
+
+  document.querySelectorAll('#range-seg button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#range-seg button').forEach(x => x.classList.remove('is-active'));
+    b.classList.add('is-active');
+    apply(DATA[b.dataset.r]);
+    P.toast('已切换统计周期：' + b.textContent);
+  }));
+
+  document.getElementById('btn-csv').addEventListener('click', () => {
+    const text = 'month,total,today,per_episode,waste\n2026-11,6204,41.30,517,86\n';
+    P.download('cost-ledger-2026-11.csv', text, 'text/csv');
+    P.toast('账单已导出 cost-ledger-2026-11.csv');
+  });
+
+  apply(DATA.month);
+})();
+</script>
+</body>
+</html>

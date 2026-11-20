@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>审核 · 长夜将明 EP01</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="review" data-crumb="审核">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <nav class="tabs" id="tabs"></nav>
+    <main class="content">
+      <div class="board-head">
+        <div>
+          <div class="eyebrow">REVIEW DESK · PROJECT LEVEL</div>
+          <h1>质量与审核</h1>
+          <div class="sub">一次通过即生效 · 无多级会签 · 退回不继承旧结论</div>
+        </div>
+        <div class="board-tools">
+          <span class="chip yellow"><span class="dot yellow"></span>7 待审</span>
+          <span class="chip red">1 FAIL</span>
+          <button class="btn btn-sm"><span data-i="eye"></span>对比上一版</button>
+        </div>
+      </div>
+
+      <div id="review-banner"></div>
+
+      <div class="review-layout">
+        <section class="panel">
+          <div class="panel-head" style="padding:13px 14px"><h2>待审队列</h2><span class="sub">7 ITEMS</span></div>
+          <div class="review-queue" id="review-queue"></div>
+        </section>
+
+        <section>
+          <div class="player-shell">
+            <div class="player-frame">
+              <img src="assets/img/hero-rain.jpg" alt="EP01 画面">
+              <button class="play" id="btn-play"><span data-i="play"></span></button>
+              <span class="tc">00:01:12:08 / 00:02:18:00</span>
+            </div>
+            <div class="player-bar">
+              <button class="icon-btn" id="btn-play2"><span data-i="play"></span></button>
+              <span class="time">00:01:12</span>
+              <div class="track"><i id="play-fill" style="width:52%"></i><em id="play-head" style="left:52%"></em></div>
+              <span class="time">02:18</span>
+              <span class="chip">9:16 · 30fps</span>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-top:12px">
+            <div class="panel-head">
+              <div><h2>EP01 · 雨夜书店 v6</h2><span class="sub">REVIEW SUBJECT / 24 SHOTS · 2′18″</span></div>
+              <div style="display:flex;gap:6px"><span class="chip green">QA PASS</span><span class="chip">项目级 review</span></div>
+            </div>
+            <div class="panel-body">
+              <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:18px">
+                <div>
+                  <h3 style="margin:0 0 8px;font-size:11px;color:var(--text-2);font-weight:500">剪辑结构 / 8 场</h3>
+                  <div style="display:flex;gap:3px;height:34px" id="cut-strip">
+                    <span class="cut" data-scene="SC01" data-name="雨夜进店" style="flex:2">SC01</span><span class="cut" data-scene="SC02" data-name="隔架对视" style="flex:1.4">SC02</span>
+                    <span class="cut hot is-selected" data-scene="SC03" data-name="借阅册特写" style="flex:2.4">SC03</span><span class="cut" data-scene="SC04" data-name="第一次试探" style="flex:1.8">SC04</span>
+                    <span class="cut" data-scene="SC05" data-name="台账翻页" style="flex:1.6">SC05</span><span class="cut" data-scene="SC06" data-name="后巷跟踪" style="flex:1.2">SC06</span>
+                    <span class="cut" data-scene="SC07" data-name="雨中对峙" style="flex:1.8">SC07</span><span class="cut" data-scene="SC08" data-name="黎明收束" style="flex:1.2">SC08</span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px">
+                    <div class="mini-kpi"><span>总时长</span><b>2′18″00</b></div>
+                    <div class="mini-kpi"><span>镜头数</span><b>24</b></div>
+                    <div class="mini-kpi"><span>音画偏移</span><b style="color:var(--green)">≤ 40ms</b></div>
+                    <div class="mini-kpi"><span>字幕行</span><b>42</b></div>
+                  </div>
+                </div>
+                <div>
+                  <h3 style="margin:0 0 8px;font-size:11px;color:var(--text-2);font-weight:500">审核说明</h3>
+                  <p style="margin:0 0 10px;font-size:11px;line-height:1.8;color:var(--muted)">本集由 QA 自动检查 12 项，0 阻断。剩余 2 项为建议级：第 05 镜角色一致度 0.84、字幕第 18 行断行偏早。可直接通过，也可退回让模型重跑相关镜头。</p>
+                  <div class="banner" style="padding:9px 11px;font-size:10px"><span data-i="target"></span><div class="grow">审核对象是剧本 v6 + 24 个 Shot Contract + 21 条画面的冻结组合。</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="review-side side-stack">
+          <section class="panel">
+            <div class="panel-head"><h2>自动检查</h2><span class="sub">QA SCORE</span></div>
+            <div class="panel-body">
+              <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:12px"><span style="font-family:var(--mono);font-size:34px;letter-spacing:-.04em;color:var(--green)">92</span><span style="font-size:10px;color:var(--dim)">/ 100 · PASS</span></div>
+              <div class="qa-item"><span class="qa-mark pass">✓</span><div class="txt"><b>画幅与项目一致</b><span>9:16 / 1080×1920 · 24 shots</span></div></div>
+              <div class="qa-item"><span class="qa-mark pass">✓</span><div class="txt"><b>音画同步</b><span>最大偏移 38ms · 阈值 50ms</span></div></div>
+              <div class="qa-item"><span class="qa-mark pass">✓</span><div class="txt"><b>黑帧 / 重复帧</b><span>0 detected</span></div></div>
+              <div class="qa-item"><span class="qa-mark warn">!</span><div class="txt"><b>角色一致度</b><span>SHOT 05 · 0.84 / 阈值 0.86</span></div></div>
+              <div class="qa-item"><span class="qa-mark warn">!</span><div class="txt"><b>字幕断行</b><span>第 18 行建议提前 4 帧</span></div></div>
+            </div>
+          </section>
+
+          <section class="panel" id="decision-panel">
+            <div class="panel-head"><h2>你的决定</h2><span class="sub">HUMAN DECISION</span></div>
+            <div class="panel-body">
+              <label class="field"><span>审核意见（退回时必填）</span><textarea id="review-note" placeholder="写清哪一镜、哪一项需要重跑。"></textarea></label>
+              <div class="decision">
+                <button class="btn" style="flex:1" id="btn-reject">退回重跑</button>
+                <button class="btn btn-primary" style="flex:1.3" id="btn-approve"><span data-i="check"></span>审核通过</button>
+              </div>
+              <p style="font-size:9px;color:var(--dim);line-height:1.7;margin:10px 0 0">通过后解锁「时间线与导出」；退回会把相关镜头回待生成，旧 QA 结论不继承。</p>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>场次批注</h2><span class="sub" id="note-count">2 条</span></div>
+            <div class="panel-body">
+              <div class="note-list" id="note-list">
+                <div class="note-item"><b>SC03 · SHOT 09</b><span>借阅册翻页前留白 6 帧，避免对白压画面。</span><button data-rework>转返工</button></div>
+                <div class="note-item"><b>SC05 · SHOT 14</b><span>台账特写可再延长 0.3 秒。</span><button data-rework>转返工</button></div>
+              </div>
+              <div class="shot-pick" id="shot-pick"></div>
+              <div class="field" style="margin-top:10px"><span>批注锚点 · <b id="note-target" style="color:var(--accent)">SC03 · SHOT 09 借阅册特写</b></span>
+                <textarea id="note-input" style="min-height:58px" placeholder="写清哪一场、哪一镜、要改什么。"></textarea>
+              </div>
+              <button class="btn btn-sm" style="margin-top:8px;width:100%" id="btn-note-add"><span data-i="plus"></span>添加镜头批注</button>
+              <div class="note" style="margin-top:6px" id="rework-count">已转返工 0 条</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>版本链</h2><span class="sub">LINEAGE</span></div>
+            <div class="panel-body">
+              <div class="mini-kpi"><span>剧集版本</span><b>EP01 v6</b></div>
+              <div class="mini-kpi"><span>时间线</span><b>tl_v6</b></div>
+              <div class="mini-kpi"><span>剧本</span><b>v6 · locked</b></div>
+              <div class="mini-kpi"><span>审核人</span><b>陈默</b></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="scrim"></div>
+<div class="modal" id="modal-reject">
+  <div class="modal-head">
+    <div><div class="eyebrow">RETURN FOR REWORK</div><h2 style="margin:4px 0 0;font-size:18px">退回重跑</h2></div>
+    <button class="icon-btn" data-close><span data-i="x"></span></button>
+  </div>
+  <div class="modal-body">
+    <label class="field"><span>退回范围</span><select><option>仅 SHOT 05 · 角色一致度</option><option>仅字幕 · 第 18 行</option><option>整个 EP01 画面</option></select></label>
+    <label class="field" style="margin-top:12px"><span>原因（写入审核记录）</span><textarea id="reject-reason">SHOT 05 角色一致度低于阈值，请锁定林未 REF v2 后重跑。</textarea></label>
+  </div>
+  <div class="modal-foot">
+    <button class="btn" data-close>取消</button>
+    <button class="btn btn-primary" id="confirm-reject">确认退回</button>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const QUEUE = [
+    { title: 'EP01 · 雨夜书店', ver: 'v6', type: '整集', state: 'review', ts: '12 分钟前' },
+    { title: 'EP02 · 怀表停在三点', ver: 'v4', type: '整集', state: 'review', ts: '46 分钟前' },
+    { title: '角色 · 陈九 参考图', ver: 'v2', type: '资产', state: 'review', ts: '2 小时前' },
+    { title: '场景 · 旧书店', ver: 'v3', type: '资产', state: 'review', ts: '3 小时前' },
+    { title: 'EP03 · 第三个人', ver: 'v3', type: '整集', state: 'review', ts: '5 小时前' },
+    { title: 'EP04 · 空白档案', ver: 'v2', type: '整集', state: 'fail', ts: '昨天' },
+    { title: '字幕 · EP03 全片', ver: 'v1', type: '字幕', state: 'review', ts: '昨天' }
+  ];
+  let active = 0;
+
+  function renderQueue() {
+    document.getElementById('review-queue').innerHTML = QUEUE.map((q, i) =>
+      '<div class="queue-item' + (i === active ? ' is-active' : '') + '" data-q="' + i + '">' +
+      '<div class="top"><span>' + q.type + ' · ' + q.ver + '</span><span>' + q.ts + '</span></div>' +
+      '<h4>' + q.title + '</h4><p>' + (q.state === 'fail' ? 'QA FAIL · 不可通过' : 'QA PASS · 待人工决定') + '</p></div>'
+    ).join('');
+  }
+
+  function banner(text, type) {
+    document.getElementById('review-banner').innerHTML = '<div class="banner ' + type + '" style="margin-bottom:14px"><span data-i="' + (type === 'danger' ? 'alert' : 'check') + '"></span><div class="grow">' + text + '</div></div>';
+    hydrateIcons(document.getElementById('review-banner'));
+  }
+
+  document.getElementById('review-queue').addEventListener('click', e => {
+    const q = e.target.closest('[data-q]');
+    if (!q) return;
+    active = +q.dataset.q;
+    renderQueue();
+    const item = QUEUE[active];
+    if (item.state === 'fail') {
+      banner('<b>' + item.title + ' QA FAIL。</b>存在阻断问题（角色一致度 0.63），不能通过，只能退回重跑。', 'danger');
+      document.getElementById('btn-approve').disabled = true;
+    } else {
+      banner('<b>' + item.title + '</b> 已载入审核台。自动检查通过，等待你的决定。', '');
+      document.getElementById('btn-approve').disabled = false;
+    }
+    P.toast('已切换到「' + item.title + '」');
+  });
+
+  document.getElementById('btn-approve').addEventListener('click', () => {
+    const st = P.state();
+    st.steps.qa.status = 'done';
+    st.steps.export.status = 'pending';
+    st.accepted = true;
+    P.save(st);
+    QUEUE[active].state = 'approved';
+    renderQueue();
+    banner('<b>审核通过。</b>EP01 v6 已解锁「时间线与导出」，决定已写入 audit log。', 'accent');
+    const b = document.getElementById('btn-approve');
+    b.disabled = true;
+    b.innerHTML = '<span data-i="check"></span>已通过';
+    hydrateIcons(b);
+    P.toast('审核通过 · 已解锁时间线与导出');
+  });
+
+  document.getElementById('btn-reject').addEventListener('click', () => P.openModal('modal-reject'));
+
+  document.getElementById('confirm-reject').addEventListener('click', () => {
+    const st = P.state();
+    st.steps.qa.status = 'pending';
+    st.steps.export.status = 'locked';
+    st.accepted = false;
+    P.save(st);
+    QUEUE[active].state = 'review';
+    P.closeModals();
+    banner('<b>已退回重跑。</b>相关镜头回到待生成，导出保持锁定；重跑后重新质检。', 'warn');
+    P.toast('已退回：SHOT 05 与字幕进入重跑队列');
+  });
+
+  let playing = false, pos = 52, playTimer = null;
+  function togglePlay() {
+    playing = !playing;
+    if (playing) {
+      playTimer = setInterval(() => {
+        pos = pos >= 98 ? 8 : pos + 1;
+        document.getElementById('play-fill').style.width = pos + '%';
+        document.getElementById('play-head').style.left = pos + '%';
+      }, 280);
+      P.toast('预览播放中（原型模拟）');
+    } else {
+      clearInterval(playTimer);
+      P.toast('已暂停');
+    }
+  }
+  document.getElementById('btn-play').addEventListener('click', togglePlay);
+  document.getElementById('btn-play2').addEventListener('click', togglePlay);
+
+  let noteScene = 'SC03', noteName = '借阅册特写', noteShot = 'SHOT 09';
+
+  function anchorText() { return noteScene + ' · ' + noteShot + ' ' + noteName; }
+
+  function renderShots() {
+    const idx = parseInt(noteScene.replace('SC', ''), 10) - 1;
+    const base = idx * 3 + 1;
+    document.getElementById('shot-pick').innerHTML = [0, 1, 2].map(k => {
+      const no = String(base + k).padStart(2, '0');
+      return '<button data-shot="SHOT ' + no + '"' + (noteShot === 'SHOT ' + no ? ' class="is-active"' : '') + '>SHOT ' + no + '</button>';
+    }).join('');
+    document.getElementById('note-target').textContent = anchorText();
+  }
+
+  document.querySelectorAll('#cut-strip .cut').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('#cut-strip .cut').forEach(x => x.classList.remove('is-selected'));
+      c.classList.add('is-selected');
+      noteScene = c.dataset.scene;
+      noteName = c.dataset.name;
+      noteShot = 'SHOT ' + String((parseInt(noteScene.replace('SC', ''), 10) - 1) * 3 + 1).padStart(2, '0');
+      renderShots();
+      P.toast('批注锚点已切到 ' + noteScene + ' · ' + noteName);
+    });
+  });
+
+  document.getElementById('shot-pick').addEventListener('click', e => {
+    const b = e.target.closest('[data-shot]');
+    if (!b) return;
+    noteShot = b.dataset.shot;
+    renderShots();
+    P.toast('批注锚点已切到 ' + anchorText());
+  });
+
+  function noteHTML(anchor, text) {
+    return '<b>' + anchor + '</b><span>' + P.esc(text) + '</span><button data-rework>转返工</button>';
+  }
+
+  document.getElementById('btn-note-add').addEventListener('click', () => {
+    const input = document.getElementById('note-input');
+    const text = input.value.trim();
+    if (!text) { P.toast('请先写批注内容'); input.focus(); return; }
+    const item = document.createElement('div');
+    item.className = 'note-item';
+    item.innerHTML = noteHTML(noteScene + ' · ' + noteShot, text);
+    document.getElementById('note-list').appendChild(item);
+    input.value = '';
+    document.getElementById('note-count').textContent = document.querySelectorAll('.note-item').length + ' 条';
+    P.toast('镜头批注已添加到 ' + anchorText());
+  });
+
+  document.getElementById('note-list').addEventListener('click', e => {
+    const b = e.target.closest('[data-rework]');
+    if (!b || b.disabled) return;
+    const item = b.closest('.note-item');
+    const anchor = item.querySelector('b').textContent;
+    const text = item.querySelector('span').textContent;
+    b.textContent = '已转返工';
+    b.disabled = true;
+    try {
+      const list = JSON.parse(localStorage.getItem('sp_v2_rework') || '[]');
+      list.unshift({ anchor: anchor, note: text, status: 'queued', at: new Date().toISOString() });
+      localStorage.setItem('sp_v2_rework', JSON.stringify(list.slice(0, 20)));
+    } catch (err) {}
+    const n = document.querySelectorAll('#note-list [data-rework]:disabled').length;
+    document.getElementById('rework-count').textContent = '已转返工 ' + n + ' 条';
+    P.toast('已创建返工任务并同步任务中心 · ' + anchor);
+  });
+
+  renderShots();
+
+  renderQueue();
+  if (P.state().steps.qa.status === 'done') banner('<b>该集已通过审核。</b>EP01 v6 已解锁时间线与导出，可继续复核成片。', 'accent');
+})();
+</script>
+</body>
+</html>

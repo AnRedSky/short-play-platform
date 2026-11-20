@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>创意与立项 · 长夜将明 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+<style>
+  .idea-item { padding: 12px 14px; border-bottom: 1px solid var(--line-soft); display: flex; gap: 12px; cursor: pointer; transition: background 120ms ease; }
+  .idea-item:hover { background: var(--surface-sunken); }
+  .idea-item.on { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+  .idea-item:last-child { border-bottom: 0; }
+  .idea-item .t { flex: 1; min-width: 0; }
+  .idea-item .t strong { font-size: 12.5px; display: block; }
+  .idea-item .t p { font-size: 10.5px; color: var(--text-3); line-height: 1.7; margin: 4px 0 7px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .idea-item .side { text-align: right; flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .field-label { font-size: 10px; letter-spacing: 0.06em; color: var(--text-3); text-transform: uppercase; margin-bottom: 5px; }
+</style>
+</head>
+<body data-page="ideas" data-project="1">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+    <nav class="module-tabs" data-tabs></nav>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Ideas &amp; greenlight</p>
+          <h1>创意与立项</h1>
+          <p class="lede">创意是项目的入口：先定一句话卖点与目标集数，再立项生成项目草稿。立项前不产生任何资产、任务与费用。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-act="ai-outline"><i data-icon="sparkles"></i>AI 扩写</button>
+          <button class="btn btn-primary" type="button" data-modal="modal-idea"><i data-icon="plus"></i>新建创意</button>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="k"><span>创意池</span></div><p class="v" id="c-ideas">12</p><p class="d">6 条本周新增</p></div>
+        <div class="stat"><div class="k"><span>待评审</span></div><p class="v" id="c-review">4</p><p class="d">SLA 48h · 超时 1 条</p></div>
+        <div class="stat"><div class="k"><span>已立项</span></div><p class="v" id="c-converted">3</p><p class="d">本月转化率 25%</p></div>
+        <div class="stat"><div class="k"><span>平均评分</span></div><p class="v">72<span class="unit">/100</span></p><p class="d">AI 建议 + 人工复评</p></div>
+      </div>
+
+      <div class="grid g-main">
+        <section class="card" style="margin: 0">
+          <div class="card-head">
+            <div><h2>创意池</h2><span class="sub">按最近更新排序</span></div>
+            <div class="actions" data-filter-group="ideas">
+              <button class="chip active" type="button" data-filter="all">全部</button>
+              <button class="chip" type="button" data-filter="in_review">待评审</button>
+              <button class="chip" type="button" data-filter="converted">已立项</button>
+            </div>
+          </div>
+
+          <div id="idea-list" data-open-group="idea" data-status-group="ideas">
+            <div class="idea-item on" data-open="idea-detail" data-title="长夜将明" data-logline="一间即将拆迁的旧书店，一本记着所有人死亡时间的账本，和两个互相隐瞒的人。" data-genre="都市悬疑 · 竖屏" data-eps="12 集 · 每集 2′30″" data-owner="苏禾" data-status="approved" data-state="approved" data-score="86" data-source="人工原创">
+              <div class="t">
+                <strong>长夜将明</strong>
+                <p>一间即将拆迁的旧书店，一本记着所有人死亡时间的账本，和两个互相隐瞒的人。</p>
+                <div class="tag-row"><span class="tag">都市悬疑</span><span class="tag">竖屏 9:16</span><span class="tag">12 集</span></div>
+              </div>
+              <div class="side">
+                <span class="pill pass">approved</span>
+                <span class="score"><span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="num">86</span></span>
+                <span class="mono" style="font-size: 9px; color: var(--text-3)">苏禾 · 11-14</span>
+              </div>
+            </div>
+
+            <div class="idea-item" data-open="idea-detail" data-title="怀表停在三点" data-logline="修表匠发现每块送修的表都停在同一个时刻，而那个时刻还没发生。" data-genre="都市悬疑 · 竖屏" data-eps="8 集 · 每集 2′30″" data-owner="苏禾" data-status="in_review" data-state="in_review" data-score="78" data-source="人工原创">
+              <div class="t">
+                <strong>怀表停在三点</strong>
+                <p>修表匠发现每块送修的表都停在同一个时刻，而那个时刻还没发生。</p>
+                <div class="tag-row"><span class="tag">都市悬疑</span><span class="tag">8 集</span></div>
+              </div>
+              <div class="side">
+                <span class="pill review">in_review</span>
+                <span class="score"><span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="num">78</span></span>
+                <span class="mono" style="font-size: 9px; color: var(--text-3)">苏禾 · 11-16</span>
+              </div>
+            </div>
+
+            <div class="idea-item" data-open="idea-detail" data-title="第三个证人" data-logline="一场只有两名目击者的车祸，卷宗里却出现了第三份证词。" data-genre="都市悬疑 · 竖屏" data-eps="10 集 · 每集 2′30″" data-owner="王斌" data-status="in_review" data-state="in_review" data-score="74" data-source="剧本改编">
+              <div class="t">
+                <strong>第三个证人</strong>
+                <p>一场只有两名目击者的车祸，卷宗里却出现了第三份证词。</p>
+                <div class="tag-row"><span class="tag">都市悬疑</span><span class="tag">10 集</span><span class="tag">改编</span></div>
+              </div>
+              <div class="side">
+                <span class="pill review">in_review</span>
+                <span class="score"><span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="num">74</span></span>
+                <span class="mono" style="font-size: 9px; color: var(--text-3)">王斌 · 11-17</span>
+              </div>
+            </div>
+
+            <div class="idea-item" data-open="idea-detail" data-title="雨停之前" data-logline="暴雨夜，便利店店员接到一通来自三年前的电话。" data-genre="都市情感 · 竖屏" data-eps="6 集 · 每集 2′" data-owner="赵一" data-status="draft" data-state="draft" data-score="61" data-source="人工原创">
+              <div class="t">
+                <strong>雨停之前</strong>
+                <p>暴雨夜，便利店店员接到一通来自三年前的电话。</p>
+                <div class="tag-row"><span class="tag">都市情感</span><span class="tag">6 集</span></div>
+              </div>
+              <div class="side">
+                <span class="pill draft">draft</span>
+                <span class="score"><span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="num">61</span></span>
+                <span class="mono" style="font-size: 9px; color: var(--text-3)">赵一 · 11-17</span>
+              </div>
+            </div>
+
+            <div class="idea-item" data-open="idea-detail" data-title="无声证词" data-logline="聋哑目击者用手语描述了一场没人相信的凶案。" data-genre="都市悬疑 · 竖屏" data-eps="10 集 · 每集 2′30″" data-owner="王斌" data-status="converted" data-state="converted" data-score="81" data-source="人工原创">
+              <div class="t">
+                <strong>无声证词</strong>
+                <p>聋哑目击者用手语描述了一场没人相信的凶案。</p>
+                <div class="tag-row"><span class="tag">都市悬疑</span><span class="tag">10 集</span><span class="tag">已立项</span></div>
+              </div>
+              <div class="side">
+                <span class="pill pass">converted</span>
+                <span class="score"><span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="num">81</span></span>
+                <span class="mono" style="font-size: 9px; color: var(--text-3)">王斌 · 11-09</span>
+              </div>
+            </div>
+
+            <div class="idea-item" data-open="idea-detail" data-title="最后一班地铁" data-logline="末班车上的乘客每天都是同一批人，除了今天。" data-genre="都市奇幻 · 竖屏" data-eps="6 集 · 每集 2′" data-owner="赵一" data-status="rejected" data-state="rejected" data-score="52" data-source="人工原创">
+              <div class="t">
+                <strong>最后一班地铁</strong>
+                <p>末班车上的乘客每天都是同一批人，除了今天。</p>
+                <div class="tag-row"><span class="tag">都市奇幻</span><span class="tag">6 集</span></div>
+              </div>
+              <div class="side">
+                <span class="pill fail">rejected</span>
+                <span class="score"><span class="dots"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span><span class="num">52</span></span>
+                <span class="mono" style="font-size: 9px; color: var(--text-3)">赵一 · 11-05</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-foot"><span>创意保留 90 天；立项后转 Project，创意本体只读归档</span><span class="mono" id="idea-count">6 / 12</span></div>
+        </section>
+
+        <div>
+          <section class="card" id="idea-detail" style="margin-bottom: 14px">
+            <div class="card-head">
+              <div><h2 data-bind="title">长夜将明</h2><span class="sub">IDEA · ida_4e21</span></div>
+              <span class="pill pass" id="detail-status">approved</span>
+            </div>
+            <div class="card-body">
+              <p class="lede" style="font-size: 12px; margin: 0 0 12px" data-bind="logline">一间即将拆迁的旧书店，一本记着所有人死亡时间的账本，和两个互相隐瞒的人。</p>
+              <div class="kv">
+                <div class="row"><dt>类型 / 形态</dt><dd data-bind="genre">都市悬疑 · 竖屏</dd></div>
+                <div class="row"><dt>目标集数</dt><dd data-bind="eps">12 集 · 每集 2′30″</dd></div>
+                <div class="row"><dt>来源</dt><dd data-bind="source">人工原创</dd></div>
+                <div class="row"><dt>提交人</dt><dd data-bind="owner">苏禾</dd></div>
+                <div class="row"><dt>评分</dt><dd><span class="score"><span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="num" data-bind="score">86</span></span></dd></div>
+              </div>
+
+              <div class="section-label">一句话卖点校验</div>
+              <div class="pass-row"><span class="pm">✓</span><span>主角有明确欲望：找回父亲失踪的真相</span></div>
+              <div class="pass-row"><span class="pm">✓</span><span>冲突可视觉化：账本上的时间 vs 现实中的人</span></div>
+              <div class="pass-row"><span class="pm warn">!</span><span>目标集数 12 集 + 每集 2′30″，需确认单集成本上限</span></div>
+
+              <div id="ai-outline" hidden>
+                <div class="section-label">AI 扩写（建议稿，需人工确认）</div>
+                <div class="banner info" style="margin: 0"><i data-icon="sparkles"></i><div>第 1–3 集：账本出现，沈砚发现自己的名字；第 4–6 集：林晚的记者身份暴露；第 7–9 集：旧书店拆迁倒计时与账本失效；第 10–12 集：两人各自的选择与代价。</div></div>
+              </div>
+
+              <div class="form-foot">
+                <button class="btn btn-primary" type="button" data-act="convert">通过并立项</button>
+                <button class="btn btn-default" type="button" data-act="return">退回修改</button>
+                <span class="hint">立项后进入项目空间，创意转只读</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" style="margin: 0">
+            <div class="card-head"><h2>评审意见</h2><span class="sub">2 条</span></div>
+            <div class="card-body">
+              <div class="issue-row"><span class="issue-sev info">制片</span><div class="issue-body"><strong>陈默 · 11-16 10:20</strong><p>12 集体量适合排期，单集预算按 1,800 计，需在立项时锁定上限。</p></div></div>
+              <div class="issue-row"><span class="issue-sev warn">编剧</span><div class="issue-body"><strong>陆行 · 11-15 17:40</strong><p>第 7–9 集的中段反转偏弱，建议把「账本失效」提前到第 8 集。</p></div></div>
+            </div>
+            <div class="card-foot"><span>评审意见绑定创意版本，修改后需重新评审</span></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="grid g-3">
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>立项字段映射</h2><span class="sub">IDEA → PROJECT</span></div>
+          <div class="card-body">
+            <div class="kv">
+              <div class="row"><dt>标题 → 项目名</dt><dd>唯一约束，冲突 409</dd></div>
+              <div class="row"><dt>类型 → 画面配置</dt><dd>竖屏 9:16 / 30fps</dd></div>
+              <div class="row"><dt>集数 → 剧集模板</dt><dd>生成空集次，不生成剧本</dd></div>
+              <div class="row"><dt>一句话卖点 → 故事圣经</dt><dd>作为 StoryBible v1 草稿</dd></div>
+            </div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>立项前置条件</h2><span class="sub">GATE</span></div>
+          <div class="card-body">
+            <div class="pass-row"><span class="pm">✓</span><span>创意状态为 approved</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>有至少 1 条制片评审意见</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>目标集数与单集时长填写完整</span></div>
+            <div class="pass-row"><span class="pm warn">!</span><span>预算上限需制片确认（当前未确认）</span></div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>合规边界</h2><span class="sub">SCOPE</span></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px; margin: 0 0 10px">创意入库只接受本组织成员手工提交或授权剧本改编；不抓取外部平台内容，不接入版权库。</p>
+            <div class="banner warn" style="margin: 0"><i data-icon="alert"></i><div>立项不会自动触发生成与费用；生成必须由人在分镜或任务页显式提交。</div></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-idea-backdrop" data-close-modal="modal-idea"></div>
+<div class="modal" id="modal-idea" role="dialog" aria-modal="true">
+  <div class="modal-head"><p class="eyebrow">New idea</p><h2>新建创意</h2></div>
+  <form data-form="idea">
+    <div class="modal-body">
+      <div class="form-grid">
+        <label class="field full"><span>标题</span><input class="control" name="title" placeholder="一句话就能记住的名字" required /></label>
+        <label class="field full"><span>一句话卖点</span><input class="control" name="logline" placeholder="谁、想要什么、被什么挡住" required /><span class="hint">超过 60 字会在列表中被截断</span></label>
+        <label class="field"><span>类型 / 形态</span><input class="control" name="genre" value="都市悬疑 · 竖屏" /></label>
+        <label class="field"><span>目标集数</span><input class="control" name="eps" value="8 集 · 每集 2′30″" /></label>
+        <label class="field"><span>来源</span><select class="control" name="source"><option>人工原创</option><option>剧本改编</option><option>小说改编（已授权）</option></select></label>
+        <label class="field"><span>提交人</span><input class="control" name="owner" value="苏禾" readonly /></label>
+      </div>
+      <div class="banner info" style="margin-top: 12px"><i data-icon="info"></i><div>提交后状态为 draft，需经制片与编剧各一条意见才可立项。</div></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-default" type="button" data-close-modal="modal-idea">取消</button>
+      <button class="btn btn-primary" type="submit">创建创意</button>
+    </div>
+  </form>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var list = document.getElementById('idea-list');
+  var detailStatus = document.getElementById('detail-status');
+  var current = list.querySelector('.idea-item.on');
+
+  function setDetailState(state) {
+    P.setPill(detailStatus, state === 'converted' ? 'approved' : state, state);
+    current.dataset.state = state;
+    var pill = current.querySelector('.side .pill');
+    P.setPill(pill, state === 'converted' ? 'approved' : state, state);
+    current.dataset.status = state;
+    current.querySelector('.side .pill').textContent = state;
+  }
+
+  document.addEventListener('proto:select', function (e) {
+    var el = e.detail.el;
+    if (!el.classList.contains('idea-item')) return;
+    current = el;
+    P.setPill(detailStatus, el.dataset.state === 'converted' ? 'approved' : el.dataset.state, el.dataset.state);
+  });
+
+  document.addEventListener('proto:act', function (e) {
+    var act = e.detail.act;
+    if (act === 'convert') {
+      if (current.dataset.state === 'converted') { P.toast('该创意已立项，无需重复操作'); return; }
+      if (current.dataset.state !== 'approved') { P.toast('仅 approved 状态的创意可立项（当前 ' + current.dataset.state + '）'); return; }
+      setDetailState('converted');
+      P.store.push('projects_created', { title: current.dataset.title, code: 'NEW', meta: current.dataset.eps });
+      P.count('#c-converted', 4);
+      P.count('#c-review', 3);
+      P.toast('已立项：项目草稿已创建，剧本模板为空，等待进入项目空间');
+    }
+    if (act === 'return') {
+      if (current.dataset.state === 'converted') { P.toast('已立项创意不可退回，请归档项目'); return; }
+      setDetailState('in_review');
+      P.toast('已退回修改，状态转为 in_review 并通知提交人');
+    }
+    if (act === 'ai-outline') {
+      var box = document.getElementById('ai-outline');
+      if (!box.hidden) { P.toast('扩写结果已加载'); return; }
+      box.hidden = false;
+      box.querySelector('.banner div').textContent = '正在生成…';
+      setTimeout(function () {
+        box.querySelector('.banner div').textContent = '第 1–3 集：账本出现，沈砚发现自己的名字；第 4–6 集：林晚的记者身份暴露；第 7–9 集：拆迁倒计时与账本失效；第 10–12 集：两人各自的选择与代价。';
+        P.toast('AI 扩写完成（建议稿，需人工确认后才可写入故事圣经）');
+      }, 900);
+    }
+  });
+
+  document.addEventListener('proto:submit', function (e) {
+    if (e.detail.name !== 'idea') return;
+    var d = e.detail.data;
+    var row = '<div class="idea-item" data-open="idea-detail" data-open-group="idea" data-title="' + P.esc(d.title) + '" data-logline="' + P.esc(d.logline) + '" data-genre="' + P.esc(d.genre) + '" data-eps="' + P.esc(d.eps) + '" data-owner="' + P.esc(d.owner) + '" data-status="draft" data-state="draft" data-score="—" data-source="' + P.esc(d.source) + '">' +
+      '<div class="t"><strong>' + P.esc(d.title) + '</strong><p>' + P.esc(d.logline) + '</p>' +
+      '<div class="tag-row"><span class="tag">' + P.esc(d.genre) + '</span><span class="tag">' + P.esc(d.eps) + '</span></div></div>' +
+      '<div class="side"><span class="pill draft">draft</span><span class="score"><span class="dots"><i></i><i></i><i></i><i></i><i></i></span><span class="num">—</span></span>' +
+      '<span class="mono" style="font-size: 9px; color: var(--text-3)">' + P.esc(d.owner) + ' · ' + P.time() + '</span></div></div>';
+    var added = P.addRow(list, row);
+    if (added) added.classList.remove('on');
+    P.count('#c-ideas', parseInt(document.getElementById('c-ideas').textContent, 10) + 1);
+    P.toast('创意已创建（draft）；待评审数 +1');
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>团队 · 长夜制作台</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="team" data-crumb="团队">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <nav class="tabs" id="tabs"></nav>
+    <main class="content">
+      <div class="board-head">
+        <div>
+          <div class="eyebrow">TEAM · ACCESS</div>
+          <h1>团队与权限</h1>
+          <div class="sub">5 名成员 · 2 个待接受邀请 · 审核权与生成权分离</div>
+        </div>
+        <div class="board-tools">
+          <span class="chip">角色 3 级</span>
+          <button class="btn btn-sm btn-primary" data-open="modal-invite"><span data-i="plus"></span>邀请成员</button>
+        </div>
+      </div>
+
+      <div class="banner" style="margin-bottom:16px">
+        <span data-i="users"></span>
+        <div class="grow"><b>审核是唯一的人工 Gate。</b>导演 / 编剧可生成与修改，制片人拥有审核与导出权；权限变更立即生效并写入 audit log。</div>
+        <span class="chip accent">AUDIT ON</span>
+      </div>
+
+      <div class="script-toolbar" style="margin-bottom:14px">
+        <div class="seg" id="team-filter">
+          <button class="is-active" data-f="all">全部 5</button>
+          <button data-f="producer">制片</button>
+          <button data-f="director">导演 / 编剧</button>
+          <button data-f="artist">美术 / 后期</button>
+        </div>
+        <span style="flex:1"></span>
+        <span class="chip green">4 活跃</span><span class="chip">1 离线</span>
+      </div>
+
+      <div class="team-grid" id="team-grid"></div>
+
+      <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:14px;margin-top:16px">
+        <section class="panel">
+          <div class="panel-head"><h2>权限矩阵</h2><span class="sub">ROLE MATRIX</span></div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>能力</th><th>制片人</th><th>导演 / 编剧</th><th>美术 / 后期</th><th>只读</th></tr></thead>
+              <tbody>
+                <tr><td>编辑剧本与设定</td><td><span class="qa-mark pass">✓</span></td><td><span class="qa-mark pass">✓</span></td><td>—</td><td>—</td></tr>
+                <tr><td>生成资产 / 画面</td><td><span class="qa-mark pass">✓</span></td><td><span class="qa-mark pass">✓</span></td><td><span class="qa-mark pass">✓</span></td><td>—</td></tr>
+                <tr><td>审核通过 / 退回</td><td><span class="qa-mark pass">✓</span></td><td>—</td><td>—</td><td>—</td></tr>
+                <tr><td>导出与发布</td><td><span class="qa-mark pass">✓</span></td><td>—</td><td>—</td><td>—</td></tr>
+                <tr><td>修改团队与预算</td><td><span class="qa-mark pass">✓</span></td><td>—</td><td>—</td><td>—</td></tr>
+                <tr><td>查看成本与日志</td><td><span class="qa-mark pass">✓</span></td><td><span class="qa-mark pass">✓</span></td><td><span class="qa-mark pass">✓</span></td><td><span class="qa-mark pass">✓</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside class="side-stack">
+          <section class="panel">
+            <div class="panel-head"><h2>待接受邀请</h2><span class="sub">2 PENDING</span></div>
+            <div class="panel-body" id="invite-list">
+              <div class="qa-item" style="padding-top:0"><span class="qa-mark warn">!</span><div class="txt"><b>zhouyi@studio.cn</b><span>导演 · 邀请于 11-16</span></div><button class="btn btn-sm" data-resend>重发</button></div>
+              <div class="qa-item"><span class="qa-mark warn">!</span><div class="txt"><b>lin@vfx.local</b><span>后期 · 邀请于 11-14</span></div><button class="btn btn-sm" data-resend>重发</button></div>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>操作日志</h2><span class="sub">AUDIT</span></div>
+            <div class="panel-body" style="font-family:var(--mono);font-size:9px;color:var(--dim);line-height:2">
+              <div>11-18 10:42 陈默 · 审核 EP01 v6</div>
+              <div>11-18 09:58 苏禾 · 提交剧本 v6</div>
+              <div>11-17 18:20 陈默 · 修改预算 12,000</div>
+              <div>11-17 16:03 阿泽 · 生成 SHOT 04</div>
+              <div>11-16 11:12 陈默 · 邀请导演</div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="scrim"></div>
+<div class="modal" id="modal-invite">
+  <div class="modal-head"><div><div class="eyebrow">INVITE</div><h2 style="margin:4px 0 0;font-size:18px">邀请成员</h2></div><button class="icon-btn" data-close><span data-i="x"></span></button></div>
+  <div class="modal-body">
+    <div class="input-grid">
+      <label class="field"><span>邮箱</span><input id="iv-mail" placeholder="name@studio.cn"></label>
+      <label class="field"><span>角色</span><select id="iv-role"><option>导演 / 编剧</option><option>制片人</option><option>美术 / 后期</option><option>只读</option></select></label>
+    </div>
+    <p style="color:var(--dim);font-size:10px;margin:12px 0 0">邀请链接 7 天有效；接受后立即继承对应权限，不继承历史审核结论。</p>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>取消</button><button class="btn btn-primary" id="iv-submit">发送邀请</button></div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  let MEMBERS = [
+    { name: '陈默', role: '制片人', tag: 'producer', initial: '陈', color: '#f05a2a', email: 'chenmo@studio.cn', load: '审核 7 · 预算', state: '活跃' },
+    { name: '苏禾', role: '编剧', tag: 'director', initial: '苏', color: '#58d3a0', email: 'suhe@studio.cn', load: '剧本 2 集', state: '活跃' },
+    { name: '周奕', role: '导演', tag: 'director', initial: '周', color: '#7d9edc', email: 'zhou@studio.cn', load: '分镜 34 shots', state: '离线' },
+    { name: '阿泽', role: '美术', tag: 'artist', initial: '泽', color: '#e7c15f', email: 'aze@studio.cn', load: '资产 63 项', state: '活跃' },
+    { name: '林岸', role: '后期', tag: 'artist', initial: '林', color: '#b28bdb', email: 'lin@studio.cn', load: '时间线 3 集', state: '活跃' }
+  ];
+
+  function render() {
+    document.getElementById('team-grid').innerHTML = MEMBERS.map(m =>
+      '<article class="member-card" data-tag="' + m.tag + '">' +
+      '<div class="avatar" style="background:' + m.color + ';color:#0b0c0e;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:13px">' + m.initial + '</div>' +
+      '<h4>' + m.name + ' <span class="chip ' + (m.state === '活跃' ? 'green' : '') + '" style="margin-left:4px">' + m.state + '</span></h4>' +
+      '<div class="role">' + m.role.toUpperCase() + '</div>' +
+      '<div style="font-size:10px;color:var(--dim);margin-top:6px">' + m.email + '</div>' +
+      '<div class="load"><span>' + m.load + '</span><span>···</span></div></article>'
+    ).join('');
+  }
+
+  document.querySelectorAll('#team-filter button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#team-filter button').forEach(x => x.classList.remove('is-active'));
+    b.classList.add('is-active');
+    const f = b.dataset.f;
+    document.querySelectorAll('.member-card').forEach(c => c.style.display = (f === 'all' || c.dataset.tag === f) ? '' : 'none');
+  }));
+
+  document.querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', () => P.openModal(el.dataset.open)));
+  document.getElementById('iv-submit').addEventListener('click', () => {
+    const mail = document.getElementById('iv-mail').value || '未填写邮箱';
+    document.getElementById('invite-list').insertAdjacentHTML('afterbegin', '<div class="qa-item" style="padding-top:0"><span class="qa-mark warn">!</span><div class="txt"><b>' + mail + '</b><span>' + document.getElementById('iv-role').value + ' · 刚刚</span></div><button class="btn btn-sm" data-resend>重发</button></div>');
+    P.closeModals();
+    P.toast('邀请已发送 · 7 天内有效');
+  });
+
+  document.addEventListener('click', e => {
+    if (e.target.closest('[data-resend]')) P.toast('邀请已重新发送');
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

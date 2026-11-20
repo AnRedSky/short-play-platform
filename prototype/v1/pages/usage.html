@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>用量与成本 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+<style>
+  .range-switch { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-control); overflow: hidden; }
+  .range-switch button { border: 0; background: var(--surface); padding: 5px 12px; font-size: 11px; color: var(--text-3); cursor: pointer; border-right: 1px solid var(--line); }
+  .range-switch button:last-child { border-right: 0; }
+  .range-switch button.on { background: var(--accent); color: #fff; }
+  .big-num { font-family: var(--mono); font-size: 26px; letter-spacing: -0.02em; }
+  .budget-line { display: flex; align-items: baseline; gap: 8px; }
+</style>
+</head>
+<body data-page="usage">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Usage &amp; cost</p>
+          <h1>用量与成本</h1>
+          <p class="lede">按项目、能力与时间统计调用量与费用。预算属于项目级门禁：超限前置拒绝，不产生「先跑后补」的费用。</p>
+        </div>
+        <div class="head-actions">
+          <div class="range-switch" id="range">
+            <button class="on" type="button" data-range="month">本月</button>
+            <button type="button" data-range="prev">上月</button>
+            <button type="button" data-range="week">近 7 天</button>
+          </div>
+          <button class="btn btn-default" type="button" data-act="export"><i data-icon="download"></i>导出 CSV</button>
+        </div>
+      </div>
+
+      <div class="banner warn" id="budget-banner">
+        <i data-icon="alert"></i>
+        <div><b>预算预警</b>：长夜将明已用 <span id="used-pct">62%</span>，超过 80% 后新任务需制片确认，100% 时硬阻断。</div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="k"><span>周期成本</span></div><p class="v"><span data-cost="total">6,204</span><span class="unit">元</span></p><p class="d" data-cost="foot">预算 10,000 · 剩余 3,796</p></div>
+        <div class="stat"><div class="k"><span>生成调用</span></div><p class="v" data-cost="calls">1,482</p><p class="d">失败 6 · 限流 3</p></div>
+        <div class="stat"><div class="k"><span>单集均价</span></div><p class="v" data-cost="avg">517<span class="unit">元</span></p><p class="d">12 集中已产 9 集</p></div>
+        <div class="stat"><div class="k"><span>月底预测</span></div><p class="v" data-cost="forecast">9,180</p><p class="d">基于近 7 日斜率</p></div>
+      </div>
+
+      <div class="grid g-main">
+        <section class="card" style="margin: 0">
+          <div class="card-head"><div><h2>成本结构</h2><span class="sub">按能力拆分</span></div><div class="actions"><span class="count" data-cost="period">2026-11-01 ~ 11-18</span></div></div>
+          <div class="card-body">
+            <div class="hbar"><span class="lb">video.generate</span><div class="trackbar"><i style="width: 42%" data-bar="video"></i></div><span class="v" data-cost="video">2,606</span></div>
+            <div class="hbar"><span class="lb">image.generate</span><div class="trackbar"><i style="width: 29%" data-bar="image"></i></div><span class="v" data-cost="image">1,799</span></div>
+            <div class="hbar"><span class="lb">audio.speech</span><div class="trackbar"><i style="width: 18%" data-bar="speech"></i></div><span class="v" data-cost="speech">1,117</span></div>
+            <div class="hbar"><span class="lb">text.complete</span><div class="trackbar"><i style="width: 8%" data-bar="text"></i></div><span class="v" data-cost="text">496</span></div>
+            <div class="hbar"><span class="lb">vision.qa</span><div class="trackbar"><i style="width: 3%" data-bar="qa"></i></div><span class="v" data-cost="qa">186</span></div>
+            <div class="hbar"><span class="lb">audio.music</span><div class="trackbar"><i style="width: 0%" data-bar="music"></i></div><span class="v" data-cost="music">0</span></div>
+          </div>
+          <div class="card-foot"><span>费用按能力返回的实际用量计，失败不计费</span><span class="mono">不含存储</span></div>
+        </section>
+
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>项目预算</h2><span class="sub">长夜将明 · NYJM-26</span></div>
+          <div class="card-body">
+            <div class="budget-line"><span class="big-num" id="budget-total">10,000</span><span class="mono" style="font-size: 11px; color: var(--text-3)">元 / 月</span></div>
+            <div class="progress" style="margin: 10px 0 4px"><i id="budget-bar" style="width: 62%"></i></div>
+            <div class="meta-row"><span>已用 <b id="budget-used">6,204</b></span><span>预警 80%</span><span>阻断 100%</span></div>
+
+            <div class="form-grid" style="margin-top: 14px">
+              <label class="field"><span>月度预算（元）</span><input class="control" id="budget-input" value="10000" /></label>
+              <label class="field"><span>预警阈值</span><input class="control" id="warn-input" value="80" /></label>
+            </div>
+            <div class="form-foot">
+              <button class="btn btn-primary" type="button" data-act="save-budget" data-save>保存预算</button>
+              <button class="btn btn-default" type="button" data-act="reset-budget">恢复默认</button>
+            </div>
+            <div class="hint" style="margin-top: 8px">修改预算只影响后续任务校验；已产生费用不回改。</div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="card-head"><div><h2>项目用量明细</h2><span class="sub">按费用倒序</span></div><div class="actions"><span class="count">3 个有消耗项目</span></div></div>
+        <div class="table-wrap">
+          <table class="table" id="usage-table">
+            <thead><tr><th>项目</th><th>编码</th><th>生成调用</th><th>成功率</th><th>视频条数</th><th>费用（元）</th><th>预算占用</th></tr></thead>
+            <tbody>
+              <tr><td>长夜将明</td><td class="mono">NYJM-26</td><td class="mono" data-usage="calls">1,102</td><td class="mono">98.4%</td><td class="mono" data-usage="videos">612</td><td class="mono" data-usage="cost">6,204</td><td class="mono" data-usage="pct">62%</td></tr>
+              <tr><td>雾港</td><td class="mono">WG-25</td><td class="mono">318</td><td class="mono">97.1%</td><td class="mono">204</td><td class="mono">1,860</td><td class="mono">46%</td></tr>
+              <tr><td>旧钟</td><td class="mono">JZ-24</td><td class="mono">62</td><td class="mono">100%</td><td class="mono">24</td><td class="mono">318</td><td class="mono">8%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-foot"><span>按项目隔离：项目之间不共享预算与用量</span><span class="mono" id="csv-note">可导出 CSV</span></div>
+      </section>
+
+      <div class="grid g-3" style="margin-top: 14px">
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>计费口径</h2><span class="sub">BILLING</span></div>
+          <div class="card-body">
+            <div class="row"><dt>视频</dt><dd>按成功条数计，失败与取消不计费</dd></div>
+            <div class="row"><dt>图片</dt><dd>按成功张数计，重试计新调用</dd></div>
+            <div class="row"><dt>语音</dt><dd>按字符数计，试听计入</dd></div>
+            <div class="row"><dt>规则 QA</dt><dd>本地执行，不计费</dd></div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>预算门禁</h2><span class="sub">GATE</span></div>
+          <div class="card-body">
+            <div class="pass-row"><span class="pm">✓</span><span>提交任务前校验剩余预算，不足返回 402</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>80% 预警通知制片，不阻断</span></div>
+            <div class="pass-row"><span class="pm warn">!</span><span>100% 硬阻断，需制片调额或等下一周期</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>调额写审计：actor / before / after</span></div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>对账</h2><span class="sub">RECONCILE</span></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px; margin: 0 0 10px">每日 02:00 与 Provider 账单对账，差异超过 2% 生成告警工单，不自动改账。</p>
+            <div class="kv"><div class="row"><dt>上次对账</dt><dd class="mono">11-18 02:00 · 差异 0.4%</dd></div><div class="row"><dt>待处理差异</dt><dd>0 笔</dd></div></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var RANGES = {
+    month: { total: '6,204', calls: '1,482', avg: '517', forecast: '9,180', period: '2026-11-01 ~ 11-18', video: '2,606', image: '1,799', speech: '1,117', text: '496', qa: '186', music: '0', foot: '预算 10,000 · 剩余 3,796', pct: 62 },
+    prev:  { total: '5,842', calls: '1,361', avg: '487', forecast: '—', period: '2026-10-01 ~ 10-31', video: '2,410', image: '1,690', speech: '1,052', text: '480', qa: '210', music: '0', foot: '预算 10,000 · 剩余 4,158', pct: 58 },
+    week:  { total: '1,926', calls: '402', avg: '482', forecast: '8,250', period: '2026-11-12 ~ 11-18', video: '860', image: '512', speech: '390', text: '196', qa: '68', music: '0', foot: '预算 10,000 · 剩余 8,074', pct: 19 }
+  };
+
+  function applyRange(key) {
+    var r = RANGES[key];
+    if (!r) return;
+    document.querySelectorAll('[data-cost]').forEach(function (n) {
+      var k = n.dataset.cost;
+      if (r[k] !== undefined) n.textContent = r[k];
+    });
+    document.querySelectorAll('[data-bar]').forEach(function (n) {
+      var k = n.dataset.bar;
+      if (r[k] !== undefined) {
+        var pct = Math.round(parseFloat(r[k].replace(/,/g, '')) / parseFloat(r.total.replace(/,/g, '')) * 100);
+        n.style.width = Math.max(pct, 0) + '%';
+      }
+    });
+    document.getElementById('budget-used').textContent = r.total;
+    document.getElementById('budget-bar').style.width = r.pct + '%';
+    document.getElementById('used-pct').textContent = r.pct + '%';
+    if (r.pct >= 80) {
+      document.getElementById('budget-banner').className = 'banner error';
+      document.getElementById('budget-banner').innerHTML = '<i data-icon="alert"></i><div><b>预算预警</b>：已用 ' + r.pct + '%，新任务需制片确认。</div>';
+    } else {
+      document.getElementById('budget-banner').className = 'banner warn';
+      document.getElementById('budget-banner').innerHTML = '<i data-icon="alert"></i><div><b>预算状态</b>：已用 ' + r.pct + '%，未触发预警阈值。</div>';
+    }
+  }
+
+  document.getElementById('range').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-range]');
+    if (!btn) return;
+    this.querySelectorAll('button').forEach(function (b) { b.classList.remove('on'); });
+    btn.classList.add('on');
+    applyRange(btn.dataset.range);
+    P.toast('统计区间已切换：' + btn.textContent);
+  });
+
+  document.addEventListener('proto:act', function (e) {
+    if (e.detail.act === 'export') {
+      var rows = [['项目', '编码', '生成调用', '成功率', '视频条数', '费用(元)', '预算占用']];
+      document.querySelectorAll('#usage-table tbody tr').forEach(function (tr) {
+        rows.push(Array.prototype.map.call(tr.querySelectorAll('td'), function (td) { return td.textContent.trim(); }));
+      });
+      rows.push(['合计', '', '1,482', '', '840', '8,382', '']);
+      P.download('usage-2026-11.csv', '\ufeff' + P.csv(rows), 'text/csv');
+      P.toast('已导出 CSV（含 3 个项目 + 合计行）');
+    }
+    if (e.detail.act === 'save-budget') {
+      var total = parseFloat(document.getElementById('budget-input').value || '0');
+      var used = parseFloat(document.getElementById('budget-used').textContent.replace(/,/g, ''));
+      var pct = Math.min(100, Math.round((used / total) * 100));
+      document.getElementById('budget-total').textContent = total.toLocaleString('en-US');
+      document.getElementById('budget-bar').style.width = pct + '%';
+      document.getElementById('used-pct').textContent = pct + '%';
+      P.toast('预算已更新为 ' + total.toLocaleString('en-US') + ' 元，当前占用 ' + pct + '%');
+    }
+    if (e.detail.act === 'reset-budget') {
+      document.getElementById('budget-input').value = 10000;
+      document.getElementById('warn-input').value = 80;
+      document.getElementById('budget-total').textContent = '10,000';
+      P.toast('已恢复默认预算 10,000 元 / 阈值 80%');
+    }
+  });
+</script>
+</body>
+</html>

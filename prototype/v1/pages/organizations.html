@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>部门与组织 · 企业 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+</head>
+<body data-page="organizations">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Organization</p>
+          <h1>部门与组织</h1>
+          <p class="lede">组织是项目归属边界，也是成员身份来源。私有化部署下每个环境对应一个组织，不做多租户计费与自助开通。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-toast="原型：组织信息变更需管理员权限并写审计">编辑组织</button>
+          <button class="btn btn-primary" type="button" data-modal="modal-dept"><i data-icon="plus"></i>新建部门</button>
+        </div>
+      </div>
+
+      <section class="card">
+        <div class="card-body">
+          <div style="display: flex; align-items: center; gap: 14px">
+            <div style="width: 46px; height: 46px; border-radius: 2px; background: var(--ink-900); display: grid; place-items: center; flex: none">
+              <i data-icon="building" style="color: #6fb5aa"></i>
+            </div>
+            <div style="flex: 1">
+              <strong style="font-size: 16px; letter-spacing: -0.01em">星野文化传播</strong>
+              <p class="lede" style="font-size: 11px; margin-top: 4px">org_2f91 · 私有化部署 · 创建于 2025-06-11 · 管理员：王斌</p>
+            </div>
+            <div style="display: flex; gap: 24px">
+              <div style="text-align: right"><span class="mono" style="font-size: 18px; font-weight: 600">9</span><p class="lede" style="font-size: 10px">成员</p></div>
+              <div style="text-align: right"><span class="mono" style="font-size: 18px; font-weight: 600">6</span><p class="lede" style="font-size: 10px">项目</p></div>
+              <div style="text-align: right"><span class="mono" style="font-size: 18px; font-weight: 600">4</span><p class="lede" style="font-size: 10px">部门</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid g-main">
+        <section class="card">
+          <div class="card-head"><div><h2>部门</h2><span class="sub">DEPARTMENT</span></div><span class="mono" style="font-size: 10px; color: var(--text-3)">GET /organizations/departments</span></div>
+          <div class="card-body tight">
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th style="width: 32%">部门</th><th>负责人</th><th>成员</th><th>在跑项目</th><th>创建时间</th><th></th></tr></thead>
+                <tbody id="dept-body">
+                  <tr data-row>
+                    <td><span class="row-title">制片部</span><span class="sub">制片、预算与交付</span></td>
+                    <td>陈默</td>
+                    <td class="num">2</td>
+                    <td class="num">3</td>
+                    <td class="mono">2025-06-12</td>
+                    <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：编辑部门负责人与成员归属">编辑</button></td>
+                  </tr>
+                  <tr data-row>
+                    <td><span class="row-title">编剧组</span><span class="sub">故事圣经与剧本</span></td>
+                    <td>苏禾</td>
+                    <td class="num">2</td>
+                    <td class="num">3</td>
+                    <td class="mono">2025-06-12</td>
+                    <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：编辑部门">编辑</button></td>
+                  </tr>
+                  <tr data-row>
+                    <td><span class="row-title">美术组</span><span class="sub">角色 / 场景 / 道具参考</span></td>
+                    <td>方屿</td>
+                    <td class="num">2</td>
+                    <td class="num">2</td>
+                    <td class="mono">2025-07-03</td>
+                    <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：编辑部门">编辑</button></td>
+                  </tr>
+                  <tr data-row>
+                    <td><span class="row-title">后期组</span><span class="sub">时间线与导出</span></td>
+                    <td>顾青</td>
+                    <td class="num">3</td>
+                    <td class="num">4</td>
+                    <td class="mono">2025-07-03</td>
+                    <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：编辑部门">编辑</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card-foot"><span>部门用于人员组织，不直接授予项目权限</span><span class="mono">4 departments</span></div>
+        </section>
+
+        <div>
+          <section class="card">
+            <div class="card-head"><h2>项目归属</h2><span class="sub">PROJECT SCOPE</span></div>
+            <div class="card-body">
+              <div class="ref-line"><span class="tag">NYJM-26</span><span>长夜将明</span><span class="pill pass">active</span></div>
+              <div class="ref-line"><span class="tag">CRHX-26</span><span>春日回信</span><span class="pill pass">active</span></div>
+              <div class="ref-line"><span class="tag">SYST-26</span><span>深夜食堂·番外</span><span class="pill pass">active</span></div>
+              <div class="ref-line"><span class="tag">WSZZ-26</span><span>无声证词</span><span class="pill fail">受阻</span></div>
+              <div class="ref-line"><span class="tag">WYLD-25</span><span>午夜来电</span><span class="pill review">on_hold</span></div>
+              <div class="ref-line"><span class="tag">DYLV-25</span><span>第一缕光</span><span class="pill draft">archived</span></div>
+            </div>
+            <div class="card-foot"><a class="btn btn-quiet btn-sm" href="projects.html">全部项目 →</a><span class="mono">scope: org</span></div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><h2>邀请状态</h2><span class="sub">1 PENDING</span></div>
+            <div class="card-body">
+              <div class="issue-row"><span class="issue-sev info">等待</span><div class="issue-body"><strong>赵一 · zhao.yi@xingye.studio</strong><p>writer · 邀请于 11-17 10:02 · 剩余 51 小时有效</p></div><div class="issue-act"><button class="btn btn-default btn-sm" type="button" data-toast="原型：已重发邀请，旧链接失效">重发</button></div></div>
+              <div class="issue-row"><span class="issue-sev warn">过期</span><div class="issue-body"><strong>钱多多 · qian.dd@xingye.studio</strong><p>邀请已过期 3 天，未产生任何访问权</p></div><div class="issue-act"><button class="btn btn-quiet btn-sm" type="button" data-toast="原型：已撤销过期邀请">撤销</button></div></div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="banner info" style="margin-top: 0">
+        <i data-icon="info"></i>
+        <div><b>本期不提供 SSO / SCIM / 多租户自助开通。</b>成员由管理员创建或邀请；组织为单实例，所有项目必须归属本组织。</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-dept-backdrop" data-close-modal="modal-dept"></div>
+<div class="modal" id="modal-dept" role="dialog" aria-modal="true">
+  <div class="modal-head"><p class="eyebrow">New department</p><h2>新建部门</h2></div>
+  <form data-form="dept">
+  <div class="modal-body">
+    <div class="form-grid">
+      <label class="field full"><span>部门名称</span><input class="control" name="dept" placeholder="如：配音组" required /></label>
+      <label class="field"><span>负责人</span><select class="control" name="owner"><option>陈默</option><option>苏禾</option><option>方屿</option><option>顾青</option></select></label>
+      <label class="field"><span>上级部门</span><select class="control" name="up"><option>星野文化传播（根）</option></select></label>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-default" type="button" data-close-modal="modal-dept">取消</button>
+    <button class="btn btn-primary" type="submit">创建部门</button>
+  </div>
+  </form>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  document.addEventListener('proto:submit', function (e) {
+    if (e.detail.name !== 'dept') return;
+    var d = e.detail.data;
+    var name = (d.dept || '').trim();
+    if (!name) { e.detail.keepOpen = true; P.toast('部门名称必填'); return; }
+    var dup = Array.prototype.some.call(document.querySelectorAll('#dept-body .row-title'), function (n) { return n.textContent.trim() === name; });
+    if (dup) { e.detail.keepOpen = true; P.toast('409：部门「' + name + '」已存在'); return; }
+    P.addRow('#dept-body', '<tr data-row><td><span class="row-title">' + P.esc(name) + '</span><span class="sub">' + P.esc(d.up) + '</span></td>' +
+      '<td>' + P.esc(d.owner) + '</td><td class="num">0</td><td class="num">0</td><td class="mono">' + P.time().slice(0, 5) + '</td>' +
+      '<td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：邀请成员加入该部门">添加成员</button></td></tr>');
+    P.toast('部门「' + name + '」已创建：不自动授予任何项目权限，需单独分配');
+  });
+</script>
+</body>
+</html>

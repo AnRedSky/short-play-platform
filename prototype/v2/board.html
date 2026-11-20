@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分镜 · 长夜将明 EP01</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="board" data-crumb="分镜">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <nav class="tabs" id="tabs"></nav>
+    <main class="content">
+      <div class="board-head">
+        <div>
+          <div class="eyebrow">STORYBOARD · SHOT CONTRACTS</div>
+          <h1>分镜与镜头</h1>
+          <div class="sub">EP01 · 24 个 Shot Contract · 21 条画面已就绪 · 总时长 2′18″</div>
+        </div>
+        <div class="board-tools">
+          <div class="seg" id="shot-filter">
+            <button class="is-active" data-f="all">全部 24</button>
+            <button data-f="ready">已就绪 21</button>
+            <button data-f="review">待确认 3</button>
+          </div>
+          <button class="btn btn-sm"><span data-i="upload"></span>导入参考</button>
+          <a class="btn btn-sm btn-primary" href="studio.html"><span data-i="play"></span>批量生成画面</a>
+        </div>
+      </div>
+
+      <div class="banner" style="margin-bottom:16px">
+        <span data-i="target"></span>
+        <div class="grow"><b>Shot Contract 是生成的唯一输入。</b>每条合同锁定画幅、时长、角色引用与场景版本；合同不改，重跑不会解决一致性问题。</div>
+        <span class="chip green">21 READY</span><span class="chip yellow">3 REVIEW</span>
+      </div>
+
+      <div class="shot-grid" id="shot-grid"></div>
+    </main>
+  </div>
+</div>
+
+<div class="scrim"></div>
+<div class="drawer" id="drawer-shot">
+  <div class="drawer-head">
+    <div><div class="eyebrow" id="shot-eyebrow">SHOT 04 / SCENE 03</div><h2 id="shot-title">借阅册</h2></div>
+    <button class="icon-btn" data-close><span data-i="x"></span></button>
+  </div>
+  <div class="drawer-body">
+    <div class="contact-sheet" style="grid-template-columns:1fr 1fr;margin-top:0" id="shot-frame">
+      <figure><img src="assets/img/bookstore.jpg" alt=""><figcaption>REF / 林未 + 周砚</figcaption></figure>
+      <figure><img src="assets/img/night-man.jpg" alt=""><figcaption>CANDIDATE / TAKE 02</figcaption></figure>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:12px"><span class="chip green">READY</span><span class="chip">9:16</span><span class="chip">5.0s</span><span class="chip">30fps</span></div>
+
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-head"><h2>Shot Contract</h2><span class="sub">FROZEN V2</span></div>
+      <div class="panel-body">
+        <dl class="kv">
+          <dt>镜头号</dt><dd id="shot-no">Shot 04</dd>
+          <dt>场景引用</dt><dd id="shot-scene">SC03 旧书店 · 内景 · v2</dd>
+          <dt>角色</dt><dd id="shot-cast">林未 / 周砚（REF v2）</dd>
+          <dt>时长</dt><dd class="mono">5.0s · 150f</dd>
+          <dt>画幅</dt><dd class="mono">9:16 · 1080×1920</dd>
+          <dt>运镜</dt><dd id="shot-move">固定 + 轻推 · 35mm</dd>
+          <dt>Prompt</dt><dd id="shot-prompt">雨夜旧书店内景，暖黄台灯，两人隔书架对视，35mm 胶片颗粒，青橙色调</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:14px">
+      <div class="panel-head"><h2>生成候选</h2><span class="sub">TAKES</span></div>
+      <div class="panel-body">
+        <div class="qa-item"><span class="qa-mark pass">✓</span><div class="txt"><b>TAKE 02 · 5.0s</b><span>一致度 0.91 · 已采用</span></div><span class="chip green">USED</span></div>
+        <div class="qa-item"><span class="qa-mark warn">!</span><div class="txt"><b>TAKE 01 · 5.0s</b><span>手部穿帮 · 已忽略</span></div><span class="chip">REJECT</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn" data-close>关闭</button>
+    <button class="btn" id="btn-regen"><span data-i="refresh"></span>生成候选</button>
+    <a class="btn btn-primary" href="review.html">送审</a>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const SHOTS = [
+    { no: '01', title: '雨夜抵达', scene: 'SC01 · 外景', img: 'hero-rain.jpg', dur: '4.0s', status: 'ready', cast: '林未', move: '固定 + 轻推' },
+    { no: '02', title: '收伞', scene: 'SC02 · 外景', img: 'alley.jpg', dur: '3.5s', status: 'ready', cast: '林未', move: '手持跟随' },
+    { no: '03', title: '门铃', scene: 'SC03 · 内景', img: 'bookstore.jpg', dur: '4.2s', status: 'ready', cast: '林未 / 周砚', move: '固定' },
+    { no: '04', title: '借阅册', scene: 'SC03 · 内景', img: 'bookstore.jpg', dur: '5.0s', status: 'ready', cast: '林未 / 周砚', move: '固定 + 轻推' },
+    { no: '05', title: '被擦掉的名字', scene: 'SC04 · 内景', img: 'night-man.jpg', dur: '5.0s', status: 'review', cast: '周砚', move: '近景 · 微推' },
+    { no: '06', title: '后巷', scene: 'SC05 · 外景', img: 'alley.jpg', dur: '6.0s', status: 'ready', cast: '林未 / 陌生人', move: '稳定器跟拍' },
+    { no: '07', title: '磁带', scene: 'SC06 · 内景', img: 'hero-rain.jpg', dur: '4.8s', status: 'ready', cast: '林未', move: '特写' },
+    { no: '08', title: '天台', scene: 'SC07 · 外景', img: 'rooftop.jpg', dur: '5.5s', status: 'ready', cast: '林未 / 周砚', move: '环绕' },
+    { no: '09', title: '同谋', scene: 'SC07 · 外景', img: 'rooftop.jpg', dur: '4.5s', status: 'review', cast: '林未 / 周砚', move: '双人中景' },
+    { no: '10', title: '名字', scene: 'SC08 · 外景', img: 'night-man.jpg', dur: '3.0s', status: 'review', cast: '林未', move: '特写 · 手持' },
+    { no: '11', title: '林未特写', scene: 'SC08 · 外景', img: 'linwei.jpg', dur: '3.2s', status: 'ready', cast: '林未', move: '肖像特写' },
+    { no: '12', title: '周砚反应', scene: 'SC08 · 外景', img: 'zhouyan.jpg', dur: '3.0s', status: 'ready', cast: '周砚', move: '近景' }
+  ];
+
+  let active = 3;
+  function cardHTML(s, i) {
+    const chip = s.status === 'ready' ? '<span class="chip green">READY</span>' : '<span class="chip yellow">REVIEW</span>';
+    return '<article class="shot-card' + (i === active ? ' is-selected' : '') + '" data-shot="' + i + '" data-status="' + s.status + '">' +
+      '<div class="shot-frame"><img src="assets/img/' + s.img + '" alt=""><span class="no">SHOT ' + s.no + '</span><span class="dur">' + s.dur + '</span><span class="ready">' + chip + '</span></div>' +
+      '<div class="shot-meta"><h4>' + s.title + '</h4><p>' + s.scene + ' · ' + s.move + '</p><div class="tags"><span>' + s.cast.split(' / ').join('</span><span>') + '</span></div></div></article>';
+  }
+
+  function renderGrid() {
+    document.getElementById('shot-grid').innerHTML = SHOTS.map(cardHTML).join('');
+  }
+
+  function openShot(i) {
+    const s = SHOTS[i];
+    document.getElementById('shot-eyebrow').textContent = 'SHOT ' + s.no + ' / ' + s.scene;
+    document.getElementById('shot-title').textContent = s.title;
+    document.getElementById('shot-no').textContent = 'Shot ' + s.no;
+    document.getElementById('shot-scene').textContent = s.scene + ' · v2';
+    document.getElementById('shot-cast').textContent = s.cast + '（REF v2）';
+    document.getElementById('shot-move').textContent = s.move + ' · 35mm';
+    document.getElementById('shot-prompt').textContent = '雨夜' + s.title + '，' + s.cast.replace(' / ', '与') + '，35mm 胶片颗粒，青橙色调，浅景深';
+    document.getElementById('shot-frame').innerHTML = '<figure><img src="assets/img/' + s.img + '" alt=""><figcaption>REF / ' + s.cast + '</figcaption></figure>' +
+      '<figure><img src="assets/img/' + (s.img === 'linwei.jpg' ? 'hero-rain.jpg' : 'linwei.jpg') + '" alt=""><figcaption>CANDIDATE / TAKE 02</figcaption></figure>';
+    P.openDrawer('drawer-shot');
+  }
+
+  document.getElementById('shot-grid').addEventListener('click', e => {
+    const card = e.target.closest('[data-shot]');
+    if (card) { active = parseInt(card.dataset.shot, 10); renderGrid(); openShot(active); }
+  });
+
+  document.querySelectorAll('#shot-filter button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#shot-filter button').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      const f = btn.dataset.f;
+      document.querySelectorAll('#shot-grid .shot-card').forEach(card => {
+        card.style.display = (f === 'all' || card.dataset.status === f) ? '' : 'none';
+      });
+    });
+  });
+
+  document.getElementById('btn-regen').addEventListener('click', () => {
+    const s = SHOTS[active];
+    s.status = 'ready';
+    renderGrid();
+    P.toast('已为 SHOT ' + s.no + ' 创建新候选，等模型返回后自动写回合同');
+  });
+
+  renderGrid();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>故事圣经 · 长夜将明 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+</head>
+<body data-page="stories" data-project="1">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+    <nav class="module-tabs" data-tabs></nav>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Story bible</p>
+          <h1>故事圣经</h1>
+          <p class="lede">世界观、人物关系与设定规则的结构化版本。剧本版本记录它采用的故事圣经版本；上游更新只提示影响，不改写已冻结剧本。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-modal="modal-import"><i data-icon="upload"></i>导入 DOCX</button>
+          <button class="btn btn-primary" type="button" data-drawer="drawer-edit">新建版本 v4</button>
+        </div>
+      </div>
+
+      <div class="grid g-side">
+        <section class="card" style="margin-bottom: 0">
+          <div class="card-head"><h2>版本与条目</h2><span class="sub">3</span></div>
+          <div class="card-body tight">
+            <div class="tree" id="ver-tree">
+              <div class="tree-item on" data-ver="v3">
+                <span class="n">v3</span>
+                <span class="t">当前版本 · 2019 梅雨<small>approved · 苏禾 · 11-16 14:20</small></span>
+                <span class="pill pass">已批准</span>
+              </div>
+              <div class="tree-item" data-ver="v2">
+                <span class="n">v2</span>
+                <span class="t">第二稿 · 增加刑警线<small>superseded · 11-09</small></span>
+                <span class="pill draft">历史</span>
+              </div>
+              <div class="tree-item" data-ver="v1">
+                <span class="n">v1</span>
+                <span class="t">初稿 · DOCX 导入<small>superseded · 11-04</small></span>
+                <span class="pill draft">历史</span>
+              </div>
+            </div>
+            <div class="section-label" style="margin: 10px 16px 6px">当前版本条目</div>
+            <div class="tree">
+              <div class="tree-item"><span class="n">01</span><span class="t">世界观：临江市老城区<small>3 条设定规则 · 置信度 0.94</small></span></div>
+              <div class="tree-item"><span class="n">02</span><span class="t">人物：沈砚<small>主角 · 28 岁 · 旧书店店主</small></span></div>
+              <div class="tree-item"><span class="n">03</span><span class="t">人物：林晚<small>女主 · 26 岁 · 晚报记者</small></span></div>
+              <div class="tree-item"><span class="n">04</span><span class="t">人物：陈九<small>刑警 · 45 岁 · 旧案负责人</small></span></div>
+              <div class="tree-item"><span class="n">05</span><span class="t">关系图：三角债务<small>6 条关系 · 2 条冲突待确认</small></span></div>
+              <div class="tree-item"><span class="n">06</span><span class="t">主题与调性<small>悬疑 / 克制 / 冷色雨夜</small></span></div>
+            </div>
+          </div>
+          <div class="card-foot"><span>版本不可覆盖</span><span class="mono">v3 · id sb_03</span></div>
+        </section>
+
+        <section class="card" style="margin-bottom: 0">
+          <div class="card-head">
+            <div><h2 id="bible-title">v3 · 2019 梅雨</h2><span class="sub" id="bible-sub">APPROVED · 来源：DOCX 导入 + 人工修订</span></div>
+            <div class="actions">
+              <button class="btn btn-quiet btn-sm" type="button" data-toast="原型：版本对比视图（v2 ↔ v3，逐条 diff）">与 v2 对比</button>
+              <button class="btn btn-default btn-sm" type="button" data-toast="原型：导出 JSON / PDF 评审稿">导出</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="banner ok">
+              <i data-icon="check"></i>
+              <div><b>已批准版本，内容不可变。</b>任何修订都产生新版本；剧本引用的是此版本的 ID，不会随编辑漂移。</div>
+            </div>
+
+            <div class="section-label">世界观</div>
+            <p class="lede" style="max-width: 100%; margin-bottom: 10px">
+              临江市老城区，2019 年梅雨季。城市正在拆改旧街，雨夜里所有招牌都熄了灯。故事发生在一条即将消失的书店街，核心规则：<b>任何人说出的时间都不可信</b>；<b>怀表只在三点停一次</b>；<b>雨声会盖住录音笔的人声</b>。
+            </p>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px">
+              <span class="tag">题材 urban-mystery</span>
+              <span class="tag">调性 restrained</span>
+              <span class="tag">季节 梅雨</span>
+              <span class="tag">画幅 9:16</span>
+              <span class="tag">时长 2'30"/集</span>
+            </div>
+
+            <div class="section-label">人物</div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>人物</th><th>身份</th><th>核心欲望</th><th>秘密</th><th>资产引用</th></tr></thead>
+                <tbody>
+                  <tr data-row>
+                    <td><span class="row-title">沈砚</span><span class="sub">主角 · 男 · 28</span></td>
+                    <td>旧书店店主</td>
+                    <td>找回父亲失踪的真相</td>
+                    <td class="wrap">他记得那晚的声音，但对外说自己不在场</td>
+                    <td><span class="tag">char a_41e2</span> <span class="pill stale">v2 已旧</span></td>
+                  </tr>
+                  <tr data-row>
+                    <td><span class="row-title">林晚</span><span class="sub">女主 · 女 · 26</span></td>
+                    <td>晚报记者</td>
+                    <td>拿到能署名的独家</td>
+                    <td class="wrap">她先于警方拿到录音，却删掉了 11 秒</td>
+                    <td><span class="tag">char a_51b0</span> <span class="pill pass">v3</span></td>
+                  </tr>
+                  <tr data-row>
+                    <td><span class="row-title">陈九</span><span class="sub">配角 · 男 · 45</span></td>
+                    <td>刑警 · 旧案负责人</td>
+                    <td>在退休前结案</td>
+                    <td class="wrap">旧案卷宗里少了一页，是他抽走的</td>
+                    <td><span class="tag">char a_73c4</span> <span class="pill stale">v1 已旧</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="section-label">关系与冲突</div>
+            <div class="grid g-2">
+              <div>
+                <div class="ref-line"><span class="tag">沈砚 → 林晚</span><span>互相利用 → 共同追查</span><span class="lock">6 场</span></div>
+                <div class="ref-line"><span class="tag">沈砚 → 陈九</span><span>被怀疑 → 试探性合作</span><span class="lock">4 场</span></div>
+                <div class="ref-line"><span class="tag">林晚 → 陈九</span><span>信息交换，隐瞒录音</span><span class="lock">5 场</span></div>
+              </div>
+              <div class="banner warn" style="margin-bottom: 0">
+                <i data-icon="alert"></i>
+                <div><b>2 条设定冲突待确认</b><br>「陈九是否知道怀表」在 EP02 与 EP05 描述矛盾；「林晚删录音的时间点」未统一。冲突只输出 issue，不自动合并。</div>
+              </div>
+            </div>
+
+            <div class="section-label">来源追溯</div>
+            <div class="kv">
+              <div class="row"><dt>原始文件</dt><dd class="mono">story_v3.docx · 48 KB · sha256 9c2f…a1</dd></div>
+              <div class="row"><dt>结构化抽取</dt><dd>18 条 · 证据定位率 96% <span class="mono">（评测集口径）</span></dd></div>
+              <div class="row"><dt>低置信度待校对</dt><dd>2 条 <span class="pill review">需人工确认</span></dd></div>
+              <div class="row"><dt>审核记录</dt><dd class="mono">rv_31a2 · 陆行 · approved · 11-16 15:02</dd></div>
+            </div>
+          </div>
+          <div class="card-foot">
+            <span>上游变更会提示影响的剧本 / 镜头 / 时间线</span>
+            <a class="btn btn-quiet btn-sm" href="episodes.html">查看引用剧本 →</a>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- 编辑抽屉 -->
+<div class="drawer-backdrop" id="drawer-edit-backdrop" data-close-drawer="drawer-edit"></div>
+<aside class="drawer" id="drawer-edit" style="width: 520px">
+  <div class="drawer-head">
+    <div><p class="eyebrow">New version</p><h2>基于 v3 新建 v4</h2></div>
+    <button class="close-x" type="button" data-close-drawer="drawer-edit"><i data-icon="x"></i></button>
+  </div>
+  <div class="drawer-body">
+    <div class="banner info"><i data-icon="info"></i><div>保存会生成不可变新版本 v4，base_version = v3；冲突返回 409 并给出差异，不覆盖他人编辑。</div></div>
+    <div class="form-grid">
+      <label class="field full"><span>版本摘要</span><input class="control" value="统一怀表与录音时间线" /></label>
+      <label class="field full"><span>世界观修订</span><textarea class="control" rows="4">核心规则第 3 条补充：雨声只在巷口盖住人声，书店内可听清；与 EP02 场次 4 对齐。</textarea></label>
+      <label class="field"><span>状态</span><select class="control"><option>draft（保存后可提交审核）</option></select></label>
+      <label class="field"><span>base_version</span><input class="control mono" value="v3" readonly /></label>
+    </div>
+    <div class="section-label">提交前校验</div>
+    <div class="check-row"><input type="checkbox" checked /><span>必填字段与引用完整性通过</span></div>
+    <div class="check-row"><input type="checkbox" checked /><span>设定冲突已标记（2 条待确认，不阻断保存）</span></div>
+    <div class="check-row"><input type="checkbox" /><span>同步更新受影响剧本说明（可选）</span></div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn btn-default" type="button" data-close-drawer="drawer-edit">保存草稿</button>
+    <button class="btn btn-primary" type="button" data-act="new-bible">保存并提交审核</button>
+  </div>
+</aside>
+
+<!-- 导入弹窗 -->
+<div class="modal-backdrop" id="modal-import-backdrop" data-close-modal="modal-import"></div>
+<div class="modal" id="modal-import" role="dialog" aria-modal="true">
+  <div class="modal-head"><p class="eyebrow">Import</p><h2>导入故事圣经文稿</h2></div>
+  <div class="modal-body">
+    <div style="border: 1px dashed var(--line-strong); border-radius: 3px; padding: 22px; text-align: center; background: var(--surface-sunken)">
+      <i data-icon="upload" style="color: var(--text-3)"></i>
+      <p style="font-size: 11.5px; color: var(--text-2); margin-top: 8px">拖入 DOCX / PDF / Markdown，或点击选择文件</p>
+      <p style="font-size: 10px; color: var(--text-3); margin-top: 4px">单文件 ≤ 20 MB；MIME 与 magic bytes 双检；上传后进入隔离区扫描</p>
+    </div>
+    <div class="check-row" style="margin-top: 12px"><input type="checkbox" checked /><span>抽取为结构化条目，保留原文证据定位</span></div>
+    <div class="check-row"><input type="checkbox" checked /><span>低置信度条目进入人工校对队列</span></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-default" type="button" data-close-modal="modal-import">取消</button>
+    <button class="btn btn-primary" type="button" data-close-modal="modal-import" data-toast="原型：已创建 ingestion 记录，异步解析中（ingestion_id 可查询）">开始解析</button>
+  </div>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var VER = {
+    v3: { title: 'v3 · 2019 梅雨', sub: 'APPROVED · 来源：DOCX 导入 + 人工修订' },
+    v2: { title: 'v2 · 第二稿 · 增加刑警线', sub: 'SUPERSEDED · 已被 v3 替代，只读' },
+    v1: { title: 'v1 · 初稿 · DOCX 导入', sub: 'SUPERSEDED · 已被 v2 替代，只读' }
+  };
+
+  document.querySelectorAll('#ver-tree .tree-item[data-ver]').forEach(function (item) {
+    item.addEventListener('click', function () {
+      document.querySelectorAll('#ver-tree .tree-item').forEach(function (n) { n.classList.remove('on'); });
+      item.classList.add('on');
+      var v = VER[item.dataset.ver];
+      document.getElementById('bible-title').textContent = v.title;
+      document.getElementById('bible-sub').textContent = v.sub;
+      P.toast('已切换到 ' + item.dataset.ver + (item.dataset.ver === 'v3' ? '（当前批准版本）' : '（历史版本，只读，不可原地编辑）'));
+    });
+  });
+
+  document.addEventListener('proto:act', function (e) {
+    if (e.detail.act !== 'new-bible') return;
+    var tree = document.getElementById('ver-tree');
+    var v4 = document.createElement('div');
+    v4.className = 'tree-item';
+    v4.dataset.ver = 'v4';
+    v4.innerHTML = '<span class="n">v4</span><span class="t">统一怀表与录音时间线<small>draft · 待审核 · ' + P.time() + '</small></span><span class="pill review">待审核</span>';
+    tree.insertBefore(v4, tree.firstElementChild);
+    P.closeDrawer();
+    P.toast('已创建 v4 草稿（base_version = v3）：进入项目 review 队列，批准前不改写已冻结剧本');
+  });
+</script>
+</body>
+</html>

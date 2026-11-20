@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小说改编 · 长夜将明</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="import" data-crumb="小说改编">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <nav class="tabs" id="tabs"></nav>
+    <main class="content">
+      <div class="board-head">
+        <div>
+          <div class="eyebrow">ADAPTATION · NOVEL TO SERIES</div>
+          <h1>小说改编</h1>
+          <div class="sub">长夜将明 · 24 章 / 86,420 字 · 目标 12 集 · 单集 2′18″ · 竖屏 9:16</div>
+        </div>
+        <div class="board-tools">
+          <span class="chip green" id="parse-chip"><span class="dot green"></span>章节已解析 24 / 24</span>
+          <button class="btn btn-sm" id="btn-boundary"><span data-i="scissors"></span>边界校对</button>
+          <a class="btn btn-sm" href="bible.html"><span data-i="layers"></span>故事圣经</a>
+          <button class="btn btn-sm" id="btn-source"><span data-i="upload"></span>更换源文件</button>
+          <button class="btn btn-primary btn-sm" id="btn-generate"><span data-i="sparkles"></span>确认实体并生成分集</button>
+        </div>
+      </div>
+
+      <div class="wizard">
+        <div class="step is-done"><i>01</i>章节解析</div><div class="line"></div>
+        <div class="step is-now"><i>02</i>实体确认</div><div class="line"></div>
+        <div class="step"><i>03</i>分集规划</div>
+        <div class="spacer" style="flex:1"></div>
+        <span class="sub">章节 <b id="wizard-count">24</b> / <b id="wizard-total">24</b> · 边界与实体可人工修正</span>
+      </div>
+
+      <div class="adapt-layout">
+        <section class="panel">
+          <div class="panel-head"><h2>源章节</h2><span class="sub">24 CHAPTERS</span></div>
+          <div style="padding:12px">
+            <div class="file-row" style="margin-top:0">
+              <span class="ext">DOCX</span>
+              <div class="grow"><b>长夜将明_24章.docx</b><span>86,420 字 · 24 章</span></div>
+              <span class="chip green">已解析</span>
+            </div>
+          </div>
+          <div class="chapter-list" id="chapter-list"></div>
+          <div style="padding:10px 12px;border-top:1px solid var(--line-soft);display:flex;justify-content:space-between;align-items:center">
+            <span class="sub">边界 24 / 24 · 置信度 96%</span>
+            <span class="chip">人工可改</span>
+          </div>
+        </section>
+
+        <section class="reader" id="reader"></section>
+
+        <aside class="side-stack adapt-side">
+          <section class="panel">
+            <div class="panel-head"><h2>改编设置</h2><span class="sub">ADAPT</span></div>
+            <div class="panel-body">
+              <label class="field"><span>目标集数</span><select id="set-eps"><option>12 集</option><option>8 集</option><option>16 集</option><option>24 集</option></select></label>
+              <label class="field" style="margin-top:10px"><span>单集时长</span><select><option>2–3 分钟 · 2′18″</option><option>1–2 分钟</option><option>3–5 分钟</option></select></label>
+              <label class="field" style="margin-top:10px"><span>分集策略</span><select><option>钩子优先 · 每集一个物件</option><option>章节对齐 · 2 章 / 集</option><option>人物弧优先</option></select></label>
+              <label class="field" style="margin-top:10px"><span>改编幅度</span><select><option>忠于主线 · 允许压缩</option><option>强化冲突 · 允许重排</option><option>大幅重构</option></select></label>
+              <div class="note" style="margin-top:12px">章节边界自动识别为 <b id="bd-note-count">24</b> 章（置信度 96%）。可在左侧逐章校对；修改边界只影响分集映射，不改写原文。</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>解析摘要</h2><span class="sub">EXTRACT</span></div>
+            <div class="panel-body">
+              <div class="mini-kpi"><span>主要人物</span><b>6 人 · 已消歧</b></div>
+              <div class="mini-kpi"><span>场景</span><b>4 个 · 18 道具</b></div>
+              <div class="mini-kpi"><span>时间线</span><b>7 夜 / 未跨年</b></div>
+              <div class="mini-kpi"><span>建议分集</span><b>12 集 · 2 章 / 集</b></div>
+              <div class="banner" style="margin-top:10px"><span data-i="alert"></span><div class="grow">第 07 章与第 12 章存在时间线冲突，已标为待人工确认，不自动合并。</div></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>实体确认</h2><span class="sub" id="entity-count">5 / 6</span></div>
+            <div class="panel-body">
+              <div class="entity-row" id="entity-chips">
+                <button class="chip green" data-entity>林未 · 记者</button>
+                <button class="chip green" data-entity>周砚 · 店主</button>
+                <button class="chip green" data-entity>陈九 · 线人</button>
+                <button class="chip green" data-entity>旧书店 · 主场景</button>
+                <button class="chip green" data-entity>借阅册 · 核心道具</button>
+                <button class="chip yellow" data-merge>“他” · 待消歧</button>
+              </div>
+              <div class="note" style="margin-top:8px">低置信度实体不进入分集。可把“他”合并到已有角色，或保留为独立角色。</div>
+              <button class="btn btn-sm" style="margin-top:8px" id="btn-merge"><span data-i="link"></span>合并同义实体</button>
+
+              <div class="rel-title">人物关系 <span>3</span></div>
+              <div class="rel-list">
+                <div class="rel-row"><b>林未</b><span>调查</span><b>周砚</b></div>
+                <div class="rel-row"><b>周砚</b><span>保管</span><b>借阅册</b></div>
+                <div class="rel-row"><b>陈九</b><span>提供</span><b>账本</b></div>
+              </div>
+              <button class="btn btn-primary adapt-cta" id="btn-generate-2"><span data-i="sparkles"></span>生成分集规划</button>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="drawer" id="drawer-boundary">
+  <div class="drawer-head"><div><div class="eyebrow">CHAPTER BOUNDARY</div><h2>验收章节边界</h2><div class="sub" style="margin-top:4px">逐章检查起止；可拆分或并入下一章</div></div><button class="icon-btn" data-close data-i="x"></button></div>
+  <div class="drawer-body">
+    <div class="banner" style="margin-bottom:10px"><span data-i="alert"></span><div class="grow">边界只决定「原文如何进入分集」，不改写原文。拆并与合并都可撤销；验收后集纲才允许批量生成。</div></div>
+    <div class="map-sum"><span id="bd-count">24 章 · 24 / 24 待验收</span><span id="bd-state" class="mono" style="color:var(--dim)">v1 · 自动识别</span></div>
+    <div class="bd-head"><span>NO</span><span>章节</span><span>页码范围</span><span>字数</span><span>操作</span></div>
+    <div id="bd-list"></div>
+  </div>
+  <div class="drawer-foot"><button class="btn" id="btn-bd-undo">撤销上一步</button><button class="btn btn-primary" id="btn-bd-pass">验收当前边界 <span data-i="check"></span></button></div>
+</div>
+
+<div class="scrim"></div>
+<div class="modal" id="modal-merge">
+  <div class="modal-head"><div><div class="eyebrow">ENTITY MERGE</div><h2 style="margin:4px 0 0;font-size:18px">合并同义实体</h2></div><button class="icon-btn" data-close data-i="x"></button></div>
+  <div class="modal-body">
+    <div class="input-grid">
+      <label class="field"><span>待消歧实体</span><select><option>“他” · 出现 34 次</option></select></label>
+      <label class="field"><span>合并到</span><select id="merge-target"><option>周砚 · 店主</option><option>林未 · 记者</option><option>保留为独立角色</option></select></label>
+    </div>
+    <div class="banner" style="margin-top:12px"><span data-i="link"></span><div class="grow">合并后，34 处“他”的引用会指向周砚；角色小传、关系图与后续分集共用同一实体。原文不会被改写。</div></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>取消</button><button class="btn btn-primary" id="btn-merge-do">确认合并 <span data-i="arrowRight"></span></button></div>
+</div>
+
+<div class="modal" id="modal-adapt">
+  <div class="modal-head"><div><div class="eyebrow">ADAPTATION PIPELINE</div><h2 style="margin:4px 0 0;font-size:18px">正在生成分集规划</h2></div><button class="icon-btn" data-close data-i="x"></button></div>
+  <div class="modal-body">
+    <div class="banner" style="margin-bottom:14px"><span data-i="cpu"></span><div class="grow">MORK-LLM-7B · 读取已验收章节 · 输出 12 集大纲与章节映射。不会覆盖原著文本。</div></div>
+    <div class="mini-bar" style="height:6px"><i id="adapt-bar" style="width:4%"></i></div>
+    <div class="note" id="adapt-note" style="margin-top:8px">章节清洗 · 4%</div>
+    <div class="log-list" id="adapt-log">
+      <div>[00:00] 读取 24 章，86,420 字</div>
+    </div>
+  </div>
+  <div class="modal-foot"><span class="sub">预计 40 秒 · ¥1.20 · 不消耗视频额度</span><button class="btn" data-close>取消</button></div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const CHAPTERS = [
+    { no: '01', title: '雨夜归人', words: '3,820', range: 'P1–18', state: 'done', body: '雨从傍晚开始下，像一层薄而冷的膜，覆在这座城市的玻璃上。林未把车停在旧书店对面的巷口，没有立刻下车。她看见<mark>旧书店</mark>的灯还亮着，橱窗里那本没有编号的<mark>借阅册</mark>翻开着，像有人刚刚离开。\n\n她推门进去，门铃只响了半声。<mark>周砚</mark>从书架后抬起头，目光越过她，落在她身后的雨里。\n\n“你找谁？”\n\n“我不找谁。”林未收起伞，“我找一本没有被登记过的书。”' },
+    { no: '02', title: '没有编号的借阅册', words: '3,410', range: 'P19–34', state: 'done', body: '借阅册的纸页泛黄，边缘被翻得起了毛。每一行都写着名字、日期和一本书。只有中间一页，名字被橡皮擦掉了，留下一个浅浅的凹痕。\n\n林未用指腹压了压那处凹痕。纸面下像是还藏着另一个名字。\n\n周砚没有阻止她。他只是把台灯往她那边推了推，说：“看可以。别抄。”' },
+    { no: '03', title: '被擦掉的名字', words: '3,760', range: 'P35–52', state: 'done', body: '“这是谁的笔迹？”林未问。\n\n“我的。”周砚说。\n\n“你在替谁隐瞒？”\n\n周砚把借阅册合上，动作很轻，像怕惊动什么。窗外的雨突然大了一阵，街灯在玻璃上碎成几块。<mark>陈九</mark>的名字就是在这个时候，从柜台底下的旧报纸里露出来的。' },
+    { no: '04', title: '后巷的陌生人', words: '3,240', range: 'P53–68', state: 'done', body: '后巷的蒸汽从井盖里升起来，霓虹灯把水洼染成红色。林未撑伞走出来，听见身后有第二个人的脚步声，不紧不慢，始终保持七步的距离。\n\n她停下，脚步也停下。\n\n“林记者。”那个人说，“有人让我带句话。”' },
+    { no: '05', title: '一盘没有录完的磁带', words: '3,980', range: 'P69–86', state: 'done', body: '磁带在旧随身听里转了两圈，先是一段雨声，然后是一个被剪掉的句子。林未反复听了四遍，才把最后两个字拼出来。\n\n“别回去。”' },
+    { no: '06', title: '天台上的同谋', words: '3,650', range: 'P87–102', state: 'done', body: '城市在脚下亮着。周砚站在栏杆边，风把他的衣角吹起来。林未把借阅册放在两人之间，像放下一件证物。\n\n“你现在退出，还来得及。”周砚说。\n\n“我已经听过那盘磁带。”' },
+    { no: '07', title: '第二把伞', words: '3,310', range: 'P103–118', state: 'warn', body: '第二天傍晚，书店门口多了一把透明伞。伞柄上缠着一根红线，和<mark>林未</mark>那把一模一样。\n\n她确定自己昨晚把伞带回了家。' },
+    { no: '08', title: '旧城区的失物招领', words: '4,120', range: 'P119–138', state: 'done', body: '旧城区的失物招领处在一栋没有电梯的楼里。管理员翻了很久，才从最底层抽出一只牛皮纸袋。袋子上写着：无人认领，保存七年。' },
+    { no: '09', title: '陈九的账本', words: '3,870', range: 'P139–158', state: 'done', body: '陈九的账本上没有金额，只有日期和名字。每一条后面都跟着一个数字，像是某种只有他自己看得懂的编号。' },
+    { no: '10', title: '那场没有发生的火灾', words: '4,050', range: 'P159–178', state: 'done', body: '火灾报道的剪报贴满了半面墙，日期却是七年前。林未数了三遍，每一张剪报上的死亡人数都不一样。' },
+    { no: '11', title: '删除记忆的人', words: '3,930', range: 'P179–198', state: 'done', body: '“记忆不是被删除的。”周砚说，“是被借走了。有人替你保管，直到你愿意还。”' },
+    { no: '12', title: '雨停之前', words: '4,180', range: 'P199–222', state: 'warn', body: '雨停之前，林未在借阅册的最后一页看见了自己的名字。日期是明天。' },
+    { no: '13', title: '借阅规则', words: '3,540', range: 'P223–240', state: 'done', body: '借阅册的扉页上写着三条规则。第三条被墨水涂掉了，只剩最后两个字：归还。' },
+    { no: '14', title: '名字的重量', words: '3,690', range: 'P241–258', state: 'done', body: '每写下一个名字，纸就重一点。林未把借阅册放上秤，指针停在 1.7 公斤。' },
+    { no: '15', title: '第七个夜晚', words: '3,880', range: 'P259–278', state: 'done', body: '第七个夜晚，旧书店没有开灯。林未推门进去，看见周砚坐在黑暗里，面前摊着那本借阅册。' },
+    { no: '16', title: '归还', words: '4,020', range: 'P279–298', state: 'done', body: '归还并不是把书放回书架。周砚说，是把名字从纸上取下来，重新放回一个人的记忆里。' },
+    { no: '17', title: '失物招领处', words: '3,470', range: 'P299–316', state: 'done', body: '失物招领处的管理员换了一个人。新管理员说，牛皮纸袋昨天被人取走了，签名栏是空的。' },
+    { no: '18', title: '没有寄出的信', words: '3,760', range: 'P317–336', state: 'done', body: '信写于七年前，收件人是林未，寄件人那一栏被撕掉了。信封里只有一张旧书店的收据。' },
+    { no: '19', title: '红线的另一端', words: '3,620', range: 'P337–354', state: 'done', body: '红线另一端系着一枚钥匙。钥匙能打开的不是门，是旧书店柜台最下面那层抽屉。' },
+    { no: '20', title: '最后一页', words: '4,140', range: 'P355–376', state: 'done', body: '借阅册的最后一页没有编号。林未翻开时，纸上只有一行新墨：长夜将明。' },
+    { no: '21', title: '天亮以后', words: '3,580', range: 'P377–394', state: 'done', body: '天亮以后，旧书店的招牌被摘了下来。林未站在门口，手里握着那把透明伞。' },
+    { no: '22', title: '第二个名字', words: '3,820', range: 'P395–414', state: 'done', body: '借阅册上出现了第二个被擦掉的名字。这一次，林未认得那笔迹。' },
+    { no: '23', title: '还书人', words: '4,060', range: 'P415–436', state: 'done', body: '还书的人没有脸。他把书放在柜台上，留下一句“到期了”，然后走进雨里。' },
+    { no: '24', title: '长夜将明', words: '4,220', range: 'P437–462', state: 'done', body: '雨在清晨四点停了。林未把借阅册合上，第一次没有把它带走。\n\n周砚站在门口，像七年前一样，等她回头。' }
+  ];
+
+  let activeChapter = 0;
+
+  function chapterHTML(c, i) {
+    return '<div class="chapter-item' + (i === activeChapter ? ' is-active' : '') + '" data-chapter="' + i + '">' +
+      '<span class="no">' + c.no + '</span>' +
+      '<div class="grow"><b>' + c.title + '</b><span>' + c.words + ' 字 · ' + c.range + '</span></div>' +
+      '<span class="dot ' + (c.state === 'warn' ? 'yellow' : 'green') + '"></span></div>';
+  }
+
+  function renderChapters() {
+    document.getElementById('chapter-list').innerHTML = CHAPTERS.map(chapterHTML).join('');
+  }
+
+  function renderReader() {
+    const c = CHAPTERS[activeChapter];
+    document.getElementById('reader').innerHTML =
+      '<div class="r-kicker">CHAPTER ' + c.no + ' / ' + CHAPTERS.length + ' · SOURCE TEXT</div>' +
+      '<h2>' + c.title + '</h2>' +
+      '<div class="r-slug">PAGES ' + c.range.replace('P', '') + ' · ' + c.words + ' 字 · 原文不改写</div>' +
+      c.body.split('\n\n').map(p => '<p>' + p + '</p>').join('') +
+      '<div class="r-note">已标注实体：林未 / 周砚 / 旧书店 / 借阅册 · 本章钩子候选：被擦掉的名字</div>' +
+      '<div class="r-facts">' +
+        '<div><span>出场人物</span><b>林未 · 周砚</b></div>' +
+        '<div><span>核心物件</span><b>无编号借阅册</b></div>' +
+        '<div><span>情绪曲线</span><b>警觉 → 试探</b></div>' +
+        '<div><span>章节钩子</span><b>被擦掉的名字</b></div>' +
+      '</div>';
+  }
+
+  document.getElementById('chapter-list').addEventListener('click', e => {
+    const item = e.target.closest('[data-chapter]');
+    if (!item) return;
+    activeChapter = parseInt(item.dataset.chapter, 10);
+    renderChapters();
+    renderReader();
+  });
+
+  document.querySelectorAll('[data-entity]').forEach(el => {
+    el.addEventListener('click', () => {
+      el.classList.toggle('green');
+      el.classList.toggle('yellow');
+      P.toast('实体「' + el.textContent.trim() + '」状态已更新');
+    });
+  });
+
+  const mergeBtn = document.getElementById('btn-merge');
+  document.querySelector('[data-merge]').addEventListener('click', () => P.openModal('modal-merge'));
+  mergeBtn.addEventListener('click', () => P.openModal('modal-merge'));
+
+  document.getElementById('btn-merge-do').addEventListener('click', () => {
+    const target = document.getElementById('merge-target').value;
+    const chip = document.querySelector('[data-merge]');
+    if (!chip) { P.closeModals(); P.toast('当前没有待消歧实体'); return; }
+    if (target === '保留为独立角色') {
+      chip.className = 'chip green';
+      chip.textContent = '“他” · 独立角色';
+      document.getElementById('entity-count').textContent = '6 / 6';
+      P.closeModals();
+      P.toast('已保留“他”为独立角色，后续可补充小传');
+      return;
+    }
+    chip.remove();
+    document.getElementById('entity-count').textContent = '5 / 5';
+    const rel = document.createElement('div');
+    rel.className = 'rel-row';
+    rel.innerHTML = '<b>“他”</b><span>即</span><b>' + target.split(' · ')[0] + '</b>';
+    document.querySelector('.rel-list').appendChild(rel);
+    P.closeModals();
+    P.toast('已将“他”合并到' + target.split(' · ')[0] + '，34 处引用同步更新');
+  });
+
+  document.getElementById('btn-source').addEventListener('click', () => P.toast('演示环境已固定使用《长夜将明》24 章源文件'));
+  document.getElementById('btn-generate-2').addEventListener('click', start);
+  document.getElementById('btn-generate').addEventListener('click', start);
+  if (location.hash === '#merge') P.openModal('modal-merge');
+
+  let bdAccepted = false;
+  const bdHistory = [];
+
+  function bdSnapshot() { bdHistory.push(JSON.parse(JSON.stringify(CHAPTERS))); }
+  function bdRenumber() { CHAPTERS.forEach((c, i) => { c.no = String(i + 1).padStart(2, '0'); }); }
+  function bdWords(n) { return Number(n).toLocaleString('en-US'); }
+
+  function renderBoundary() {
+    document.getElementById('bd-count').textContent = CHAPTERS.length + ' 章 · ' + (bdAccepted ? '已验收' : '待验收');
+    document.getElementById('bd-state').textContent = bdAccepted ? 'v2 · accepted' : 'v1 · 自动识别';
+    document.getElementById('wizard-count').textContent = CHAPTERS.length;
+    document.getElementById('wizard-total').textContent = CHAPTERS.length;
+    document.getElementById('bd-note-count').textContent = CHAPTERS.length;
+    document.getElementById('bd-list').innerHTML = CHAPTERS.map((c, i) =>
+      '<div class="bd-row"><span class="no">' + c.no + '</span><b>' + c.title + '</b><span class="mono">' + c.range + '</span><span class="mono">' + c.words + '</span>' +
+      '<div class="bd-actions"><button data-bd-split="' + i + '">拆分</button>' +
+      (i < CHAPTERS.length - 1 ? '<button data-bd-merge="' + i + '">并入下章</button>' : '') + '</div></div>'
+    ).join('');
+  }
+
+  document.getElementById('btn-boundary').addEventListener('click', () => { renderBoundary(); P.openDrawer('drawer-boundary'); });
+  if (location.hash === '#boundary') { renderBoundary(); P.openDrawer('drawer-boundary'); }
+
+  document.getElementById('bd-list').addEventListener('click', e => {
+    const split = e.target.closest('[data-bd-split]');
+    const merge = e.target.closest('[data-bd-merge]');
+    if (split) {
+      const i = parseInt(split.dataset.bdSplit, 10);
+      const c = CHAPTERS[i];
+      const parts = c.body.split('\n\n').filter(Boolean);
+      if (parts.length < 2) { P.toast('本章段落不足，无法拆分'); return; }
+      bdSnapshot();
+      const cut = Math.ceil(parts.length / 2);
+      const n = parseInt(c.words.replace(/,/g, ''), 10);
+      c.body = parts.slice(0, cut).join('\n\n');
+      c.words = bdWords(Math.round(n / 2));
+      c.title = c.title.replace(/ · [上下]$/, '') + ' · 上';
+      CHAPTERS.splice(i + 1, 0, {
+        no: '', title: c.title.replace(' · 上', ' · 下'), words: bdWords(n - Math.round(n / 2)),
+        range: c.range + ' 下', state: 'warn',
+        body: parts.slice(cut).join('\n\n')
+      });
+      bdRenumber();
+      bdAccepted = false;
+      renderChapters();
+      renderBoundary();
+      P.toast('已在第 ' + (i + 1) + ' 章拆出新章，共 ' + CHAPTERS.length + ' 章');
+    }
+    if (merge) {
+      const i = parseInt(merge.dataset.bdMerge, 10);
+      const c = CHAPTERS[i], next = CHAPTERS[i + 1];
+      if (!next) return;
+      bdSnapshot();
+      const n1 = parseInt(c.words.replace(/,/g, ''), 10), n2 = parseInt(next.words.replace(/,/g, ''), 10);
+      c.body = c.body + '\n\n' + next.body;
+      c.words = bdWords(n1 + n2);
+      c.title = c.title.replace(/ · [上下]$/, '');
+      c.range = (c.range.split('–')[0] || c.range) + '–' + (next.range.split('–').pop() || next.range);
+      CHAPTERS.splice(i + 1, 1);
+      bdRenumber();
+      bdAccepted = false;
+      if (activeChapter >= CHAPTERS.length) activeChapter = CHAPTERS.length - 1;
+      renderChapters();
+      renderReader();
+      renderBoundary();
+      P.toast('已并入下章，共 ' + CHAPTERS.length + ' 章');
+    }
+  });
+
+  document.getElementById('btn-bd-undo').addEventListener('click', () => {
+    if (!bdHistory.length) { P.toast('没有可撤销的边界操作'); return; }
+    const prev = bdHistory.pop();
+    CHAPTERS.length = 0;
+    prev.forEach(c => CHAPTERS.push(c));
+    if (activeChapter >= CHAPTERS.length) activeChapter = CHAPTERS.length - 1;
+    bdAccepted = false;
+    renderChapters();
+    renderReader();
+    renderBoundary();
+    P.toast('已撤销上一步边界操作');
+  });
+
+  document.getElementById('btn-bd-pass').addEventListener('click', () => {
+    bdAccepted = true;
+    document.getElementById('parse-chip').innerHTML = '<span class="dot green"></span>章节边界已验收 ' + CHAPTERS.length + ' 章';
+    renderBoundary();
+    P.closeDrawers();
+    P.toast('章节边界已验收 · 分集与剧本可引用 ' + CHAPTERS.length + ' 章');
+  });
+
+  let running = false;
+  let adaptTimer = null;
+  let cancelled = false;
+
+  document.getElementById('modal-adapt').addEventListener('click', e => {
+    if (!e.target.closest('[data-close]')) return;
+    if (adaptTimer) {
+      clearInterval(adaptTimer);
+      adaptTimer = null;
+      cancelled = true;
+      running = false;
+      document.getElementById('adapt-note').textContent = '已取消 · 未写入分集规划';
+      P.toast('已取消解析，原著与已有分集不会被修改');
+    }
+  });
+
+  function start() {
+    if (running) return;
+    running = true;
+    cancelled = false;
+    P.openModal('modal-adapt');
+    const bar = document.getElementById('adapt-bar');
+    const note = document.getElementById('adapt-note');
+    const log = document.getElementById('adapt-log');
+    bar.style.width = '4%';
+    let pct = 4;
+    log.innerHTML = '<div>[00:00] 读取 ' + CHAPTERS.length + ' 章</div>';
+    const phases = [
+      [30, '实体消歧 · 6 人物 / 4 场景'],
+      [58, '章节映射 · ' + CHAPTERS.length + ' 章 → 12 集'],
+      [82, '生成集纲与钩子 · 12 集'],
+      [96, '写入分集规划 v1']
+    ];
+    let pi = 0;
+    adaptTimer = setInterval(() => {
+      pct += 4;
+      bar.style.width = Math.min(96, pct) + '%';
+      note.textContent = '处理中 · ' + Math.min(96, pct) + '%';
+      if (pi < phases.length && pct >= phases[pi][0]) {
+        log.innerHTML += '<div>[00:' + String(pi * 8 + 6).padStart(2, '0') + '] ' + phases[pi][1] + '</div>';
+        log.scrollTop = log.scrollHeight;
+        pi += 1;
+      }
+      if (pct >= 96) {
+        clearInterval(adaptTimer);
+        adaptTimer = null;
+        bar.style.width = '100%';
+        note.textContent = '完成 · 12 集规划已生成';
+        log.innerHTML += '<div>[00:40] 完成 · 进入分集规划</div>';
+        if (!cancelled) setTimeout(() => { if (!cancelled) location.href = 'episodes.html'; }, 1000);
+      }
+    }, 230);
+  }
+
+  renderChapters();
+  renderReader();
+})();
+</script>
+</body>
+</html>

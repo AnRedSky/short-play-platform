@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>分镜与镜头 · 长夜将明 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+</head>
+<body data-page="storyboards" data-project="1">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+    <nav class="module-tabs" data-tabs></nav>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Storyboard &amp; shot contract</p>
+          <h1>分镜与镜头</h1>
+          <p class="lede">Shot 是生成、审核、返工与用量追踪的核心单元。Shot Contract 是不可变输入：合同一改就产生新版本，正在运行的任务继续使用旧快照。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-toast="原型：按场次拆分镜头（AI 拆镜结果先进入草稿，不直接可生成）">AI 辅助拆镜</button>
+          <button class="btn btn-primary" type="button" data-modal="modal-gen">生成选中镜头</button>
+        </div>
+      </div>
+
+      <div class="banner stale">
+        <i data-icon="alert"></i>
+        <div><b>2 个镜头引用已更新版本的资产。</b>shot 1-03 / 1-04 引用的「沈砚 v2」已被 v3 取代，标记为 stale_candidate；生成输入的快照不会中途替换。</div>
+        <a class="btn btn-default btn-sm b-act" href="assets.html">查看资产</a>
+      </div>
+
+      <div class="grid g-main">
+        <div>
+          <section class="card">
+            <div class="card-head">
+              <div><h2>EP01 雨夜书店 · 分镜板 v2</h2><span class="sub">STORYBOARD v2 · 24 SHOTS</span></div>
+              <div class="actions">
+                <select class="control" aria-label="按场次筛选镜头">
+                  <option>全部场次（8）</option>
+                  <option>SCENE 1 旧书店内景</option>
+                  <option>SCENE 2 旧书店内景</option>
+                  <option>SCENE 3 巷口 · 雨</option>
+                </select>
+                <button class="btn btn-quiet btn-sm" type="button" data-toast="原型：按镜头号 / 时长 / 状态排序">排序</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="shot-strip" id="shot-strip">
+                <article class="shot-card" data-shot="1-01">
+                  <div class="shot-frame"><span class="no">1-01</span><span class="dur">00:28</span></div>
+                  <div class="shot-body"><strong>书店柜台 · 中景</strong><div class="line"><span>固定</span><span>v1</span></div><span class="pill pass">已审核</span></div>
+                </article>
+                <article class="shot-card" data-shot="1-02">
+                  <div class="shot-frame"><span class="no">1-02</span><span class="dur">00:34</span></div>
+                  <div class="shot-body"><strong>转身取书 · 近景</strong><div class="line"><span>缓推</span><span>v3</span></div><span class="pill pass">已审核</span></div>
+                </article>
+                <article class="shot-card on" data-shot="1-03">
+                  <div class="shot-frame"><span class="no">1-03</span><span class="dur">00:41</span></div>
+                  <div class="shot-body"><strong>抬眼 · 特写</strong><div class="line"><span>手持微晃</span><span>v3</span></div><span class="pill fail">生成失败</span></div>
+                </article>
+                <article class="shot-card" data-shot="1-04">
+                  <div class="shot-frame"><span class="no">1-04</span><span class="dur">00:36</span></div>
+                  <div class="shot-body"><strong>双人 · 门口</strong><div class="line"><span>横移</span><span>v2</span></div><span class="pill pass">已审核</span></div>
+                </article>
+                <article class="shot-card" data-shot="1-05">
+                  <div class="shot-frame"><span class="no">1-05</span><span class="dur">00:22</span></div>
+                  <div class="shot-body"><strong>巷口鞋尖 · 大特写</strong><div class="line"><span>固定</span><span>v1</span></div><span class="pill review">待审核</span></div>
+                </article>
+                <article class="shot-card" data-shot="1-06">
+                  <div class="shot-frame"><span class="no">1-06</span><span class="dur">00:18</span></div>
+                  <div class="shot-body"><strong>钥匙入掌 · 特写</strong><div class="line"><span>固定</span><span>v1</span></div><span class="pill queued">排队中</span></div>
+                </article>
+              </div>
+            </div>
+            <div class="card-foot"><span>镜头编号唯一；总时长与集目标差异可计算（当前 2'39" / 目标 2'30"）</span><span class="mono">+18 shots</span></div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div><h2 id="sb-title">Shot 1-03 · 抬眼 · 特写</h2><span class="sub" id="sb-sub">CONTRACT v3 · FROZEN INPUT</span></div>
+              <div class="actions">
+                <span class="pill stale" id="sb-stale">stale_candidate</span>
+                <button class="btn btn-default btn-sm" type="button" data-act="revise">修订合同</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="contract-grid" id="sb-grid">
+                <div class="contract-cell"><small>SHOT NO</small><strong class="mono">1-03</strong></div>
+                <div class="contract-cell"><small>DURATION</small><strong class="mono">41s · 1230 frames</strong></div>
+                <div class="contract-cell"><small>FRAMING 景别</small><strong>特写（CU）</strong></div>
+                <div class="contract-cell"><small>CAMERA 机位</small><strong>平视 35mm · 距 1.2m</strong></div>
+                <div class="contract-cell"><small>MOVEMENT 运镜</small><strong>手持微晃 · 无位移</strong></div>
+                <div class="contract-cell"><small>FRAME 画幅 / 帧率</small><strong class="mono">9:16 · 30/1 fps</strong></div>
+                <div class="contract-cell" style="grid-column: span 2"><small>ACTION 动作描述</small><p>沈砚抬眼，视线越过镜头边缘；雨声骤停一拍，他的手停在书脊上，指节因用力泛白。</p></div>
+                <div class="contract-cell" style="grid-column: span 2"><small>DIALOGUE 对白</small><p>无对白（内心停顿）· 字幕不叠加</p></div>
+              </div>
+
+              <div class="section-label">资产版本引用</div>
+              <div class="ref-line"><span class="tag">CHAR</span><span>沈砚 · 参考图 v2</span><span class="pill stale">已被 v3 取代</span><span class="lock">locked v2</span></div>
+              <div class="ref-line"><span class="tag">LOC</span><span>旧书店内景 · v2</span><span class="pill pass">一致</span><span class="lock">locked v2</span></div>
+              <div class="ref-line"><span class="tag">PROP</span><span>黄铜怀表 · v2</span><span class="pill pass">一致</span><span class="lock">locked v2</span></div>
+              <div class="ref-line"><span class="tag">PROMPT</span><span>prompt_tpl_closeup_v3</span><span class="pill pass">版本已记录</span><span class="lock">locked</span></div>
+
+              <div class="section-label">连续性约束</div>
+              <div class="kv">
+                <div class="row"><dt>服装</dt><dd>深灰风衣 · 领口第二颗扣子缺失</dd></div>
+                <div class="row"><dt>光线</dt><dd>单一侧光来自左侧窗；无补光</dd></div>
+                <div class="row"><dt>时间 / 空间</dt><dd>凌晨 02:57 · 前接 1-02 同空间同方向</dd></div>
+                <div class="row"><dt>道具状态</dt><dd>怀表在口袋内，不可见；袖口无雨渍</dd></div>
+              </div>
+            </div>
+            <div class="card-foot">
+              <span>生成输入完整率要求 100%；引用版本不存在时拒绝提交</span>
+              <span class="mono">contract sc_1_03_v3</span>
+            </div>
+          </section>
+        </div>
+
+        <div>
+          <section class="card">
+            <div class="card-head"><div><h2>生成与状态</h2><span class="sub">CAPABILITY · MORK</span></div></div>
+            <div class="card-body">
+              <div class="kv">
+                <div class="row"><dt>能力目录</dt><dd><span class="pill pass">video.generate</span></dd></div>
+                <div class="row"><dt>Provider</dt><dd>Mork · mork-video-2</dd></div>
+                <div class="row"><dt>支持参数</dt><dd class="mono">ratio / duration / motion / seed</dd></div>
+                <div class="row"><dt>预算状态</dt><dd>剩余 ¥ 3,796 · 通过</dd></div>
+                <div class="row"><dt>幂等键</dt><dd class="mono">shot_1-03_v3_video</dd></div>
+              </div>
+              <div class="divider"></div>
+              <label class="field">
+                <span>生成参数</span>
+                <select class="control"><option>9:16 · 41s · 手持微晃</option><option>9:16 · 41s · 固定机位</option></select>
+              </label>
+              <button class="btn btn-primary btn-block" style="margin-top: 10px" type="button" data-modal="modal-gen">提交生成任务</button>
+              <button class="btn btn-quiet btn-block" style="margin-top: 6px" type="button" data-toast="原型：展示 PROVIDER_NOT_CONFIGURED 的失败关闭状态（不伪造结果）">查看未配置状态</button>
+              <p class="lede" style="font-size: 10px; margin-top: 10px">未配置 Mork 时返回 <span class="mono">PROVIDER_NOT_CONFIGURED</span>，任务不会创建成功，也不会退回 Mock。</p>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><div><h2>最近任务</h2><span class="sub">gt_7f2e04</span></div><a class="btn btn-quiet btn-sm" href="tasks.html">详情</a></div>
+            <div class="card-body">
+              <div class="attempt-list" id="sb-tasks">
+                <div class="attempt is-fail">
+                  <div class="a-head"><span class="pill failed">失败</span><b>#2</b><span class="mono" style="font-size: 9px">00:48 · ¥ 2.10</span></div>
+                  <div class="a-err">QA_FRAME_RATIO_MISMATCH · 输出 1920×1080（16:9），合同要求 1080×1920（9:16）</div>
+                </div>
+                <div class="attempt is-fail">
+                  <div class="a-head"><span class="pill failed">失败</span><b>#1</b><span class="mono" style="font-size: 9px">01:02 · ¥ 2.10</span></div>
+                  <div class="a-err">PROVIDER_429 · 上游限流，指数退避后重试</div>
+                </div>
+              </div>
+              <div class="banner error" style="margin-top: 6px"><i data-icon="alert"></i><div>失败可诊断：保留每次 Attempt 的错误分类、耗时与成本；重试必须新建 Attempt。</div></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><div><h2>审核状态</h2><span class="sub">GATE</span></div></div>
+            <div class="card-body">
+              <div class="kv">
+                <div class="row"><dt>质量检查</dt><dd><span class="pill failed">FAIL</span></dd></div>
+                <div class="row"><dt>人工审核</dt><dd><span class="pill draft">pending</span></dd></div>
+                <div class="row"><dt>阻断下游</dt><dd>时间线 / 导出不可用</dd></div>
+                <div class="row"><dt>审核人</dt><dd>陆行（项目级 review）</dd></div>
+              </div>
+            </div>
+            <div class="card-foot"><a class="btn btn-quiet btn-sm" href="reviews.html">进入审核台</a><span class="mono">不提供 WAIVED</span></div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-gen-backdrop" data-close-modal="modal-gen"></div>
+<div class="modal" id="modal-gen" role="dialog" aria-modal="true" style="width: 500px">
+  <div class="modal-head"><p class="eyebrow">Generation task</p><h2 id="gen-title">提交生成任务 · shot 1-03</h2></div>
+  <form data-form="gen">
+  <div class="modal-body">
+    <div class="kv">
+      <div class="row"><dt>输入快照</dt><dd class="mono" id="gen-snap">contract sc_1_03_v3</dd></div>
+      <div class="row"><dt>引用版本</dt><dd>沈砚 v2 · 旧书店 v2 · 怀表 v2</dd></div>
+      <div class="row"><dt>能力 / 模型</dt><dd>video.generate · mork-video-2</dd></div>
+      <div class="row"><dt>幂等键</dt><dd class="mono" id="gen-key">shot_1-03_v3_video</dd></div>
+      <div class="row"><dt>预计成本</dt><dd class="mono">¥ 2.10 · 预算通过</dd></div>
+    </div>
+    <p class="lede" style="font-size: 10.5px; margin-top: 10px">同一幂等键重复提交只产生一个逻辑任务；提交成功后返回 task_id，页面通过快照轮询更新状态。</p>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-default" type="button" data-close-modal="modal-gen">取消</button>
+    <button class="btn btn-primary" type="submit">创建任务</button>
+  </div>
+  </form>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var SHOTS = {
+    '1-01': { name: '书店柜台 · 中景', dur: '28s · 840 frames', frame: '中景（MS）', cam: '平视 50mm · 距 2.4m', move: '固定', action: '沈砚把账本压在柜台玻璃下，手指在封皮边缘停了一拍。', dlg: '沈砚：这本不卖。', v: 1, stale: false },
+    '1-02': { name: '转身取书 · 近景', dur: '34s · 1020 frames', frame: '近景（MCU）', cam: '平视 35mm · 距 1.6m', move: '缓推', action: '他转身抽出最上层的书，灰尘在侧光里浮起。', dlg: '无对白 · 环境雨声', v: 3, stale: false },
+    '1-03': { name: '抬眼 · 特写', dur: '41s · 1230 frames', frame: '特写（CU）', cam: '平视 35mm · 距 1.2m', move: '手持微晃 · 无位移', action: '沈砚抬眼，视线越过镜头边缘；雨声骤停一拍，他的手停在书脊上，指节因用力泛白。', dlg: '无对白（内心停顿）· 字幕不叠加', v: 3, stale: true },
+    '1-04': { name: '双人 · 门口', dur: '36s · 1080 frames', frame: '中景（MS）', cam: '平视 28mm · 距 2.0m', move: '横移', action: '林晚推门而入，两人在门口错身；伞尖的水落在地砖上。', dlg: '林晚：你等很久了？', v: 2, stale: true },
+    '1-05': { name: '巷口鞋尖 · 大特写', dur: '22s · 660 frames', frame: '大特写（ECU）', cam: '俯拍 50mm · 距 0.4m', move: '固定', action: '鞋尖踩进积水，倒影里掠过一个人影。', dlg: '无对白', v: 1, stale: false },
+    '1-06': { name: '钥匙入掌 · 特写', dur: '18s · 540 frames', frame: '特写（CU）', cam: '平视 50mm · 距 0.6m', move: '固定', action: '一枚黄铜钥匙落进掌心，指腹摩挲过齿纹。', dlg: '无对白', v: 1, stale: false }
+  };
+
+  var strip = document.getElementById('shot-strip');
+  var grid = document.getElementById('sb-grid');
+  var current = '1-03';
+
+  function render(no) {
+    var s = SHOTS[no];
+    if (!s) return;
+    current = no;
+    strip.querySelectorAll('.shot-card').forEach(function (c) { c.classList.toggle('on', c.dataset.shot === no); });
+    document.getElementById('sb-title').textContent = 'Shot ' + no + ' · ' + s.name;
+    document.getElementById('sb-sub').textContent = 'CONTRACT v' + s.v + ' · FROZEN INPUT';
+    var stale = document.getElementById('sb-stale');
+    stale.hidden = !s.stale;
+    grid.innerHTML =
+      '<div class="contract-cell"><small>SHOT NO</small><strong class="mono">' + no + '</strong></div>' +
+      '<div class="contract-cell"><small>DURATION</small><strong class="mono">' + s.dur + '</strong></div>' +
+      '<div class="contract-cell"><small>FRAMING 景别</small><strong>' + s.frame + '</strong></div>' +
+      '<div class="contract-cell"><small>CAMERA 机位</small><strong>' + s.cam + '</strong></div>' +
+      '<div class="contract-cell"><small>MOVEMENT 运镜</small><strong>' + s.move + '</strong></div>' +
+      '<div class="contract-cell"><small>FRAME 画幅 / 帧率</small><strong class="mono">9:16 · 30/1 fps</strong></div>' +
+      '<div class="contract-cell" style="grid-column: span 2"><small>ACTION 动作描述</small><p>' + s.action + '</p></div>' +
+      '<div class="contract-cell" style="grid-column: span 2"><small>DIALOGUE 对白</small><p>' + s.dlg + '</p></div>';
+    document.getElementById('gen-title').textContent = '提交生成任务 · shot ' + no;
+    document.getElementById('gen-snap').textContent = 'contract sc_' + no.replace('-', '_') + '_v' + s.v;
+    document.getElementById('gen-key').textContent = 'shot_' + no + '_v' + s.v + '_video';
+  }
+
+  strip.addEventListener('click', function (e) {
+    var card = e.target.closest('.shot-card');
+    if (card) render(card.dataset.shot);
+  });
+
+  render('1-03');
+
+  document.addEventListener('proto:act', function (e) {
+    if (e.detail.act !== 'revise') return;
+    var s = SHOTS[current];
+    s.v += 1;
+    s.stale = false;
+    render(current);
+    var card = strip.querySelector('.shot-card[data-shot="' + current + '"]');
+    card.querySelector('.line span:last-child').textContent = 'v' + s.v;
+    P.toast('合同已修订为 v' + s.v + '：已运行任务继续使用旧快照，新任务使用新合同');
+  });
+
+  document.addEventListener('proto:submit', function (e) {
+    if (e.detail.name !== 'gen') return;
+    var s = SHOTS[current];
+    var id = 'gt_' + Math.random().toString(16).slice(2, 8);
+    var list = document.getElementById('sb-tasks');
+    var item = document.createElement('div');
+    item.className = 'attempt';
+    item.innerHTML = '<div class="a-head"><span class="pill queued">queued</span><b>#1</b><span class="mono" style="font-size: 9px">' + P.time() + ' · ¥ 2.10</span></div><div class="a-meta">' + id + ' · shot ' + current + ' · contract v' + s.v + ' · 幂等键 shot_' + current + '_v' + s.v + '_video</div>';
+    list.insertBefore(item, list.firstElementChild);
+    var card = strip.querySelector('.shot-card[data-shot="' + current + '"]');
+    P.setPill(card.querySelector('.shot-body .pill'), 'queued', '排队中');
+    P.toast('任务 ' + id + ' 已创建（queued）：输入快照 contract v' + s.v + '，不会在请求内同步执行');
+  });
+</script>
+</body>
+</html>

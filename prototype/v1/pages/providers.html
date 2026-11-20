@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>能力与 Provider · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+<style>
+  .cap-row { cursor: pointer; }
+  .cap-row.on td { background: var(--accent-soft); }
+  .cap-row[data-status="missing"] td:first-child { color: var(--fail); }
+  .inline-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+</style>
+</head>
+<body data-page="providers">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Capabilities &amp; providers</p>
+          <h1>能力与 Provider</h1>
+          <p class="lede">每个生成能力绑定一个默认 Provider 与模型；缺少配置时任务直接失败为 PROVIDER_NOT_CONFIGURED，禁止静默回退 Mock。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-act="health"><i data-icon="pulse"></i>全量健康检查</button>
+          <button class="btn btn-primary" type="button" data-modal="modal-provider"><i data-icon="plus"></i>新增 Provider</button>
+        </div>
+      </div>
+
+      <div class="banner warn">
+        <i data-icon="alert"></i>
+        <div><b>video.generate 未配置</b>：默认 Mork 缺少 secret_ref，提交生成会返回 PROVIDER_NOT_CONFIGURED（400），任务不创建、不计费。配置完成前不会回退本地 Mock。</div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="k"><span>能力</span></div><p class="v">6</p><p class="d">已接入 5 个 Provider</p></div>
+        <div class="stat"><div class="k"><span>已配置</span></div><p class="v" id="c-config">5</p><p class="d">1 项缺密钥</p></div>
+        <div class="stat"><div class="k"><span>今日调用</span></div><p class="v">128</p><p class="d">失败 2 · 限流 1</p></div>
+        <div class="stat"><div class="k"><span>p95 延迟</span></div><p class="v">7.4<span class="unit">s</span></p><p class="d">视频生成 · 近 24h</p></div>
+      </div>
+
+      <div class="grid g-main">
+        <section class="card" style="margin: 0">
+          <div class="card-head"><div><h2>能力目录</h2><span class="sub">CAPABILITY → PROVIDER</span></div><div class="actions"><span class="count">6 项</span></div></div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>能力</th><th>默认 Provider / 模型</th><th>状态</th><th>p95</th><th>单价</th></tr></thead>
+              <tbody id="cap-body">
+                <tr class="cap-row" data-open="cap-detail" data-open-group="cap" data-cap="video.generate" data-model="mork-video-2" data-endpoint="https://mork.internal/v2/video" data-secret="—（未设置）" data-timeout="120" data-concurrency="2" data-price="¥2.10 / 条" data-status="missing" data-state="missing">
+                  <td class="mono">video.generate</td><td>Mork · mork-video-2</td><td><span class="pill fail">未配置</span></td><td class="mono">7.4s</td><td class="mono">¥2.10 / 条</td>
+                </tr>
+                <tr class="cap-row on" data-open="cap-detail" data-open-group="cap" data-cap="image.generate" data-model="mork-image-3" data-endpoint="https://mork.internal/v2/image" data-secret="secret://org/mork#k1" data-timeout="60" data-concurrency="4" data-price="¥0.60 / 张" data-status="configured" data-state="configured">
+                  <td class="mono">image.generate</td><td>Mork · mork-image-3</td><td><span class="pill pass">已配置</span></td><td class="mono">2.1s</td><td class="mono">¥0.60 / 张</td>
+                </tr>
+                <tr class="cap-row" data-open="cap-detail" data-open-group="cap" data-cap="audio.speech" data-model="moss-tts-cn" data-endpoint="https://tts.internal/synth" data-secret="secret://org/tts#k2" data-timeout="30" data-concurrency="6" data-price="¥0.12 / 百字" data-status="configured" data-state="configured">
+                  <td class="mono">audio.speech</td><td>内部 TTS · moss-tts-cn</td><td><span class="pill pass">已配置</span></td><td class="mono">0.9s</td><td class="mono">¥0.12 / 百字</td>
+                </tr>
+                <tr class="cap-row" data-open="cap-detail" data-open-group="cap" data-cap="text.complete" data-model="mork-llm-7b" data-endpoint="https://mork.internal/v2/chat" data-secret="secret://org/mork#k1" data-timeout="45" data-concurrency="8" data-price="¥0.03 / 千字" data-status="configured" data-state="configured">
+                  <td class="mono">text.complete</td><td>Mork · mork-llm-7b</td><td><span class="pill pass">已配置</span></td><td class="mono">1.8s</td><td class="mono">¥0.03 / 千字</td>
+                </tr>
+                <tr class="cap-row" data-open="cap-detail" data-open-group="cap" data-cap="vision.qa" data-model="qa-rules-2026.11" data-endpoint="local://rules-engine" data-secret="—" data-timeout="20" data-concurrency="8" data-price="不计费" data-status="configured" data-state="configured">
+                  <td class="mono">vision.qa</td><td>本地规则 · qa-rules-2026.11</td><td><span class="pill pass">已配置</span></td><td class="mono">0.4s</td><td class="mono">不计费</td>
+                </tr>
+                <tr class="cap-row" data-open="cap-detail" data-open-group="cap" data-cap="audio.music" data-model="—" data-endpoint="—" data-secret="—" data-timeout="60" data-concurrency="2" data-price="—" data-status="missing" data-state="missing">
+                  <td class="mono">audio.music</td><td>未选择</td><td><span class="pill draft">未接入</span></td><td class="mono">—</td><td class="mono">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card-foot"><span>选中一行可在右侧查看与修改配置</span><span class="mono" id="cap-selected">image.generate</span></div>
+        </section>
+
+        <div>
+          <section class="card" id="cap-detail" style="margin-bottom: 14px">
+            <div class="card-head"><div><h2><span class="mono" data-bind="cap">image.generate</span></h2><span class="sub">CAPABILITY CONFIG</span></div><span class="pill pass" id="cap-state">已配置</span></div>
+            <div class="card-body">
+              <div class="inline-form">
+                <label class="field"><span>Provider</span><select class="control" data-bind="model"><option>mork-image-3</option><option>mork-video-2</option><option>moss-tts-cn</option><option>mork-llm-7b</option><option>qa-rules-2026.11</option></select></label>
+                <label class="field"><span>Endpoint</span><input class="control" data-bind="endpoint" /></label>
+                <label class="field"><span>secret_ref</span><input class="control" data-bind="secret" /></label>
+                <label class="field"><span>超时（秒）</span><input class="control" data-bind="timeout" /></label>
+                <label class="field"><span>并发上限</span><input class="control" data-bind="concurrency" /></label>
+                <label class="field"><span>单价</span><input class="control" data-bind="price" /></label>
+              </div>
+
+              <div class="section-label">调用约束</div>
+              <div class="pass-row"><span class="pm">✓</span><span>429 时按 Retry-After 退避，最多 3 次，不降级到 Mock</span></div>
+              <div class="pass-row"><span class="pm">✓</span><span>密钥只以 secret_ref 引用，日志与响应不得回显明文</span></div>
+              <div class="pass-row"><span class="pm warn">!</span><span>超时与重试叠加不得超过任务级 300s 上限</span></div>
+
+              <div class="form-foot">
+                <button class="btn btn-primary" type="button" data-act="save-cap" data-save>保存配置</button>
+                <button class="btn btn-default" type="button" data-act="test-cap">测试连接</button>
+                <span class="hint" id="cap-hint">video.generate 缺少 secret_ref</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" style="margin: 0">
+            <div class="card-head"><h2>Provider 健康</h2><span class="sub">近 1 小时</span></div>
+            <div class="card-body">
+              <div class="kv">
+                <div class="row"><dt>Mork · video</dt><dd><span class="pill fail">auth_failed</span>　401 · 密钥过期</dd></div>
+                <div class="row"><dt>Mork · image</dt><dd><span class="pill pass">ok</span>　p95 2.1s</dd></div>
+                <div class="row"><dt>内部 TTS</dt><dd><span class="pill pass">ok</span>　p95 0.9s</dd></div>
+                <div class="row"><dt>规则引擎</dt><dd><span class="pill review">degraded</span>　规则服务超时 1 次</dd></div>
+              </div>
+            </div>
+            <div class="card-foot"><span>规则服务故障时 QA 不得判 PASS</span><span class="mono">health</span></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="grid g-3">
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>配置失败语义</h2><span class="sub">ERRORS</span></div>
+          <div class="card-body">
+            <div class="kv">
+              <div class="row"><dt>未配置</dt><dd class="mono">PROVIDER_NOT_CONFIGURED</dd></div>
+              <div class="row"><dt>限流</dt><dd class="mono">PROVIDER_429</dd></div>
+              <div class="row"><dt>鉴权</dt><dd class="mono">PROVIDER_AUTH_FAILED</dd></div>
+              <div class="row"><dt>超时</dt><dd class="mono">PROVIDER_TIMEOUT</dd></div>
+            </div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>不可回退项</h2><span class="sub">NO FALLBACK</span></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px; margin: 0 0 10px">Provider 缺失、密钥失效、限流耗尽都属可诊断失败：任务停在 failed，保留错误码与 request_id，等待人工处理后重试。</p>
+            <div class="banner warn" style="margin: 0"><i data-icon="alert"></i><div>禁止用 Mock 结果冒充成功；演示数据只在原型外壳标注「演示数据」。</div></div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>成本控制</h2><span class="sub">BUDGET</span></div>
+          <div class="card-body">
+            <div class="pass-row"><span class="pm">✓</span><span>提交前校验项目预算余额，超限 402 前置拒绝</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>按能力设置单次上限，超限需制片审批</span></div>
+            <div class="pass-row"><span class="pm warn">!</span><span>video.generate 单价 ¥2.10/条，24 镜 = ¥50.40</span></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-provider-backdrop" data-close-modal="modal-provider"></div>
+<div class="modal" id="modal-provider" role="dialog" aria-modal="true">
+  <div class="modal-head"><p class="eyebrow">New provider</p><h2>新增 Provider</h2></div>
+  <form data-form="provider">
+    <div class="modal-body">
+      <div class="form-grid">
+        <label class="field"><span>名称</span><input class="control" name="name" placeholder="如 mork-image-3" required /></label>
+        <label class="field"><span>能力</span><select class="control" name="cap"><option>video.generate</option><option>image.generate</option><option>audio.speech</option><option>audio.music</option><option>text.complete</option><option>vision.qa</option></select></label>
+        <label class="field full"><span>Endpoint</span><input class="control" name="endpoint" placeholder="https://…" required /></label>
+        <label class="field"><span>secret_ref</span><input class="control" name="secret" placeholder="secret://org/…" /></label>
+        <label class="field"><span>并发上限</span><input class="control" name="concurrency" value="2" /></label>
+      </div>
+      <div class="banner info" style="margin-top: 12px"><i data-icon="info"></i><div>新增后默认不启用；需在能力目录里显式设为默认，未设置时提交任务仍返回 PROVIDER_NOT_CONFIGURED。</div></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-default" type="button" data-close-modal="modal-provider">取消</button><button class="btn btn-primary" type="submit">保存 Provider</button></div>
+  </form>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var body = document.getElementById('cap-body');
+  var current = body.querySelector('.cap-row.on');
+  var statePill = document.getElementById('cap-state');
+
+  function paint(row) {
+    var missing = row.dataset.status === 'missing';
+    statePill.className = 'pill ' + (missing ? 'fail' : 'pass');
+    statePill.textContent = missing ? '未配置' : '已配置';
+    document.getElementById('cap-hint').textContent = missing
+      ? '该能力缺少 secret_ref，提交任务将返回 PROVIDER_NOT_CONFIGURED'
+      : '配置已保存，测试连接可验证可达性';
+    document.getElementById('cap-selected').textContent = row.dataset.cap;
+    P.fill(document.getElementById('cap-detail'), row.dataset);
+  }
+
+  document.addEventListener('proto:select', function (e) {
+    if (!e.detail.el.classList.contains('cap-row')) return;
+    current = e.detail.el;
+    paint(current);
+  });
+
+  document.addEventListener('proto:act', function (e) {
+    var act = e.detail.act;
+    if (act === 'test-cap') {
+      P.toast('正在测试 ' + current.dataset.cap + ' …');
+      setTimeout(function () {
+        if (current.dataset.status === 'missing') P.toast('测试失败：PROVIDER_NOT_CONFIGURED（缺少 secret_ref）');
+        else P.toast('连接正常：HTTP 200 · 延迟 ' + (Math.random() * 2 + 0.6).toFixed(1) + 's');
+      }, 900);
+    }
+    if (act === 'save-cap') {
+      current.dataset.status = 'configured';
+      P.setPill(current.querySelector('td .pill'), 'configured', '已配置');
+      P.count('#c-config', Math.min(6, parseInt(document.getElementById('c-config').textContent, 10) + 1));
+      paint(current);
+      P.toast('配置已保存（secret 只存引用，不回显明文）');
+    }
+    if (act === 'health') {
+      P.toast('健康检查完成：video provider auth_failed，其余 4 项 ok，规则引擎 degraded');
+    }
+  });
+
+  document.addEventListener('proto:submit', function (e) {
+    if (e.detail.name !== 'provider') return;
+    P.toast('Provider「' + P.esc(e.detail.data.name) + '」已保存，等待设为默认');
+  });
+
+  paint(current);
+</script>
+</body>
+</html>

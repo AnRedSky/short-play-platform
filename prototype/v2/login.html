@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 · 长夜制作台</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="login" data-project="none">
+<div class="login">
+  <div class="login-art">
+    <img src="assets/img/hero-rain.jpg" alt="">
+    <div class="art-copy" style="top:0;left:0;right:0;bottom:auto;z-index:5;max-width:none;padding:48px 44px 84px;background:linear-gradient(180deg,rgba(8,9,11,.9),rgba(8,9,11,.62) 58%,transparent)">
+      <div style="max-width:390px">
+        <div class="eyebrow" style="color:#f08a63">MORK PRODUCTION SUITE</div>
+        <h2 style="margin-top:8px">从一句话<br>到一整集短剧。</h2>
+        <p>设定、剧本、资产与分镜、画面、配音、质检、时间线——七个步骤，每一步都有模型、有输入契约、有可回滚的产物。</p>
+      </div>
+    </div>
+  </div>
+  <div class="login-panel">
+    <button class="icon-btn" id="theme-toggle" data-i="sun" title="切换到亮色" style="position:fixed;right:24px;top:24px;z-index:20"></button>
+    <div class="brand" style="display:flex;align-items:center;gap:10px">
+      <div style="width:30px;height:30px;background:var(--accent);color:#08090b;display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:600;border-radius:2px">SP</div>
+      <div><b style="font-size:13px">长夜制作台</b><div style="font-family:var(--mono);font-size:8px;color:var(--dim);letter-spacing:.1em">SHORT PLAY STUDIO</div></div>
+    </div>
+    <h1>登录工作台</h1>
+    <div class="sub">私有化部署 · 广州机房 · 账号由团队管理员分配</div>
+    <div class="login-form">
+      <label class="field"><span>工作邮箱</span><input id="login-mail" value="chenmo@studio.cn"></label>
+      <label class="field"><span>密码</span><input id="login-pass" type="password" value="demo-2026"></label>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--dim)">
+        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" checked style="accent-color:var(--accent)">保持登录</label>
+        <a href="#" style="color:var(--muted);text-decoration:none">忘记密码</a>
+      </div>
+      <button class="btn btn-primary" id="btn-login" style="height:40px">进入制作台 <span data-i="arrowRight"></span></button>
+      <div style="display:flex;align-items:center;gap:10px;margin:6px 0"><span style="flex:1;height:1px;background:var(--line)"></span><span style="font-family:var(--mono);font-size:8px;color:var(--dim)">OR</span><span style="flex:1;height:1px;background:var(--line)"></span></div>
+      <button class="btn" id="btn-sso"><span data-i="users"></span>使用企业 SSO 登录</button>
+    </div>
+    <div class="login-foot">演示账号可直接进入工作台。<br>演示环境：所有生成任务为模拟状态，不产生真实费用。</div>
+  </div>
+</div>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  document.getElementById('btn-login').addEventListener('click', () => {
+    const mail = document.getElementById('login-mail').value;
+    if (!mail) { P.toast('请填写工作邮箱'); return; }
+    P.toast('登录成功 · 正在进入「长夜将明」');
+    setTimeout(() => location.href = 'index.html', 900);
+  });
+  document.getElementById('btn-sso').addEventListener('click', () => P.toast('企业 SSO 需要管理员配置 IdP，演示环境暂未接入'));
+  document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-login').click(); });
+})();
+</script>
+</body>
+</html>

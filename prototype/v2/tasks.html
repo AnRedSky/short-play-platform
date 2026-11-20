@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>任务 · 长夜制作台</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="tasks" data-crumb="任务">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <nav class="tabs" id="tabs"></nav>
+    <main class="content">
+      <div class="board-head">
+        <div>
+          <div class="eyebrow">TASK CENTER · GLOBAL</div>
+          <h1>生成任务</h1>
+          <div class="sub">所有文本、图像、视频、语音与编码任务走同一套异步状态机</div>
+        </div>
+        <div class="board-tools">
+          <div class="seg" id="task-filter">
+            <button class="is-active" data-f="all">全部</button>
+            <button data-f="running">运行中</button>
+            <button data-f="failed">失败</button>
+            <button data-f="success">已完成</button>
+          </div>
+          <button class="btn btn-sm" data-i="search"></button>
+          <button class="btn btn-sm btn-primary" data-open="modal-task"><span data-i="plus"></span>新建任务</button>
+        </div>
+      </div>
+
+      <div class="tasks-layout">
+        <section class="panel">
+          <div class="panel-head">
+            <div><h2>任务列表</h2><span class="sub" id="task-count">9 TASKS · 4 ACTIVE</span></div>
+            <span class="status"><span class="dot green"></span>WORKER 正常 · 6 并发</span>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>任务 / 对象</th><th>能力</th><th>状态</th><th>进度</th><th>耗时</th><th>成本</th><th style="text-align:right">操作</th></tr></thead>
+              <tbody id="task-body"></tbody>
+            </table>
+          </div>
+          <div style="padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;color:var(--dim);font-size:10px">
+            <span>任务状态以服务端快照为准；SSE 只做通知，断线重连后重新拉取。</span>
+            <span class="mono">p95 排队 18s</span>
+          </div>
+        </section>
+
+        <aside class="side-stack">
+          <section class="panel">
+            <div class="panel-head"><h2>队列健康</h2><span class="sub">HEALTH</span></div>
+            <div class="panel-body">
+              <div class="mini-kpi"><span>Mork · video</span><b style="color:var(--green)">正常</b></div>
+              <div class="mini-kpi"><span>Mork · image</span><b style="color:var(--green)">正常</b></div>
+              <div class="mini-kpi"><span>Moss · TTS</span><b style="color:var(--yellow)">较慢</b></div>
+              <div class="mini-kpi"><span>本地 · FFmpeg</span><b style="color:var(--green)">空闲</b></div>
+              <div class="mini-kpi"><span>运行 / 排队</span><b>4 / 3</b></div>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>今日消耗</h2><span class="sub">SPEND</span></div>
+            <div class="panel-body">
+              <div style="font-family:var(--mono);font-size:28px;letter-spacing:-.03em">¥41.30</div>
+              <div style="color:var(--dim);font-size:10px;margin-bottom:12px">视频 ¥31.20 · 图像 ¥8.60 · 语音 ¥1.50</div>
+              <div class="mini-bar" style="width:100%"><i style="width:38%"></i></div>
+              <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:5px"><span>38% 预算</span><span>¥6,204 / 10,000</span></div>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>失败策略</h2><span class="sub">POLICY</span></div>
+            <div class="panel-body" style="font-size:10px;color:var(--muted);line-height:1.8">
+              <div class="qa-item" style="padding-top:0"><span class="qa-mark pass">✓</span><div class="txt"><b>超时保留 attempt</b><span>不自动覆盖已成功产物</span></div></div>
+              <div class="qa-item"><span class="qa-mark warn">!</span><div class="txt"><b>不跨 Provider 降级</b><span>失败需显式改参重跑</span></div></div>
+              <div class="qa-item"><span class="qa-mark pass">✓</span><div class="txt"><b>取消可恢复</b><span>已产生费用不退回</span></div></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="scrim"></div>
+<div class="drawer" id="drawer-task">
+  <div class="drawer-head">
+    <div><div class="eyebrow" id="t-eyebrow">TASK</div><h2 id="t-title">任务详情</h2></div>
+    <button class="icon-btn" data-close><span data-i="x"></span></button>
+  </div>
+  <div class="drawer-body">
+    <div class="output-box" style="margin-top:0">
+      <div class="out-head"><span class="eyebrow">TASK</span><span id="t-status" class="chip green">运行中</span></div>
+      <div class="out-main" id="t-object">—</div>
+      <div class="out-sub" id="t-cap">—</div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <div class="panel-head"><h2>执行明细</h2><span class="sub">ATTEMPT</span></div>
+      <div class="panel-body">
+        <dl class="kv">
+          <dt>task_id</dt><dd class="mono" id="t-id">—</dd>
+          <dt>模型</dt><dd class="mono" id="t-model">—</dd>
+          <dt>Attempt</dt><dd id="t-attempt">—</dd>
+          <dt>输入快照</dt><dd id="t-input">—</dd>
+          <dt>成本</dt><dd class="mono" id="t-cost">—</dd>
+          <dt>失败原因</dt><dd id="t-error">—</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <div class="panel-head"><h2>事件</h2><span class="sub">EVENTS</span></div>
+      <div class="panel-body" style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:2">
+        <div>10:42:03  queued</div><div>10:42:05  running · attempt 1</div><div>10:42:11  progress 34%</div><div>10:42:18  progress 72%</div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn" data-close>关闭</button>
+    <button class="btn" id="t-retry"><span data-i="refresh"></span>重试</button>
+    <button class="btn btn-primary" id="t-open">回到对象</button>
+  </div>
+</div>
+
+<div class="scrim" style="display:none"></div>
+<div class="modal" id="modal-task">
+  <div class="modal-head">
+    <div><div class="eyebrow">NEW TASK</div><h2 style="margin:4px 0 0;font-size:18px">新建生成任务</h2></div>
+    <button class="icon-btn" data-close><span data-i="x"></span></button>
+  </div>
+  <div class="modal-body">
+    <div class="input-grid">
+      <label class="field"><span>能力</span><select id="nt-cap"><option>video.generate</option><option>image.generate</option><option>speech.synthesize</option><option>text.complete</option></select></label>
+      <label class="field"><span>对象</span><input value="EP01 / Shot 04" id="nt-object"></label>
+      <label class="field"><span>模型</span><select><option>mork-video-2（默认）</option><option>mork-image-3</option><option>moss-tts-cn</option></select></label>
+      <label class="field"><span>优先级</span><select><option>普通</option><option>高</option></select></label>
+    </div>
+    <p style="color:var(--dim);font-size:10px;margin:12px 0 0">提交后返回 task_id，不阻塞页面；完成事件通过 SSE 推送，断线后以快照为准。</p>
+  </div>
+  <div class="modal-foot">
+    <button class="btn" data-close>取消</button>
+    <button class="btn btn-primary" id="nt-submit">提交任务 <span data-i="arrowRight"></span></button>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const TASKS = [
+    { id: 'gt_7f31c8', object: 'EP01 · 1-04 借阅册', cap: 'video.generate', model: 'mork-video-2', status: 'running', progress: 72, elapsed: '01:12', cost: '¥3.20', attempt: 1, error: '—', input: 'Shot Contract 04 · 5.0s · 9:16' },
+    { id: 'gt_7e88b2', object: 'EP01 · 对白 03', cap: 'speech.synthesize', model: 'moss-tts-cn', status: 'running', progress: 41, elapsed: '00:38', cost: '¥0.18', attempt: 1, error: '—', input: '林未 / 0.95× / 克制' },
+    { id: 'gt_7f319a', object: '角色 · 林未 REF v2', cap: 'image.generate', model: 'mork-image-3', status: 'success', progress: 100, elapsed: '00:19', cost: '¥0.42', attempt: 2, error: '—', input: 'portrait · linwei-v2' },
+    { id: 'gt_7e7f01', object: 'EP01 · QA 全片', cap: 'quality.check', model: 'qa-rules-2026.11', status: 'queued', progress: 0, elapsed: '—', cost: '¥0.00', attempt: 0, error: '—', input: 'EP01_v5 · 24 shots' },
+    { id: 'gt_7d91c0', object: 'EP01 · 1-10 天台', cap: 'video.generate', model: 'mork-video-2', status: 'failed', progress: 88, elapsed: '04:02', cost: '¥3.60', attempt: 1, error: 'CHARACTER_CONSISTENCY_LOW (0.63 < 0.86)', input: 'Shot Contract 10 · 3.0s · 9:16' },
+    { id: 'gt_7d7a33', object: 'EP01 · 剧本 v6', cap: 'text.complete', model: 'mork-llm-7b', status: 'success', progress: 100, elapsed: '00:35', cost: '¥0.90', attempt: 1, error: '—', input: 'story-bible-v4 + 8 scenes' },
+    { id: 'gt_7c9f12', object: '场景 · 旧书店 REF v2', cap: 'image.generate', model: 'mork-image-3', status: 'success', progress: 100, elapsed: '00:22', cost: '¥0.60', attempt: 1, error: '—', input: 'scene · bookstore · 9:16' },
+    { id: 'gt_7b2d88', object: 'EP01_v5.mp4', cap: 'media.encode', model: 'ffmpeg · vertical_mp4_v2', status: 'success', progress: 100, elapsed: '01:18', cost: '¥0.00', attempt: 1, error: '—', input: 'tl_v5 · 2′18″' },
+    { id: 'gt_7a1f44', object: 'EP01 · 1-08 同谋', cap: 'video.generate', model: 'mork-video-2', status: 'cancelled', progress: 34, elapsed: '01:40', cost: '¥1.20', attempt: 1, error: 'cancelled_by_user', input: 'Shot Contract 08 · 4.5s · 9:16' }
+  ];
+
+  try {
+    const rework = JSON.parse(localStorage.getItem('sp_v2_rework') || '[]');
+    rework.slice(0, 5).forEach((r, i) => {
+      TASKS.unshift({
+        id: 'rw_' + (i + 1),
+        object: 'EP01 · ' + r.anchor,
+        cap: 'video.rework',
+        model: 'mork-video-2',
+        status: 'queued',
+        progress: 0,
+        elapsed: '—',
+        cost: '¥0.00',
+        attempt: 0,
+        error: '来自审核批注',
+        input: r.note
+      });
+    });
+  } catch (e) {}
+
+  const LABEL = { running: '运行中', success: '成功', failed: '失败', queued: '排队中', cancelled: '已取消', cancelling: '取消中' };
+  const CHIP = { running: 'accent', success: 'green', failed: 'red', queued: '', cancelled: '', cancelling: 'yellow' };
+  let active = 0;
+
+  function rowHTML(t, i) {
+    const running = t.status === 'running';
+    const canCancel = running || t.status === 'queued';
+    const canRetry = t.status === 'failed' || t.status === 'cancelled';
+    return '<tr data-task="' + i + '" data-status="' + t.status + '">' +
+      '<td class="name"><b>' + t.object + '</b><span>' + t.id + '</span></td>' +
+      '<td><span class="chip">' + t.cap + '</span></td>' +
+      '<td><span class="chip ' + (CHIP[t.status] || '') + '">' + (t.status === 'running' ? '<span class="spin"></span>' : '') + LABEL[t.status] + '</span></td>' +
+      '<td><div class="mini-bar"><i style="width:' + t.progress + '%"></i></div><span class="mono" style="font-size:9px;color:var(--dim)">' + t.progress + '%</span></td>' +
+      '<td class="num">' + t.elapsed + '</td><td class="num">' + t.cost + '</td>' +
+      '<td style="text-align:right;white-space:nowrap">' +
+        (canCancel ? '<button class="btn btn-sm" data-cancel="' + i + '">取消</button>' : '') +
+        (canRetry ? '<button class="btn btn-sm" data-retry="' + i + '">重试</button>' : '') +
+        '<button class="btn btn-sm btn-quiet" data-view="' + i + '">详情</button>' +
+      '</td></tr>';
+  }
+
+  function render() {
+    document.getElementById('task-body').innerHTML = TASKS.map(rowHTML).join('');
+    const activeCount = TASKS.filter(t => ['running', 'queued'].includes(t.status)).length;
+    document.getElementById('task-count').textContent = TASKS.length + ' TASKS · ' + activeCount + ' ACTIVE';
+  }
+
+  function openTask(i) {
+    const t = TASKS[i];
+    active = i;
+    document.getElementById('t-eyebrow').textContent = 'TASK · ' + t.cap;
+    document.getElementById('t-title').textContent = t.object;
+    document.getElementById('t-status').textContent = LABEL[t.status];
+    document.getElementById('t-status').className = 'chip ' + (CHIP[t.status] || '');
+    document.getElementById('t-object').textContent = t.object;
+    document.getElementById('t-cap').textContent = t.cap;
+    document.getElementById('t-id').textContent = t.id;
+    document.getElementById('t-model').textContent = t.model;
+    document.getElementById('t-attempt').textContent = t.attempt + ' 次';
+    document.getElementById('t-input').textContent = t.input;
+    document.getElementById('t-cost').textContent = t.cost;
+    document.getElementById('t-error').textContent = t.error;
+    P.openDrawer('drawer-task');
+  }
+
+  document.addEventListener('click', e => {
+    const cancel = e.target.closest('[data-cancel]');
+    if (cancel) {
+      const i = +cancel.dataset.cancel;
+      TASKS[i].status = 'cancelling';
+      render();
+      P.toast('已请求取消 · 等待 Worker 回收');
+      setTimeout(() => {
+        TASKS[i].status = 'cancelled';
+        TASKS[i].error = 'cancelled_by_user';
+        render();
+        P.toast('任务已取消，已产生费用不退回');
+      }, 1300);
+      return;
+    }
+    const retry = e.target.closest('[data-retry]');
+    if (retry) {
+      const i = +retry.dataset.retry;
+      TASKS[i].status = 'running';
+      TASKS[i].progress = 4;
+      TASKS[i].attempt += 1;
+      TASKS[i].error = '—';
+      render();
+      let p = 4;
+      const int = setInterval(() => {
+        p = Math.min(100, p + 12);
+        TASKS[i].progress = p;
+        if (p >= 100) { clearInterval(int); TASKS[i].status = 'success'; TASKS[i].elapsed = '00:41'; }
+        render();
+      }, 160);
+      P.toast('已重试 · Attempt ' + TASKS[i].attempt + '，原产物保留');
+      return;
+    }
+    const view = e.target.closest('[data-view]');
+    if (view) { openTask(+view.dataset.view); return; }
+    const row = e.target.closest('[data-task]');
+    if (row && !e.target.closest('button,a')) openTask(+row.dataset.task);
+  });
+
+  document.querySelectorAll('#task-filter button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#task-filter button').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      const f = btn.dataset.f;
+      document.querySelectorAll('#task-body tr').forEach(tr => {
+        tr.style.display = (f === 'all' || tr.dataset.status === f) ? '' : 'none';
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', () => P.openModal(el.dataset.open)));
+  document.getElementById('nt-submit').addEventListener('click', () => {
+    const cap = document.getElementById('nt-cap').value;
+    const object = document.getElementById('nt-object').value || '未命名对象';
+    TASKS.unshift({ id: 'gt_' + Math.random().toString(36).slice(2, 7), object, cap, model: 'mork-video-2', status: 'queued', progress: 0, elapsed: '—', cost: '¥0.00', attempt: 0, error: '—', input: 'pending snapshot' });
+    render();
+    P.closeModals();
+    P.toast('任务已入队 · 返回 task_id，不阻塞页面');
+  });
+
+  document.getElementById('t-retry').addEventListener('click', () => {
+    TASKS[active].status = 'running';
+    TASKS[active].progress = 6;
+    TASKS[active].attempt += 1;
+    render();
+    P.toast('已从抽屉重试任务');
+    P.closeDrawers();
+  });
+  document.getElementById('t-open').addEventListener('click', () => {
+    if (TASKS[active].cap === 'video.generate') location.href = 'studio.html';
+    else if (TASKS[active].cap === 'quality.check') location.href = 'review.html';
+    else if (TASKS[active].cap === 'media.encode') location.href = 'timeline.html';
+    else location.href = 'board.html';
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

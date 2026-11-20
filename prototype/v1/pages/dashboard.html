@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>企业工作台 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+</head>
+<body data-page="dashboard">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Workbench</p>
+          <h1>企业工作台</h1>
+          <p class="lede">跨项目的生产视图。这里的每个数字都以服务端快照为准；未接入的能力显示为“待建设”，不展示估算值。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-drawer="drawer-notify"><i data-icon="bell"></i>待审核 7</button>
+          <button class="btn btn-primary" type="button" data-modal="modal-project"><i data-icon="plus"></i>新建项目</button>
+        </div>
+      </div>
+
+      <div class="banner info">
+        <i data-icon="info"></i>
+        <div><b>当前为原型演示态。</b>所有数值、任务与审核记录均为静态样例，不写入后端；正式环境以 <span class="mono">/api/v1</span> 返回的快照为准。</div>
+        <button class="btn btn-quiet btn-sm b-act" type="button" onclick="location.href='states.html'">查看状态规范</button>
+      </div>
+
+      <div class="card" style="margin-bottom: 14px">
+        <div class="card-head"><div><h2>快捷入口</h2><span class="sub">SITEMAP · 22 业务页</span></div><span class="mono" style="font-size: 10px; color: var(--text-3)">原型导航</span></div>
+        <div class="card-body">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <a class="btn btn-primary btn-sm" href="flow.html">制作流程（推荐入口）</a>
+            <a class="btn btn-default btn-sm" href="project-overview.html">生产概览</a>
+            <a class="btn btn-default btn-sm" href="ideas.html">创意立项</a>
+            <a class="btn btn-default btn-sm" href="workflows.html">生产流水线</a>
+            <a class="btn btn-default btn-sm" href="providers.html">能力与 Provider</a>
+            <a class="btn btn-default btn-sm" href="usage.html">用量与成本</a>
+            <a class="btn btn-default btn-sm" href="audit.html">审计日志</a>
+            <a class="btn btn-default btn-sm" href="settings.html">项目设置</a>
+            <a class="btn btn-default btn-sm" href="users.html">成员</a>
+            <a class="btn btn-default btn-sm" href="roles.html">角色权限</a>
+            <a class="btn btn-default btn-sm" href="organizations.html">组织</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat">
+          <div class="k"><span>进行中项目</span><span class="tag">active</span></div>
+          <p class="v">4<small>/ 6</small></p>
+          <p class="d">2 个已归档 · 0 个延期</p>
+        </div>
+        <div class="stat">
+          <div class="k"><span>近 7 日生成任务</span><span class="pill pass plain">+18%</span></div>
+          <p class="v">128</p>
+          <p class="d">成功 113 · 失败 9 · 运行中 6</p>
+        </div>
+        <div class="stat">
+          <div class="k"><span>待人工审核</span><span class="pill review plain">SLA 24h</span></div>
+          <p class="v">7</p>
+          <p class="d">最早积压 6h 12m · 审核员 2 人</p>
+        </div>
+        <div class="stat">
+          <div class="k"><span>本月预算消耗</span><span class="pill review plain">62%</span></div>
+          <p class="v">¥ 6,204</p>
+          <p class="d">上限 ¥ 10,000 · 预计月末 ¥ 9,100</p>
+        </div>
+      </div>
+
+      <div class="grid g-main">
+        <div>
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2>项目生产看板</h2>
+                <span class="sub">PROJECT PIPELINE</span>
+              </div>
+              <div class="actions">
+                <select class="control" aria-label="按生产阶段筛选">
+                  <option>全部阶段</option>
+                  <option>剧本场次</option>
+                  <option>资产与分镜</option>
+                  <option>画面生成</option>
+                  <option>质检与审核</option>
+                  <option>时间线与导出</option>
+                </select>
+                <a class="btn btn-quiet btn-sm" href="projects.html">全部项目 →</a>
+              </div>
+            </div>
+            <div class="card-body tight">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th style="width: 34%">项目</th>
+                      <th>当前阶段</th>
+                      <th>集数 / 镜头</th>
+                      <th>待审核</th>
+                      <th>预算</th>
+                      <th>最近活动</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr data-row>
+                      <td>
+                        <a class="row-title" href="project-overview.html">长夜将明</a>
+                        <span class="sub">NYJM-26 · 都市悬疑 · 竖屏 9:16</span>
+                      </td>
+                      <td><span class="pill run">资产与分镜</span></td>
+                      <td class="num">12 / 146</td>
+                      <td><span class="pill review">7</span></td>
+                      <td class="num">62%</td>
+                      <td class="mono">12 分钟前</td>
+                      <td class="t-actions"><a class="btn btn-default btn-sm" href="project-overview.html">进入</a></td>
+                    </tr>
+                    <tr data-row>
+                      <td>
+                        <a class="row-title" href="#">春日回信</a>
+                        <span class="sub">CRHX-26 · 治愈爱情 · 竖屏 9:16</span>
+                      </td>
+                      <td><span class="pill pass">时间线与导出</span></td>
+                      <td class="num">8 / 96</td>
+                      <td><span class="pill pass">0</span></td>
+                      <td class="num">81%</td>
+                      <td class="mono">1 小时前</td>
+                      <td class="t-actions"><a class="btn btn-default btn-sm" href="project-overview.html">进入</a></td>
+                    </tr>
+                    <tr data-row>
+                      <td>
+                        <a class="row-title" href="#">深夜食堂·番外</a>
+                        <span class="sub">SYST-26 · 都市温情 · 横屏 16:9</span>
+                      </td>
+                      <td><span class="pill draft">剧本场次</span></td>
+                      <td class="num">4 / 0</td>
+                      <td><span class="pill pass">0</span></td>
+                      <td class="num">12%</td>
+                      <td class="mono">昨天</td>
+                      <td class="t-actions"><a class="btn btn-default btn-sm" href="project-overview.html">进入</a></td>
+                    </tr>
+                    <tr data-row>
+                      <td>
+                        <a class="row-title" href="#">无声证词</a>
+                        <span class="sub">WSZZ-26 · 悬疑 · 竖屏 9:16</span>
+                      </td>
+                      <td><span class="pill fail">画面生成受阻</span></td>
+                      <td class="num">10 / 118</td>
+                      <td><span class="pill review">3</span></td>
+                      <td class="num">94%</td>
+                      <td class="mono">2 天前</td>
+                      <td class="t-actions"><a class="btn btn-default btn-sm" href="project-overview.html">进入</a></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="pager"><span>共 4 个进行中项目</span><div class="pages"><span>1</span><span class="on">2</span></div></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div>
+                <h2>最近 AI 任务</h2>
+                <span class="sub">GENERATION TASK</span>
+              </div>
+              <div class="actions">
+                <span class="count">Provider：Mork</span>
+                <a class="btn btn-quiet btn-sm" href="tasks.html">任务中心 →</a>
+              </div>
+            </div>
+            <div class="card-body tight">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr><th>任务</th><th>能力</th><th>作用对象</th><th>状态</th><th>耗时</th><th>成本</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr data-row>
+                      <td><span class="mono">gt_7f31c8</span><span class="sub">video.generate · mork-video-2</span></td>
+                      <td>视频生成</td>
+                      <td>1-04 镜头</td>
+                      <td><span class="pill running">运行中</span></td>
+                      <td class="mono">01:12</td>
+                      <td class="mono">—</td>
+                    </tr>
+                    <tr data-row>
+                      <td><span class="mono">gt_7f319a</span><span class="sub">image.generate · mork-image-3</span></td>
+                      <td>图像生成</td>
+                      <td>角色 · 沈砚 v3</td>
+                      <td><span class="pill succeeded">成功</span></td>
+                      <td class="mono">00:19</td>
+                      <td class="mono">¥ 0.42</td>
+                    </tr>
+                    <tr data-row>
+                      <td><span class="mono">gt_7f2e04</span><span class="sub">video.generate · mork-video-2</span></td>
+                      <td>视频生成</td>
+                      <td>1-03 镜头</td>
+                      <td><span class="pill retry">等待重试</span></td>
+                      <td class="mono">00:48</td>
+                      <td class="mono">¥ 2.10</td>
+                    </tr>
+                    <tr data-row>
+                      <td><span class="mono">gt_7f2b71</span><span class="sub">audio.speech · mork-tts</span></td>
+                      <td>语音合成</td>
+                      <td>1-02 对白 · 林晚</td>
+                      <td><span class="pill failed">失败</span></td>
+                      <td class="mono">00:06</td>
+                      <td class="mono">¥ 0.03</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card-foot">
+              <span>任务状态以 GET 快照为最终事实，SSE 仅用于通知；断线后重新拉取。</span>
+              <span class="mono">p95 300ms</span>
+            </div>
+          </section>
+        </div>
+
+        <div>
+          <section class="card">
+            <div class="card-head">
+              <h2>待审核队列</h2>
+              <span class="sub">7</span>
+            </div>
+            <div class="card-body">
+              <div class="issue-row">
+                <span class="issue-sev block">FAIL</span>
+                <div class="issue-body">
+                  <strong>1-03 镜头 · 画幅不一致</strong>
+                  <p>生成结果 16:9，项目配置为 9:16；阻断进入时间线。</p>
+                  <span class="evi">shot 1-03 · artifact av_2c91</span>
+                </div>
+              </div>
+              <div class="issue-row">
+                <span class="issue-sev warn">REV</span>
+                <div class="issue-body">
+                  <strong>第 2 集剧本 v4 · 对白角色未绑定</strong>
+                  <p>12 条对白中有 3 条未绑定角色资产，需编剧确认。</p>
+                  <span class="evi">script v4 · scene 2-04</span>
+                </div>
+              </div>
+              <div class="issue-row">
+                <span class="issue-sev info">REV</span>
+                <div class="issue-body">
+                  <strong>角色 · 陈九 参考图 v2</strong>
+                  <p>连续性检查：发型与 1-01 镜头不一致，建议人工确认。</p>
+                  <span class="evi">asset a_41f0 · v2</span>
+                </div>
+              </div>
+              <div class="issue-row">
+                <span class="issue-sev info">REV</span>
+                <div class="issue-body">
+                  <strong>第 1 集成片 · 字幕轨</strong>
+                  <p>2 处时间码重叠，需在时间线修正后重新导出。</p>
+                  <span class="evi">timeline tl_v4</span>
+                </div>
+              </div>
+            </div>
+            <div class="card-foot">
+              <span>审核绑定不可变版本，不继承旧结论</span>
+              <a class="btn btn-quiet btn-sm" href="reviews.html">进入审核台</a>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2>Provider 与队列</h2>
+              <span class="sub">HEALTH</span>
+            </div>
+            <div class="card-body">
+              <div class="kv">
+                <div class="row"><dt>Mork · image.generate</dt><dd><span class="pill pass">正常</span></dd></div>
+                <div class="row"><dt>Mork · video.generate</dt><dd><span class="pill review">限流 429</span></dd></div>
+                <div class="row"><dt>Mork · audio.speech</dt><dd><span class="pill fail">鉴权失败</span></dd></div>
+                <div class="row"><dt>Celery 队列 · generation</dt><dd class="mono">3 排队 / 4 执行</dd></div>
+                <div class="row"><dt>Celery 队列 · media</dt><dd class="mono">1 排队 / 2 执行</dd></div>
+                <div class="row"><dt>Outbox 积压</dt><dd class="mono">0（延迟 &lt; 1s）</dd></div>
+              </div>
+              <div class="divider"></div>
+              <p class="lede" style="font-size: 10.5px">Provider 缺失有效配置时应返回 <span class="mono">PROVIDER_NOT_CONFIGURED</span>，禁止静默回退 Mock 或伪造结果。</p>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2>最近审计事件</h2>
+              <span class="sub">AUDIT</span>
+            </div>
+            <div class="card-body tight">
+              <div style="padding: 4px 16px 10px">
+                <div class="ref-line"><span class="tag">14:22</span><span>陈默 归档资产 <b>a_38d1</b>（被 2 个镜头引用，已阻止物理删除）</span></div>
+                <div class="ref-line"><span class="tag">13:48</span><span>陆行 拒绝审核 <b>shot 1-05</b>，原因：服装连续性</span></div>
+                <div class="ref-line"><span class="tag">11:03</span><span>系统 创建 ExportJob <b>ej_5b12</b>（timeline tl_v4）</span></div>
+                <div class="ref-line"><span class="tag">09:30</span><span>王斌 分配项目角色 writer → 苏禾</span></div>
+              </div>
+            </div>
+            <div class="card-foot"><span>审计要求 actor / action / resource / request_id</span><span class="mono">只读</span></div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- 通知抽屉 -->
+<div class="drawer-backdrop" id="drawer-notify-backdrop" data-close-drawer="drawer-notify"></div>
+<aside class="drawer" id="drawer-notify" aria-label="待审核通知">
+  <div class="drawer-head">
+    <div>
+      <p class="eyebrow">Notifications</p>
+      <h2>待处理通知 · 7</h2>
+    </div>
+    <button class="close-x" type="button" data-close-drawer="drawer-notify" aria-label="关闭"><i data-icon="x"></i></button>
+  </div>
+  <div class="drawer-body">
+    <div class="issue-row">
+      <span class="issue-sev block">阻断</span>
+      <div class="issue-body"><strong>1-03 镜头画幅与项目配置不一致</strong><p>需重新生成或修改 Shot Contract 的画幅约束。</p></div>
+    </div>
+    <div class="issue-row">
+      <span class="issue-sev warn">待审核</span>
+      <div class="issue-body"><strong>第 2 集剧本 v4 已提交审核</strong><p>提交人：苏禾 · 12 分钟前</p></div>
+    </div>
+    <div class="issue-row">
+      <span class="issue-sev warn">待审核</span>
+      <div class="issue-body"><strong>角色 · 陈九 参考图 v2</strong><p>连续性提示 1 项，等待人工确认。</p></div>
+    </div>
+    <div class="issue-row">
+      <span class="issue-sev info">预算</span>
+      <div class="issue-body"><strong>「无声证词」预算已用 94%</strong><p>达到 100% 后生成任务将被阻断，需制片人授权。</p></div>
+    </div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn btn-default" type="button" data-close-drawer="drawer-notify">稍后处理</button>
+    <a class="btn btn-primary" href="reviews.html">打开审核台</a>
+  </div>
+</aside>
+
+<!-- 新建项目弹窗 -->
+<div class="modal-backdrop" id="modal-project-backdrop" data-close-modal="modal-project"></div>
+<div class="modal" id="modal-project" role="dialog" aria-modal="true" aria-labelledby="mp-title">
+  <div class="modal-head"><p class="eyebrow">New project</p><h2 id="mp-title">新建项目</h2></div>
+  <div class="modal-body">
+    <div class="form-grid">
+      <label class="field"><span>项目名称</span><input class="control" value="无名之辈" /></label>
+      <label class="field"><span>项目编码</span><input class="control mono" value="WMBZ-26" /></label>
+      <label class="field"><span>题材</span><select class="control"><option>都市悬疑</option><option>都市温情</option><option>古装</option></select></label>
+      <label class="field"><span>画幅</span><select class="control"><option>竖屏 9:16（短剧默认）</option><option>横屏 16:9</option></select></label>
+      <label class="field full"><span>目标集数</span><input class="control num" value="12" /></label>
+    </div>
+    <p class="lede" style="font-size: 10.5px; margin-top: 12px">创建后项目状态为 draft，需制片人授予成员后才能进入生产工作区。编码唯一，冲突返回 409。</p>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-default" type="button" data-close-modal="modal-project">取消</button>
+    <button class="btn btn-primary" type="button" data-close-modal="modal-project" data-toast="原型：项目已创建（draft），真实环境返回 project_id 并初始化默认词表与工作流">创建项目</button>
+  </div>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>故事圣经 · 长夜将明</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="bible" data-crumb="故事圣经">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <nav class="tabs" id="tabs"></nav>
+    <main class="content">
+      <div class="board-head">
+        <div>
+          <div class="eyebrow">STORY BIBLE · SINGLE SOURCE OF TRUTH</div>
+          <h1>故事圣经</h1>
+          <div class="sub">3 人物 · 3 场景 · 2 道具 · 8 条关系 · 所有集共用的设定底稿</div>
+        </div>
+        <div class="board-tools">
+          <span class="chip green" id="bible-version"><span class="dot green"></span>v4 已锁定</span>
+          <a class="btn btn-sm" href="episodes.html"><span data-i="list"></span>分集规划</a>
+          <button class="btn btn-sm" data-open="modal-entity"><span data-i="plus"></span>新增实体</button>
+          <button class="btn btn-sm btn-primary" id="btn-save"><span data-i="check"></span>保存故事圣经</button>
+        </div>
+      </div>
+
+      <div class="banner" style="margin-bottom:14px">
+        <span data-i="layers"></span>
+        <div class="grow"><b>故事圣经是唯一设定源。</b>实体改名、关系变更、视觉锚点更新后，分集、剧本与资产引用同一份设定；旧版本保留，不静默覆盖。</div>
+        <span class="chip accent">v4 → v5</span>
+      </div>
+
+      <div class="bible-layout">
+        <section class="panel bible-side">
+          <div class="panel-head" style="padding:12px 12px"><h2>实体索引</h2><span class="sub" id="entity-total">8 ENTITIES</span></div>
+          <div style="padding:10px 10px 0"><input class="input" id="bible-search" placeholder="搜索人物、场景、道具"></div>
+          <div class="seg" style="margin:10px;flex-wrap:wrap" id="bible-filter">
+            <button class="is-active" data-f="all">全部</button>
+            <button data-f="角色">人物</button>
+            <button data-f="场景">场景</button>
+            <button data-f="道具">道具</button>
+          </div>
+          <div class="entity-list" id="entity-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div><h2 id="ed-name">林未</h2><span class="sub" id="ed-sub">CHARACTER · LEAD</span></div>
+            <div style="display:flex;gap:6px"><span class="chip green" id="ed-type">角色</span><span class="chip" id="ed-ref">被 12 集引用</span></div>
+          </div>
+          <div class="panel-body">
+            <div class="bible-cover">
+              <img id="ed-cover" src="assets/img/linwei.jpg" alt="">
+              <div class="bible-cover-meta">
+                <span class="mono" id="ed-id">ENT-001</span>
+                <b id="ed-role">调查者 · 记者</b>
+                <span>首次出现 EP01 · 最近修改 EP12 分集前</span>
+                <button class="btn btn-sm" id="btn-cover">更换参考图</button>
+              </div>
+            </div>
+
+            <div class="input-grid" style="margin-top:14px">
+              <label class="field"><span>名称</span><input id="f-name"></label>
+              <label class="field"><span>别名 / 称呼</span><input id="f-alias"></label>
+              <label class="field"><span>身份 / 类型</span><input id="f-role"></label>
+              <label class="field"><span>视觉锚点</span><input id="f-visual"></label>
+              <label class="field"><span>叙事目标</span><input id="f-goal"></label>
+              <label class="field"><span>冲突 / 限制</span><input id="f-limit"></label>
+              <label class="field"><span>隐藏信息</span><input id="f-secret"></label>
+              <label class="field"><span>语气 / 氛围</span><input id="f-tone"></label>
+            </div>
+            <label class="field" style="margin-top:12px"><span>小传 / 描述</span><textarea id="f-bio" style="min-height:104px"></textarea></label>
+
+            <div class="rel-title" style="margin-top:14px">该实体的关系 <span id="rel-count">2</span><button class="btn btn-sm" style="margin-left:auto" data-open="modal-relation"><span data-i="plus"></span>新增关系</button></div>
+            <div class="rel-list" id="ed-relations"></div>
+
+            <div class="note" style="margin-top:12px">修改会先写成 v5 草稿；点在页头的「保存故事圣经」后，才同步到分集、剧本与资产引用。原文与旧版本不改。</div>
+          </div>
+        </section>
+
+        <aside class="side-stack">
+          <section class="panel">
+            <div class="panel-head"><h2>关系图</h2><span class="sub">RELATIONS</span></div>
+            <div class="panel-body">
+              <div class="rel-graph" id="rel-graph"></div>
+              <div class="rel-list" id="all-relations" style="margin-top:8px"></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>设定检查</h2><span class="sub">CONTINUITY</span></div>
+            <div class="panel-body">
+              <div class="qa-item"><span class="qa-mark pass">✓</span><div class="txt"><b>人物年龄一致</b><span>8 个实体 · 0 冲突</span></div></div>
+              <div class="qa-item"><span class="qa-mark warn">!</span><div class="txt"><b>借阅册封面颜色</b><span>EP03 写“深绿”，资产卡为“墨绿”</span></div></div>
+              <div class="qa-item"><span class="qa-mark warn">!</span><div class="txt"><b>周砚的左手伤</b><span>EP07 起出现，EP01 未建立</span></div></div>
+              <button class="btn btn-sm" style="width:100%;margin-top:10px" id="btn-check"><span data-i="target"></span>重新检查设定</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>版本记录</h2><span class="sub">VERSIONS</span></div>
+            <div class="panel-body">
+              <div class="mini-kpi"><span>当前</span><b id="ver-now">v4 · locked</b></div>
+              <div class="mini-kpi"><span>历史</span><b>v3 / v2 / v1</b></div>
+              <div class="mini-kpi"><span>引用</span><b>12 集 · 63 资产</b></div>
+              <button class="btn btn-sm" style="width:100%;margin-top:8px" id="btn-diff">对比 v4 → v5</button>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="scrim"></div>
+<div class="modal" id="modal-entity">
+  <div class="modal-head"><div><div class="eyebrow">NEW ENTITY</div><h2 style="margin:4px 0 0;font-size:18px">新增故事圣经实体</h2></div><button class="icon-btn" data-close data-i="x"></button></div>
+  <div class="modal-body">
+    <div class="input-grid">
+      <label class="field"><span>类型</span><select id="new-type"><option>角色</option><option>场景</option><option>道具</option></select></label>
+      <label class="field"><span>名称</span><input id="new-name" placeholder="例如：旧城区的失物招领处"></label>
+    </div>
+    <label class="field" style="margin-top:10px"><span>身份 / 功能</span><input id="new-role" placeholder="例如：第二处关键场景"></label>
+    <div class="banner" style="margin-top:12px"><span data-i="sparkles"></span><div class="grow">新增实体先进入 v5 草稿，不自动出现在已锁定的分集与剧本中；需要手动挂到对应集。</div></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>取消</button><button class="btn btn-primary" id="btn-entity-add">新增 <span data-i="arrowRight"></span></button></div>
+</div>
+
+<div class="modal" id="modal-relation">
+  <div class="modal-head"><div><div class="eyebrow">NEW RELATION</div><h2 style="margin:4px 0 0;font-size:18px">新增实体关系</h2></div><button class="icon-btn" data-close data-i="x"></button></div>
+  <div class="modal-body">
+    <div class="input-grid" style="grid-template-columns:1fr 106px 1fr">
+      <label class="field"><span>从</span><select id="rel-from"></select></label>
+      <label class="field"><span>关系</span><input id="rel-verb" value="调查"></label>
+      <label class="field"><span>到</span><select id="rel-to"></select></label>
+    </div>
+    <div class="banner" style="margin-top:12px"><span data-i="link"></span><div class="grow">关系会同时出现在两个实体的详情与关系图；删除关系需在关系图里显式操作。</div></div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>取消</button><button class="btn btn-primary" id="btn-relation-add">新增关系 <span data-i="arrowRight"></span></button></div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const ENTITIES = [
+    { id: 'ENT-001', type: '角色', name: '林未', alias: '未未 / 林记者', role: '调查者 · 记者', visual: '短发 / 米色风衣 / 透明伞', goal: '找回被删除的姐姐', limit: '一旦接近真相就会被“重置”记忆', secret: '她其实记得第七夜', tone: '短句，先问后答，很少解释', bio: '地方记者，习惯把问题写在手心里。雨夜进入旧书店，是为了一本没有编号的借阅册。', cover: 'assets/img/linwei.jpg' },
+    { id: 'ENT-002', type: '角色', name: '周砚', alias: '周老板 / 店主', role: '旧书店店主 · 守门人', visual: '深色风衣 / 左手旧伤 / 黄铜台灯', goal: '守住借阅册与书店', limit: '不能离开书店超过一夜', secret: '他是第七个借阅者', tone: '慢，停顿多，答非所问', bio: '旧书店现任店主。知道借阅册的规则，却从不把规则完整说出口。', cover: 'assets/img/zhouyan.jpg' },
+    { id: 'ENT-003', type: '角色', name: '陈九', alias: '九哥 / 线人', role: '线人 · 账本持有者', visual: '黑色雨衣 / 右手打火机 / 旧账本', goal: '用账本换一次离开', limit: '被两边同时追', secret: '账本最后一页写的是他自己的名字', tone: '轻佻，句子短，常用反问', bio: '旧城区的消息贩子，提供账本，也提供假消息。', cover: 'assets/img/night-man.jpg' },
+    { id: 'ENT-004', type: '场景', name: '旧书店', alias: '长夜书店', role: '主场景 · 借阅规则发生地', visual: '木书架 / 暖黄灯 / 雨夜玻璃', goal: '让每个进入者留下一个名字', limit: '只在雨夜开门', secret: '地下还有一层未登记的书库', tone: '安静，雨声盖过对白', bio: '临街两层旧书店。借阅册放在柜台下的铁盒里，借书不登记，还书才登记。', cover: 'assets/img/bookstore.jpg' },
+    { id: 'ENT-005', type: '场景', name: '后巷', alias: '书店后巷', role: '跟踪与交换信息的场所', visual: '红色霓虹 / 湿地面 / 铁卷门', goal: '让角色在无监控处交换信息', limit: '只有一个出口', secret: '卷门后是书店的地下入口', tone: '压迫，霓虹反光', bio: '书店背后的窄巷，雨夜积水没过鞋面。', cover: 'assets/img/alley.jpg' },
+    { id: 'ENT-006', type: '场景', name: '天台', alias: '旧楼天台', role: '两人结盟的场景', visual: '城市夜景 / 水箱 / 铁丝网', goal: '让两个角色第一次说真话', limit: '风声大，必须靠近说话', secret: '能看见书店后巷的灯', tone: '开阔，冷，留白多', bio: '旧书店对面的居民楼天台，正对后巷。', cover: 'assets/img/rooftop.jpg' },
+    { id: 'ENT-007', type: '道具', name: '借阅册', alias: '没有编号的册子', role: '核心道具 · 全剧线索', visual: '深绿硬皮 / 无编号 / 黄铜搭扣', goal: '记录每个借阅者的名字与归还日', limit: '不能拍照，不能带走', secret: '最后一页会自己长出新的名字', tone: '被翻动时纸页很轻', bio: '旧书店的借阅登记册，缺了编号页。每还一本书，才会出现一个名字。', cover: 'assets/img/ledger.jpg' },
+    { id: 'ENT-008', type: '道具', name: '黄铜台灯', alias: '柜台灯', role: '场景光源 · 情绪锚点', visual: '黄铜灯罩 / 暖光 / 开关松动', goal: '在暗场里给人物脸部一束暖光', limit: '连续开超过一夜会闪烁', secret: '灯座下压着一张旧照片', tone: '电流声很轻', bio: '柜台上的老台灯，书店关门后仍亮着。', cover: 'assets/img/lamp.jpg' }
+  ];
+  const RELATIONS = [
+    ['林未', '调查', '周砚'], ['林未', '追查', '借阅册'], ['周砚', '保管', '借阅册'],
+    ['周砚', '守着', '旧书店'], ['陈九', '提供', '借阅册'], ['陈九', '躲藏于', '后巷'],
+    ['周砚', '约见', '林未', '天台'], ['借阅册', '记录', '陈九']
+  ];
+
+  let current = 'ENT-001';
+  let filter = 'all';
+
+  try {
+    const saved = JSON.parse(localStorage.getItem('sp_v2_bible') || 'null');
+    if (saved && saved.entities && saved.entities.length) {
+      ENTITIES.length = 0;
+      saved.entities.forEach(e => ENTITIES.push(e));
+      if (saved.relations) { RELATIONS.length = 0; saved.relations.forEach(r => RELATIONS.push(r)); }
+      current = ENTITIES[0].id;
+      if (saved.version === 'v5') {
+        document.getElementById('bible-version').innerHTML = '<span class="dot yellow"></span>v5 草稿';
+        document.getElementById('bible-version').className = 'chip yellow';
+        document.getElementById('ver-now').textContent = 'v5 · draft';
+      }
+    }
+  } catch (e) {}
+
+  function entity(id) { return ENTITIES.find(e => e.id === id); }
+  function byName(name) { return ENTITIES.find(e => e.name === name); }
+
+  function renderList() {
+    const q = document.getElementById('bible-search').value.trim();
+    const list = ENTITIES.filter(e => (filter === 'all' || e.type === filter) && (!q || (e.name + e.alias + e.role).indexOf(q) > -1));
+    document.getElementById('entity-list').innerHTML = list.map(e =>
+      '<button class="bible-item' + (e.id === current ? ' is-active' : '') + '" data-ent="' + e.id + '">' +
+      '<img src="' + e.cover + '" alt=""><div class="bi-txt"><b>' + e.name + '</b><span>' + e.type + ' · ' + e.role.split(' · ')[0] + '</span></div>' +
+      (e.id === current ? '<span class="bi-dot"></span>' : '') + '</button>'
+    ).join('') || '<div class="note" style="padding:8px">没有匹配的实体</div>';
+    document.getElementById('entity-total').textContent = ENTITIES.length + ' ENTITIES';
+  }
+
+  function renderRelations() {
+    const e = entity(current);
+    const mine = RELATIONS.filter(r => r[0] === e.name || r[2] === e.name);
+    document.getElementById('rel-count').textContent = mine.length;
+    document.getElementById('ed-relations').innerHTML = mine.map(r => {
+      const other = r[0] === e.name ? r[2] : r[0];
+      return '<div class="rel-row"><b>' + r[0] + '</b><span>' + r[1] + '</span><b>' + (r[3] ? r[2] + ' · ' + r[3] : other) + '</b></div>';
+    }).join('') || '<div class="note">暂无关系，点右上角新增。</div>';
+
+    document.getElementById('all-relations').innerHTML = RELATIONS.map(r =>
+      '<div class="rel-row"><b>' + r[0] + '</b><span>' + r[1] + '</span><b>' + r[2] + '</b></div>'
+    ).join('');
+
+    const nodes = ['林未', '周砚', '陈九', '借阅册', '旧书店'];
+    document.getElementById('rel-graph').innerHTML = '<div class="graph-core">借阅册</div><div class="graph-ring">' +
+      nodes.filter(n => n !== '借阅册').map(n => '<span>' + n + '</span>').join('') + '</div>';
+  }
+
+  function load(id) {
+    current = id;
+    const e = entity(id);
+    document.getElementById('ed-name').textContent = e.name;
+    document.getElementById('ed-sub').textContent = e.type.toUpperCase() + ' · ' + e.role;
+    document.getElementById('ed-type').textContent = e.type;
+    document.getElementById('ed-ref').textContent = e.type === '角色' ? '被 12 集引用' : '被 8 集引用';
+    document.getElementById('ed-id').textContent = e.id;
+    document.getElementById('ed-role').textContent = e.role;
+    document.getElementById('ed-cover').src = e.cover;
+    ['name', 'alias', 'role', 'visual', 'goal', 'limit', 'secret', 'tone', 'bio'].forEach(k => {
+      document.getElementById('f-' + k).value = e[k] || '';
+    });
+    renderList();
+    renderRelations();
+  }
+
+  function collect() {
+    const e = entity(current);
+    ['name', 'alias', 'role', 'visual', 'goal', 'limit', 'secret', 'tone', 'bio'].forEach(k => {
+      e[k] = document.getElementById('f-' + k).value;
+    });
+    document.getElementById('ed-name').textContent = e.name || '未命名实体';
+    document.getElementById('ed-role').textContent = e.role;
+  }
+
+  document.getElementById('entity-list').addEventListener('click', e => {
+    const b = e.target.closest('[data-ent]');
+    if (!b) return;
+    collect();
+    load(b.dataset.ent);
+    P.toast('已切换到「' + entity(b.dataset.ent).name + '」');
+  });
+
+  document.querySelectorAll('#bible-filter button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#bible-filter button').forEach(x => x.classList.remove('is-active'));
+    b.classList.add('is-active');
+    filter = b.dataset.f;
+    renderList();
+  }));
+
+  document.getElementById('bible-search').addEventListener('input', renderList);
+  ['name', 'alias', 'role', 'visual', 'goal', 'limit', 'secret', 'tone', 'bio'].forEach(k => {
+    document.getElementById('f-' + k).addEventListener('input', () => {
+      if (k === 'name' || k === 'role') { collect(); renderList(); }
+    });
+  });
+
+  document.getElementById('btn-save').addEventListener('click', () => {
+    collect();
+    try { localStorage.setItem('sp_v2_bible', JSON.stringify({ entities: ENTITIES, relations: RELATIONS, version: 'v5' })); } catch (e) {}
+    document.getElementById('bible-version').innerHTML = '<span class="dot yellow"></span>v5 草稿';
+    document.getElementById('bible-version').className = 'chip yellow';
+    document.getElementById('ver-now').textContent = 'v5 · draft';
+    P.toast('故事圣经 v5 草稿已保存 · 待分集确认');
+  });
+
+  document.getElementById('btn-cover').addEventListener('click', () => P.toast('原型模式：参考图更换从资产库选择'));
+  document.getElementById('btn-check').addEventListener('click', () => P.toast('设定检查完成：2 项建议，0 项阻断'));
+  document.getElementById('btn-diff').addEventListener('click', () => P.toast('v4 → v5：1 个实体改名、2 条关系新增、1 个视觉锚点更新'));
+
+  document.getElementById('btn-entity-add').addEventListener('click', () => {
+    const type = document.getElementById('new-type').value;
+    const name = document.getElementById('new-name').value.trim();
+    const role = document.getElementById('new-role').value.trim() || '待补身份';
+    if (!name) { P.toast('先填实体名称'); return; }
+    ENTITIES.push({ id: 'ENT-00' + (ENTITIES.length + 1), type: type, name: name, alias: '', role: role, visual: '', goal: '', limit: '', secret: '', tone: '', bio: '', cover: type === '角色' ? 'assets/img/night-man.jpg' : type === '场景' ? 'assets/img/alley.jpg' : 'assets/img/ledger.jpg' });
+    P.closeModals();
+    load(ENTITIES[ENTITIES.length - 1].id);
+    P.toast('已新增「' + name + '」到 v5 草稿');
+  });
+
+  function relationOptions() {
+    const opts = ENTITIES.map(e => '<option>' + e.name + '</option>').join('');
+    document.getElementById('rel-from').innerHTML = opts;
+    document.getElementById('rel-to').innerHTML = opts;
+    document.getElementById('rel-from').value = entity(current).name;
+  }
+
+  document.getElementById('btn-relation-add').addEventListener('click', () => {
+    const from = document.getElementById('rel-from').value;
+    const verb = document.getElementById('rel-verb').value.trim() || '关联';
+    const to = document.getElementById('rel-to').value;
+    if (from === to) { P.toast('关系两端不能是同一实体'); return; }
+    RELATIONS.push([from, verb, to]);
+    P.closeModals();
+    renderRelations();
+    P.toast('已新增关系：' + from + ' → ' + verb + ' → ' + to);
+  });
+
+  document.querySelector('[data-open="modal-relation"]').addEventListener('click', relationOptions);
+  relationOptions();
+  renderList();
+  load('ENT-001');
+})();
+</script>
+</body>
+</html>

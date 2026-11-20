@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>登录 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+<style>
+  .login-shell { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(420px, 0.85fr); background: var(--paper); }
+  .login-art { background: var(--ink-900); color: #e7e5e0; padding: 54px 58px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+  .login-art .grid-lines { position: absolute; inset: 0; background-image: linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(0deg, rgba(255,255,255,0.035) 1px, transparent 1px); background-size: 52px 52px; pointer-events: none; }
+  .login-art .brand-line { display: flex; align-items: center; gap: 10px; position: relative; }
+  .login-art .brand-mark { width: 28px; height: 28px; border-radius: 2px; background: var(--accent); display: grid; place-items: center; }
+  .login-art .brand-mark svg { width: 16px; height: 16px; stroke: #eaf4f2; }
+  .login-art h1 { font-size: 46px; line-height: 1.08; letter-spacing: -0.04em; font-weight: 600; margin: auto 0 18px; max-width: 18ch; position: relative; }
+  .login-art p { color: #9fa9ad; font-size: 12px; line-height: 2; max-width: 46ch; position: relative; margin: 0 0 auto; }
+  .login-art .chain { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 26px; font-size: 10.5px; color: #7f8b90; font-family: var(--mono); letter-spacing: 0.04em; }
+  .login-art .chain b { font-weight: 400; color: #c9cfce; }
+  .login-art .chain span { color: #4d5a60; }
+  .login-form-wrap { display: grid; place-items: center; padding: 40px 34px; }
+  .login-card { width: min(384px, 100%); }
+  .login-card .eyebrow { margin-bottom: 10px; }
+  .login-card h2 { font-size: 25px; letter-spacing: -0.02em; font-weight: 600; margin-bottom: 6px; }
+  .login-card .muted { font-size: 11.5px; color: var(--text-3); line-height: 1.8; }
+  .login-card .field { margin-top: 16px; }
+  .login-card .field input { height: 38px; font-size: 12.5px; }
+  .login-card .btn-primary { height: 38px; margin-top: 22px; }
+  .login-card .foot { margin-top: 16px; font-size: 10.5px; color: var(--text-3); line-height: 1.8; }
+  .login-card .foot .mono { color: var(--text-2); }
+  .login-card .err-banner { display: none; }
+  .login-card .err-banner.show { display: flex; }
+  .login-card .env-chip { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.06em; color: var(--text-3); border: 1px solid var(--line); background: var(--surface); padding: 4px 8px; border-radius: var(--r-pill); }
+  @media (max-width: 1024px) {
+    .login-shell { grid-template-columns: minmax(0, 1fr); }
+    .login-art { display: none; }
+    .login-form-wrap { min-height: 100vh; }
+  }
+</style>
+</head>
+<body>
+<div class="login-shell">
+  <section class="login-art">
+    <div class="grid-lines"></div>
+    <div class="brand-line">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 9h18M3 15h18M8 4v16M16 4v16"/></svg></span>
+      <span style="font-size: 12.5px; letter-spacing: 0.04em">短剧智能生产平台</span>
+    </div>
+    <h1>从一句创意，<br>到可直接交付的成片。</h1>
+    <p>创意 → 故事圣经 → 剧本与场次 → 角色/场景/道具 → 分镜与 Shot Contract → AI 生成 → 质量检查与人工审核 → 时间线 → FFmpeg → MP4。每一步都绑定不可变版本。</p>
+    <div class="chain">
+      <b>企业私有化部署</b><span>/</span><b>项目内资产隔离</b><span>/</span><b>整数 PTS 时码</b><span>/</span><b>审核不可绕过</b>
+    </div>
+  </section>
+
+  <section class="login-form-wrap">
+    <div class="login-card">
+      <span class="env-chip">STAGING · 星野文化传播</span>
+      <p class="eyebrow" style="margin-top: 18px">Sign in</p>
+      <h2>登录工作空间</h2>
+      <p class="muted">使用组织账号登录。账号由管理员创建或邀请，离职与禁用会立即撤销会话。</p>
+
+      <div class="banner error err-banner" id="login-err">
+        <i data-icon="alert"></i>
+        <div><b>邮箱或密码不正确。</b>请联系管理员确认账号状态；连续失败 5 次将锁定 15 分钟。<span class="mono">request_id: req_8c31d0</span></div>
+      </div>
+
+      <label class="field">
+        <span>工作邮箱</span>
+        <input class="control" type="email" value="chen.mo@xingye.studio" autocomplete="username" />
+      </label>
+      <label class="field">
+        <span>密码</span>
+        <input class="control" type="password" value="studio2026" autocomplete="current-password" />
+        <span class="hint">会话有效期 8 小时；令牌过期后自动续期，续期失败回到登录页并保留当前路由。</span>
+      </label>
+
+      <button class="btn btn-primary btn-block" type="button" id="btn-login">登录</button>
+
+      <p class="foot">
+        没有账号？联系组织管理员在「成员」中创建并授予项目角色。<br>
+        SSO / SCIM 为后续能力，本期不提供。<br>
+        <span class="mono">POST /api/v1/auth/login · POST /auth/refresh · POST /auth/logout</span>
+      </p>
+      <p class="foot" style="margin-top: 10px"><a href="dashboard.html" style="color: var(--accent)">查看已登录态的原型页面 →</a></p>
+    </div>
+  </section>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  document.getElementById('btn-login').addEventListener('click', function () {
+    const btn = this;
+    btn.disabled = true;
+    btn.textContent = '正在验证…';
+    setTimeout(function () {
+      window.location.href = 'dashboard.html';
+    }, 700);
+  });
+  // 演示：按住 Alt 点击登录展示错误态
+  document.getElementById('btn-login').addEventListener('click', function (e) {
+    if (e.altKey) {
+      e.stopImmediatePropagation();
+      document.getElementById('login-err').classList.add('show');
+    }
+  }, true);
+</script>
+</body>
+</html>

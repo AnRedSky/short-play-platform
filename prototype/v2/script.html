@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>剧本 · 长夜将明 EP01</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="script" data-crumb="剧本">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <nav class="tabs" id="tabs"></nav>
+    <main class="content">
+      <div class="board-head">
+        <div>
+          <div class="eyebrow" id="ep-eyebrow">SCREENPLAY · EP01</div>
+          <h1 id="ep-title">雨夜书店</h1>
+          <div class="sub" id="ep-sub">8 场 · 19 条对白 · 预估成片 2′18″ · 剧本 v6</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="chip yellow" id="ep-status"><span class="dot yellow"></span>草稿</span>
+          <button class="btn" id="btn-lock"><span data-i="check"></span>锁定剧本</button>
+          <button class="btn btn-primary" id="btn-save"><span data-i="download"></span>保存新版本</button>
+        </div>
+      </div>
+
+      <div class="ep-switch">
+        <span class="sub">SEASON 2 · 12 集</span>
+        <div id="ep-switch" style="display:flex;gap:5px"></div>
+        <span class="spacer" style="flex:1"></span>
+        <span class="chip" id="ep-source">来源：分集规划 v2</span>
+      </div>
+
+      <div class="script-toolbar">
+        <span class="chip accent" id="ver-chip">v6 · DRAFT</span>
+        <span class="chip">编剧：苏禾</span>
+        <span class="chip">来源：故事圣经 v4</span>
+        <span class="spacer" style="flex:1"></span>
+        <button class="btn btn-sm" id="btn-edit"><span data-i="scissors"></span>编辑正文</button>
+        <button class="btn btn-sm" id="btn-ai"><span data-i="sparkles"></span>AI 优化本场</button>
+        <button class="btn btn-sm" id="btn-add"><span data-i="plus"></span>新增场次</button>
+      </div>
+
+      <div class="script-layout">
+        <section class="panel">
+          <div class="panel-head" style="padding:13px 14px"><h2>场次</h2><span class="sub" id="scene-count">8 SCENES</span></div>
+          <div class="scene-list" id="scene-list"></div>
+        </section>
+
+        <section class="script-sheet" id="sheet">
+          <div class="sheet-head"><span id="sheet-title">长夜将明 · EP01 · 雨夜书店</span><span id="sheet-page">PAGE 03 / 12</span></div>
+          <div id="sheet-body"></div>
+          <div style="margin-top:26px;font-family:var(--mono);font-size:8px;color:#8a806d;letter-spacing:.08em">MORK-LLM-7B GENERATED DRAFT · HUMAN LOCK REQUIRED</div>
+        </section>
+
+        <aside class="side-stack">
+          <section class="panel">
+            <div class="panel-head"><h2>AI 建议</h2><span class="sub">ASSIST</span></div>
+            <div class="panel-body" id="ai-panel">
+              <div class="ai-note">
+                <div class="tag">SCENE 03 · HOOK</div>
+                <p>结尾的“名字不见了”可以更具体：让周砚翻开借阅册，指着一行被擦掉的名字。这样物件钩子能直接进入下一场。</p>
+                <div style="display:flex;gap:6px"><button class="btn btn-sm btn-primary" data-use-ai>采用建议</button><button class="btn btn-sm">忽略</button></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>本场信息</h2><span class="sub">METADATA</span></div>
+            <div class="panel-body">
+              <div class="mini-kpi"><span>场次编号</span><b id="m-no">03</b></div>
+              <div class="mini-kpi"><span>内 / 外景</span><b id="m-int">内景</b></div>
+              <div class="mini-kpi"><span>时间</span><b id="m-time">夜</b></div>
+              <div class="mini-kpi"><span>预估时长</span><b id="m-dur">38 秒</b></div>
+              <div class="mini-kpi"><span>出场角色</span><b id="m-cast">林未 / 周砚</b></div>
+              <div class="mini-kpi"><span>对白</span><b id="m-lines">4 条</b></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>连续性检查</h2><span class="sub">CONTINUITY</span></div>
+            <div class="panel-body">
+              <div class="qa-item"><span class="qa-mark pass">✓</span><div class="txt"><b>角色引用一致</b><span>林未 / 周砚 v2 参考图已锁定</span></div></div>
+              <div class="qa-item"><span class="qa-mark warn">!</span><div class="txt"><b>伞的连续性</b><span>第 02 场收伞，第 07 场再次出现</span></div></div>
+              <div class="qa-item"><span class="qa-mark pass">✓</span><div class="txt"><b>时间线连贯</b><span>夜 → 深夜，未跨日</span></div></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const SEASON = [
+    { no: '01', title: '雨夜归人', status: 'locked', version: 6, dur: '2′18″', lines: 19, src: '第 1–2 章', hook: '借阅册里被擦掉的名字', act: '起' },
+    { no: '02', title: '没有编号的册子', status: 'locked', version: 4, dur: '2′16″', lines: 14, src: '第 3–4 章', hook: '陌生人说：有人让我带句话', act: '起' },
+    { no: '03', title: '后巷的陌生人', status: 'draft', version: 2, dur: '2′20″', lines: 12, src: '第 5–6 章', hook: '磁带最后两个字：别回去', act: '起' },
+    { no: '04', title: '天台上的同谋', status: 'pending', version: 1, dur: '2′17″', lines: 13, src: '第 7–8 章', hook: '门口出现第二把一模一样的伞', act: '承' },
+    { no: '05', title: '失物招领', status: 'pending', version: 1, dur: '2′19″', lines: 11, src: '第 9–10 章', hook: '取件签名栏是空的', act: '承' },
+    { no: '06', title: '陈九的账本', status: 'pending', version: 1, dur: '2′18″', lines: 15, src: '第 11–12 章', hook: '林未的名字，日期是明天', act: '承' },
+    { no: '07', title: '借阅规则', status: 'pending', version: 1, dur: '2′15″', lines: 12, src: '第 13–14 章', hook: '借阅册重 1.7 公斤', act: '转' },
+    { no: '08', title: '第七个夜晚', status: 'pending', version: 1, dur: '2′22″', lines: 16, src: '第 15–16 章', hook: '停电时，借阅册自己翻了一页', act: '转' },
+    { no: '09', title: '归还', status: 'pending', version: 1, dur: '2′18″', lines: 14, src: '第 17–18 章', hook: '她想起了不属于自己的童年', act: '转' },
+    { no: '10', title: '没有寄出的信', status: 'pending', version: 1, dur: '2′17″', lines: 13, src: '第 19–20 章', hook: '信封里只有一张旧书店收据', act: '合' },
+    { no: '11', title: '红线另一端', status: 'pending', version: 1, dur: '2′19″', lines: 12, src: '第 21–22 章', hook: '抽屉里是第二本借阅册', act: '合' },
+    { no: '12', title: '长夜将明', status: 'pending', version: 1, dur: '2′24″', lines: 17, src: '第 23–24 章', hook: '她第一次没有把借阅册带走', act: '合' }
+  ];
+
+  try {
+    const saved = JSON.parse(localStorage.getItem('sp_v2_eps') || '[]');
+    SEASON.forEach(e => {
+      const s = saved.find(x => x.no === e.no);
+      if (s && s.status) e.status = s.status;
+    });
+  } catch (err) {}
+
+  const EP01 = [
+    { no: '01', slug: 'EXT. 旧书店门口 · 夜 · 雨', title: '雨夜抵达', dur: '26 秒', int: '外景', cast: '林未', lines: 0,
+      action: '雨压在旧书店的玻璃上。林未撑透明伞停在门口，霓虹把她的风衣边缘染成橙色。她抬头看了一眼招牌，没有推门。',
+      dialogue: [{ who: '旁白', text: '这座城市的旧书店，替人保管那些没人回来取的东西。', paren: '画外音' }] },
+    { no: '02', slug: 'EXT. 旧书店门口 · 夜 · 雨', title: '收伞', dur: '18 秒', int: '外景', cast: '林未', lines: 1,
+      action: '林未收伞，伞尖的水在台阶上拖出一条细线。她回头，街道尽头有一辆没有熄火的车。',
+      dialogue: [{ who: '林未', text: '（低声）有人在跟着我。', paren: '自语' }] },
+    { no: '03', slug: 'INT. 旧书店 · 夜', title: '借阅册', dur: '42 秒', int: '内景', cast: '林未 / 周砚', lines: 4,
+      action: '门铃响了一声。周砚从书架后出来，手里是那本没有编号的借阅册。木头地板还留着雨水。',
+      dialogue: [
+        { who: '林未', text: '这本书，从来没有人借过？', paren: '' },
+        { who: '周砚', text: '有人借过。只是还回来的时候，名字已经不见了。', paren: '' },
+        { who: '林未', text: '那你为什么还留着它。', paren: '' },
+        { who: '周砚', text: '因为下一个来借的人，会需要它。', paren: '停顿' }
+      ] },
+    { no: '04', slug: 'INT. 旧书店 · 夜', title: '被擦掉的名字', dur: '36 秒', int: '内景', cast: '林未 / 周砚', lines: 3,
+      action: '周砚翻开借阅册，指着一行被橡皮擦过的名字。纸面起了毛，灯光下能看见凹痕。',
+      dialogue: [{ who: '林未', text: '这是谁的笔迹？', paren: '' }, { who: '周砚', text: '我的。', paren: '' }, { who: '林未', text: '你在替谁隐瞒？', paren: '' }] },
+    { no: '05', slug: 'EXT. 后巷 · 夜 · 雨', title: '跟踪者', dur: '30 秒', int: '外景', cast: '林未 / 陌生人', lines: 2,
+      action: '林未从后门离开，巷子里蒸汽升起来。一个穿黑雨衣的人停在霓虹灯下，没有继续跟。',
+      dialogue: [{ who: '陌生人', text: '林记者，有人让我带句话。', paren: '隔着雨' }, { who: '林未', text: '让他自己来。', paren: '' }] },
+    { no: '06', slug: 'INT. 林未公寓 · 夜', title: '磁带', dur: '28 秒', int: '内景', cast: '林未', lines: 1,
+      action: '林未把湿透的录音带放进旧随身听。磁带转了两圈，只有雨声，然后是一个被剪掉的句子。',
+      dialogue: [{ who: '磁带', text: '……如果你听到这里，说明他已经找到你了。', paren: '失真' }] },
+    { no: '07', slug: 'EXT. 天台 · 夜', title: '同谋', dur: '34 秒', int: '外景', cast: '林未 / 周砚', lines: 3,
+      action: '城市在脚下亮着。周砚站在栏杆边，风把他的衣角吹起来。林未把借阅册放在两人之间。',
+      dialogue: [{ who: '周砚', text: '你现在退出，还来得及。', paren: '' }, { who: '林未', text: '我已经听过那盘磁带。', paren: '' }, { who: '周砚', text: '那就别回头。', paren: '很轻' }] },
+    { no: '08', slug: 'EXT. 天台 · 夜', title: '第一集钩子', dur: '24 秒', int: '外景', cast: '林未 / 周砚', lines: 0,
+      action: '远处一栋楼的灯同时熄灭。林未低头，借阅册最后一页多了一行新的名字——她自己的。',
+      dialogue: [] }
+  ];
+
+  const EP02 = [
+    { no: '01', slug: 'INT. 旧书店 · 夜', title: '没有编号', dur: '24 秒', int: '内景', cast: '林未 / 周砚', lines: 0,
+      action: '周砚把借阅册推到台灯下。册子没有编号，封面只有一道被反复摩挲的折痕。',
+      dialogue: [] },
+    { no: '02', slug: 'INT. 旧书店 · 夜', title: '翻页', dur: '38 秒', int: '内景', cast: '林未 / 周砚', lines: 3,
+      action: '林未一页页翻过去。每一行都有名字和日期，只有中间一页被橡皮擦得发亮。',
+      dialogue: [{ who: '林未', text: '这一页呢？', paren: '' }, { who: '周砚', text: '那页不算。', paren: '' }, { who: '林未', text: '对谁不算？', paren: '' }] },
+    { no: '03', slug: 'INT. 旧书店 · 夜', title: '擦痕', dur: '34 秒', int: '内景', cast: '林未 / 周砚', lines: 2,
+      action: '台灯斜照，纸面下浮出另一个笔迹的压痕。林未用铅笔轻轻涂过，三个字显出来一半。',
+      dialogue: [{ who: '林未', text: '这不是你的字。', paren: '' }, { who: '周砚', text: '所以我才留着它。', paren: '低声' }] },
+    { no: '04', slug: 'EXT. 后巷 · 夜 · 雨', title: '跟踪', dur: '30 秒', int: '外景', cast: '林未 / 陌生人', lines: 2,
+      action: '林未从后门出去。巷口的霓虹闪了两下，一个穿黑雨衣的人影停在七步之外。',
+      dialogue: [{ who: '陌生人', text: '林记者，有人让我带句话。', paren: '隔着雨' }, { who: '林未', text: '让他自己来。', paren: '' }] },
+    { no: '05', slug: 'INT. 旧书店 · 夜', title: '磁带', dur: '36 秒', int: '内景', cast: '林未 / 周砚', lines: 2,
+      action: '周砚从柜台底下摸出一盘磁带，外壳裂了一道缝。标签上写着七年前的日期。',
+      dialogue: [{ who: '林未', text: '你早就知道我在查什么。', paren: '' }, { who: '周砚', text: '我在等你来问。', paren: '' }] },
+    { no: '06', slug: 'EXT. 街道 · 夜 · 雨', title: '第二集钩子', dur: '18 秒', int: '外景', cast: '林未', lines: 1,
+      action: '林未把磁带塞进口袋。街对面，那辆没有熄火的车第一次亮起车灯。',
+      dialogue: [{ who: '林未', text: '（低声）那就别让我等太久。', paren: '自语' }] }
+  ];
+
+  const EP03 = [
+    { no: '01', slug: 'EXT. 后巷 · 夜 · 雨', title: '第二把伞', dur: '22 秒', int: '外景', cast: '林未', lines: 0,
+      action: '书店门口多了一把透明伞，伞柄缠着红线，和林未那把一模一样。她确定自己昨晚把伞带回了家。',
+      dialogue: [] },
+    { no: '02', slug: 'INT. 旧书店 · 夜', title: '谁放的', dur: '36 秒', int: '内景', cast: '林未 / 周砚', lines: 3,
+      action: '林未把两把伞并排放在柜台上。水珠从伞骨滴下来，在地板上积成两个相同的圆。',
+      dialogue: [{ who: '林未', text: '另一把是谁的？', paren: '' }, { who: '周砚', text: '不知道。', paren: '' }, { who: '林未', text: '你连门都没出。', paren: '' }] },
+    { no: '03', slug: 'INT. 旧书店 · 夜', title: '红线', dur: '30 秒', int: '内景', cast: '林未 / 周砚', lines: 2,
+      action: '红线缠得很紧，末端系着一枚旧钥匙。钥匙齿磨平了，像是开过很多次同一扇门。',
+      dialogue: [{ who: '周砚', text: '别动那根线。', paren: '' }, { who: '林未', text: '你认得它。', paren: '' }] },
+    { no: '04', slug: 'EXT. 天台 · 夜', title: '同谋', dur: '34 秒', int: '外景', cast: '林未 / 周砚', lines: 3,
+      action: '城市在脚下亮着。周砚站在栏杆边，风把他的衣角吹起来。林未把借阅册放在两人之间。',
+      dialogue: [{ who: '周砚', text: '你现在退出，还来得及。', paren: '' }, { who: '林未', text: '我已经听过那盘磁带。', paren: '' }, { who: '周砚', text: '那就别回头。', paren: '很轻' }] },
+    { no: '05', slug: 'INT. 林未公寓 · 夜', title: '磁带', dur: '32 秒', int: '内景', cast: '林未', lines: 2,
+      action: '磁带转了两圈，先是一段雨声，然后是一个被剪掉的句子。林未反复听了四遍。',
+      dialogue: [{ who: '磁带', text: '……别回去。', paren: '失真' }, { who: '林未', text: '回哪里？', paren: '自语' }] },
+    { no: '06', slug: 'EXT. 街道 · 夜 · 雨', title: '第三集钩子', dur: '20 秒', int: '外景', cast: '林未 / 陌生人', lines: 2,
+      action: '林未关灯，窗外那辆车的雨刷停了一秒，又继续摆动。',
+      dialogue: [{ who: '陌生人', text: '（车内）她听见了。', paren: '电话里' }, { who: '林未', text: '（低声）那就听清楚。', paren: '' }] }
+  ];
+
+  function buildGeneric(ep) {
+    return [
+      { no: '01', slug: 'EXT. 旧城区 · 夜 · 雨', title: '回到线索', dur: '24 秒', int: '外景', cast: '林未', lines: 0,
+        action: '雨把旧城区的招牌洗得发亮。林未站在' + ep.src + '对应的那条街口，手里的伞没有打开。',
+        dialogue: [] },
+      { no: '02', slug: 'INT. 旧书店 · 夜', title: '物证', dur: '38 秒', int: '内景', cast: '林未 / 周砚', lines: 3,
+        action: '周砚把与「' + ep.hook + '」有关的物件放到灯下。两个人都没有先开口。',
+        dialogue: [{ who: '林未', text: '你早就知道它会出现在这里。', paren: '' }, { who: '周砚', text: '我只知道它会来找你。', paren: '' }, { who: '林未', text: '那现在呢？', paren: '' }] },
+      { no: '03', slug: 'INT. 旧书店 · 夜', title: '追问', dur: '34 秒', int: '内景', cast: '林未 / 周砚', lines: 2,
+        action: '林未把借阅册翻到对应的一页。纸面上的名字比昨天淡了一点，像正在被谁收回。',
+        dialogue: [{ who: '林未', text: '名字在消失。', paren: '' }, { who: '周砚', text: '不是消失，是有人来取了。', paren: '低声' }] },
+      { no: '04', slug: 'EXT. 后巷 · 夜 · 雨', title: '对峙', dur: '30 秒', int: '外景', cast: '林未 / 陌生人', lines: 2,
+        action: '后巷的蒸汽升起来。那个穿黑雨衣的人终于走近，停在离她三步的位置。',
+        dialogue: [{ who: '陌生人', text: '你查到第几页了？', paren: '' }, { who: '林未', text: '刚好查到你的名字。', paren: '' }] },
+      { no: '05', slug: 'INT. 旧书店 · 夜', title: '决定', dur: '28 秒', int: '内景', cast: '林未 / 周砚', lines: 2,
+        action: '林未把伞收起，水滴落在借阅册旁边。她第一次主动把书店的门反锁。',
+        dialogue: [{ who: '周砚', text: '锁了门，就回不了头。', paren: '' }, { who: '林未', text: '我本来就没打算回。', paren: '' }] },
+      { no: '06', slug: 'EXT. 天台 · 夜', title: '第 ' + ep.no + ' 集钩子', dur: '20 秒', int: '外景', cast: '林未 / 周砚', lines: 1,
+        action: ep.hook + '。镜头停在两人的手之间，谁都没有先松开。',
+        dialogue: [{ who: '周砚', text: '长夜还没过去。', paren: '很轻' }] }
+    ];
+  }
+
+  function scenesFor(ep) {
+    if (ep.no === '01') return EP01.map(x => Object.assign({}, x));
+    if (ep.no === '02') return EP02.map(x => Object.assign({}, x));
+    if (ep.no === '03') return EP03.map(x => Object.assign({}, x));
+    return buildGeneric(ep);
+  }
+
+  let epNo = '01';
+  try {
+    const q = new URLSearchParams(location.search).get('ep');
+    if (q) epNo = String(q).replace(/[^0-9]/g, '').padStart(2, '0').slice(-2);
+  } catch (err) {}
+  let meta = SEASON.find(e => e.no === epNo) || SEASON[0];
+  let SCENES = scenesFor(meta);
+  let active = meta.no === '01' ? 2 : 1;
+  let version = meta.version;
+  let locked = meta.status === 'locked';
+  let edited = false;
+
+  function sceneHTML(s, i) {
+    return '<div class="scene-item' + (i === active ? ' is-active' : '') + '" data-scene="' + i + '">' +
+      '<div class="scene-no"><span>SCENE ' + s.no + '</span><span>' + s.dur + '</span></div>' +
+      '<h4>' + s.title + '</h4><p>' + s.slug + '</p></div>';
+  }
+
+  function renderList() {
+    document.getElementById('scene-list').innerHTML = SCENES.map(sceneHTML).join('');
+    document.getElementById('scene-count').textContent = SCENES.length + ' SCENES';
+  }
+
+  function renderSheet() {
+    const s = SCENES[active] || SCENES[0];
+    document.getElementById('sheet-body').innerHTML =
+      '<h2>' + s.no + ' · ' + s.title + '</h2>' +
+      '<div class="slug">' + s.slug + '</div>' +
+      '<p class="action">' + s.action + '</p>' +
+      s.dialogue.map(d => '<div class="character">' + d.who + (d.paren ? ' <span class="paren">（' + d.paren + '）</span>' : '') + '</div><p class="dialogue">' + d.text + '</p>').join('') +
+      '<p class="action" style="margin-top:20px"><span class="cursor-line"></span></p>';
+    document.getElementById('m-no').textContent = s.no;
+    document.getElementById('m-int').textContent = s.int;
+    document.getElementById('m-time').textContent = '夜';
+    document.getElementById('m-dur').textContent = s.dur;
+    document.getElementById('m-cast').textContent = s.cast;
+    document.getElementById('m-lines').textContent = s.dialogue.length + ' 条';
+    document.getElementById('sheet-page').textContent = 'PAGE ' + (active + 1) + ' / ' + SCENES.length;
+  }
+
+  function renderHeader() {
+    const pending = meta.status === 'pending';
+    document.title = '剧本 · 长夜将明 EP' + meta.no;
+    document.getElementById('ep-eyebrow').textContent = 'SCREENPLAY · EP' + meta.no + ' · ' + meta.src;
+    document.getElementById('ep-title').textContent = meta.title;
+    document.getElementById('ep-sub').textContent = SCENES.length + ' 场 · ' + meta.lines + ' 条对白 · 预估成片 ' + meta.dur + (pending ? ' · 结构预览' : ' · 剧本 v' + version);
+    document.getElementById('sheet-title').textContent = '长夜将明 · EP' + meta.no + ' · ' + meta.title;
+    const chip = document.getElementById('ep-status');
+    chip.className = 'chip ' + (locked ? 'green' : pending ? '' : 'yellow');
+    chip.innerHTML = '<span class="dot ' + (locked ? 'green' : pending ? '' : 'yellow') + '"></span>' + (locked ? '已锁定' : pending ? '待生成' : '草稿');
+    const v = document.getElementById('ver-chip');
+    v.textContent = pending ? '未生成' : 'v' + version + (locked ? ' · LOCKED' : ' · DRAFT');
+    v.className = 'chip ' + (locked ? 'green' : pending ? '' : 'accent');
+    document.getElementById('btn-lock').innerHTML = '<span data-i="check"></span>' + (locked ? '已锁定' : '锁定剧本');
+    document.getElementById('btn-lock').classList.toggle('btn-primary', locked);
+    ['btn-lock', 'btn-save', 'btn-edit', 'btn-ai', 'btn-add'].forEach(id => {
+      document.getElementById(id).disabled = pending;
+    });
+    hydrateIcons(document.getElementById('btn-lock'));
+    document.getElementById('ep-source').textContent = '来源：分集规划 v2 · ' + meta.act + '段';
+  }
+
+  function renderSwitch() {
+    document.getElementById('ep-switch').innerHTML = SEASON.map(e =>
+      '<button class="ep-chip' + (e.no === meta.no ? ' is-active' : '') + (e.status === 'locked' ? ' is-locked' : '') + (e.status === 'pending' ? ' is-pending' : '') + '" data-ep="' + e.no + '">EP' + e.no + '</button>'
+    ).join('');
+  }
+
+  function setEpisode(no) {
+    const next = SEASON.find(e => e.no === no);
+    if (!next) return;
+    if (next.status === 'pending') {
+      P.toast('EP' + no + ' 还没有剧本草稿，请回分集页生成');
+      return;
+    }
+    meta = next;
+    epNo = no;
+    SCENES = scenesFor(meta);
+    active = no === '01' ? 2 : 1;
+    version = meta.version;
+    locked = meta.status === 'locked';
+    edited = false;
+    document.getElementById('sheet').setAttribute('contenteditable', 'false');
+    document.getElementById('sheet').style.outline = '';
+    try { history.replaceState(null, '', 'script.html?ep=' + no); } catch (err) {}
+    renderHeader(); renderSwitch(); renderList(); renderSheet();
+  }
+
+  function persistEp() {
+    try {
+      let saved = JSON.parse(localStorage.getItem('sp_v2_eps') || '[]');
+      if (!saved.length) saved = SEASON.map(e => ({ no: e.no, status: e.status, version: e.version }));
+      const hit = saved.find(x => x.no === meta.no);
+      if (hit) { hit.status = meta.status; hit.version = version; }
+      else saved.push({ no: meta.no, status: meta.status, version: version });
+      localStorage.setItem('sp_v2_eps', JSON.stringify(saved));
+    } catch (err) {}
+  }
+
+  document.getElementById('ep-switch').addEventListener('click', e => {
+    const chip = e.target.closest('[data-ep]');
+    if (chip) setEpisode(chip.dataset.ep);
+  });
+
+  document.getElementById('scene-list').addEventListener('click', e => {
+    const item = e.target.closest('[data-scene]');
+    if (!item) return;
+    active = parseInt(item.dataset.scene, 10);
+    renderList(); renderSheet();
+  });
+
+  function blockPending() {
+    if (meta.status !== 'pending') return false;
+    P.toast('EP' + meta.no + ' 还没有生成剧本，请先回分集页生成');
+    return true;
+  }
+
+  document.getElementById('btn-save').addEventListener('click', () => {
+    if (blockPending()) return;
+    if (locked) { P.toast('剧本已锁定，需先解除锁定才能保存'); return; }
+    version += 1;
+    meta.version = version;
+    meta.status = 'draft';
+    edited = false;
+    persistEp();
+    renderHeader(); renderSwitch();
+    document.getElementById('btn-save').innerHTML = '<span data-i="download"></span>保存新版本';
+    hydrateIcons(document.getElementById('btn-save'));
+    P.toast('EP' + meta.no + ' 已保存为剧本 v' + version + '，草稿不会自动进入分镜');
+  });
+
+  document.getElementById('btn-lock').addEventListener('click', () => {
+    if (blockPending()) return;
+    if (locked) { P.toast('EP' + meta.no + ' 剧本 v' + version + ' 已锁定，可作为拆镜输入'); return; }
+    locked = true;
+    meta.status = 'locked';
+    meta.version = version;
+    persistEp();
+    renderHeader(); renderSwitch();
+    P.toast('EP' + meta.no + ' 剧本 v' + version + ' 已锁定，可进入「资产与分镜」');
+  });
+
+  document.getElementById('btn-edit').addEventListener('click', () => {
+    if (blockPending()) return;
+    if (locked) { P.toast('已锁定的版本不可编辑，请先创建新草稿'); return; }
+    const sheet = document.getElementById('sheet');
+    const on = sheet.getAttribute('contenteditable') !== 'true';
+    sheet.setAttribute('contenteditable', on ? 'true' : 'false');
+    sheet.style.outline = on ? '1px dashed rgba(240,90,42,.45)' : '';
+    document.getElementById('btn-edit').innerHTML = '<span data-i="scissors"></span>' + (on ? '完成编辑' : '编辑正文');
+    hydrateIcons(document.getElementById('btn-edit'));
+    if (on) { sheet.focus(); P.toast('正文可编辑，保存后生成新版本'); }
+    else { edited = true; P.toast('正文已修改但未保存，记得点「保存新版本」'); }
+  });
+
+  document.getElementById('btn-ai').addEventListener('click', () => {
+    const panel = document.getElementById('ai-panel');
+    panel.innerHTML = '<div class="ai-note"><div class="tag">SCENE ' + SCENES[active].no + ' · REWRITE</div>' +
+      '<p>建议把这场结尾改成动作收束：让角色做一个具体动作，而不是解释。这样下一场可以直接接物件特写。</p>' +
+      '<div style="display:flex;gap:6px"><button class="btn btn-sm btn-primary" data-use-ai>采用建议</button><button class="btn btn-sm" data-dismiss>忽略</button></div></div>';
+    P.toast('AI 已给出本场优化建议');
+  });
+
+  document.getElementById('ai-panel').addEventListener('click', e => {
+    if (e.target.closest('[data-use-ai]')) {
+      P.toast('已采用建议：本场结尾改为动作收束');
+      document.getElementById('ai-panel').innerHTML = '<div class="banner green" style="border-color:rgba(88,211,160,.3);background:rgba(88,211,160,.06);font-size:11px">已采用 AI 建议，保存后写入剧本新版本。</div>';
+    }
+    if (e.target.closest('[data-dismiss]')) {
+      document.getElementById('ai-panel').innerHTML = '<p style="color:var(--dim);font-size:10px;margin:0">本次建议已忽略。</p>';
+    }
+  });
+
+  document.getElementById('btn-add').addEventListener('click', () => {
+    if (blockPending()) return;
+    if (locked) { P.toast('剧本已锁定，不能新增场次'); return; }
+    const n = String(SCENES.length + 1).padStart(2, '0');
+    SCENES.push({ no: n, slug: 'INT. 未命名场景 · 夜', title: '新增场次', dur: '0 秒', int: '内景', cast: '待分配', lines: 0, action: '在这里写下本场动作。', dialogue: [] });
+    active = SCENES.length - 1;
+    renderList(); renderSheet();
+    P.toast('已新增场次 ' + n + '，等待填写内容');
+  });
+
+  if (locked) {
+    document.getElementById('btn-lock').classList.add('btn-primary');
+  }
+  renderHeader(); renderSwitch(); renderList(); renderSheet();
+  if (meta.status === 'pending') {
+    setTimeout(() => P.toast('EP' + meta.no + ' 尚未生成剧本，当前仅显示结构预览；请回分集页生成'), 500);
+  }
+})();
+
+</script>
+</body>
+</html>

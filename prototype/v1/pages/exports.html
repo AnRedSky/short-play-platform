@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>成片导出 · 长夜将明 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+</head>
+<body data-page="exports" data-project="1">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+    <nav class="module-tabs" data-tabs></nav>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Export &amp; delivery</p>
+          <h1>成片导出</h1>
+          <p class="lede">导出固定时间线版本与全部素材版本快照。FFmpeg 渲染后经 ffprobe 与完整解码校验，checksum 通过才原子发布；失败不提供半成品下载。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-toast="原型：ExportProfile 白名单（竖屏 MP4 / 独立字幕 / 归档母版）">导出配置</button>
+          <button class="btn btn-primary" type="button" data-modal="modal-export"><i data-icon="download"></i>新建导出</button>
+        </div>
+      </div>
+
+      <div class="banner info">
+        <i data-icon="lock"></i>
+        <div><b>快照已冻结：</b>本次导出绑定 <span class="mono">tl_v4</span> 与 8 个 AssetVersion。导出提交后再修改时间线，不会改变正在渲染的任务，也不会覆盖历史导出。</div>
+      </div>
+
+      <div class="grid g-main">
+        <div>
+          <section class="card">
+            <div class="card-head"><div><h2>导出队列</h2><span class="sub">EXPORT JOB</span></div><span class="pill running pill" id="export-badge">1 渲染中</span></div>
+            <div class="card-body tight" id="export-queue">
+              <div class="export-row" style="background: var(--surface-sunken); font-family: var(--mono); font-size: 9.5px; color: var(--text-3); letter-spacing: 0.08em; padding-top: 8px; padding-bottom: 8px">
+                <span></span><span>JOB / 时间线</span><span>进度</span><span>状态</span><span style="text-align: right">操作</span>
+              </div>
+
+              <div class="export-row" data-job="ej_5b12" data-state="rendering">
+                <div class="e-icon"><i data-icon="film"></i></div>
+                <div class="e-main">
+                  <strong>EP01 · 雨夜书店 · 成片 v4</strong>
+                  <small>ej_5b12 · tl_v4 · profile vertical_mp4_v2 · 陈默 · 15:02</small>
+                </div>
+                <div class="e-prog">
+                  <div class="progress"><i style="width: 68%"></i></div>
+                  <small>rendering 68% · 预计 02:10 剩余</small>
+                </div>
+                <div><span class="pill rendering">rendering</span></div>
+                <div class="e-act"><button class="btn btn-default btn-sm" type="button" data-act="cancel-job">取消</button></div>
+              </div>
+
+              <div class="export-row" data-job="ej_4a08" data-state="succeeded">
+                <div class="e-icon"><i data-icon="film"></i></div>
+                <div class="e-main">
+                  <strong>EP01 · 雨夜书店 · 成片 v3</strong>
+                  <small>ej_4a08 · tl_v3 · profile vertical_mp4_v2 · 顾青 · 11-17 19:40</small>
+                </div>
+                <div class="e-prog">
+                  <div class="progress"><i style="width: 100%"></i></div>
+                  <small>校验通过 · ffprobe OK · 完整解码 OK</small>
+                </div>
+                <div><span class="pill succeeded">succeeded</span></div>
+                <div class="e-act"><button class="btn btn-default btn-sm" type="button" data-act="download">下载</button></div>
+              </div>
+
+              <div class="export-row">
+                <div class="e-icon"><i data-icon="film"></i></div>
+                <div class="e-main">
+                  <strong>EP02 · 怀表停在三点 · 预览</strong>
+                  <small>ej_5a91 · tl_v2 · profile preview_720p · 顾青 · 11-18 10:12</small>
+                </div>
+                <div class="e-prog">
+                  <div class="progress fail"><i style="width: 100%"></i></div>
+                  <small>FFmpeg 非零退出 · 素材缺失 1 个</small>
+                </div>
+                <div><span class="pill failed">failed</span></div>
+                <div class="e-act"><button class="btn btn-default btn-sm" type="button" data-drawer="drawer-failed">诊断</button></div>
+              </div>
+
+              <div class="export-row" data-job="ej_5b20" data-state="queued">
+                <div class="e-icon"><i data-icon="film"></i></div>
+                <div class="e-main">
+                  <strong>EP02 · 怀表停在三点 · 独立字幕</strong>
+                  <small>ej_5b20 · tl_v2 · profile srt_sidecar · 顾青 · 15:20</small>
+                </div>
+                <div class="e-prog">
+                  <div class="progress"><i style="width: 0%"></i></div>
+                  <small>queued · 队列位置 2 · media 队列</small>
+                </div>
+                <div><span class="pill queued">queued</span></div>
+                <div class="e-act"><button class="btn btn-default btn-sm" type="button" data-act="cancel-job">取消</button></div>
+              </div>
+            </div>
+            <div class="card-foot"><span>失败任务使用新 Attempt 重试，不覆盖失败记录</span><span class="mono">4 jobs</span></div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><div><h2>交付产物</h2><span class="sub">ARTIFACT</span></div><span class="mono" style="font-size: 10px; color: var(--text-3)">ej_4a08</span></div>
+            <div class="card-body tight">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead><tr><th>产物</th><th>规格</th><th>checksum</th><th>保留</th><th></th></tr></thead>
+                  <tbody>
+                    <tr data-row>
+                      <td><span class="row-title">EP01_成片_v3.mp4</span><span class="sub">1080×1920 · 58.0s · 86.4 MB</span></td>
+                      <td class="mono">H.264 High / AAC LC 48k</td>
+                      <td class="mono">7d3a…c9</td>
+                      <td>永久</td>
+                      <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：生成短时签名下载链接（每次重新鉴权）">下载</button></td>
+                    </tr>
+                    <tr data-row>
+                      <td><span class="row-title">EP01_成片_v3.srt</span><span class="sub">字幕独立文件 · 24 条</span></td>
+                      <td class="mono">SRT UTF-8</td>
+                      <td class="mono">b18e…44</td>
+                      <td>永久</td>
+                      <td class="t-actions"><button class="btn btn-default btn-sm" type="button" data-toast="原型：下载 SRT">下载</button></td>
+                    </tr>
+                    <tr data-row>
+                      <td><span class="row-title">probe_report.json</span><span class="sub">ffprobe 校验报告</span></td>
+                      <td class="mono">JSON · 2.1 KB</td>
+                      <td class="mono">4f02…71</td>
+                      <td>永久</td>
+                      <td class="t-actions"><button class="btn btn-quiet btn-sm" type="button" data-toast="原型：查看完整报告（容器 / 流 / 帧率 / 时长 / 音画同步）">查看</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div>
+          <section class="card">
+            <div class="card-head"><div><h2>导出配置</h2><span class="sub">PROFILE · 白名单</span></div></div>
+            <div class="card-body">
+              <label class="field"><span>Profile</span><select class="control"><option>vertical_mp4_v2 · 竖屏 9:16 MP4</option><option>preview_720p · 预览代理</option><option>srt_sidecar · 独立字幕</option></select></label>
+              <div class="kv" style="margin-top: 10px">
+                <div class="row"><dt>容器 / 编码</dt><dd class="mono">MP4 · H.264 High · yuv420p</dd></div>
+                <div class="row"><dt>画幅 / 帧率</dt><dd class="mono">1080×1920 · 30/1</dd></div>
+                <div class="row"><dt>音频</dt><dd class="mono">AAC LC · 48 kHz · 128 kbps</dd></div>
+                <div class="row"><dt>字幕</dt><dd>烧录 + 独立 SRT</dd></div>
+                <div class="row"><dt>码率策略</dt><dd class="mono">VBR 8 Mbps（目标）</dd></div>
+              </div>
+              <p class="lede" style="font-size: 10px; margin-top: 10px">Profile 只允许白名单值，避免通过任意参数调用编码器；配置版本随产物记录。</p>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><div><h2>校验报告</h2><span class="sub">FFPROBE · PASS</span></div></div>
+            <div class="card-body">
+              <div class="pass-row"><span class="pm">✓</span><span>容器与视频流可解析</span></div>
+              <div class="pass-row"><span class="pm">✓</span><span>分辨率 / 帧率 / 时长与 Profile 一致</span></div>
+              <div class="pass-row"><span class="pm">✓</span><span>音频流存在，采样率 48 kHz</span></div>
+              <div class="pass-row"><span class="pm">✓</span><span>完整解码无错误帧</span></div>
+              <div class="pass-row"><span class="pm">✓</span><span>checksum 与登记值一致</span></div>
+              <div class="banner ok" style="margin: 10px 0 0"><i data-icon="check"></i><div>全部校验通过后才标记 succeeded；此前不显示成功，也不允许下载。</div></div>
+            </div>
+          </section>
+
+          <section class="card" style="margin-bottom: 0">
+            <div class="card-head"><div><h2>失败诊断</h2><span class="sub">ej_5a91</span></div></div>
+            <div class="card-body">
+              <div class="issue-row"><span class="issue-sev block">FFMPEG</span><div class="issue-body"><strong>素材缺失</strong><p>引用 a_2f77 已被撤回，渲染中断。</p><span class="evi">exit 1 · 无半成品产物</span></div></div>
+              <div class="issue-row"><span class="issue-sev warn">ENOSPC</span><div class="issue-body"><strong>磁盘空间不足</strong><p>临时目录剩余 1.2 GB，低于预估 4.8 GB。</p></div></div>
+              <button class="btn btn-default btn-sm btn-block" type="button" data-toast="原型：查看完整 FFmpeg 日志与 request_id（脱敏后）">查看日志</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- 成功导出详情 -->
+<div class="drawer-backdrop" id="drawer-export-backdrop" data-close-drawer="drawer-export"></div>
+<aside class="drawer" id="drawer-export">
+  <div class="drawer-head">
+    <div><p class="eyebrow">Export artifact</p><h2>ej_4a08 · 已交付</h2></div>
+    <button class="close-x" type="button" data-close-drawer="drawer-export"><i data-icon="x"></i></button>
+  </div>
+  <div class="drawer-body">
+    <div class="asset-thumb" style="aspect-ratio: 16/9; background: linear-gradient(150deg, #1b232b, #303a43)">
+      <span class="glyph">PREVIEW · 1080×1920<br>EP01 雨夜书店 · 58.0s</span>
+    </div>
+    <div class="kv" style="margin-top: 12px">
+      <div class="row"><dt>ExportJob</dt><dd class="mono">ej_4a08</dd></div>
+      <div class="row"><dt>时间线版本</dt><dd class="mono">tl_v3（已冻结）</dd></div>
+      <div class="row"><dt>Profile</dt><dd class="mono">vertical_mp4_v2</dd></div>
+      <div class="row"><dt>产物</dt><dd class="mono">art_8e21 · 86.4 MB</dd></div>
+      <div class="row"><dt>checksum</dt><dd class="mono">7d3a…c9</dd></div>
+      <div class="row"><dt>完成时间</dt><dd class="mono">11-17 19:52</dd></div>
+      <div class="row"><dt>访问</dt><dd>项目成员 · 短时签名 URL</dd></div>
+    </div>
+    <div class="banner info" style="margin-top: 12px"><i data-icon="lock"></i><div>下载链接不替代业务授权：每次请求重新鉴权，链接过期即失效。</div></div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn btn-default" type="button" data-toast="原型：复制受控分享链接（含过期时间与撤销能力）">分享链接</button>
+    <button class="btn btn-primary" type="button" data-toast="原型：开始下载（服务端校验项目权限）">下载 MP4</button>
+  </div>
+</aside>
+
+<!-- 失败诊断 -->
+<div class="drawer-backdrop" id="drawer-failed-backdrop" data-close-drawer="drawer-failed"></div>
+<aside class="drawer" id="drawer-failed">
+  <div class="drawer-head">
+    <div><p class="eyebrow">Export failed</p><h2>ej_5a91 · 渲染失败</h2></div>
+    <button class="close-x" type="button" data-close-drawer="drawer-failed"><i data-icon="x"></i></button>
+  </div>
+  <div class="drawer-body">
+    <div class="banner error"><i data-icon="alert"></i><div><b>FFMPEG_MISSING_SOURCE：</b>时间线引用的素材 a_2f77 已撤回，渲染在 00:00:22 处中断。</div></div>
+    <div class="section-label">诊断信息</div>
+    <div class="kv">
+      <div class="row"><dt>阶段</dt><dd>rendering</dd></div>
+      <div class="row"><dt>退出码</dt><dd class="mono">1</dd></div>
+      <div class="row"><dt>临时文件</dt><dd>已保留（48h 后清理）</dd></div>
+      <div class="row"><dt>request_id</dt><dd class="mono">req_71af09</dd></div>
+      <div class="row"><dt>可重试</dt><dd>否（需先替换素材引用）</dd></div>
+    </div>
+    <div class="section-label">日志摘录</div>
+    <pre class="mono" style="background: var(--surface-sunken); border: 1px solid var(--line-soft); padding: 10px; font-size: 9.5px; line-height: 1.8; overflow-x: auto; margin: 0">[ffmpeg] Input #2 ... No such file or directory
+[a_2f77] asset revoked at 2026-11-18 09:12
+[filter] graph aborted at pts 52800000
+exit status 1</pre>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn btn-default" type="button" data-close-drawer="drawer-failed">关闭</button>
+    <button class="btn btn-primary" type="button" data-close-drawer="drawer-failed" data-toast="原型：跳转时间线替换已撤回素材，再重新创建 ExportJob">去替换素材</button>
+  </div>
+</aside>
+
+<!-- 新建导出 -->
+<div class="modal-backdrop" id="modal-export-backdrop" data-close-modal="modal-export"></div>
+<div class="modal" id="modal-export" role="dialog" aria-modal="true">
+  <div class="modal-head"><p class="eyebrow">New export</p><h2>新建导出</h2></div>
+  <form data-form="export">
+  <div class="modal-body">
+    <div class="form-grid">
+      <label class="field"><span>时间线版本</span><select class="control" name="timeline"><option value="tl_v4">tl_v4（当前草稿，需先保存为版本）</option><option value="tl_v3">tl_v3（已审核通过）</option></select></label>
+      <label class="field"><span>ExportProfile</span><select class="control" name="profile"><option>vertical_mp4_v2</option><option>srt_sidecar</option><option>preview_720p</option></select></label>
+      <label class="field full"><span>字幕</span><select class="control" name="subtitle"><option>烧录 + 输出独立 SRT</option><option>仅独立 SRT</option></select></label>
+    </div>
+    <div class="banner stale" style="margin-top: 12px"><i data-icon="alert"></i><div>tl_v4 存在未审核改动与 1 个已撤回素材引用；直接提交会被阻断，需先处理。选择 tl_v3 可正常创建。</div></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-default" type="button" data-close-modal="modal-export">取消</button>
+    <button class="btn btn-primary" type="submit">创建导出</button>
+  </div>
+  </form>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var queue = document.getElementById('export-queue');
+  var badge = document.getElementById('export-badge');
+
+  function jobRow(id, title, meta) {
+    return '<div class="export-row" data-job="' + id + '" data-state="queued">' +
+      '<div class="e-icon"><i data-icon="film"></i></div>' +
+      '<div class="e-main"><strong>' + title + '</strong><small>' + meta + '</small></div>' +
+      '<div class="e-prog"><div class="progress"><i style="width: 0%"></i></div><small>queued · 队列位置 1 · media 队列</small></div>' +
+      '<div><span class="pill queued">queued</span></div>' +
+      '<div class="e-act"><button class="btn btn-default btn-sm" type="button" data-act="cancel-job">取消</button></div></div>';
+  }
+
+  function advance(row, pct, state, label) {
+    row.dataset.state = state;
+    row.querySelector('.progress i').style.width = pct + '%';
+    row.querySelector('.e-prog small').textContent = label;
+    var pill = row.querySelector('.e-act').previousElementSibling.querySelector('.pill');
+    P.setPill(pill, state, state);
+    P.setPill(badge, state === 'succeeded' ? 'succeeded' : state, state === 'succeeded' ? '0 渲染中' : '1 ' + state);
+  }
+
+  document.addEventListener('proto:act', function (e) {
+    var act = e.detail.act;
+    var row = e.detail.el.closest('.export-row');
+
+    if (act === 'cancel-job' && row) {
+      if (row.dataset.state === 'succeeded' || row.dataset.state === 'cancelled') { P.toast('该任务已结束，无需取消'); return; }
+      advance(row, row.querySelector('.progress i').style.width.replace('%', '') || 0, 'cancel_requested', 'cancel_requested · 等待渲染进程退出');
+      P.toast('已请求取消：渲染进程停止后标记 cancelled，临时文件保留 48h');
+      setTimeout(function () {
+        advance(row, 0, 'cancelled', 'cancel_requested → cancelled · 无半成品产物');
+        row.querySelector('.e-act').innerHTML = '<button class="btn btn-quiet btn-sm" type="button" data-act="detail">详情</button>';
+        P.toast('任务已取消：未产出可下载文件');
+      }, 1800);
+      return;
+    }
+
+    if (act === 'download') {
+      var job = row ? row.dataset.job : 'ej_4a08';
+      var manifest = '短剧生产平台 · 导出产物清单（演示）\n\nExportJob: ' + job + '\n时间线: tl_v3（已冻结）\nProfile: vertical_mp4_v2\n规格: 1080×1920 · 30fps · H.264 High / AAC 48k\nchecksum: 7d3a…c9\n\n说明: 原型未接入真实对象存储，此文件为交付清单占位，不代表可播放成片。\n';
+      P.download(job + '_manifest.txt', manifest, 'text/plain');
+      P.openDrawer('drawer-export');
+      P.toast('已生成受控下载清单：真实环境需服务端校验项目权限后签发短时 URL');
+      return;
+    }
+
+    if (act === 'detail') {
+      P.toast('已取消任务无产物；日志保留 request_id 供排查');
+    }
+  });
+
+  document.addEventListener('proto:submit', function (e) {
+    if (e.detail.name !== 'export') return;
+    var d = e.detail.data;
+    if (d.timeline === 'tl_v4') {
+      e.detail.keepOpen = true;
+      P.toast('409 导出被阻断：tl_v4 含 1 个已撤回素材与未审核片段，未创建 ExportJob');
+      return;
+    }
+    var id = 'ej_' + Math.random().toString(16).slice(2, 6);
+    var tmp = document.createElement('div');
+    tmp.innerHTML = jobRow(id, 'EP01 · 雨夜书店 · 成片 v5', id + ' · ' + d.timeline + ' · profile ' + d.profile + ' · 陈默 · ' + P.time());
+    var row = tmp.firstElementChild;
+    queue.insertBefore(row, queue.children[1]);
+    if (row) {
+      P.toast('已创建 ExportJob ' + id + '：冻结 ' + d.timeline + ' + ' + d.profile + ' 快照，进入 queued');
+      setTimeout(function () {
+        advance(row, 12, 'rendering', 'rendering 12% · 已启动 FFmpeg');
+        setTimeout(function () {
+          advance(row, 64, 'rendering', 'rendering 64% · 预计 01:40 剩余');
+          setTimeout(function () {
+            advance(row, 100, 'validating', 'validating · ffprobe + 完整解码 + checksum');
+            setTimeout(function () {
+              advance(row, 100, 'succeeded', '校验通过 · ffprobe OK · checksum 一致');
+              row.querySelector('.e-act').innerHTML = '<button class="btn btn-default btn-sm" type="button" data-act="download">下载</button>';
+              P.toast('导出完成：checksum 通过，已原子发布，可下载');
+            }, 1200);
+          }, 1400);
+        }, 1300);
+      }, 900);
+    }
+  });
+</script>
+</body>
+</html>

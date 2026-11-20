@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>审计日志 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+<style>
+  .log-row { cursor: pointer; }
+  .log-row:hover td { background: var(--surface-sunken); }
+  .log-row[data-result="fail"] td:nth-child(2) { color: var(--fail); }
+  .json-box { background: var(--ink-900); color: #d9e2e0; font-family: var(--mono); font-size: 10px; line-height: 1.8; padding: 12px 14px; border-radius: var(--r-control); overflow: auto; }
+</style>
+</head>
+<body data-page="audit">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Audit log</p>
+          <h1>审计日志</h1>
+          <p class="lede">记录身份、项目、资产、生成与导出上的关键动作。日志只追加不修改，敏感字段脱敏；权限变更与高危操作必须可追溯到 request_id。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-act="export"><i data-icon="download"></i>导出</button>
+          <button class="btn btn-default" type="button" data-toast="日志保留 180 天，超期自动归档，不支持手工删除"><i data-icon="clock"></i>保留策略</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="toolbar" style="border: 0; padding: 0; margin: 0">
+            <div class="search"><i data-icon="search"></i><input type="search" placeholder="搜索操作人、资源或 request_id" id="log-search" /></div>
+            <select class="control" id="log-actor" style="width: 130px"><option value="">全部操作人</option><option>陈默</option><option>顾青</option><option>苏禾</option><option>陆行</option><option>系统</option></select>
+            <select class="control" id="log-result" style="width: 110px"><option value="">全部结果</option><option value="ok">success</option><option value="fail">fail</option></select>
+            <span class="spacer"></span>
+            <span class="count" id="log-count">8 条</span>
+          </div>
+        </div>
+        <div class="card-body" style="padding-top: 0">
+          <div class="tag-row" style="margin-bottom: 12px">
+            <button class="chip active" type="button" data-kind="all">全部</button>
+            <button class="chip" type="button" data-kind="auth">身份</button>
+            <button class="chip" type="button" data-kind="project">项目</button>
+            <button class="chip" type="button" data-kind="asset">资产</button>
+            <button class="chip" type="button" data-kind="generation">生成</button>
+            <button class="chip" type="button" data-kind="export">导出</button>
+            <button class="chip" type="button" data-kind="rbac">权限</button>
+          </div>
+
+          <div class="table-wrap" style="border: 0">
+            <table class="table" id="log-table">
+              <thead><tr><th style="width: 118px">时间</th><th>动作</th><th>操作人</th><th>资源</th><th>结果</th><th>request_id</th></tr></thead>
+              <tbody id="log-body">
+                <tr class="log-row" data-open="log-detail" data-kind="generation" data-result="ok" data-actor="陈默" data-time="11-18 15:58:07" data-action="generation.task.create" data-resource="task gt_7f2e04" data-rid="req_7c91a2" data-ip="10.12.4.88" data-payload='{"project_id":"prj_nyjm26","capability":"video.generate","provider":"mork-video-2","shot":"1-03"}'>
+                  <td class="mono">11-18 15:58:07</td><td class="mono">generation.task.create</td><td>陈默</td><td>task gt_7f2e04</td><td><span class="pill pass">success</span></td><td class="mono">req_7c91a2</td>
+                </tr>
+                <tr class="log-row" data-open="log-detail" data-kind="asset" data-result="ok" data-actor="顾青" data-time="11-18 15:41:22" data-action="asset.version.revoke" data-resource="asset ast_31c7 · v2" data-rid="req_5b02fe" data-ip="10.12.4.31" data-payload='{"asset_id":"ast_31c7","from_version":2,"to_version":3,"reason":"画面比例不一致"}'>
+                  <td class="mono">11-18 15:41:22</td><td class="mono">asset.version.revoke</td><td>顾青</td><td>asset ast_31c7 · v2</td><td><span class="pill pass">success</span></td><td class="mono">req_5b02fe</td>
+                </tr>
+                <tr class="log-row" data-open="log-detail" data-kind="rbac" data-result="ok" data-actor="陈默" data-time="11-18 14:20:03" data-action="rbac.project_role.assign" data-resource="project prj_nyjm26 · 陆行" data-rid="req_19dd07" data-ip="10.12.4.88" data-payload='{"user":"usr_luxing","role":"reviewer","scope":"project","before":null,"after":"reviewer"}'>
+                  <td class="mono">11-18 14:20:03</td><td class="mono">rbac.project_role.assign</td><td>陈默</td><td>project prj_nyjm26 · 陆行</td><td><span class="pill pass">success</span></td><td class="mono">req_19dd07</td>
+                </tr>
+                <tr class="log-row" data-open="log-detail" data-kind="export" data-result="fail" data-actor="系统" data-time="11-18 13:02:44" data-action="export.render.failed" data-resource="export exp_2201" data-rid="req_31ac5e" data-ip="—" data-payload='{"export_id":"exp_2201","error_code":"FFMPEG_MISSING_SOURCE","missing":["shot 2-04","shot 2-07"]}'>
+                  <td class="mono">11-18 13:02:44</td><td class="mono">export.render.failed</td><td>系统</td><td>export exp_2201</td><td><span class="pill fail">fail</span></td><td class="mono">req_31ac5e</td>
+                </tr>
+                <tr class="log-row" data-open="log-detail" data-kind="project" data-result="ok" data-actor="陈默" data-time="11-18 11:36:10" data-action="project.budget.update" data-resource="project prj_nyjm26" data-rid="req_8f10c4" data-ip="10.12.4.88" data-payload='{"before":{"monthly_budget":8000},"after":{"monthly_budget":10000}}'>
+                  <td class="mono">11-18 11:36:10</td><td class="mono">project.budget.update</td><td>陈默</td><td>project prj_nyjm26</td><td><span class="pill pass">success</span></td><td class="mono">req_8f10c4</td>
+                </tr>
+                <tr class="log-row" data-open="log-detail" data-kind="generation" data-result="fail" data-actor="陈默" data-time="11-18 10:18:52" data-action="generation.task.retry" data-resource="task gt_7f1a08" data-rid="req_0be311" data-ip="10.12.4.88" data-payload='{"task_id":"gt_7f1a08","attempt":2,"error_code":"PROVIDER_429","retry_after":"18s"}'>
+                  <td class="mono">11-18 10:18:52</td><td class="mono">generation.task.retry</td><td>陈默</td><td>task gt_7f1a08</td><td><span class="pill fail">fail</span></td><td class="mono">req_0be311</td>
+                </tr>
+                <tr class="log-row" data-open="log-detail" data-kind="auth" data-result="ok" data-actor="苏禾" data-time="11-18 09:02:11" data-action="auth.login" data-resource="user usr_suhe" data-rid="req_4d2a90" data-ip="10.12.7.19" data-payload='{"method":"sso","org":"xingye","session":"sess_9c1"}'>
+                  <td class="mono">11-18 09:02:11</td><td class="mono">auth.login</td><td>苏禾</td><td>user usr_suhe</td><td><span class="pill pass">success</span></td><td class="mono">req_4d2a90</td>
+                </tr>
+                <tr class="log-row" data-open="log-detail" data-kind="asset" data-result="fail" data-actor="顾青" data-time="11-17 18:35:09" data-action="asset.upload.reject" data-resource="asset ast_88f1" data-rid="req_7e20b1" data-ip="10.12.4.31" data-payload='{"reason":"mime mismatch","declared":"image/png","actual":"image/jpeg","size":1048576}'>
+                  <td class="mono">11-17 18:35:09</td><td class="mono">asset.upload.reject</td><td>顾青</td><td>asset ast_88f1</td><td><span class="pill fail">fail</span></td><td class="mono">req_7e20b1</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pager"><span>第 1 / 12 页 · 共 96 条</span><div class="pages"><button class="tbtn on" type="button">1</button><button class="tbtn" type="button">2</button><button class="tbtn" type="button">3</button><button class="tbtn" type="button" data-toast="原型仅演示前 3 页翻页">›</button></div></div>
+        </div>
+      </div>
+
+      <div class="grid g-3" style="margin-top: 14px">
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>写入时机</h2><span class="sub">WHEN</span></div>
+          <div class="card-body">
+            <div class="pass-row"><span class="pm">✓</span><span>身份、项目、权限变更：成功与失败都写</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>资产生命周期：上传、撤回、删除</span></div>
+            <div class="pass-row"><span class="pm">✓</span><span>生成与导出：创建、重试、失败、取消</span></div>
+            <div class="pass-row"><span class="pm warn">!</span><span>演示环境的 Mock 调用不写正式审计</span></div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>字段口径</h2><span class="sub">FIELDS</span></div>
+          <div class="card-body">
+            <div class="kv">
+              <div class="row"><dt>actor</dt><dd>用户 id + 显示名，系统动作为 system</dd></div>
+              <div class="row"><dt>action</dt><dd>domain.entity.verb，稳定枚举</dd></div>
+              <div class="row"><dt>resource</dt><dd>entity + id + 版本（如适用）</dd></div>
+              <div class="row"><dt>request_id</dt><dd>贯穿日志、响应与前端提示</dd></div>
+            </div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>脱敏与访问</h2><span class="sub">PRIVACY</span></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px; margin: 0 0 10px">密钥、完整 IP、对象存储签名一律脱敏；仅 administrator 与 audit:read 权限可查询，普通成员不可见他人操作明细。</p>
+            <div class="banner info" style="margin: 0"><i data-icon="info"></i><div>跨项目检索被禁止：审计查询必须带 project_id 或 org 级授权。</div></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="drawer" id="log-detail">
+  <div class="drawer-head"><div><p class="eyebrow">Audit event</p><h2 data-bind="action">generation.task.create</h2><span class="sub mono" data-bind="rid">req_7c91a2</span></div><button class="close-x" type="button" data-close-drawer="log-detail">×</button></div>
+  <div class="drawer-body">
+    <div class="kv">
+      <div class="row"><dt>时间</dt><dd class="mono" data-bind="time">11-18 15:58:07</dd></div>
+      <div class="row"><dt>操作人</dt><dd data-bind="actor">陈默</dd></div>
+      <div class="row"><dt>资源</dt><dd data-bind="resource">task gt_7f2e04</dd></div>
+      <div class="row"><dt>来源 IP</dt><dd class="mono" data-bind="ip">10.12.4.88</dd></div>
+      <div class="row"><dt>结果</dt><dd>success</dd></div>
+    </div>
+    <div class="section-label">Payload（已脱敏）</div>
+    <div class="json-box" id="log-json">{
+  "project_id": "prj_nyjm26",
+  "capability": "video.generate",
+  "provider": "mork-video-2",
+  "shot": "1-03"
+}</div>
+    <div class="section-label">关联</div>
+    <div class="ref-line"><span class="mono">task</span><span>gt_7f2e04</span><span class="pill review">failed</span></div>
+    <div class="ref-line"><span class="mono">shot</span><span>1-03 · 抬眼特写</span><span class="pill draft">contract v3</span></div>
+    <div class="banner info" style="margin-top: 12px"><i data-icon="info"></i><div>日志不可编辑；如需复核，按 request_id 拉取同批次全部事件。</div></div>
+  </div>
+  <div class="drawer-foot"><button class="btn btn-default" type="button" data-close-drawer="log-detail">关闭</button><button class="btn btn-quiet" type="button" data-toast="已复制 request_id">复制 request_id</button></div>
+</div>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  var body = document.getElementById('log-body');
+  var kind = 'all';
+
+  function apply() {
+    var q = document.getElementById('log-search').value.trim().toLowerCase();
+    var actor = document.getElementById('log-actor').value;
+    var result = document.getElementById('log-result').value;
+    var shown = 0;
+    body.querySelectorAll('.log-row').forEach(function (row) {
+      var hit = (kind === 'all' || row.dataset.kind === kind) &&
+        (!actor || row.dataset.actor === actor) &&
+        (!result || row.dataset.result === result) &&
+        (!q || row.textContent.toLowerCase().indexOf(q) > -1);
+      row.hidden = !hit;
+      if (hit) shown++;
+    });
+    document.getElementById('log-count').textContent = shown + ' 条';
+  }
+
+  document.querySelectorAll('[data-kind]').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      document.querySelectorAll('[data-kind]').forEach(function (c) { c.classList.remove('active'); });
+      chip.classList.add('active');
+      kind = chip.dataset.kind;
+      apply();
+    });
+  });
+  ['log-search', 'log-actor', 'log-result'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', apply);
+    document.getElementById(id).addEventListener('change', apply);
+  });
+
+  document.addEventListener('proto:select', function (e) {
+    if (!e.detail.el.classList.contains('log-row')) return;
+    var json = document.getElementById('log-json');
+    try {
+      json.textContent = JSON.stringify(JSON.parse(e.detail.el.dataset.payload), null, 2);
+    } catch (err) {
+      json.textContent = e.detail.el.dataset.payload;
+    }
+  });
+
+  document.addEventListener('proto:act', function (e) {
+    if (e.detail.act === 'export') {
+      var rows = [['时间', 'action', 'actor', 'resource', 'result', 'request_id', 'ip']];
+      body.querySelectorAll('.log-row:not([hidden])').forEach(function (row) {
+        var d = row.dataset;
+        rows.push([d.time, d.action, d.actor, d.resource, d.result, d.rid, d.ip]);
+      });
+      P.download('audit-2026-11-18.csv', '\ufeff' + P.csv(rows), 'text/csv');
+      P.toast('已导出当前筛选结果（' + (rows.length - 1) + ' 条）');
+    }
+  });
+</script>
+</body>
+</html>

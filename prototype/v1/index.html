@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>系统原型总览 · 短剧智能生产平台</title>
+<link rel="stylesheet" href="assets/prototype.css" />
+</head>
+<body data-page="index">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+
+    <main class="page">
+      <section class="proto-hero">
+        <div class="grid-lines"></div>
+        <p class="kicker">Short-play studio · prototype v2.1</p>
+        <h1>企业级 AI 短剧<br>智能生产平台 · 系统原型</h1>
+        <p>覆盖「创意 → 故事圣经 → 剧本场次 → 角色/场景/道具 → 分镜与 Shot Contract → Mork 生成 → 质量检查与人工审核 → 时间线 → FFmpeg 成片」。新增「制作流程」向导，把整条链路收成 7 步模型生成，每步只做一次确认。</p>
+        <div class="hero-meta">
+          <div>页面<strong>22 个业务页面 + 1 个状态规范</strong></div>
+          <div>基准<strong>1440×900 · 收窄至 1024</strong></div>
+          <div>设计令牌<strong>1 强调色 · 3 圆角角色 · 1 字阶断崖</strong></div>
+          <div>交互<strong>状态真实变更 · 会话内可回放</strong></div>
+        </div>
+      </section>
+
+      <div class="banner info">
+        <i data-icon="info"></i>
+        <div><b>这份原型是“界面契约”，不是已交付功能。</b>每个页面标注了它对应的真实路由与 API 域；页面上的成功操作必须由服务端确认，演示数据不得当作生产能力。</div>
+        <a class="btn btn-default btn-sm b-act" href="README.md">阅读说明 →</a>
+      </div>
+
+      <div class="section-label">信息架构 · 四层</div>
+      <div class="grid g-4">
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>企业层</h2><span class="sub">ORG SCOPE</span></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px; margin-bottom: 10px">组织是项目归属边界：成员、部门、角色权限、审计。</p>
+            <div class="ref-line"><span class="tag">01</span><a href="pages/login.html">登录与会话</a><span class="lock">auth</span></div>
+            <div class="ref-line"><span class="tag">02</span><a href="pages/dashboard.html">企业工作台</a><span class="lock">dashboard</span></div>
+            <div class="ref-line"><span class="tag">03</span><a href="pages/projects.html">项目空间</a><span class="lock">projects</span></div>
+            <div class="ref-line"><span class="tag">04</span><a href="pages/users.html">成员</a><span class="lock">users</span></div>
+            <div class="ref-line"><span class="tag">05</span><a href="pages/roles.html">角色与权限</a><span class="lock">roles</span></div>
+            <div class="ref-line"><span class="tag">06</span><a href="pages/organizations.html">部门与组织</a><span class="lock">organizations</span></div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>项目生产层</h2><span class="sub">PROJECT SCOPE</span></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px; margin-bottom: 10px">所有生产数据的隔离根。切换项目必须清理上一项目的缓存、草稿与订阅。</p>
+            <div class="ref-line"><span class="tag">00</span><a href="pages/flow.html">制作流程（推荐入口）</a><span class="lock">flow</span></div>
+            <div class="ref-line"><span class="tag">16</span><a href="pages/ideas.html">创意与立项</a><span class="lock">ideas</span></div>
+            <div class="ref-line"><span class="tag">07</span><a href="pages/project-overview.html">生产概览</a><span class="lock">pipeline</span></div>
+            <div class="ref-line"><span class="tag">08</span><a href="pages/stories.html">故事圣经</a><span class="lock">creation</span></div>
+            <div class="ref-line"><span class="tag">09</span><a href="pages/episodes.html">剧集与剧本</a><span class="lock">creation</span></div>
+            <div class="ref-line"><span class="tag">10</span><a href="pages/assets.html">资产库</a><span class="lock">assets</span></div>
+            <div class="ref-line"><span class="tag">11</span><a href="pages/storyboards.html">分镜与镜头</a><span class="lock">creation</span></div>
+            <div class="ref-line"><span class="tag">17</span><a href="pages/workflows.html">生产流水线</a><span class="lock">workflow</span></div>
+            <div class="ref-line"><span class="tag">12</span><a href="pages/tasks.html">AI 任务</a><span class="lock">generation</span></div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>专项工作区</h2><span class="sub">FOCUSED</span></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px; margin-bottom: 10px">独立沉浸工作区：审核台、时间线、导出与设置，均绑定不可变快照。</p>
+            <div class="ref-line"><span class="tag">13</span><a href="pages/reviews.html">质量与审核</a><span class="lock">review</span></div>
+            <div class="ref-line"><span class="tag">14</span><a href="pages/editor.html">时间线</a><span class="lock">timeline</span></div>
+            <div class="ref-line"><span class="tag">15</span><a href="pages/exports.html">成片导出</a><span class="lock">export</span></div>
+            <div class="ref-line"><span class="tag">21</span><a href="pages/settings.html">项目设置</a><span class="lock">settings</span></div>
+            <div class="ref-line"><span class="tag">★</span><a href="pages/states.html">交互状态规范</a><span class="lock">states</span></div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>配置与运营层</h2><span class="sub">OPS SCOPE</span></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px; margin-bottom: 10px">能力接入、成本与审计：配置只影响本组织，日志只追加不修改。</p>
+            <div class="ref-line"><span class="tag">18</span><a href="pages/providers.html">能力与 Provider</a><span class="lock">providers</span></div>
+            <div class="ref-line"><span class="tag">19</span><a href="pages/usage.html">用量与成本</a><span class="lock">usage</span></div>
+            <div class="ref-line"><span class="tag">20</span><a href="pages/audit.html">审计日志</a><span class="lock">audit</span></div>
+          </div>
+          <div class="card-foot"><span>页面路由保留现有 web/src/router 路径</span></div>
+        </section>
+      </div>
+
+      <div class="section-label">页面索引 · 点开即用</div>
+      <div class="page-index">
+        <article class="index-card">
+          <div class="ic-top"><span class="no">00 / FLOW</span><span class="pill accent">推荐入口</span></div>
+          <h3>制作流程（7 步向导）</h3>
+          <p>设定 → 剧本 → 资产与分镜 → 画面 → 配音 → 质检审核 → 时间线与导出。每步显示所用模型、输入、产物与预计费用，点一次生成自动解锁下一步。</p>
+          <div class="ic-foot"><span>/flow</span><a class="go" href="pages/flow.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">01 / AUTH</span><span class="pill draft">基础实现</span></div>
+          <h3>登录与会话</h3>
+          <p>登录、续期、退出；密码错误与锁定提示；令牌过期后回到登录并保留原路由。</p>
+          <div class="ic-foot"><span>/login</span><a class="go" href="pages/login.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">02 / WORKBENCH</span><span class="pill draft">基础实现</span></div>
+          <h3>企业工作台</h3>
+          <p>跨项目生产看板、待审核队列、任务健康、预算用量与审计事件。未接入指标标“待建设”。</p>
+          <div class="ic-foot"><span>/dashboard</span><a class="go" href="pages/dashboard.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">03 / PROJECTS</span><span class="pill pass">已接入</span></div>
+          <h3>项目空间</h3>
+          <p>项目列表、创建、状态筛选与生命周期；无权限时空态；进入真实 project_id 工作区。</p>
+          <div class="ic-foot"><span>/projects</span><a class="go" href="pages/projects.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">04 / MEMBERS</span><span class="pill draft">基础实现</span></div>
+          <h3>成员</h3>
+          <p>组织成员与项目角色分离；邀请、禁用、会话撤销；权限计算的交集模型。</p>
+          <div class="ic-foot"><span>/users</span><a class="go" href="pages/users.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">05 / ROLES</span><span class="pill draft">基础实现</span></div>
+          <h3>角色与权限</h3>
+          <p>10 个权限码 × 6 个角色模板的矩阵，与 <span class="mono">PERMISSION_CATALOG</span> 对齐；越权边界说明。</p>
+          <div class="ic-foot"><span>/roles</span><a class="go" href="pages/roles.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">06 / ORG</span><span class="pill draft">基础实现</span></div>
+          <h3>部门与组织</h3>
+          <p>部门、负责人、项目归属与邀请状态；明确不做多租户与自助开通。</p>
+          <div class="ic-foot"><span>/organizations</span><a class="go" href="pages/organizations.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">07 / OVERVIEW</span><span class="pill review">新增原型</span></div>
+          <h3>生产概览</h3>
+          <p>七阶段生产链路、分集进度、阻塞项、依赖 stale 影响、成员与预算。</p>
+          <div class="ic-foot"><span>/projects/:id/overview</span><a class="go" href="pages/project-overview.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">08 / STORY</span><span class="pill review">演示/待接入</span></div>
+          <h3>故事圣经</h3>
+          <p>版本化世界观、人物、关系与冲突；来源追溯与结构化抽取置信度；版本对比。</p>
+          <div class="ic-foot"><span>/projects/:id/stories</span><a class="go" href="pages/stories.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">09 / SCRIPT</span><span class="pill review">演示/待接入</span></div>
+          <h3>剧集与剧本</h3>
+          <p>集次、场次、对白、版本历史；保存即新版本；409 冲突比较合并；未保存离开确认。</p>
+          <div class="ic-foot"><span>/projects/:id/episodes</span><a class="go" href="pages/episodes.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">10 / ASSETS</span><span class="pill review">部分 UI</span></div>
+          <h3>资产库</h3>
+          <p>角色/场景/道具与参考素材；不可变版本、引用影响、撤回与禁止物理删除；上传扫描流程。</p>
+          <div class="ic-foot"><span>/projects/:id/assets</span><a class="go" href="pages/assets.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">11 / SHOTS</span><span class="pill review">演示/待接入</span></div>
+          <h3>分镜与镜头</h3>
+          <p>分镜板、Shot Contract 全字段、锁定资产版本、连续性约束、生成输入与失败诊断。</p>
+          <div class="ic-foot"><span>/projects/:id/storyboards</span><a class="go" href="pages/storyboards.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">12 / TASKS</span><span class="pill review">待完整联调</span></div>
+          <h3>AI 任务</h3>
+          <p>Task/Attempt 分离、重试与取消、成本、状态机、Provider 未配置的失败关闭。</p>
+          <div class="ic-foot"><span>/projects/:id/tasks</span><a class="go" href="pages/tasks.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">13 / REVIEW</span><span class="pill fail">待建设</span></div>
+          <h3>质量与审核</h3>
+          <p>QA 三级结论、问题分级与证据、项目级统一审核、拒绝返工、审核不可篡改。</p>
+          <div class="ic-foot"><span>/projects/:id/reviews</span><a class="go" href="pages/reviews.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">14 / TIMELINE</span><span class="pill fail">原型</span></div>
+          <h3>时间线</h3>
+          <p>三轨编排、整数 PTS + 有理数 time_base、片段属性、版本保存、能力边界声明。</p>
+          <div class="ic-foot"><span>/projects/:id/editor</span><a class="go" href="pages/editor.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">15 / EXPORT</span><span class="pill fail">原型</span></div>
+          <h3>成片导出</h3>
+          <p>ExportJob 队列与进度、Profile 白名单、ffprobe 校验、产物下载、失败诊断。</p>
+          <div class="ic-foot"><span>/projects/:id/exports</span><a class="go" href="pages/exports.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">16 / IDEAS</span><span class="pill review">新增原型</span></div>
+          <h3>创意与立项</h3>
+          <p>创意池 master-detail、评分与一句话卖点校验；通过立项生成项目草稿，退回与 AI 扩写。</p>
+          <div class="ic-foot"><span>/projects/:id/ideas</span><a class="go" href="pages/ideas.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">17 / WORKFLOW</span><span class="pill review">新增原型</span></div>
+          <h3>生产流水线</h3>
+          <p>WorkflowRun 列表、六节点 DAG 与场景映射、暂停 / 恢复 / 取消、节点事件与失败重试。</p>
+          <div class="ic-foot"><span>/projects/:id/workflows</span><a class="go" href="pages/workflows.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">18 / PROVIDERS</span><span class="pill review">新增原型</span></div>
+          <h3>能力与 Provider</h3>
+          <p>六项生成能力的默认 Provider 绑定、secret 引用、超时与并发；未配置时失败关闭。</p>
+          <div class="ic-foot"><span>/providers</span><a class="go" href="pages/providers.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">19 / USAGE</span><span class="pill review">新增原型</span></div>
+          <h3>用量与成本</h3>
+          <p>区间切换重算成本结构、项目用量明细、预算阈值与 80% 预警；CSV 导出实际下载。</p>
+          <div class="ic-foot"><span>/usage</span><a class="go" href="pages/usage.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">20 / AUDIT</span><span class="pill review">新增原型</span></div>
+          <h3>审计日志</h3>
+          <p>八类动作日志、关键词与操作人 / 结果筛选、详情抽屉回填 payload、筛选结果导出。</p>
+          <div class="ic-foot"><span>/audit-logs</span><a class="go" href="pages/audit.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">21 / SETTINGS</span><span class="pill review">新增原型</span></div>
+          <h3>项目设置</h3>
+          <p>六个分页：基本信息、成员、生成配置、导出 Profile、预算、危险操作（归档 / 转移 / 删除需输入项目名）。</p>
+          <div class="ic-foot"><span>/projects/:id/settings</span><a class="go" href="pages/settings.html">打开 →</a></div>
+        </article>
+
+        <article class="index-card">
+          <div class="ic-top"><span class="no">★ / SPEC</span><span class="pill accent">规范</span></div>
+          <h3>交互状态规范</h3>
+          <p>11 种通用状态的视觉与规则，含页面 × 状态覆盖矩阵，可直接作为前端验收清单。</p>
+          <div class="ic-foot"><span>/prototype/pages/states.html</span><a class="go" href="pages/states.html">打开 →</a></div>
+        </article>
+      </div>
+
+      <div class="section-label">设计语言 · 令牌</div>
+      <div class="token-block">
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>色板</h2><span class="sub">ONE ACCENT</span></div>
+          <div class="card-body">
+            <div class="swatches">
+              <div class="swatch"><i style="background: #14181d"></i>ink-900</div>
+              <div class="swatch"><i style="background: #f4f2ee"></i>paper</div>
+              <div class="swatch"><i style="background: #ffffff"></i>surface</div>
+              <div class="swatch"><i style="background: #0e6b63"></i>accent</div>
+              <div class="swatch"><i style="background: #2e7a52"></i>ok</div>
+              <div class="swatch"><i style="background: #a06b12"></i>warn</div>
+              <div class="swatch"><i style="background: #a83f34"></i>fail</div>
+              <div class="swatch"><i style="background: #33567d"></i>info</div>
+            </div>
+            <p class="lede" style="font-size: 10.5px; margin-top: 12px">暖中性纸面承载长时间阅读；深青是唯一强调色，只给主操作、当前选中的页签与关键数字；状态色只用于状态，不用于装饰。</p>
+          </div>
+        </section>
+
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>字阶与形状</h2><span class="sub">TYPE &amp; RADIUS</span></div>
+          <div class="card-body">
+            <div class="type-spec">
+              <div><span>display 30</span><strong style="font-size: 22px; letter-spacing: -0.028em">生产概览 · 标题有断崖</strong></div>
+              <div><span>h2 17</span><span style="font-size: 15px; font-weight: 600">卡片标题</span></div>
+              <div><span>body 13</span><span style="font-size: 12.5px; color: var(--text-2)">正文克制，行高 1.75</span></div>
+              <div><span>mono 10</span><span class="mono" style="font-size: 10px; color: var(--text-3)">SHOT 1-03 · PTS 8,840,400</span></div>
+            </div>
+            <div class="kv" style="margin-top: 10px">
+              <div class="row"><dt>容器圆角</dt><dd class="mono">3px（直角感）</dd></div>
+              <div class="row"><dt>控件圆角</dt><dd class="mono">7px</dd></div>
+              <div class="row"><dt>状态药丸</dt><dd class="mono">999px</dd></div>
+              <div class="row"><dt>阴影</dt><dd>只给抽屉与弹窗</dd></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="section-label">原型约定</div>
+      <div class="grid g-3">
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>能点的地方都是真的</h2><span class="sub">INTERACTION</span></div>
+          <div class="card-body">
+            <div class="check-row"><input type="checkbox" checked disabled /><span>侧边导航、模块页签可互相跳转（22 页全通）</span></div>
+            <div class="check-row"><input type="checkbox" checked disabled /><span>制作流程可单步生成、一键跑整集，质检后等待人工通过</span></div>
+            <div class="check-row"><input type="checkbox" checked disabled /><span>新建、重试、取消、审核真实改变状态与计数</span></div>
+            <div class="check-row"><input type="checkbox" checked disabled /><span>抽屉与弹窗按行数据回填；重复键返回 409</span></div>
+            <div class="check-row"><input type="checkbox" checked disabled /><span>CSV 与 manifest 为真实文件下载</span></div>
+            <div class="check-row"><input type="checkbox" checked disabled /><span>演示改动存入 sessionStorage，刷新后可回放</span></div>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>不可伪造的部分</h2><span class="sub">HONESTY</span></div>
+          <div class="card-body">
+            <div class="banner warn" style="margin: 0"><i data-icon="alert"></i><div>页面上的新建、审核、导出等操作只改浏览器内演示状态（内存 + sessionStorage），不写任何后端。</div></div>
+            <p class="lede" style="font-size: 10.5px; margin-top: 10px">跨项目资产、WAIVED 豁免、多级会签、第三方采集、专业 NLE 能力在原型中一律不出现入口。</p>
+          </div>
+        </section>
+        <section class="card" style="margin: 0">
+          <div class="card-head"><h2>下一步</h2><span class="sub">NEXT</span></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11px">按 <span class="mono">R1 → R7</span> 阶段把页面接真实 API：先统一项目上下文与错误/权限态，再依次接 creation、assets、generation、review、timeline、export。</p>
+            <a class="btn btn-default btn-sm" style="margin-top: 10px" href="DESIGN_SPEC.md">设计说明 DESIGN_SPEC →</a>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="assets/prototype.js"></script>
+<script src="assets/interactions.js"></script>
+</body>
+</html>

@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>制作台 · 长夜将明</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="studio" data-crumb="制作台">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <nav class="tabs" id="tabs"></nav>
+    <main class="content">
+      <div class="studio-head">
+        <div class="studio-title">
+          <div class="eyebrow">PRODUCTION STUDIO · EP01</div>
+          <h1>长夜将明</h1>
+          <div class="meta">
+            <span class="chip accent">制作中</span>
+            <span>EP01 · 雨夜书店</span><i>·</i>
+            <span>12 集 / 竖屏 9:16 / 30fps</span><i>·</i>
+            <span class="mono" style="font-size:9px">NYJM-26</span>
+          </div>
+        </div>
+        <div class="studio-actions">
+          <div class="run-progress"><span id="run-label">3 / 7 步完成</span><span class="bar"><i id="run-bar" style="width:43%"></i></span></div>
+          <button class="btn" data-act="reset"><span data-i="refresh"></span>重置</button>
+          <button class="btn" data-act="run-all"><span data-i="play"></span>一键制作本集</button>
+          <a class="btn btn-primary" href="review.html" id="review-link"><span data-i="check"></span>审核台</a>
+        </div>
+      </div>
+
+      <div id="banner-host"></div>
+
+      <div class="flow-strip" id="flow-strip"></div>
+
+      <div class="stage-work">
+        <section class="panel stage-main" id="stage-panel"></section>
+        <aside class="side-stack" id="side-stack"></aside>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="scrim"></div>
+<div class="drawer" id="drawer-artifact">
+  <div class="drawer-head">
+    <div><div class="eyebrow">ARTIFACT</div><h2 id="art-title">产物详情</h2></div>
+    <button class="icon-btn" data-close><span data-i="x"></span></button>
+  </div>
+  <div class="drawer-body">
+    <div class="output-box" style="margin-top:0">
+      <div class="out-head"><span class="eyebrow">OUTPUT</span><span class="chip green" id="art-status">已完成</span></div>
+      <div class="out-main" id="art-main">—</div>
+      <div class="out-sub" id="art-sub">—</div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <div class="panel-head"><h2>调用明细</h2><span class="sub">PROVENANCE</span></div>
+      <div class="panel-body">
+        <dl class="kv">
+          <dt>步骤</dt><dd id="art-step">—</dd>
+          <dt>模型</dt><dd class="mono" id="art-model">—</dd>
+          <dt>输入快照</dt><dd id="art-input">—</dd>
+          <dt>request_id</dt><dd class="mono" id="art-req">—</dt>
+          <dt>生成时间</dt><dd class="mono" id="art-time">—</dd>
+          <dt>版本策略</dt><dd>不可变 · 重跑生成新版本</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="banner" style="margin-top:14px"><span data-i="target"></span><div class="grow">产物只读上一步已冻结的版本；下游引用固定 version_id，不随上游继续编辑而漂移。</div></div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn" data-close>关闭</button>
+    <a class="btn btn-primary" id="art-link" href="#">打开专业视图 <span data-i="external"></span></a>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const STEPS = [
+    {
+      id: 'setup', no: '01', name: '设定与故事', short: '设定',
+      model: 'mork-llm-7b', m: 'MORK-LLM', provider: 'Mork / via Adapter',
+      cap: 'text.complete', cover: { type: 'text' },
+      desc: '把一句话或整本小说扩成可生产的故事圣经：世界观、人物关系、情绪曲线与 12 集分集钩子。你只需要确认来源、集数和叙事节奏。',
+      input: [
+        { id: 'genre', label: '题材与风格', value: '都市悬疑 · 冷峻写实', options: ['都市悬疑 · 冷峻写实', '治愈爱情 · 柔光', '犯罪悬疑 · 高对比', '古风权谋 · 低饱和'] },
+        { id: 'eps', label: '集数', value: '12 集', options: ['8 集', '12 集', '24 集'] },
+        { id: 'pace', label: '叙事节奏', value: '每集 2 个反转', options: ['每集 1 个反转', '每集 2 个反转', '慢热铺垫'] },
+        { id: 'source', label: '素材来源', value: '小说改编 · 24 章', options: ['一句话创意', '小说改编 · 24 章', '小说章节 · 粘贴'] }
+      ],
+      out: '故事圣经 v4 · 12 集钩子', outMeta: '人物 6 · 场景 4 · 12 条分集钩子', cost: '¥1.20', time: '约 40 秒', duration: 1200,
+      preview: { type: 'text', title: '故事圣经 · 长夜将明', stamp: 'STORY BIBLE V4 / FROZEN', body: '雨夜的旧书店是这座城市的失物招领处。林未在调查一桩失踪案时，发现每一本旧书里都夹着同一个人的借阅卡——周砚，书店老板，也是最后一个见过失踪者的人。\n\n十二集里，两个人从互相试探到共同面对同一段被删除的记忆。每集结尾留一个具体物件作为钩子：借阅卡、坏掉的伞骨、一卷没有录完的磁带。' },
+      artifacts: [{ name: '故事圣经 v4', meta: 'v4 · 2.1 MB · frozen', icon: 'list' }, { name: '12 条分集钩子', meta: 'season arc · 起承转合', icon: 'target' }]
+    },
+    {
+      id: 'script', no: '02', name: '剧本与分集', short: '分集',
+      model: 'mork-llm-7b', m: 'MORK-LLM', provider: 'Mork / via Adapter',
+      cap: 'text.complete', cover: { type: 'text' },
+      desc: '先把 24 章拆成 12 集大纲，再按单集生成场次、动作、对白与结尾钩子。分集 v2 锁定后，12 集可批量生成，只有需要精修的集才打开编辑器。',
+      input: [
+        { id: 'source', label: '改编来源', value: '小说 · 24 章', options: ['小说 · 24 章', '故事圣经原创', '导入既有剧本'] },
+        { id: 'strategy', label: '分集策略', value: '钩子优先 · 12 集', options: ['钩子优先 · 12 集', '章节对齐 · 2 章/集', '人物弧优先 · 12 集'] },
+        { id: 'scenes', label: '单集场次', value: '8 场', options: ['6 场', '8 场', '10 场'] },
+        { id: 'adapt', label: '改编幅度', value: '忠于主线 · 允许压缩', options: ['忠于主线 · 允许压缩', '强化冲突 · 允许重排', '大幅重构'] }
+      ],
+      out: '12 集大纲 + EP01 剧本 v6', outMeta: '12 集 · EP01 8 场 / 19 对白 · 2′18″', cost: '¥0.90 / 集', time: '约 35 秒 / 集', duration: 1200,
+      preview: { type: 'text', title: 'EP01 · 雨夜书店', stamp: 'SCENE 03 / INT. 旧书店 / NIGHT', body: '雨声压过街道。林未收伞进门，伞尖的水在木地板上拖出一条线。\n\n周砚从书架后出来，手里是那本没有编号的借阅册。\n\n林未：这本书，从来没有人借过？\n周砚：有人借过。只是还回来的时候，名字已经不见了。' },
+      artifacts: [{ name: '分集规划 v2', meta: '12 集 · 24 章覆盖 · locked', icon: 'list' }, { name: 'EP01 剧本 v6', meta: 'v6 · 8 场 · 19 条对白', icon: 'list' }]
+    },
+    {
+      id: 'assets', no: '03', name: '资产与分镜', short: '资产',
+      model: 'mork-image-3 + mork-llm-7b', m: 'MORK-IMG', provider: 'Mork · image + text', cap: 'image.generate · text.complete',
+      cover: { type: 'image', src: 'linwei.jpg' },
+      desc: '先生成并锁定角色、场景、道具的参考图，再把剧本拆成镜头与 Shot Contract。资产锁定后，后面每条画面都引用同一套 version_id。',
+      input: [
+        { id: 'style', label: '视觉风格', value: '冷峻写实 · 35mm', options: ['冷峻写实 · 35mm', '柔光治愈 · 50mm', '高对比黑色电影'] },
+        { id: 'consistency', label: '角色一致性', value: '锁定参考图 · v2', options: ['锁定参考图 · v2', '允许逐镜微调'] },
+        { id: 'density', label: '拆镜密度', value: '标准 · 每场 3 镜', options: ['标准 · 每场 3 镜', '细 · 每场 4–5 镜', '粗 · 每场 2 镜'] },
+        { id: 'ratio', label: '画幅', value: '9:16 · 30fps', options: ['9:16 · 30fps', '16:9 · 30fps'] }
+      ],
+      out: '63 项资产 · 24 个合同', outMeta: '角色 3 · 场景 3 · 道具 4 · 总时长 2′18″', cost: '¥6.40', time: '约 2 分', duration: 1600,
+      preview: { type: 'images', refs: [{ src: 'linwei.jpg', label: '林未 / REF v2' }, { src: 'zhouyan.jpg', label: '周砚 / REF v2' }, { src: 'bookstore.jpg', label: '旧书店 / REF v2' }] },
+      artifacts: [{ name: '角色与场景参考', meta: '63 项 · v2 locked', icon: 'image' }, { name: '24 个 Shot Contract', meta: 'v2 · 2′18″ · frozen', icon: 'list' }]
+    },
+    {
+      id: 'render', no: '04', name: '画面生成', short: '画面',
+      model: 'mork-video-2', m: 'MORK-VIDEO', provider: 'Mork', cap: 'video.generate',
+      cover: { type: 'image', src: 'night-man.jpg' },
+      desc: '按每条 Shot Contract 生成竖屏视频。模型读合同里的角色引用、场景与时长；失败会带诊断码，不改合同重跑不会成功。',
+      input: [
+        { id: 'range', label: '生成范围', value: '全部未生成（24 条）', options: ['全部未生成（24 条）', '仅选中的 6 条', '仅失败的 3 条'] },
+        { id: 'ratio', label: '画幅', value: '9:16 · 30fps', options: ['9:16 · 30fps', '16:9 · 30fps'] },
+        { id: 'duration', label: '单条时长', value: '5 秒 / 条', options: ['5 秒 / 条', '3 秒 / 条', '8 秒 / 条'] },
+        { id: 'concurrency', label: '并发', value: '6 并发', options: ['3 并发', '6 并发', '10 并发'] }
+      ],
+      out: '21 段画面 · 4m12s', outMeta: '1080×1920 · 30fps · H.264 · 承接 9:16', cost: '¥33.60', time: '约 4 分 12 秒', duration: 1800,
+      preview: { type: 'images', refs: [{ src: 'night-man.jpg', label: 'SHOT 04 / 5.0s' }, { src: 'alley.jpg', label: 'SHOT 05 / 4.2s' }, { src: 'rooftop.jpg', label: 'SHOT 06 / 6.0s' }] },
+      artifacts: [{ name: '21 段 9:16 画面', meta: '21 clips · 4m12s · 1080×1920', icon: 'video' }]
+    },
+    {
+      id: 'voice', no: '05', name: '配音与字幕', short: '配音',
+      model: 'moss-tts-cn + mork-llm-7b', m: 'MOSS-TTS', provider: 'Moss · local', cap: 'speech.synthesize · text.complete',
+      cover: { type: 'audio' },
+      desc: '按对白逐条合成配音，按角色绑定音色，再由语言模型切分字幕时间轴。19 条音轨与 SRT 一起冻结，交给时间线。',
+      input: [
+        { id: 'voice', label: '音色方案', value: '林未 · 清冷女声', options: ['林未 · 清冷女声', '周砚 · 低沉男声', '旁白 · 纪录片'] },
+        { id: 'speed', label: '语速', value: '0.95×', options: ['0.9×', '0.95×', '1.0×', '1.1×'] },
+        { id: 'subtitle', label: '字幕', value: '中文 · 烧录 + SRT', options: ['中文 · 烧录 + SRT', '仅 SRT', '中英双语'] },
+        { id: 'emotion', label: '情绪强度', value: '克制', options: ['克制', '自然', '外放'] }
+      ],
+      out: '19 条对白音轨 + SRT', outMeta: '48kHz / 24bit · 19 条 · 中文字幕 42 行', cost: '¥2.28', time: '约 1 分', duration: 1400,
+      preview: { type: 'audio' },
+      artifacts: [{ name: '对白音轨 19 条', meta: '48kHz · wav · frozen', icon: 'mic' }, { name: 'EP01 中文字幕', meta: '42 行 · srt', icon: 'list' }]
+    },
+    {
+      id: 'qa', no: '06', name: '质检与审核', short: '质检',
+      model: 'qa-rules-2026.11 + vision.qa', m: 'QA-RULES', provider: '本地规则 + 视觉模型', cap: 'quality.check · vision.qa',
+      cover: { type: 'qa' },
+      desc: '自动跑 12 项检查：画幅、时长、角色一致性、字幕同步、音画偏移、黑帧与重复帧。机器只给 PASS / REVIEW_REQUIRED / FAIL，最终由你点一次通过。',
+      input: [
+        { id: 'checks', label: '检查项', value: '全部 12 项', options: ['全部 12 项', '画面与时长', '仅阻断项'] },
+        { id: 'threshold', label: '一致度阈值', value: '0.86', options: ['0.80', '0.86', '0.92'] },
+        { id: 'frames', label: '抽帧密度', value: '每 2 秒', options: ['每 1 秒', '每 2 秒', '每 5 秒'] },
+        { id: 'human', label: '人工复核', value: '项目级 · 一次通过', options: ['项目级 · 一次通过', '仅异常项复核'] }
+      ],
+      out: 'QA 报告 · 92 / 100', outMeta: '12 项检查 · 0 阻断 · 2 项建议', cost: '不计费', time: '约 40 秒', duration: 1300,
+      preview: { type: 'qa' },
+      artifacts: [{ name: 'EP01 QA 报告', meta: 'PASS · 62 checks · 0 blockers', icon: 'check' }]
+    },
+    {
+      id: 'export', no: '07', name: '时间线与导出', short: '导出',
+      model: 'Timeline Assembler + FFmpeg', m: 'TIMELINE', provider: '本地执行器', cap: 'timeline.assemble · media.encode',
+      cover: { type: 'image', src: 'rooftop.jpg' },
+      desc: '按分镜顺序自动装配时间线（整数 PTS + 有理数 time_base），再合成画面、音轨与字幕。ffprobe + 完整解码 + checksum 通过后才原子发布。',
+      input: [
+        { id: 'assemble', label: '装配方式', value: '按分镜顺序自动装配', options: ['按分镜顺序自动装配', '沿用 tl_v5 手动编排'] },
+        { id: 'profile', label: '输出规格', value: 'vertical_mp4_v2 · 1080×1920', options: ['vertical_mp4_v2 · 1080×1920', 'preview_720p', 'master_prores'] },
+        { id: 'subtitle', label: '字幕', value: '烧录 + 独立 SRT', options: ['烧录 + 独立 SRT', '仅烧录', '不烧录'] },
+        { id: 'publish', label: '发布', value: '通过后原子发布', options: ['通过后原子发布', '仅生成不上架'] }
+      ],
+      out: 'EP01_v6.mp4', outMeta: '42.8 MB · 1080×1920 · checksum 7d3a…c9', cost: '不计费', time: '约 1 分 20 秒', duration: 1600,
+      preview: { type: 'final' },
+      artifacts: [{ name: 'EP01_v6.mp4', meta: '42.8 MB · vertical · published', icon: 'video' }, { name: 'tl_v6 时间线', meta: 'otio · fps 30 · 2′18″', icon: 'scissors' }]
+    }
+  ];
+
+  const INPUTS = {};
+  STEPS.forEach(s => { INPUTS[s.id] = {}; s.input.forEach(f => INPUTS[s.id][f.id] = f.value); });
+
+  let state = P.state();
+  if (!state.inputs) state.inputs = JSON.parse(JSON.stringify(INPUTS));
+  if (!state.steps.qa) state.steps = P.state().steps;
+  let current = state.current || 'render';
+  let timer = null, runTimer = null, batch = false;
+
+  const LABEL = { done: '已完成', pending: '待生成', running: '生成中', failed: '失败', locked: '已锁定', review: '待审核' };
+  const DOT = { done: 'green', pending: 'yellow', running: 'accent', failed: 'red', locked: '', review: 'yellow' };
+
+  const idxOf = id => STEPS.findIndex(s => s.id === id);
+  const stepOf = id => STEPS[idxOf(id)];
+
+  function save() { state.current = current; P.save(state); }
+  function log(msg) {
+    state.log.unshift(P.time() + '  ' + msg);
+    state.log = state.log.slice(0, 30);
+  }
+  function unlocked(id) {
+    const i = idxOf(id);
+    if (i <= 0) return true;
+    return state.steps[STEPS[i - 1].id].status === 'done';
+  }
+
+  function cardCover(s) {
+    if (s.cover.type === 'text') {
+      return '<div class="stage-cover text"><div class="fake-lines"><i></i><i></i><i></i><i></i></div></div>';
+    }
+    if (s.cover.type === 'audio') {
+      const bars = Array.from({ length: 19 }, (_, i) => '<i style="height:' + (6 + (i * 7 % 20)) + 'px"></i>').join('');
+      return '<div class="stage-cover audio"><div class="wave">' + bars + '</div></div>';
+    }
+    if (s.cover.type === 'qa') {
+      return '<div class="stage-cover qa"><div class="score">92<small>QA SCORE</small></div></div>';
+    }
+    return '<div class="stage-cover"><img src="assets/img/' + s.cover.src + '" alt=""><span class="stage-num">' + s.no + '</span></div>';
+  }
+
+  function renderStrip() {
+    document.getElementById('flow-strip').innerHTML = STEPS.map((s, i) => {
+      const st = state.steps[s.id].status;
+      return '<article class="stage-card' + (current === s.id ? ' is-active' : '') + '" data-step="' + s.id + '">' +
+        cardCover(s) +
+        '<div class="stage-state"><span class="status"><span class="dot ' + DOT[st] + '"></span>' + LABEL[st] + '</span></div>' +
+        '<div class="stage-info"><h3>' + s.name + '</h3><div class="model">' + s.model + '</div>' +
+        '<div class="stage-foot"><span>' + s.no + ' / 07</span><span class="cost">' + s.cost + '</span></div></div>' +
+        '</article>';
+    }).join('');
+  }
+
+  function statusChip(st) {
+    const map = { done: 'green', pending: 'yellow', running: 'accent', failed: 'red', locked: '', review: 'yellow' };
+    return '<span class="chip ' + (map[st] || '') + '"><span class="dot ' + DOT[st] + '"></span>' + LABEL[st] + '</span>';
+  }
+
+  function inputHTML(s) {
+    return '<div class="input-grid">' + s.input.map(f =>
+      '<label class="field"><span>' + f.label + '</span><select data-input="' + f.id + '">' +
+      f.options.map(o => '<option' + (state.inputs[s.id][f.id] === o ? ' selected' : '') + '>' + o + '</option>').join('') +
+      '</select></label>'
+    ).join('') + '</div>';
+  }
+
+  function previewHTML(s, st) {
+    const type = s.preview.type;
+    if (type === 'text') {
+      const body = s.preview.body.split('\n').filter(Boolean).map(p => '<p>' + p + '</p>').join('');
+      return '<div class="text-preview"><div class="stamp">' + s.preview.stamp + '</div><h4>' + s.preview.title + '</h4>' + body + '</div>';
+    }
+    if (type === 'images') {
+      return '<div class="contact-sheet">' + s.preview.refs.map((r, i) =>
+        st === 'pending' ? '<figure class="empty">SHOT ' + String(i + 1).padStart(2, '0') + '<br>未生成</figure>' :
+        '<figure><img src="assets/img/' + r.src + '" alt=""><figcaption>' + r.label + '</figcaption></figure>'
+      ).join('') + '</div>';
+    }
+    if (type === 'audio') {
+      const bars = Array.from({ length: 64 }, (_, i) => '<i style="width:3px;height:' + (5 + (i * 13 % 26)) + 'px"></i>').join('');
+      return '<div class="wave" style="height:74px;gap:2px;padding:0 6px;border:1px solid var(--line);background:var(--bg-soft)">' + bars + '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">' +
+        ['林未 / 03 对白 / 00:12', '周砚 / 05 对白 / 00:18', '林未 / 07 对白 / 00:09', '旁白 / 02 段 / 00:06'].map(x =>
+          '<div class="mini-kpi" style="padding:8px"><span>' + x.split(' / ')[0] + '</span><b>' + x.split(' / ')[1] + '</b></div>').join('') +
+        '</div>';
+    }
+    if (type === 'qa') {
+      const rows = [['画幅与项目一致', '9:16 / 1080×1920', 'pass'], ['音画偏移', '≤ 40ms', 'pass'], ['角色一致度', '0.91 / 阈值 0.86', 'pass'], ['字幕断行', '2 处建议', 'warn']];
+      return '<div>' + rows.map(r => '<div class="qa-item"><span class="qa-mark ' + r[2] + '">' + (r[2] === 'pass' ? '✓' : '!') + '</span><div class="txt"><b>' + r[0] + '</b><span>' + r[1] + '</span></div></div>').join('') + '</div>';
+    }
+    // final
+    return '<div class="tl-preview" style="padding:0;border:0"><div class="frame" style="width:190px"><img src="assets/img/rooftop.jpg" alt=""><span class="tc">00:01:12:08</span></div>' +
+      '<div class="meta" style="padding:4px 0 0 14px"><h3>EP01_v6.mp4</h3><p>1080×1920 · 30fps · H.264 High<br>42.8 MB · 2′18″ · checksum 7d3a…c9</p>' +
+      '<div style="display:flex;gap:6px;margin-top:12px"><span class="chip green">已发布</span><span class="chip">tl_v6</span><span class="chip">SRT</span></div></div></div>';
+  }
+
+  function renderPanel() {
+    const s = stepOf(current);
+    const st = state.steps[s.id].status;
+    const i = idxOf(s.id);
+    let action = '';
+    if (st === 'running') {
+      action = '<button class="btn btn-primary" disabled><span class="spin"></span>生成中 <span id="stage-pct">8%</span></button>';
+    } else if (st === 'review') {
+      action = '<button class="btn" disabled>等待审核</button>';
+    } else if (st === 'locked') {
+      action = '<button class="btn" disabled>待上一步完成</button>';
+    } else if (st === 'failed') {
+      action = '<button class="btn btn-primary" data-act="fix"><span data-i="refresh"></span>按 9:16 重跑</button>';
+    } else if (st === 'done') {
+      action = '<button class="btn" data-act="run"><span data-i="refresh"></span>重新生成</button>';
+    } else {
+      action = '<button class="btn btn-primary" data-act="run"><span data-i="play"></span>生成此步</button>';
+    }
+
+    const outState = st === 'done' ? '已生成' : st === 'review' ? '待审核' : st === 'running' ? '生成中' : st === 'failed' ? '失败' : '未产出';
+    const outChip = st === 'done' ? 'green' : st === 'failed' ? 'red' : st === 'review' ? 'yellow' : '';
+
+    document.getElementById('stage-panel').innerHTML =
+      '<div class="stage-head"><div><div class="no">' + s.no + ' / 07 · ' + s.cap + '</div><h2>' + s.name + '</h2><p class="desc">' + s.desc + '</p></div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' + statusChip(st) + action + '</div></div>' +
+      '<div class="stage-body">' +
+        '<div style="display:grid;grid-template-columns:1.05fr .95fr;gap:18px">' +
+          '<div><h3>输入 / 你只需要确认这些</h3>' + inputHTML(s) +
+            '<h3 style="margin-top:18px">上游输入 / 已冻结</h3>' +
+            '<div class="upstream">' + (i === 0 ?
+              '<div class="upstream-row"><span class="no">IDEA</span><b>一句话创意</b><span>manual · locked</span></div>' :
+              STEPS.slice(0, i).filter(x => state.steps[x.id].status === 'done').slice(-2).map(x =>
+                '<div class="upstream-row"><span class="no">' + x.no + '</span><b>' + x.out + '</b><span>' + (state.steps[x.id].req || 'frozen') + '</span></div>'
+              ).join('') || '<div class="empty-state" style="padding:14px;font-size:10px">上游暂无已冻结产物</div>') +
+            '</div>' +
+            '<h3 style="margin-top:18px">本步约束</h3><ul class="rule-list"><li>只读上一步已冻结版本，不读取草稿</li><li>产物不可变，重跑生成新版本而不是覆盖</li><li>失败保留诊断码，修输入后显式重跑</li></ul>' +
+          '</div>' +
+          '<div><h3>OUTPUT / 模型产物</h3><div class="output-box" style="margin-top:0"><div class="out-head"><span class="eyebrow">' + outState + '</span><span class="chip ' + outChip + '">' + (st === 'done' ? 'v6 · frozen' : '—') + '</span></div>' +
+          previewHTML(s, st) +
+          '<div class="out-main" style="margin-top:10px">' + (st === 'done' || st === 'review' ? s.out : '尚未生成') + '</div>' +
+          '<div class="out-sub">' + (st === 'done' || st === 'review' ? s.outMeta : '点「生成此步」后由模型写入产物；产物不可变，重跑生成新版本。') + '</div>' +
+          '<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm" data-act="artifact"><span data-i="eye"></span>查看产物</button><a class="btn btn-sm" href="' + ({ setup: 'script.html', script: 'episodes.html', assets: 'assets.html', render: 'board.html', voice: 'voice.html', qa: 'review.html', export: 'timeline.html' })[s.id] + '">打开专业视图 <span data-i="arrowRight"></span></a></div>' +
+          '</div></div>' +
+        '</div>' +
+        '<div class="log" style="margin:16px -20px -18px;padding-left:20px;padding-right:20px"><div class="log-head"><span>SESSION LOG</span><span id="log-count">' + state.log.length + ' 条</span></div><div class="log-lines" id="log-lines">' +
+          state.log.slice(0, 8).map(l => '<div><time>' + l.slice(0, 8) + '</time><span>' + P.esc(l.slice(10)) + '</span></div>').join('') +
+        '</div></div>' +
+      '</div>';
+    hydrateIcons(document.getElementById('stage-panel'));
+    renderSide(s, st);
+  }
+
+  function renderSide(s, st) {
+    const artifacts = STEPS.filter(x => ['done', 'review'].includes(state.steps[x.id].status) && idxOf(x.id) <= idxOf(s.id))
+      .flatMap(x => (x.artifacts || []).map(a => ({ ...a, step: x.name, id: x.id })));
+    const gate = s.id === 'qa' && st === 'review';
+    const locked = st === 'locked';
+    document.getElementById('side-stack').innerHTML =
+      '<section class="panel model-card"><div class="panel-head"><h2>模型与参数</h2><span class="sub">MODEL CALL</span></div><div class="panel-body">' +
+        '<div class="model-name"><b>' + s.model + '</b><span class="chip accent">' + s.cap + '</span></div>' +
+        '<div class="cap">' + s.provider + '</div>' +
+        '<dl class="kv" style="margin-top:12px">' +
+          '<dt>输入</dt><dd>上一步冻结版本</dt>' +
+          '<dt>计费</dt><dd class="mono">' + s.cost + '</dd>' +
+          '<dt>预计耗时</dt><dd>' + s.time + '</dd>' +
+          '<dt>失败策略</dt><dd>不降级 · 不重试 · 保留诊断码</dd>' +
+        '</dl>' +
+        '<div class="banner" style="margin-top:12px;padding:8px 10px;font-size:10px;line-height:1.6">' + s.m + ' 只读取已冻结的输入；失败或超时不自动切换模型。</div>' +
+      '</div></section>' +
+      (gate ?
+        '<section class="panel gate-card"><div class="panel-head"><h2>需要你确认</h2><span class="sub">HUMAN GATE</span></div><div class="panel-body">' +
+        '<div style="font-size:12px;line-height:1.7">机器检查已通过，仍有 2 项建议需要人看。这是项目级审核，<b style="color:var(--text)">点一次通过即生效</b>，没有多级会签。</div>' +
+        '<div class="gate-actions"><button class="btn btn-primary btn-sm" data-act="approve"><span data-i="check"></span>审核通过</button><button class="btn btn-sm" data-act="reject">退回重跑</button></div>' +
+        '<div style="font-size:9px;color:var(--dim);margin-top:8px">退回后 QA 回待生成，导出保持锁定，旧结论不继承。</div>' +
+        '</div></section>' : '') +
+      '<section class="panel run-card"><div class="panel-head"><h2>本次调用</h2><span class="sub">ESTIMATE</span></div><div class="panel-body">' +
+        '<div class="estimate"><b>' + s.cost + '</b><span>' + s.time + '</span></div>' +
+        (st === 'running' ? '<div class="mini-bar" style="width:100%;height:5px;margin-bottom:10px"><i id="side-bar" style="width:8%"></i></div><div class="note" id="side-note">模型执行中 · 8%</div>' :
+          '<button class="btn btn-primary" style="width:100%" ' + (locked || st === 'review' ? 'disabled' : '') + ' data-act="' + (st === 'failed' ? 'fix' : 'run') + '">' + (locked ? '等待上一步' : st === 'review' ? '等待人工审核' : st === 'done' ? '重新生成此步' : '生成此步') + '</button>' +
+          '<div class="note">' + (locked ? '上一步 ' + STEPS[idxOf(current) - 1].name + ' 完成后解锁。' : '生成成功后自动解锁下一步；失败请按诊断码修改输入。') + '</div>') +
+      '</div></section>' +
+      '<section class="panel"><div class="panel-head"><h2>本集产物</h2><span class="sub">' + artifacts.length + ' ITEMS</span></div><div class="artifact-list">' +
+        (artifacts.length ? artifacts.map((a, i) => '<div class="artifact-row" data-art="' + (a.id || s.id) + '"><span class="icon" data-i="' + a.icon + '"></span><span class="name"><b>' + a.name + '</b><span>' + a.meta + '</span></span><span class="right" data-i="chevron"></span></div>').join('') :
+          '<div class="empty-state" style="padding:26px">还没有产物</div>') +
+      '</div></section>';
+    hydrateIcons(document.getElementById('side-stack'));
+  }
+
+  function renderBanner() {
+    const failed = STEPS.find(s => state.steps[s.id].status === 'failed');
+    const review = STEPS.find(s => state.steps[s.id].status === 'review');
+    let html = '';
+    if (failed) {
+      html = '<div class="banner danger" style="margin-bottom:12px"><span data-i="alert"></span><div class="grow"><b>' + failed.name + '失败 · QA_FRAME_RATIO_MISMATCH</b> 输出 16:9（1920×1080），项目要求 9:16（1080×1920）。已阻断，未写入时间线。</div><button class="btn btn-sm" data-act="fix">按 9:16 重跑</button></div>';
+    } else if (review) {
+      html = '<div class="banner warn" style="margin-bottom:12px"><span data-i="check"></span><div class="grow"><b>质检已通过，等待你点一次「审核通过」。</b> 审核通过后才解锁时间线与导出；退回会重新质检。</div><a class="btn btn-sm" href="review.html">打开审核台 <span data-i="arrowRight"></span></a></div>';
+    } else if (state.steps.export.status === 'done') {
+      html = '<div class="banner accent" style="margin-bottom:12px"><span data-i="check"></span><div class="grow"><b>EP01_v6.mp4 已发布。</b> checksum 7d3a…c9 · 42.8 MB · 1080×1920。可直接进入时间线复核或回到项目列表。</div><a class="btn btn-sm" href="timeline.html">打开时间线 <span data-i="arrowRight"></span></a></div>';
+    }
+    document.getElementById('banner-host').innerHTML = html;
+    hydrateIcons(document.getElementById('banner-host'));
+  }
+
+  function renderAll() {
+    renderStrip();
+    renderPanel();
+    renderBanner();
+    const done = STEPS.filter(s => state.steps[s.id].status === 'done').length;
+    document.getElementById('run-label').textContent = done + ' / 7 步完成';
+    document.getElementById('run-bar').style.width = Math.round(done / 7 * 100) + '%';
+    document.getElementById('review-link').style.display = state.steps.qa.status === 'review' ? '' : 'none';
+  }
+
+  function updateProgress(pct) {
+    const p = Math.min(96, pct);
+    const bar = document.getElementById('run-bar');
+    if (bar) bar.style.width = Math.max(43, Math.round((3 + p / 100) / 7 * 100)) + '%';
+    const stage = document.getElementById('stage-pct');
+    if (stage) stage.textContent = p + '%';
+    const side = document.getElementById('side-bar');
+    if (side) side.style.width = p + '%';
+    const note = document.getElementById('side-note');
+    if (note) note.textContent = '模型执行中 · ' + p + '%';
+  }
+
+  function finishStep(s, ok) {
+    if (!ok) {
+      state.steps[s.id].status = 'failed';
+      state.steps[s.id].error = 'QA_FRAME_RATIO_MISMATCH: output 16:9, expected 9:16';
+      log(s.name + ' 失败 · QA_FRAME_RATIO_MISMATCH，未写入时间线');
+      P.save(state);
+      renderAll();
+      P.toast('生成失败：画幅与项目不一致，请按 9:16 重跑');
+      return;
+    }
+    if (s.id === 'qa') {
+      state.steps.qa.status = 'review';
+      log('QA 完成 · 12 项检查通过，等待人工审核');
+      P.save(state);
+      renderAll();
+      batch = false;
+      P.toast('质检完成，等待你点「审核通过」');
+      return;
+    }
+    state.steps[s.id].status = 'done';
+    state.steps[s.id].at = P.time();
+    state.steps[s.id].req = 'req_' + Math.random().toString(16).slice(2, 10);
+    const next = STEPS[idxOf(s.id) + 1];
+    if (next && state.steps[next.id].status === 'locked') state.steps[next.id].status = 'pending';
+    log(s.name + ' 完成 · ' + s.out + '，已解锁' + (next ? '「' + next.name + '」' : '交付'));
+    P.save(state);
+    renderAll();
+    if (batch) {
+      const nextIdx = STEPS.findIndex(x => !['done', 'review'].includes(state.steps[x.id].status));
+      if (nextIdx >= 0 && state.steps[STEPS[nextIdx].id].status !== 'locked') {
+        current = STEPS[nextIdx].id;
+        setTimeout(() => runStep(nextIdx), 450);
+      } else {
+        batch = false;
+      }
+    }
+  }
+
+  function runStep(i) {
+    const s = STEPS[i];
+    if (state.steps[s.id].status === 'running') return;
+    if (s.id !== 'setup' && !unlocked(s.id)) { P.toast('上一步还没完成'); return; }
+    current = s.id;
+    state.steps[s.id].status = 'running';
+    state.steps[s.id].req = 'req_' + Math.random().toString(16).slice(2, 10);
+    state.steps[s.id].at = P.time();
+    log('开始生成「' + s.name + '」· ' + s.model);
+    P.save(state);
+    renderAll();
+    let pct = 8;
+    if (timer) clearInterval(timer);
+    timer = setInterval(() => { pct = Math.min(92, pct + 4); updateProgress(pct); }, 90);
+    if (runTimer) clearTimeout(runTimer);
+    runTimer = setTimeout(() => {
+      clearInterval(timer); timer = null;
+      const ratio = state.inputs.render.ratio;
+      const bad = s.id === 'render' && ratio === '16:9 · 30fps';
+      finishStep(s, !bad);
+    }, s.duration);
+  }
+
+  function runCurrent() {
+    const i = idxOf(current);
+    if (state.steps[current].status === 'running') return;
+    batch = false;
+    runStep(i);
+  }
+
+  function runAll() {
+    if (STEPS.some(s => state.steps[s.id].status === 'running')) { P.toast('已有步骤在生成中'); return; }
+    if (state.steps.qa.status === 'review') { P.toast('质检已完成，请先点「审核通过」再继续导出'); return; }
+    const first = STEPS.findIndex(s => !['done'].includes(state.steps[s.id].status));
+    if (first < 0) { P.toast('7 步已全部完成，可直接复核时间线'); return; }
+    if (state.steps[STEPS[first].id].status === 'locked') { P.toast('流程被锁住，请刷新或重置'); return; }
+    batch = true;
+    current = STEPS[first].id;
+    runStep(first);
+  }
+
+  function approve() {
+    state.steps.qa.status = 'done';
+    state.steps.export.status = 'pending';
+    state.accepted = true;
+    log('人工审核通过 · 解锁「时间线与导出」');
+    P.save(state);
+    renderAll();
+    P.toast('审核通过，已解锁时间线与导出');
+  }
+
+  function reject() {
+    state.steps.qa.status = 'pending';
+    state.steps.export.status = 'locked';
+    log('审核退回重跑 · QA 回待生成，导出保持锁定');
+    P.save(state);
+    renderAll();
+    P.toast('已退回：需要重新质检，旧结论不继承');
+  }
+
+  function fixRatio() {
+    state.inputs.render.ratio = '9:16 · 30fps';
+    P.save(state);
+    current = 'render';
+    if (state.steps.render.status === 'failed') {
+      state.steps.render.status = 'pending';
+    }
+    renderAll();
+    runStep(idxOf('render'));
+  }
+
+  function openArtifact(id) {
+    const s = stepOf(id);
+    const st = state.steps[s.id].status;
+    if (st !== 'done' && st !== 'review') { P.toast('这一步还没有产物'); return; }
+    document.getElementById('art-title').textContent = s.no + ' · ' + s.name;
+    document.getElementById('art-status').textContent = st === 'review' ? '待审核' : '已生成';
+    document.getElementById('art-main').textContent = s.out;
+    document.getElementById('art-sub').textContent = s.outMeta;
+    document.getElementById('art-step').textContent = s.no + ' ' + s.name;
+    document.getElementById('art-model').textContent = s.model + ' · ' + s.cap;
+    document.getElementById('art-input').textContent = Object.keys(state.inputs[s.id]).map(k => state.inputs[s.id][k]).join(' / ');
+    document.getElementById('art-req').textContent = state.steps[s.id].req || 'req_7f3a91c2';
+    document.getElementById('art-time').textContent = state.steps[s.id].at || P.time();
+    document.getElementById('art-link').href = ({ setup: 'script.html', script: 'episodes.html', assets: 'assets.html', render: 'board.html', voice: 'voice.html', qa: 'review.html', export: 'timeline.html' })[s.id];
+    P.openDrawer('drawer-artifact');
+  }
+
+  document.addEventListener('click', function (e) {
+    const step = e.target.closest('[data-step]');
+    if (step) { current = step.dataset.step; save(); renderAll(); return; }
+    const act = e.target.closest('[data-act]');
+    if (act) {
+      const a = act.dataset.act;
+      if (a === 'run') runCurrent();
+      else if (a === 'run-all') runAll();
+      else if (a === 'approve') approve();
+      else if (a === 'reject') reject();
+      else if (a === 'fix') fixRatio();
+      else if (a === 'artifact') openArtifact(current);
+      else if (a === 'reset') {
+        if (timer) clearInterval(timer);
+        if (runTimer) clearTimeout(runTimer);
+        timer = null; runTimer = null; batch = false;
+        P.reset();
+        state = P.state();
+        current = 'render';
+        renderAll();
+        P.toast('已重置：回到 3 / 7，从「画面生成」继续');
+      }
+      return;
+    }
+    const art = e.target.closest('[data-art]');
+    if (art) openArtifact(art.dataset.art);
+  });
+
+  document.addEventListener('change', function (e) {
+    const f = e.target.closest('[data-input]');
+    if (!f) return;
+    state.inputs[current][f.dataset.input] = f.value;
+    if (current === 'render' && f.dataset.input === 'ratio') state.renderRatio = f.value;
+    P.save(state);
+    if (current === 'render' && f.dataset.input === 'ratio' && f.value === '16:9 · 30fps') {
+      P.toast('已改为 16:9。生成会返回画幅不一致诊断码，用于演示失败与修复。');
+    }
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

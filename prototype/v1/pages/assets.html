@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>资产库 · 长夜将明 · 短剧生产平台原型</title>
+<link rel="stylesheet" href="../assets/prototype.css" />
+</head>
+<body data-page="assets" data-project="1">
+<div class="shell">
+  <aside class="sidebar" data-nav></aside>
+  <div class="main">
+    <header class="topbar" data-topbar></header>
+    <nav class="module-tabs" data-tabs></nav>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Asset library</p>
+          <h1>资产库</h1>
+          <p class="lede">角色、场景、道具与参考媒体的不可变版本。资产只在项目内引用，引用锁定具体版本；被引用的资产禁止物理删除。</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-default" type="button" data-toast="原型：按素材来源扫描相似资产候选（仅提示，不自动合并）">查重</button>
+          <button class="btn btn-primary" type="button" data-drawer="drawer-upload"><i data-icon="upload"></i>上传资产</button>
+        </div>
+      </div>
+
+      <section class="card">
+        <div class="toolbar">
+          <div class="search"><i data-icon="search"></i><input placeholder="搜索资产名称、标签或版本号" /></div>
+          <div data-filter-group="assets" style="display: flex; gap: 6px">
+            <button class="chip active" data-filter="all" type="button">全部<span class="c">73</span></button>
+            <button class="chip" data-filter="character" type="button">角色<span class="c">8</span></button>
+            <button class="chip" data-filter="location" type="button">场景<span class="c">11</span></button>
+            <button class="chip" data-filter="prop" type="button">道具<span class="c">24</span></button>
+            <button class="chip" data-filter="ref" type="button">参考素材<span class="c">30</span></button>
+          </div>
+          <div class="spacer"></div>
+          <select class="control" aria-label="按状态筛选">
+            <option>全部状态</option>
+            <option>ready</option>
+            <option>in_review</option>
+            <option>stale</option>
+            <option>revoked</option>
+          </select>
+          <span class="count">按最近更新降序</span>
+        </div>
+
+        <div class="card-body" data-status-group="assets">
+          <div class="asset-grid" id="asset-grid">
+            <article class="asset-card" data-select data-row data-status="character" data-select-group="asset-detail" data-select="a_41e2" data-title="沈砚 · 参考图 v2" data-version="v2" data-status-label="ready" data-owner="方屿">
+              <div class="asset-thumb">
+                <span class="glyph">CHARACTER<br>沈砚 / 28 男</span>
+                <span class="vtag">v2</span>
+                <span class="stale-tag">STALE</span>
+              </div>
+              <div class="asset-meta">
+                <strong>沈砚 · 参考图</strong>
+                <small>a_41e2 · v2 · 2048×2732</small>
+                <div class="asset-foot"><span class="pill ready">ready</span><span class="mono" style="font-size: 9px; color: var(--text-3)">9 引用</span></div>
+              </div>
+            </article>
+
+            <article class="asset-card" data-select data-row data-status="character" data-select-group="asset-detail" data-select="a_51b0" data-title="林晚 · 参考图 v3" data-version="v3" data-status-label="ready" data-owner="方屿">
+              <div class="asset-thumb">
+                <span class="glyph">CHARACTER<br>林晚 / 26 女</span>
+                <span class="vtag">v3</span>
+              </div>
+              <div class="asset-meta">
+                <strong>林晚 · 参考图</strong>
+                <small>a_51b0 · v3 · 2048×2732</small>
+                <div class="asset-foot"><span class="pill ready">ready</span><span class="mono" style="font-size: 9px; color: var(--text-3)">6 引用</span></div>
+              </div>
+            </article>
+
+            <article class="asset-card" data-select data-row data-status="character" data-select-group="asset-detail" data-select="a_73c4" data-title="陈九 · 参考图 v1" data-version="v1" data-status-label="in_review" data-owner="方屿">
+              <div class="asset-thumb">
+                <span class="glyph">CHARACTER<br>陈九 / 45 男</span>
+                <span class="vtag">v1</span>
+                <span class="stale-tag">REVIEW</span>
+              </div>
+              <div class="asset-meta">
+                <strong>陈九 · 参考图</strong>
+                <small>a_73c4 · v1 · 2048×2732</small>
+                <div class="asset-foot"><span class="pill review">in_review</span><span class="mono" style="font-size: 9px; color: var(--text-3)">3 引用</span></div>
+              </div>
+            </article>
+
+            <article class="asset-card" data-select data-row data-status="location" data-select-group="asset-detail" data-select="a_2b19" data-title="旧书店内景" data-version="v2" data-status-label="ready" data-owner="方屿">
+              <div class="asset-thumb">
+                <span class="glyph">LOCATION<br>旧书店 · 内景 · 夜</span>
+                <span class="vtag">v2</span>
+              </div>
+              <div class="asset-meta">
+                <strong>旧书店内景</strong>
+                <small>a_2b19 · v2 · 3840×2160</small>
+                <div class="asset-foot"><span class="pill ready">ready</span><span class="mono" style="font-size: 9px; color: var(--text-3)">14 引用</span></div>
+              </div>
+            </article>
+
+            <article class="asset-card" data-select data-row data-status="location" data-select-group="asset-detail" data-select="a_2f77" data-title="雨夜巷口" data-version="v1" data-status-label="revoked" data-owner="方屿">
+              <div class="asset-thumb" style="opacity: 0.72">
+                <span class="glyph">LOCATION<br>巷口 · 夜 · 雨</span>
+                <span class="vtag">v1</span>
+                <span class="stale-tag">REVOKED</span>
+              </div>
+              <div class="asset-meta">
+                <strong>雨夜巷口</strong>
+                <small>a_2f77 · v1 · 3840×2160</small>
+                <div class="asset-foot"><span class="pill fail">revoked</span><span class="mono" style="font-size: 9px; color: var(--text-3)">已阻断导出</span></div>
+              </div>
+            </article>
+
+            <article class="asset-card" data-select data-row data-status="location" data-select-group="asset-detail" data-select="a_3c02" data-title="律所顶层" data-version="v1" data-status-label="ready" data-owner="方屿">
+              <div class="asset-thumb">
+                <span class="glyph">LOCATION<br>律所 · 顶层 · 日</span>
+                <span class="vtag">v1</span>
+              </div>
+              <div class="asset-meta">
+                <strong>律所顶层</strong>
+                <small>a_3c02 · v1 · 3840×2160</small>
+                <div class="asset-foot"><span class="pill ready">ready</span><span class="mono" style="font-size: 9px; color: var(--text-3)">2 引用</span></div>
+              </div>
+            </article>
+
+            <article class="asset-card" data-select data-row data-status="prop" data-select-group="asset-detail" data-select="a_38d1" data-title="黄铜怀表" data-version="v2" data-status-label="ready" data-owner="方屿">
+              <div class="asset-thumb">
+                <span class="glyph">PROP<br>黄铜怀表 · 3:00</span>
+                <span class="vtag">v2</span>
+              </div>
+              <div class="asset-meta">
+                <strong>黄铜怀表</strong>
+                <small>a_38d1 · v2 · 2048×2048</small>
+                <div class="asset-foot"><span class="pill ready">ready</span><span class="mono" style="font-size: 9px; color: var(--text-3)">5 引用</span></div>
+              </div>
+            </article>
+
+            <article class="asset-card" data-select data-row data-status="prop" data-select-group="asset-detail" data-select="a_38ea" data-title="录音笔" data-version="v1" data-status-label="ready" data-owner="方屿">
+              <div class="asset-thumb">
+                <span class="glyph">PROP<br>录音笔 · 银灰</span>
+                <span class="vtag">v1</span>
+              </div>
+              <div class="asset-meta">
+                <strong>录音笔</strong>
+                <small>a_38ea · v1 · 2048×2048</small>
+                <div class="asset-foot"><span class="pill ready">ready</span><span class="mono" style="font-size: 9px; color: var(--text-3)">3 引用</span></div>
+              </div>
+            </article>
+
+            <article class="asset-card" data-select data-row data-status="prop" data-select-group="asset-detail" data-select="a_38f6" data-title="旧报纸 · 2019" data-version="v1" data-status-label="ready" data-owner="方屿">
+              <div class="asset-thumb">
+                <span class="glyph">PROP<br>旧报纸 · 泛黄</span>
+                <span class="vtag">v1</span>
+              </div>
+              <div class="asset-meta">
+                <strong>旧报纸 · 2019</strong>
+                <small>a_38f6 · v1 · 2048×2048</small>
+                <div class="asset-foot"><span class="pill ready">ready</span><span class="mono" style="font-size: 9px; color: var(--text-3)">2 引用</span></div>
+              </div>
+            </article>
+
+            <article class="asset-card" data-select data-row data-status="ref" data-select-group="asset-detail" data-select="a_6011" data-title="参考 · 雨夜街道" data-version="v1" data-status-label="ready" data-owner="方屿">
+              <div class="asset-thumb">
+                <span class="glyph">REFERENCE<br>雨夜街道 · 氛围</span>
+                <span class="vtag">v1</span>
+              </div>
+              <div class="asset-meta">
+                <strong>参考 · 雨夜街道</strong>
+                <small>a_6011 · v1 · 1920×1080</small>
+                <div class="asset-foot"><span class="pill ready">ready</span><span class="mono" style="font-size: 9px; color: var(--text-3)">4 引用</span></div>
+              </div>
+            </article>
+          </div>
+
+          <div class="banner info" style="margin: 14px 0 0">
+            <i data-icon="info"></i>
+            <div><b>选中卡片会在右侧展开版本与引用影响。</b>引用固定版本：上游更新后，下游只会被标记 stale，不会被静默替换。点任意卡片查看详情。</div>
+          </div>
+        </div>
+
+        <div class="pager"><span>显示 10 / 73 · 已上传 73 项，0 项隔离中</span><div class="pages"><span class="on">1</span><span>2</span><span>3</span><span>…</span><span>8</span></div></div>
+      </section>
+
+      <div class="grid g-3">
+        <section class="card">
+          <div class="card-head"><h2>上传与扫描流程</h2><span class="sub">QUARANTINE</span></div>
+          <div class="card-body">
+            <div class="kv">
+              <div class="row"><dt>1 · 客户端预检</dt><dd>类型 / 大小（服务端重校验）</dd></div>
+              <div class="row"><dt>2 · 隔离区</dt><dd>病毒与恶意内容扫描</dd></div>
+              <div class="row"><dt>3 · 媒体探测</dt><dd>ffprobe / 图像元数据</dd></div>
+              <div class="row"><dt>4 · checksum</dt><dd>sha256 校验入库</dd></div>
+              <div class="row"><dt>5 · 登记版本</dt><dd>生成 AssetVersion</dd></div>
+            </div>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>引用规则</h2><span class="sub">PROJECT SCOPE</span></div>
+          <div class="card-body">
+            <p class="lede" style="font-size: 11.5px">所有 Asset 必须带 <span class="mono">project_id</span>；AssetRelation 两端必须同项目。跨项目引用一律 403，不提供跨项目搜索与共享入口。</p>
+            <div class="banner stale" style="margin: 10px 0 0"><i data-icon="alert"></i><div>有引用时删除返回 409，只允许归档或撤回；撤回会阻断下游新导出。</div></div>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>上传失败状态</h2><span class="sub">ERROR</span></div>
+          <div class="card-body">
+            <div class="issue-row"><span class="issue-sev block">失败</span><div class="issue-body"><strong>checksum 不匹配</strong><p>上传中断或文件被篡改，进入隔离区不发布。</p></div></div>
+            <div class="issue-row"><span class="issue-sev warn">重试</span><div class="issue-body"><strong>扫描服务不可用</strong><p>可延迟重试，不标记为通过。</p></div></div>
+            <div class="issue-row"><span class="issue-sev info">提示</span><div class="issue-body"><strong>格式不受支持</strong><p>返回 422 与允许的 MIME 列表。</p></div></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- 资产详情抽屉 -->
+<div class="drawer-backdrop" id="drawer-asset-backdrop" data-close-drawer="drawer-asset"></div>
+<aside class="drawer" id="drawer-asset">
+  <div class="drawer-head">
+    <div>
+      <p class="eyebrow">Asset detail</p>
+      <h2 data-bind="title">沈砚 · 参考图 v2</h2>
+    </div>
+    <button class="close-x" type="button" data-close-drawer="drawer-asset"><i data-icon="x"></i></button>
+  </div>
+  <div class="drawer-body">
+    <div class="asset-thumb" style="aspect-ratio: 3 / 4; max-width: 240px; border-radius: 3px; margin-bottom: 14px">
+      <span class="glyph" style="font-size: 10px">CHARACTER<br>REFERENCE v2</span>
+      <span class="vtag">v2</span>
+    </div>
+    <div class="kv">
+      <div class="row"><dt>资产 ID</dt><dd class="mono">a_41e2</dd></div>
+      <div class="row"><dt>当前版本</dt><dd class="mono" data-bind="version">v2</dd></div>
+      <div class="row"><dt>类型</dt><dd>角色参考图</dd></div>
+      <div class="row"><dt>状态</dt><dd><span class="pill ready" data-bind="status-label">ready</span></dd></div>
+      <div class="row"><dt>负责人</dt><dd data-bind="owner">方屿</dd></div>
+      <div class="row"><dt>尺寸 / 格式</dt><dd class="mono">2048×2732 · PNG</dd></div>
+      <div class="row"><dt>checksum</dt><dd class="mono">9c2f41…a1</dd></div>
+      <div class="row"><dt>来源</dt><dd>项目内上传 · 11-14 09:12</dd></div>
+      <div class="row"><dt>分类</dt><dd>internal · retention 永久</dd></div>
+    </div>
+
+    <div class="section-label">版本</div>
+    <div class="ref-line"><span class="tag">v2</span><span>当前 · 服装调整为深灰风衣</span><span class="lock">11-14</span></div>
+    <div class="ref-line"><span class="tag">v1</span><span>初版 · 浅色外套</span><span class="pill stale">stale</span></div>
+
+    <div class="section-label">引用影响（9）</div>
+    <div class="ref-line"><span class="tag">shot 1-01</span><span>近景 · 柜台</span><span class="pill pass">已审核</span></div>
+    <div class="ref-line"><span class="tag">shot 1-02</span><span>中景 · 转身</span><span class="pill pass">已审核</span></div>
+    <div class="ref-line"><span class="tag">shot 1-04</span><span>双人 · 门口</span><span class="pill stale">stale</span></div>
+    <div class="ref-line"><span class="tag">+6</span><span>其余镜头与 2 个时间线片段</span><span class="lock">展开</span></div>
+
+    <div class="banner stale" style="margin-top: 12px"><i data-icon="lock"></i><div>该资产被 9 处引用，禁止物理删除；归档后仍可回查历史版本。</div></div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn btn-danger" type="button" data-act="delete-asset">删除</button>
+    <button class="btn btn-default" type="button" data-toast="原型：打开版本对比（v1 ↔ v2 元数据与图像差异）">对比版本</button>
+    <button class="btn btn-primary" type="button" data-drawer="drawer-upload">上传新版本</button>
+  </div>
+</aside>
+
+<!-- 上传抽屉 -->
+<div class="drawer-backdrop" id="drawer-upload-backdrop" data-close-drawer="drawer-upload"></div>
+<aside class="drawer" id="drawer-upload">
+  <div class="drawer-head">
+    <div><p class="eyebrow">Upload asset</p><h2>上传资产</h2></div>
+    <button class="close-x" type="button" data-close-drawer="drawer-upload"><i data-icon="x"></i></button>
+  </div>
+  <div class="drawer-body">
+    <form data-form="upload" id="upload-form">
+    <div style="border: 1px dashed var(--line-strong); border-radius: 3px; padding: 26px 18px; text-align: center; background: var(--surface-sunken)">
+      <i data-icon="upload" style="color: var(--text-3)"></i>
+      <p style="font-size: 11.5px; color: var(--text-2); margin-top: 8px">拖入图片 / 视频 / 音频，或点击选择</p>
+      <p style="font-size: 10px; color: var(--text-3); margin-top: 4px">PNG · JPEG · WebP · MP4 · MOV · WAV · MP3　单文件 ≤ 2 GB</p>
+    </div>
+    <div class="form-grid" style="margin-top: 14px">
+      <label class="field"><span>资产类型</span><select class="control" name="type"><option value="character">角色参考</option><option value="location">场景参考</option><option value="prop">道具参考</option><option value="ref">通用素材</option></select></label>
+      <label class="field"><span>绑定对象</span><select class="control" name="target"><option>沈砚（char a_41e2）</option><option>新建资产</option></select></label>
+      <label class="field full"><span>标签</span><input class="control" name="tags" value="夜内 / 冷色 / 主角定妆" /></label>
+      <label class="field full"><span>文件名</span><input class="control" name="name" value="沈砚_定妆_03.png" /></label>
+    </div>
+    <div class="section-label">上传后处理</div>
+    <div class="check-row"><input type="checkbox" checked /><span>进入隔离区扫描，通过后登记 AssetVersion</span></div>
+    <div class="check-row"><input type="checkbox" checked /><span>生成缩略图与代理文件（用于预览）</span></div>
+    <div class="check-row"><input type="checkbox" checked /><span>计算 sha256 并写入元数据</span></div>
+    <p class="lede" style="font-size: 10px; margin-top: 10px">上传成功不代表资产可用：扫描与探测通过后状态才变为 ready。</p>
+    </form>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn btn-default" type="button" data-close-drawer="drawer-upload">取消</button>
+    <button class="btn btn-primary" type="submit" form="upload-form">开始上传</button>
+  </div>
+</aside>
+
+<script src="../assets/prototype.js"></script>
+<script src="../assets/interactions.js"></script>
+<script>
+  // 点击资产卡打开详情抽屉，并把卡片元数据带进抽屉
+  document.querySelectorAll('.asset-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      ['title', 'version', 'status-label', 'owner'].forEach(function (k) {
+        var node = document.querySelector('[data-bind="' + k + '"]');
+        if (node && card.dataset[k === 'status-label' ? 'statusLabel' : k]) node.textContent = card.dataset[k === 'status-label' ? 'statusLabel' : k];
+      });
+      P.openDrawer('drawer-asset');
+    });
+  });
+
+  var grid = document.getElementById('asset-grid');
+  var TYPE_LABEL = { character: 'CHARACTER', location: 'LOCATION', prop: 'PROP', ref: 'REFERENCE' };
+
+  document.addEventListener('proto:submit', function (e) {
+    if (e.detail.name !== 'upload') return;
+    var d = e.detail.data;
+    var id = 'a_' + Math.random().toString(16).slice(2, 6);
+    var name = (d.name || '未命名素材').replace(/\.[a-z0-9]+$/i, '');
+    var card = document.createElement('article');
+    card.className = 'asset-card';
+    card.dataset.select = id;
+    card.dataset.selectGroup = 'asset-detail';
+    card.dataset.status = d.type;
+    card.dataset.title = name + ' · 新上传 v1';
+    card.dataset.version = 'v1';
+    card.dataset.statusLabel = 'processing';
+    card.dataset.owner = '方屿';
+    card.innerHTML = '<div class="asset-thumb"><span class="glyph">' + (TYPE_LABEL[d.type] || 'ASSET') + '<br>' + P.esc(name) + '</span><span class="vtag">v1</span></div>' +
+      '<div class="asset-meta"><strong>' + P.esc(name) + '</strong><small>' + id + ' · v1 · 扫描中</small>' +
+      '<div class="asset-foot"><span class="pill processing">processing</span><span class="mono" style="font-size: 9px; color: var(--text-3)">0 引用</span></div></div>';
+    card.hidden = false;
+    grid.insertBefore(card, grid.firstElementChild);
+    P.count('[data-filter="all"] .c', parseInt(document.querySelector('[data-filter="all"] .c').textContent, 10) + 1);
+    var chip = document.querySelector('[data-filter="' + d.type + '"] .c');
+    if (chip) chip.textContent = parseInt(chip.textContent, 10) + 1;
+    P.closeDrawer('drawer-upload');
+    P.toast('上传已受理：' + id + ' 进入隔离区扫描，完成前不可被镜头引用');
+
+    setTimeout(function () {
+      card.dataset.statusLabel = 'ready';
+      var pill = card.querySelector('.pill');
+      P.setPill(pill, 'ready', 'ready');
+      card.querySelector('small').textContent = id + ' · v1 · 2048×2732';
+      P.toast(id + ' 扫描通过，状态 ready，可被 Shot 合同引用');
+    }, 2600);
+  });
+
+  document.addEventListener('proto:act', function (e) {
+    if (e.detail.act !== 'delete-asset') return;
+    var id = document.querySelector('[data-bind="title"]');
+    P.toast('删除被拒绝（409）：该资产存在 9 处引用（含 2 个时间线片段），只能撤回版本或归档');
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>资产 · 长夜将明 EP01</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="assets" data-crumb="资产">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <nav class="tabs" id="tabs"></nav>
+    <main class="content">
+      <div class="board-head">
+        <div>
+          <div class="eyebrow">ASSET LIBRARY · ONE ENTITY PER SOURCE</div>
+          <h1>资产与一致性</h1>
+          <div class="sub">63 项资产 · 6 个角色 · 4 个场景 · 18 件道具 · 12 套服装 · 全部锁定引用版本</div>
+        </div>
+        <div class="board-tools">
+          <span class="chip green"><span class="dot green"></span>0 冲突</span>
+          <button class="btn btn-sm" id="btn-check"><span data-i="target"></span>一致性检查</button>
+          <button class="btn btn-sm btn-primary" data-open="modal-asset"><span data-i="plus"></span>新增资产</button>
+        </div>
+      </div>
+
+      <div class="banner" style="margin-bottom:14px">
+        <span data-i="layers"></span>
+        <div class="grow"><b>角色、场景、道具、服装是四个独立实体。</b>每个镜头只引用已锁定的参考版本；换参考必须显式生成新版本，旧镜头不会被静默替换。</div>
+        <span class="chip accent">LOCKED REFERENCES</span>
+      </div>
+
+      <div class="script-toolbar" style="margin-bottom:14px">
+        <div class="seg" id="asset-filter">
+          <button class="is-active" data-f="all">全部 63</button>
+          <button data-f="character">角色 6</button>
+          <button data-f="scene">场景 4</button>
+          <button data-f="prop">道具 18</button>
+          <button data-f="costume">服装 12</button>
+        </div>
+        <span class="spacer" style="flex:1"></span>
+        <span class="chip">REF v2 统一</span>
+        <span class="chip">显示 12 / 63 · 按引用排序</span>
+      </div>
+
+      <div class="asset-grid" id="asset-grid"></div>
+
+      <div style="display:grid;grid-template-columns:1.3fr .7fr;gap:14px;margin-top:14px">
+        <section class="panel">
+          <div class="panel-head"><div><h2>一致性概览</h2><span class="sub">CONSISTENCY</span></div><span class="chip green">PASS</span></div>
+          <div class="panel-body">
+            <div class="mini-kpi"><span>角色引用一致</span><b style="color:var(--green)">18 / 18 镜</b></div>
+            <div class="mini-kpi"><span>场景机位一致</span><b style="color:var(--green)">4 / 4 场景</b></div>
+            <div class="mini-kpi"><span>道具连续性</span><b style="color:var(--yellow)">2 处提醒</b></div>
+            <div class="mini-kpi" style="border:0"><span>待锁定资产</span><b>0 项</b></div>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>待处理提醒</h2><span class="sub">2 NOTES</span></div>
+          <div class="panel-body">
+            <div class="qa-item" style="padding-top:0"><span class="qa-mark warn">!</span><div class="txt"><b>透明伞出现场次</b><span>SC02 收伞，SC05 未带伞 · 已在分镜标注</span></div></div>
+            <div class="qa-item"><span class="qa-mark warn">!</span><div class="txt"><b>借阅册纸色</b><span>SC03 暖白，SC04 偏黄 · 建议锁定同一参考</span></div></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="scrim"></div>
+<div class="drawer" id="drawer-asset">
+  <div class="drawer-head">
+    <div><div class="eyebrow" id="as-type">CHARACTER</div><h2 id="as-name">林未</h2></div>
+    <button class="icon-btn" data-close><span data-i="x"></span></button>
+  </div>
+  <div class="drawer-body">
+    <div style="border:1px solid var(--line);border-radius:3px;overflow:hidden;background:#000"><img id="as-img" src="assets/img/linwei.jpg" alt="" style="width:100%;display:block;aspect-ratio:3/4;object-fit:cover"></div>
+    <div style="display:flex;gap:6px;margin-top:10px"><span class="chip green">REF v2</span><span class="chip">LOCKED</span><span class="chip" id="as-used">引用 18 镜</span></div>
+    <div class="panel" style="margin-top:14px">
+      <div class="panel-head"><h2>引用元数据</h2><span class="sub">REFERENCE</span></div>
+      <div class="panel-body">
+        <dl class="kv">
+          <dt>资产 ID</dt><dd class="mono" id="as-id">AST-CH-01</dd>
+          <dt>类型</dt><dd id="as-kind">角色 · 主要人物</dd>
+          <dt>参考图</dt><dd>3 张 · 正 / 侧 / 全身</dd>
+          <dt>锁定版本</dt><dd class="mono">REF v2 · 2026-11-12</dd>
+          <dt>引用镜头</dt><dd id="as-shots">SHOT 01 / 02 / 03 / 04 / 07 / 11</dd>
+          <dt>一致性分</dt><dd class="mono" id="as-score">0.93</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="banner" style="margin-top:12px;font-size:10px"><span data-i="target"></span><div class="grow">重跑参考图会生成 REF v3，不会影响已冻结的 24 个合同；需要手动迁移引用。</div></div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn" data-close>关闭</button>
+    <button class="btn" id="as-regen"><span data-i="refresh"></span>生成新参考</button>
+    <button class="btn btn-primary" id="as-lock"><span data-i="check"></span>锁定引用</button>
+  </div>
+</div>
+
+<div class="scrim"></div>
+<div class="modal" id="modal-asset">
+  <div class="modal-head"><div><div class="eyebrow">NEW ASSET</div><h2 style="margin:4px 0 0;font-size:18px">新增资产</h2></div><button class="icon-btn" data-close><span data-i="x"></span></button></div>
+  <div class="modal-body">
+    <div class="input-grid">
+      <label class="field"><span>名称</span><input placeholder="例如：借阅册"></label>
+      <label class="field"><span>类型</span><select><option>角色</option><option>场景</option><option>道具</option><option>服装</option></select></label>
+      <label class="field"><span>参考图</span><input placeholder="选择本地文件或生成"></label>
+      <label class="field"><span>锁定方式</span><select><option>仅引用锁定版本</option><option>允许自由引用</option></select></label>
+    </div>
+  </div>
+  <div class="modal-foot"><button class="btn" data-close>取消</button><button class="btn btn-primary" id="as-submit">创建资产</button></div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const ASSETS = [
+    { id: 'AST-CH-01', name: '林未', type: 'character', typeLabel: '角色 · 主角', img: 'linwei.jpg', ver: 'REF v2', used: '引用 18 镜', score: '0.93', kind: '角色 · 主要人物', shots: 'SHOT 01 / 02 / 03 / 04 / 07 / 11' },
+    { id: 'AST-CH-02', name: '周砚', type: 'character', typeLabel: '角色 · 主角', img: 'zhouyan.jpg', ver: 'REF v2', used: '引用 14 镜', score: '0.91', kind: '角色 · 主要人物', shots: 'SHOT 03 / 04 / 08 / 09 / 12' },
+    { id: 'AST-CH-03', name: '陈九', type: 'character', typeLabel: '角色 · 配角', img: 'night-man.jpg', ver: 'REF v1', used: '引用 4 镜', score: '0.87', kind: '角色 · 配角', shots: 'SHOT 05 / 06 / 10' },
+    { id: 'AST-SC-01', name: '旧书店', type: 'scene', typeLabel: '场景 · 内景', img: 'bookstore.jpg', ver: 'REF v2', used: '引用 9 镜', score: '0.96', kind: '场景 · 主场景', shots: 'SHOT 03 / 04 / 07' },
+    { id: 'AST-SC-02', name: '雨夜后巷', type: 'scene', typeLabel: '场景 · 外景', img: 'alley.jpg', ver: 'REF v2', used: '引用 5 镜', score: '0.94', kind: '场景 · 外景', shots: 'SHOT 02 / 06' },
+    { id: 'AST-SC-03', name: '城市天台', type: 'scene', typeLabel: '场景 · 外景', img: 'rooftop.jpg', ver: 'REF v2', used: '引用 6 镜', score: '0.92', kind: '场景 · 高潮场景', shots: 'SHOT 08 / 09 / 10' },
+    { id: 'AST-SC-04', name: '雨夜街道', type: 'scene', typeLabel: '场景 · 外景', img: 'hero-rain.jpg', ver: 'REF v2', used: '引用 3 镜', score: '0.90', kind: '场景 · 开场', shots: 'SHOT 01' },
+    { id: 'AST-PR-01', name: '无编号借阅册', type: 'prop', typeLabel: '道具 · 关键物件', img: 'ledger.jpg', ver: 'REF v1', used: '引用 6 镜', score: '0.85', kind: '道具 · 剧情钩子', shots: 'SHOT 03 / 04 / 08' },
+    { id: 'AST-PR-02', name: '透明长柄伞', type: 'prop', typeLabel: '道具 · 连续性', img: 'hero-rain.jpg', ver: 'REF v1', used: '引用 5 镜', score: '0.88', kind: '道具 · 连续性道具', shots: 'SHOT 01 / 02' },
+    { id: 'AST-CS-01', name: '米色风衣', type: 'costume', typeLabel: '服装 · 林未', img: 'linwei.jpg', ver: 'REF v2', used: '引用 12 镜', score: '0.95', kind: '服装 · 主角常服', shots: 'SHOT 01–04 / 07' },
+    { id: 'AST-CS-02', name: '深色长风衣', type: 'costume', typeLabel: '服装 · 周砚', img: 'zhouyan.jpg', ver: 'REF v2', used: '引用 9 镜', score: '0.92', kind: '服装 · 主角常服', shots: 'SHOT 03 / 08 / 09' },
+    { id: 'AST-PR-03', name: '黄铜台灯', type: 'prop', typeLabel: '道具 · 光源', img: 'lamp.jpg', ver: 'REF v1', used: '引用 8 镜', score: '0.90', kind: '道具 · 场景光源', shots: 'SHOT 03 / 04 / 07' }
+  ];
+  let active = 0;
+
+  function cardHTML(a, i) {
+    return '<article class="asset-card" data-asset="' + i + '" data-type="' + a.type + '">' +
+      '<div class="frame"><img src="assets/img/' + a.img + '" alt=""><span class="kind">' + a.typeLabel + '</span><span class="lock"><span data-i="check"></span></span></div>' +
+      '<div class="meta"><h4>' + a.name + '</h4><p><span class="mono">' + a.ver + '</span><span>' + a.used + '</span></p><div class="score"><i style="width:' + (parseFloat(a.score) * 100) + '%"></i></div></div></article>';
+  }
+
+  function render() { document.getElementById('asset-grid').innerHTML = ASSETS.map(cardHTML).join(''); }
+
+  function openAsset(i) {
+    active = i;
+    const a = ASSETS[i];
+    document.getElementById('as-type').textContent = a.type.toUpperCase();
+    document.getElementById('as-name').textContent = a.name;
+    document.getElementById('as-img').src = 'assets/img/' + a.img;
+    document.getElementById('as-used').textContent = a.used;
+    document.getElementById('as-id').textContent = a.id;
+    document.getElementById('as-kind').textContent = a.kind;
+    document.getElementById('as-shots').textContent = a.shots;
+    document.getElementById('as-score').textContent = a.score;
+    P.openDrawer('drawer-asset');
+  }
+
+  document.getElementById('asset-grid').addEventListener('click', e => {
+    const card = e.target.closest('[data-asset]');
+    if (card) openAsset(+card.dataset.asset);
+  });
+
+  document.querySelectorAll('#asset-filter button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#asset-filter button').forEach(x => x.classList.remove('is-active'));
+    b.classList.add('is-active');
+    const f = b.dataset.f;
+    document.querySelectorAll('.asset-card').forEach(c => c.style.display = (f === 'all' || c.dataset.type === f) ? '' : 'none');
+  }));
+
+  document.getElementById('btn-check').addEventListener('click', () => P.toast('一致性检查完成：0 冲突 · 2 条建议（道具连续性）'));
+  document.querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', () => P.openModal(el.dataset.open)));
+  document.getElementById('as-submit').addEventListener('click', () => { P.closeModals(); P.toast('资产已创建，等待参考图生成'); });
+  document.getElementById('as-regen').addEventListener('click', () => {
+    P.closeDrawers();
+    P.toast('已创建 REF v3 生成任务，旧版本与已冻结合同不受影响');
+  });
+  document.getElementById('as-lock').addEventListener('click', () => {
+    P.closeDrawers();
+    P.toast(ASSETS[active].name + ' 的 ' + ASSETS[active].ver + ' 已锁定，供后续镜头引用');
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

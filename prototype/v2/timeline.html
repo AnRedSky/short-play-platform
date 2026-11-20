@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>try{var t=localStorage.getItem("sp_v2_theme");if(location.search.indexOf("theme=light")>-1)t="light";if(location.search.indexOf("theme=dark")>-1)t="dark";if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>时间线 · 长夜将明 EP01</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body data-page="timeline" data-crumb="时间线">
+<div class="app">
+  <aside class="rail" id="rail"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <nav class="tabs" id="tabs"></nav>
+    <main class="content">
+      <div class="board-head">
+        <div>
+          <div class="eyebrow">TIMELINE · OTIO</div>
+          <h1>时间线与导出</h1>
+          <div class="sub">tl_v6 · 24 个片段 · 4 条轨道 · 2′18″00 · 整数 PTS / 30fps</div>
+        </div>
+        <div class="board-tools">
+          <span class="chip green" id="export-chip">READY TO EXPORT</span>
+          <button class="btn btn-sm" id="btn-preview"><span data-i="play"></span>预览</button>
+          <button class="btn btn-sm btn-primary" data-open="modal-export"><span data-i="upload"></span>导出成片</button>
+        </div>
+      </div>
+
+      <div id="export-state"></div>
+
+      <div class="timeline-layout">
+        <section class="panel">
+          <div class="panel-head">
+            <div style="display:flex;align-items:center;gap:10px"><h2>EP01_v6</h2><span class="chip">OTIO TIMELINE</span></div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <button class="btn btn-sm" id="btn-snap"><span data-i="layers"></span>吸附</button>
+              <div class="seg" id="zoom-seg"><button class="is-active">1×</button><button>2×</button><button>4×</button></div>
+            </div>
+          </div>
+
+          <div class="timeline">
+            <div class="tl-ruler">
+              <div class="tl-head-cell mono">TRACK</div>
+              <div class="tl-ruler-marks" id="ruler"></div>
+            </div>
+
+            <div class="tl-track">
+              <div class="tl-head"><span class="type">V2</span><b>叠加 / 字幕</b><span>42 clips</span></div>
+              <div class="tl-lane" id="lane-sub">
+                <span class="clip sub" style="left:4%;width:38%">字幕 01–18</span>
+                <span class="clip sub" style="left:44%;width:52%">字幕 19–42</span>
+                <span class="clip marker" style="left:44%">SC03</span>
+                <span class="clip marker" style="left:68%">SC05</span>
+              </div>
+            </div>
+
+            <div class="tl-track">
+              <div class="tl-head"><span class="type">V1</span><b>画面 / 镜头</b><span>24 clips</span></div>
+              <div class="tl-lane tall" id="lane-video">
+                <div class="clip video" style="left:0;width:12%"><em>SHOT 01</em><b>雨夜抵达</b><span>4.0s</span></div>
+                <div class="clip video" style="left:12%;width:10%"><em>SHOT 02</em><b>收伞</b><span>3.5s</span></div>
+                <div class="clip video" style="left:22%;width:14%"><em>SHOT 03</em><b>门铃</b><span>4.2s</span></div>
+                <div class="clip video is-selected" style="left:36%;width:16%" data-clip="04"><em>SHOT 04</em><b>借阅册</b><span>5.0s</span></div>
+                <div class="clip video" style="left:52%;width:14%"><em>SHOT 05</em><b>名字</b><span>5.0s</span></div>
+                <div class="clip video" style="left:66%;width:12%"><em>SHOT 06</em><b>后巷</b><span>6.0s</span></div>
+                <div class="clip video" style="left:78%;width:22%"><em>SHOT 07–09</em><b>天台</b><span>14.5s</span></div>
+                <span class="playhead" id="playhead" style="left:42%"></span>
+              </div>
+            </div>
+
+            <div class="tl-track">
+              <div class="tl-head"><span class="type">A1</span><b>对白 / 音效</b><span>19 tracks</span></div>
+              <div class="tl-lane" id="lane-audio">
+                <span class="clip audio" style="left:2%;width:18%">AMB · 雨声</span>
+                <span class="clip audio" style="left:23%;width:11%">林未 · L01</span>
+                <span class="clip audio" style="left:38%;width:8%">周砚 · L02</span>
+                <span class="clip audio" style="left:47%;width:9%">林未 · L03</span>
+                <span class="clip audio" style="left:58%;width:13%">周砚 · L04</span>
+                <span class="clip audio" style="left:72%;width:24%">雨声渐强</span>
+              </div>
+            </div>
+
+            <div class="tl-track">
+              <div class="tl-head"><span class="type">M1</span><b>音乐</b><span>2 clips</span></div>
+              <div class="tl-lane">
+                <span class="clip music" style="left:0;width:52%">dark-room · motif A</span>
+                <span class="clip music" style="left:52%;width:48%">dark-room · motif B</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="tl-status">
+            <span><span class="dot green"></span>OTIO 校验通过 · 0 gap · 0 overlap</span>
+            <span class="mono">PTS 0 → 248400 · 30 fps · 2484 frames</span>
+          </div>
+        </section>
+
+        <aside class="side-stack">
+          <section class="panel">
+            <div class="panel-head"><h2>片段检查器</h2><span class="sub" id="clip-no">SHOT 04</span></div>
+            <div class="panel-body">
+              <div style="border:1px solid var(--line);border-radius:3px;overflow:hidden;background:#000"><img src="assets/img/night-man.jpg" alt="" style="width:100%;display:block;aspect-ratio:16/9;object-fit:cover"></div>
+              <div class="mini-kpi" style="margin-top:12px"><span>片段</span><b id="clip-name">借阅册</b></div>
+              <div class="mini-kpi"><span>时间码</span><b class="mono" id="clip-tc">00:00:31:07 → 00:00:36:07</b></div>
+              <div class="mini-kpi"><span>源素材</span><b class="mono">shot_04_take02.mp4</b></div>
+              <div class="mini-kpi"><span>速度</span><b>1.0×</b></div>
+              <div class="mini-kpi"><span>转场</span><b>cut · 无淡化</b></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.35fr .65fr;gap:14px;margin-top:14px">
+        <section class="panel">
+          <div class="panel-head"><div><h2>导出记录</h2><span class="sub">DELIVERIES</span></div><span class="sub">文件不可变 · 重跑生成新版本</span></div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>文件</th><th>时间线</th><th>规格</th><th>大小</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr><td class="name"><b>EP01_v6.mp4</b><span>verify 7d3a…c9</span></td><td class="num">tl_v6</td><td class="num">1080×1920 / 30fps</td><td class="num">42.8 MB</td><td><span class="chip green">READY</span></td><td><button class="btn btn-sm" data-dl>下载</button></td></tr>
+                <tr><td class="name"><b>EP01_v5.mp4</b><span>verify a81c…2f</span></td><td class="num">tl_v5</td><td class="num">1080×1920 / 30fps</td><td class="num">41.2 MB</td><td><span class="chip">ARCHIVE</span></td><td><button class="btn btn-sm" data-dl>下载</button></td></tr>
+                <tr><td class="name"><b>EP01_v4.mp4</b><span>QA FAIL · 画幅 16:9</span></td><td class="num">tl_v4</td><td class="num">1920×1080 / 30fps</td><td class="num">38.6 MB</td><td><span class="chip red">FAIL</span></td><td><button class="btn btn-sm" disabled>不可交付</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 18px;padding:12px 16px;border-top:1px solid var(--line-soft)">
+            <div class="mini-kpi" style="border:0"><span>默认导出</span><b>9:16 · H.264</b></div>
+            <div class="mini-kpi" style="border:0"><span>响度 / 字幕</span><b>-14 LUFS · 压制 + SRT</b></div>
+            <div class="mini-kpi" style="border:0"><span>发布目标</span><b>抖音 / 快手 / 视频号</b></div>
+            <div class="mini-kpi" style="border:0"><span>版本保留</span><b>90 天 · 不可变</b></div>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>交付规范</h2><span class="sub">SPEC</span></div>
+          <div class="panel-body">
+            <div class="mini-kpi"><span>画幅</span><b>9:16 · 1080×1920</b></div>
+            <div class="mini-kpi"><span>帧率 / 编码</span><b>30fps · H.264</b></div>
+            <div class="mini-kpi"><span>响度</span><b>-14 LUFS</b></div>
+            <div class="mini-kpi"><span>字幕</span><b>压制 + 独立 SRT</b></div>
+            <div class="mini-kpi" style="border:0"><span>发布目标</span><b>抖音 / 快手 / 视频号</b></div>
+            <p style="font-size:9px;color:var(--dim);line-height:1.7;margin:10px 0 0">导出前校验 OTIO 与素材版本；校验失败不会生成可交付文件。</p>
+            <div style="border-top:1px solid var(--line-soft);margin-top:14px;padding-top:8px">
+              <div class="mini-kpi" style="border:0;padding:4px 0"><span>版本链</span><b class="mono" style="font-size:10px">tl_v6 · 当前</b></div>
+              <div style="font-family:var(--mono);font-size:8px;color:var(--dim);line-height:1.8">tl_v5 已废弃 · 21 shots<br>tl_v4 QA FAIL · 画幅不一致</div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="scrim"></div>
+<div class="modal" id="modal-export">
+  <div class="modal-head">
+    <div><div class="eyebrow">EXPORT</div><h2 style="margin:4px 0 0;font-size:18px">导出成片</h2></div>
+    <button class="icon-btn" data-close><span data-i="x"></span></button>
+  </div>
+  <div class="modal-body">
+    <div class="input-grid">
+      <label class="field"><span>分辨率</span><select id="ex-res"><option>1080×1920 · 竖屏</option><option>720×1280 · 轻量</option></select></label>
+      <label class="field"><span>格式</span><select><option>MP4 / H.264</option><option>MOV / ProRes</option></select></label>
+      <label class="field"><span>字幕</span><select><option>压制中文字幕</option><option>导出独立 SRT</option></select></label>
+      <label class="field"><span>片头 / 水印</span><select><option>无</option><option>平台片头</option></select></label>
+    </div>
+
+    <div class="input-grid" style="margin-top:12px">
+      <label class="field"><span>成片标题</span><input id="ex-title" value="EP01 · 雨夜书店"></label>
+      <label class="field"><span>封面文案</span><input id="ex-cover" value="她借走了一本没有编号的册子"></label>
+      <label class="field" style="grid-column:1 / -1"><span>发布简介</span><textarea id="ex-desc" style="min-height:56px">雨夜，她走进一家只借书不登记的书店，借阅册上却没有她的名字。</textarea></label>
+    </div>
+
+    <div class="field" style="margin-top:12px"><span>交付规格（可多选）</span>
+      <div class="check-row" id="ex-specs">
+        <label><input type="checkbox" checked value="9:16 · 1080×1920">9:16 竖屏</label>
+        <label><input type="checkbox" value="16:9 · 1920×1080">16:9 横屏</label>
+        <label><input type="checkbox" value="1:1 · 1080×1080">1:1 方图</label>
+        <label><input type="checkbox" checked value="封面 + 标题卡">封面 + 标题卡</label>
+        <label><input type="checkbox" checked value="集数卡">集数卡</label>
+        <label><input type="checkbox" checked value="独立 SRT">独立 SRT</label>
+      </div>
+    </div>
+    <div class="banner" style="margin:14px 0 0;font-size:10px"><span data-i="film"></span><div class="grow">导出会冻结 tl_v6 与全部源素材版本；每个规格生成独立文件，不覆盖旧成片。</div></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn" data-close>取消</button>
+    <button class="btn btn-primary" id="start-export">开始导出 <span data-i="arrowRight"></span></button>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const st = P.state();
+  if (st.steps.qa.status !== 'done') {
+    const chip = document.getElementById('export-chip');
+    chip.textContent = 'EXPORT LOCKED';
+    chip.className = 'chip yellow';
+    document.getElementById('export-state').innerHTML = '<div class="banner warn" style="margin-bottom:14px"><span data-i="alert"></span><div class="grow"><b>EP01 尚未通过审核，导出被锁定。</b> 请先到审核台做出决定，导出不会绕过 QA gate。</div><a class="btn btn-sm" href="review.html">去审核</a></div>';
+    hydrateIcons(document.getElementById('export-state'));
+  }
+
+  document.querySelectorAll('[data-dl]').forEach(b => b.addEventListener('click', () => P.toast('原型模式：已模拟下载成片（真实环境从产物库取流）')));
+
+  // ruler
+  let marks = '';
+  for (let i = 0; i <= 18; i++) {
+    marks += '<span style="left:' + (i / 18 * 100) + '%"><i></i><em>' + String(i * 8).padStart(2, '0') + 's</em></span>';
+  }
+  document.getElementById('ruler').innerHTML = marks;
+
+  document.querySelectorAll('.clip.video').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('.clip.video').forEach(x => x.classList.remove('is-selected'));
+      c.classList.add('is-selected');
+      document.getElementById('clip-no').textContent = c.querySelector('em').textContent;
+      document.getElementById('clip-name').textContent = c.querySelector('b').textContent;
+      document.getElementById('clip-tc').textContent = '00:00:' + c.style.left.replace('%', '').padStart(2, '0') + ':00 → +' + c.querySelector('span').textContent;
+      P.toast('已选中 ' + c.querySelector('em').textContent + '，检查器已更新');
+    });
+  });
+
+  document.querySelectorAll('#zoom-seg button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#zoom-seg button').forEach(x => x.classList.remove('is-active'));
+    b.classList.add('is-active');
+    P.toast('时间线缩放 ' + b.textContent + '（原型示意）');
+  }));
+
+  document.getElementById('btn-snap').addEventListener('click', () => P.toast('已吸附到最近整帧 · 0 个 gap'));
+
+  let playing = false, head = 42, t = null;
+  document.getElementById('btn-preview').addEventListener('click', () => {
+    playing = !playing;
+    if (playing) {
+      t = setInterval(() => {
+        head = head > 97 ? 0 : head + 1;
+        document.getElementById('playhead').style.left = head + '%';
+      }, 300);
+      P.toast('时间线预览播放中');
+    } else { clearInterval(t); P.toast('已暂停'); }
+  });
+
+  document.querySelectorAll('[data-open]').forEach(el => el.addEventListener('click', e => {
+    e.stopPropagation();
+    if (st.steps.qa.status !== 'done') { P.toast('导出被锁定：EP01 尚未通过审核'); location.href = 'review.html'; return; }
+    P.openModal(el.dataset.open);
+  }));
+
+  document.getElementById('start-export').addEventListener('click', () => {
+    const specs = Array.from(document.querySelectorAll('#ex-specs input:checked')).map(x => x.value);
+    if (!specs.length) { P.toast('至少选择一个交付规格'); return; }
+    const title = document.getElementById('ex-title').value.trim();
+    const cover = document.getElementById('ex-cover').value.trim();
+    const desc = document.getElementById('ex-desc').value.trim();
+    if (!title || !cover || !desc) { P.toast('标题、封面文案、发布简介都需要填写'); return; }
+    P.closeModals();
+    const box = document.getElementById('export-state');
+    box.innerHTML = '<div class="panel" style="margin-bottom:14px"><div class="panel-body" style="display:flex;align-items:center;gap:14px"><div style="flex:1"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><b style="font-size:11px">正在导出 ' + title + ' · ' + specs.length + ' 个规格</b><span class="mono" id="ex-pct" style="font-size:10px;color:var(--dim)">0%</span></div><div class="bar"><i id="ex-bar" style="width:0%"></i></div><div style="margin-top:7px;font-size:9px;color:var(--dim)">FFmpeg 编码 · 冻结 tl_v6 · ' + specs.join(' / ') + '</div></div><span class="chip yellow" id="ex-chip">ENCODING</span></div></div>';
+    let p = 0;
+    const int = setInterval(() => {
+      p += 9;
+      document.getElementById('ex-bar').style.width = Math.min(100, p) + '%';
+      document.getElementById('ex-pct').textContent = Math.min(100, p) + '%';
+      if (p >= 100) {
+        clearInterval(int);
+        document.getElementById('ex-chip').className = 'chip green';
+        document.getElementById('ex-chip').textContent = 'DONE';
+        document.getElementById('ex-bar').style.width = '100%';
+        st.steps.export.status = 'done';
+        P.save(st);
+        box.innerHTML = '<div class="banner accent" style="margin-bottom:14px"><span data-i="check"></span><div class="grow"><b>导出完成 · ' + title + ' · ' + specs.length + ' 个交付件</b><br><span style="font-size:10px;color:var(--muted)">' + specs.join(' · ') + ' · 封面文案「' + cover + '」 · checksum 7d3a…c9</span></div><button class="btn btn-sm" id="btn-dl">下载交付包</button></div>';
+        hydrateIcons(box);
+        document.getElementById('btn-dl').addEventListener('click', () => P.toast('原型模式：已模拟下载 ' + specs.length + ' 个交付件'));
+        P.toast('导出完成，' + specs.length + ' 个交付件已写入产物库');
+      }
+    }, 260);
+  });
+
+  if (location.hash === '#export') P.openModal('modal-export');
+})();
+</script>
+</body>
+</html>
