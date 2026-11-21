@@ -1,0 +1,501 @@
+/* ============================================================
+   长夜制作台 V4 · 应用层
+   路由注册、导航装配、内存态、权限判定、搜索与反馈组件。
+   依赖：DB -> UI -> App -> modules
+   ============================================================ */
+window.App = (function () {
+  var modules = [];
+  var routes = [];
+  var routeMap = {};
+  var currentRoute = null;
+  var palette = null;
+
+  /* 路由权限表：集中维护，不在页面内散落判定 */
+  var ROUTE_PERMS = {
+    "overview/dashboard": null,
+    "overview/project": "project:read",
+    "story/bible": "story:read",
+    "story/import": "story:write",
+    "production/episodes": "script:read",
+    "production/script": "script:read",
+    "production/assets": "asset:read",
+    "production/storyboard": "board:read",
+    "review/tasks": "task:read",
+    "review/qa": "qa:read",
+    "review/timeline": "timeline:read",
+    "delivery/export": "export:read",
+    "system/team": "team:manage",
+    "system/settings": "settings:manage"
+  };
+
+  var App = {
+    state: null,
+    currentUser: null,
+    groupOrder: ["overview", "story", "production", "review", "delivery", "system"]
+  };
+
+  /* ---------- 模块注册 ---------- */
+  App.registerModule = function (def) {
+    if (!def || !def.group || !Array.isArray(def.routes)) throw new Error("模块定义不完整");
+    def.routes.forEach(function (r) {
+      if (r.path.indexOf(def.group + "/") !== 0) console.warn("路由前缀与分组不一致：" + r.path);
+      if (routeMap[r.path]) throw new Error("路由重复：" + r.path);
+      r.group = def.group;
+      r.groupLabel = def.label;
+      routes.push(r);
+      routeMap[r.path] = r;
+    });
+    modules.push(def);
+  };
+  window.AppModule = { register: App.registerModule };
+
+  /* ---------- 工具 ---------- */
+  App.hasPerm = function (perm) {
+    if (!perm) return true;
+    var p = App.currentUser && App.currentUser.perms || [];
+    return p.indexOf("*") > -1 || p.indexOf(perm) > -1;
+  };
+  App.can = App.hasPerm;
+
+  App.routeAllowed = function (route) {
+    var perm = ROUTE_PERMS[route.path];
+    if (perm && !App.hasPerm(perm)) return false;
+    return true;
+  };
+  App.routes = function () { return routes.slice(); };
+  App.route = function (path) { return routeMap[path] || null; };
+
+  App.navigate = function (path, params) {
+    var q = "";
+    if (params) {
+      var arr = [];
+      Object.keys(params).forEach(function (k) {
+        if (params[k] !== undefined && params[k] !== null) arr.push(encodeURIComponent(k) + "=" + encodeURIComponent(params[k]));
+      });
+      if (arr.length) q = "?" + arr.join("&");
+    }
+    var target = "#/" + path + q;
+    if (location.hash === target) App.render();
+    else location.hash = target;
+  };
+
+  App.link = function (path, params) {
+    var q = "";
+    if (params) {
+      var arr = [];
+      Object.keys(params).forEach(function (k) {
+        if (params[k] !== undefined && params[k] !== null) arr.push(encodeURIComponent(k) + "=" + encodeURIComponent(params[k]));
+      });
+      if (arr.length) q = "?" + arr.join("&");
+    }
+    return "#/" + path + q;
+  };
+
+  App.refresh = function () { App.render(); };
+
+  App.formatMoney = function (n) {
+    return "¥" + Number(n || 0).toLocaleString("zh-CN");
+  };
+
+  App.epProgress = function (no) {
+    var ep = App.state.episodes.filter(function (e) { return e.no === no; })[0];
+    if (!ep) return 0;
+    if (App.state.qa.status === "approved") return 100;
+    if (no === "01") return 88;
+    if (ep.status === "locked") return 100;
+    if (ep.status === "draft") return 45;
+    return 0;
+  };
+
+  App.taskRunning = function () {
+    return App.state.tasks.filter(function (t) { return t.status === "running" || t.status === "queued"; }).length;
+  };
+
+  App.setIdentity = function (id) {
+    var u = App.state.identities.filter(function (x) { return x.id === id; })[0];
+    if (!u) return;
+    App.state.currentUserId = id;
+    App.currentUser = u;
+    App.render();
+    App.toast("已切换身份", u.name + " · " + u.role, "success");
+  };
+
+  App.resetDemo = function () {
+    App.state = DB.seed();
+    App.currentUser = App.state.identities.filter(function (x) { return x.id === App.state.currentUserId; })[0] || App.state.identities[0];
+    App.render();
+  };
+
+  /* ---------- 初始化 ---------- */
+  App.init = function () {
+    App.state = DB.seed();
+    App.currentUser = App.state.identities.filter(function (x) { return x.id === App.state.currentUserId; })[0] || App.state.identities[0];
+    bindGlobal();
+    if (!location.hash) {
+      location.replace("#/overview/dashboard");
+    }
+    window.addEventListener("hashchange", App.render);
+    App.render();
+  };
+
+  /* ---------- 渲染 ---------- */
+  App.render = function () {
+    if (!App.state) return;
+    var raw = location.hash.replace(/^#\//, "");
+    if (!raw) raw = "overview/dashboard";
+    var path = raw.split("?")[0];
+    var params = parseQuery(raw.split("?")[1] || "");
+    var route = routeMap[path];
+
+    if (!route) {
+      currentRoute = null;
+      renderShell(null, "页面不存在");
+      document.getElementById("view").innerHTML = statusPage("404", "页面不存在", "这条路由没有登记，可能是地址拼写错误或页面已下线。", "返回工作台");
+      document.title = "页面不存在 · 长夜制作台";
+      return;
+    }
+    if (!App.routeAllowed(route)) {
+      currentRoute = route;
+      renderShell(route, "暂无权限");
+      document.getElementById("view").innerHTML = statusPage("403", "暂无权限", "当前身份「" + App.currentUser.name + " · " + App.currentUser.role + "」无权访问该页面。切换身份后可继续。", "返回工作台");
+      document.title = "暂无权限 · 长夜制作台";
+      return;
+    }
+
+    currentRoute = route;
+    renderShell(route, route.title);
+    var oldView = document.getElementById("view");
+    var view = oldView.cloneNode(false);
+    oldView.parentNode.replaceChild(view, oldView);
+    view.innerHTML = route.render(params || {});
+    document.title = route.title + " · 长夜制作台";
+    if (route.mount) route.mount(view, params || {});
+    window.scrollTo(0, 0);
+    closeRail();
+    setTimeout(function () {
+      var focus = view.querySelector("[autofocus]");
+      if (focus) focus.focus();
+    }, 30);
+  };
+
+  function parseQuery(q) {
+    var out = {};
+    q.split("&").forEach(function (kv) {
+      if (!kv) return;
+      var p = kv.split("=");
+      out[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || "");
+    });
+    return out;
+  }
+
+  function navGroups() {
+    return App.groupOrder.map(function (g) {
+      return modules.filter(function (m) { return m.group === g; })[0];
+    }).filter(Boolean);
+  }
+
+  function railHTML(activePath) {
+    var groups = navGroups().map(function (m) {
+      var visible = m.routes.filter(function (r) {
+        return r.nav !== false && App.routeAllowed(r);
+      });
+      if (!visible.length) return "";
+      var items = visible.map(function (r) {
+        var active = r.path === activePath || r.navParent === activePath;
+        var badge = "";
+        if (r.badge === "tasks" && App.taskRunning() > 0) badge = '<span class="ni-badge hot">' + App.taskRunning() + "</span>";
+        else if (r.badge) badge = '<span class="ni-badge">' + UI.esc(r.badge) + "</span>";
+        return '<a class="nav-item' + (active ? " active" : "") + '" href="' + App.link(r.path) + '">' +
+          '<span class="ni-icon">' + UI.icon(r.icon, 15) + "</span><span>" + UI.esc(r.title.split(" · ")[0]) + "</span>" + badge + "</a>";
+      }).join("");
+      return '<div class="nav-group"><div class="nav-label">' + UI.esc(m.label) + '</div><div class="nav">' + items + "</div></div>";
+    }).join("");
+
+    var pct = App.epProgress("01");
+    return '<div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M5 19V8.5L12 4l7 4.5V19"/><path d="M9 19v-6h6v6"/><circle cx="12" cy="10" r="1.2" fill="#fff" stroke="none"/></svg></span>' +
+      '<span><span class="brand-name">长夜制作台</span><br><span class="brand-sub">Long Night Studio</span></span></div>' +
+      '<button class="project-switch" data-app="projects"><span class="ps-badge">长</span>' +
+      '<span class="ps-main"><span class="ps-name">' + UI.esc(App.state.project.name) + '</span><br><span class="ps-meta">' + UI.esc(App.state.project.code) + " · " + App.state.project.episodes + ' 集 · 9:16</span></span>' +
+      '<span class="chev">' + UI.icon("down", 13) + "</span></button>" +
+      '<nav class="rail-nav">' + groups + "</nav>" +
+      '<div class="rail-progress"><div class="rp-top"><strong>EP01 雨夜书店</strong><span>' + pct + '%</span></div>' +
+      '<div class="rp-bar"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="rp-foot"><span>资产与分镜进行中</span><span>5 / 8</span></div></div>' +
+      '<button class="rail-user" data-app="account">' + UI.avatar(App.currentUser.name, "", App.currentUser.color) +
+      '<span class="ru-main"><span class="ru-name">' + UI.esc(App.currentUser.name) + '</span><br><span class="ru-role">' + UI.esc(App.currentUser.role) + "</span></span>" +
+      '<span class="ru-more">' + UI.icon("more", 16) + "</span></button>";
+  }
+
+  function topbarHTML(route, crumb) {
+    var running = App.taskRunning();
+    var select = '<label class="identity-switch" title="切换演示身份"><span class="is-avatar">' + UI.avatar(App.currentUser.name, "sm", App.currentUser.color) + "</span>" +
+      '<select data-identity aria-label="切换演示身份">' + App.state.identities.map(function (u) {
+        return '<option value="' + u.id + '"' + (u.id === App.currentUser.id ? " selected" : "") + ">" + UI.esc(u.name + " · " + u.role) + "</option>";
+      }).join("") + "</select>" + UI.icon("down", 12) + "</label>";
+    return '<div class="topbar-left"><button class="icon-btn menu-btn" data-app="menu" aria-label="打开导航">' + UI.icon("menu") + "</button>" +
+      '<div class="crumb"><span class="crumb-project">' + UI.esc(App.state.project.name) + '</span><span class="sep">/</span><b>' + UI.esc(crumb || "") + '</b><span class="badge b-teal">制作中</span></div></div>' +
+      '<div class="spacer"></div>' +
+      '<button class="search-trigger" data-app="search">' + UI.icon("search", 14) + '<span>搜索页面、角色、镜头…</span><span class="kbd">⌘ K</span></button>' +
+      '<button class="task-pill" data-app="tasks"><span class="pulse"></span><span class="tp-count">' + running + '</span><span class="tp-text"> 个任务运行中</span></button>' +
+      select;
+  }
+
+  function renderShell(route, crumb) {
+    var rail = document.getElementById("rail");
+    var top = document.getElementById("topbar");
+    if (rail) rail.innerHTML = railHTML(route ? route.path : "");
+    if (top) top.innerHTML = topbarHTML(route, crumb);
+  }
+
+  function statusPage(code, title, desc, action) {
+    return '<div class="page"><div class="status-page"><div class="status-code">' + code + "</div><h1>" + title + "</h1><p>" + desc + '</p><a class="btn btn-primary" href="' + App.link("overview/dashboard") + '">' + action + "</a></div></div>";
+  }
+
+  /* ---------- 全局交互 ---------- */
+  function bindGlobal() {
+    document.addEventListener("click", function (e) {
+      var el = e.target.closest("[data-app]");
+      if (!el) return;
+      var act = el.getAttribute("data-app");
+      if (act === "menu") openRail();
+      if (act === "search") openPalette();
+      if (act === "account") openAccount();
+      if (act === "projects") openProjects();
+      if (act === "tasks") {
+        if (App.hasPerm("task:read")) App.navigate("review/tasks");
+        else App.toast("暂无权限", "当前身份不能查看 AI 任务。", "warn");
+      }
+    });
+    document.addEventListener("change", function (e) {
+      if (e.target.matches("[data-identity]")) App.setIdentity(e.target.value);
+    });
+    document.addEventListener("keydown", function (e) {
+      if ((e.metaKey || e.ctrlKey) && String(e.key).toLowerCase() === "k") {
+        e.preventDefault(); openPalette();
+      }
+      if (e.key === "Escape") {
+        closePalette(); closeRail();
+        document.querySelectorAll(".overlay.open, .drawer-wrap.open").forEach(function (o) { o.remove(); });
+      }
+    });
+    var scrim = document.getElementById("railScrim");
+    if (scrim) scrim.addEventListener("click", closeRail);
+  }
+
+  function openRail() {
+    document.getElementById("rail").classList.add("open");
+    document.getElementById("railScrim").classList.add("show");
+  }
+  function closeRail() {
+    var r = document.getElementById("rail");
+    var s = document.getElementById("railScrim");
+    if (r) r.classList.remove("open");
+    if (s) s.classList.remove("show");
+  }
+
+  /* ---------- 项目切换 / 账号 ---------- */
+  function openProjects() {
+    var body = '<div class="stack">' + App.state.projects.map(function (p) {
+      var cur = p.id === App.state.project.id;
+      return '<button class="card card-pad project-choice' + (cur ? " is-current" : "") + '" data-proj="' + p.id + '">' +
+        '<span class="pc-mark">' + UI.esc(p.name.charAt(0)) + "</span><span class=\"pc-main\"><b>" + UI.esc(p.name) + "</b>" +
+        '<small>' + UI.esc(p.code) + " · " + p.episodes + " 集 · " + UI.esc(p.genre) + " · " + UI.esc(p.stage) + "</small></span>" +
+        (cur ? '<span class="badge b-active">当前项目</span>' : '<span class="badge b-todo">' + UI.esc(p.status) + "</span>") + "</button>";
+    }).join("") + "</div>" +
+      '<div class="notice info mt-16">' + UI.icon("alert", 15) + "<span>V4 演示数据完整覆盖《长夜将明》。其余项目为工作台示例卡，不承载独立数据。</span></div>";
+    App.modal({
+      title: "切换项目", sub: "项目是生产数据与权限的边界。原型只在内存中切换当前上下文。", body: body,
+      footer: '<button class="btn" data-close>取消</button>',
+      onMount: function (el, close) {
+        el.addEventListener("click", function (e) {
+          var b = e.target.closest("[data-proj]");
+          if (!b) return;
+          if (b.getAttribute("data-proj") === App.state.project.id) { close(); return; }
+          App.toast("示例项目", "该卡片仅用于演示项目切换版式，暂无独立数据。", "warn");
+        });
+      }
+    });
+  }
+
+  function openAccount() {
+    var u = App.currentUser;
+    var body = '<div class="account-head">' + UI.avatar(u.name, "lg", u.color) +
+      '<div><div class="account-name">' + UI.esc(u.name) + '</div><div class="small muted">' + UI.esc(u.email) + " · " + UI.esc(u.role) + "</div></div></div>" +
+      '<div class="notice mt-16">账号归属「长夜工作室」。原型不接真实鉴权；身份切换只影响菜单、页面与操作入口的可见性。</div>' +
+      '<div class="grid g2 mt-16">' +
+      (App.hasPerm("team:manage") ? '<a class="btn" href="' + App.link("system/team") + '">团队与权限</a>' : "") +
+      (App.hasPerm("settings:manage") ? '<a class="btn" href="' + App.link("system/settings") + '">模型与用量</a>' : "") +
+      "</div>";
+    App.modal({
+      title: "账号与工作区", sub: "当前为演示身份，切换后立即生效。",
+      body: body,
+      footer: '<button class="btn" data-close>关闭</button>'
+    });
+  }
+
+  /* ---------- 全局搜索 ---------- */
+  function openPalette() {
+    closePalette();
+    var items = [];
+    routes.forEach(function (r) {
+      if (App.routeAllowed(r)) items.push({ group: "页面", title: r.title, sub: r.groupLabel + " · " + r.path, path: r.path, icon: r.icon });
+    });
+    App.state.episodes.forEach(function (ep) {
+      items.push({ group: "剧集", title: "EP" + ep.no + " · " + ep.title, sub: ep.hook, path: "production/script", params: { ep: ep.no }, icon: "book" });
+    });
+    App.state.characters.forEach(function (c) {
+      items.push({ group: "角色", title: c.name, sub: c.role, path: "story/bible", params: { tab: "character", id: c.id }, icon: "users" });
+    });
+    App.state.assets.forEach(function (a) {
+      items.push({ group: "资产", title: a.name, sub: a.version + " · 引用 " + a.refs + " 次", path: "production/assets", params: { id: a.id }, icon: "image" });
+    });
+    App.state.shots.forEach(function (s) {
+      items.push({ group: "镜头", title: s.id + " · " + s.title, sub: "EP" + s.ep + " · " + s.size, path: "production/storyboard", params: { shot: s.id }, icon: "activity" });
+    });
+
+    palette = document.createElement("div");
+    palette.className = "palette open";
+    palette.innerHTML = '<div class="palette-box" role="dialog" aria-label="全局搜索">' +
+      '<div class="palette-input">' + UI.icon("search", 16) + '<input id="paletteInput" placeholder="搜索页面、剧集、角色、资产或镜头…" autocomplete="off"><span class="tiny muted mono">ESC 关闭</span></div>' +
+      '<div class="palette-list" id="paletteList"></div>' +
+      '<div class="palette-foot"><span>↑↓ 移动</span><span>Enter 打开</span><span>⌘K 随时唤起</span></div></div>';
+    document.body.appendChild(palette);
+    var input = palette.querySelector("#paletteInput");
+    var list = palette.querySelector("#paletteList");
+    var filtered = items;
+    var sel = 0;
+
+    function paint() {
+      var groups = {};
+      filtered.slice(0, 16).forEach(function (it) { (groups[it.group] = groups[it.group] || []).push(it); });
+      var idx = 0;
+      list.innerHTML = Object.keys(groups).map(function (g) {
+        return '<div class="palette-group-label">' + g + "</div>" + groups[g].map(function (it) {
+          var n = idx++;
+          return '<button class="palette-item' + (n === sel ? " sel" : "") + '" data-idx="' + n + '">' +
+            '<span class="pi-icon">' + UI.icon(it.icon, 14) + '</span><span class="pi-main"><span class="pi-title">' + UI.esc(it.title) +
+            '</span><span class="pi-sub truncate">' + UI.esc(it.sub) + '</span></span><span class="pi-key">↵</span></button>';
+        }).join("");
+      }).join("") || UI.empty("没有匹配结果", "换一个关键词，例如「周砚」「S0107」「审核」。");
+    }
+    function apply() {
+      var q = input.value.trim().toLowerCase();
+      filtered = items.filter(function (it) { return !q || (it.title + " " + it.sub).toLowerCase().indexOf(q) > -1; });
+      sel = 0; paint();
+    }
+    function pick(n) {
+      var it = filtered[n];
+      if (!it) return;
+      closePalette();
+      App.navigate(it.path, it.params);
+    }
+    input.addEventListener("input", apply);
+    list.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-idx]");
+      if (b) pick(Number(b.getAttribute("data-idx")));
+    });
+    list.addEventListener("mousemove", function (e) {
+      var b = e.target.closest("[data-idx]");
+      if (!b) return;
+      sel = Number(b.getAttribute("data-idx")); paint();
+    });
+    palette.addEventListener("click", function (e) { if (e.target === palette) closePalette(); });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") { e.preventDefault(); sel = Math.min(filtered.length - 1, sel + 1); paint(); }
+      if (e.key === "ArrowUp") { e.preventDefault(); sel = Math.max(0, sel - 1); paint(); }
+      if (e.key === "Enter") { e.preventDefault(); pick(sel); }
+    });
+    apply();
+    setTimeout(function () { input.focus(); }, 20);
+  }
+  function closePalette() {
+    if (palette) { palette.remove(); palette = null; }
+  }
+
+  /* ---------- 弹窗 / 抽屉 / Toast ---------- */
+  App.modal = function (o) {
+    var overlay = document.createElement("div");
+    overlay.className = "overlay open";
+    overlay.innerHTML = '<div class="modal ' + (o.size || "") + '" role="dialog" aria-modal="true">' +
+      '<div class="modal-head"><div><h3>' + UI.esc(o.title) + "</h3>" + (o.sub ? "<p>" + o.sub + "</p>" : "") + "</div>" +
+      '<button class="close-x" data-close aria-label="关闭">✕</button></div>' +
+      '<div class="modal-body">' + o.body + "</div>" +
+      (o.footer ? '<div class="modal-foot">' + o.footer + "</div>" : "") + "</div>";
+    document.body.appendChild(overlay);
+    function close() { overlay.remove(); }
+    overlay.addEventListener("click", function (e) {
+      if (e.target === overlay || e.target.closest("[data-close]")) close();
+    });
+    if (o.onMount) o.onMount(overlay.querySelector(".modal"), close);
+    return { el: overlay, close: close };
+  };
+
+  App.drawer = function (o) {
+    var wrap = document.createElement("div");
+    wrap.className = "drawer-wrap open";
+    wrap.innerHTML = '<div class="drawer" role="dialog" aria-modal="true"><div class="drawer-head"><div>' +
+      (o.eyebrow ? '<div class="eyebrow">' + UI.esc(o.eyebrow) + "</div>" : "") +
+      '<h3>' + UI.esc(o.title) + "</h3>" + (o.sub ? '<div class="small muted mt-4">' + o.sub + "</div>" : "") +
+      '</div><button class="close-x" data-close aria-label="关闭">✕</button></div>' +
+      '<div class="drawer-body">' + o.body + "</div>" +
+      (o.footer ? '<div class="drawer-foot">' + o.footer + "</div>" : "") + "</div>";
+    document.body.appendChild(wrap);
+    function close() { wrap.remove(); }
+    wrap.addEventListener("click", function (e) {
+      if (e.target === wrap || e.target.closest("[data-close]")) close();
+    });
+    if (o.onMount) o.onMount(wrap.querySelector(".drawer"), close);
+    return { el: wrap, close: close };
+  };
+
+  App.confirm = function (o) {
+    return new Promise(function (resolve) {
+      var settled = false;
+      var m = App.modal({
+        title: o.title, sub: o.sub || "",
+        body: '<div class="confirm-copy">' + (o.message || "") + "</div>" +
+          (o.detail ? '<div class="notice ' + (o.danger ? "danger" : "warn") + ' mt-12">' + UI.icon("alert", 15) + "<span>" + o.detail + "</span></div>" : ""),
+        footer: '<button class="btn" data-close>取消</button><button class="btn ' + (o.danger ? "btn-danger" : "btn-primary") + '" id="cfmOk">' + UI.esc(o.okText || "确认") + "</button>",
+        onMount: function (el, close) {
+          el.querySelector("#cfmOk").addEventListener("click", function () { settled = true; close(); resolve(true); });
+          el.querySelectorAll("[data-close]").forEach(function (b) {
+            b.addEventListener("click", function () { if (!settled) { settled = true; resolve(false); } });
+          });
+        }
+      });
+      m.el.addEventListener("click", function (e) {
+        if (e.target === m.el && !settled) { settled = true; resolve(false); }
+      });
+      m.el.addEventListener("keydown", function (e) { if (e.key === "Escape" && !settled) { settled = true; resolve(false); } });
+    });
+  };
+
+  App.toast = function (title, msg, type) {
+    var wrap = document.getElementById("toasts");
+    if (!wrap) { wrap = document.createElement("div"); wrap.id = "toasts"; wrap.className = "toasts"; document.body.appendChild(wrap); }
+    var el = document.createElement("div");
+    el.className = "toast " + (type || "success");
+    el.innerHTML = '<div class="t-main"><div class="t-title">' + UI.esc(title) + "</div>" + (msg ? '<div class="t-msg">' + UI.esc(msg) + "</div>" : "") + "</div>" +
+      '<button class="close-x" aria-label="关闭">✕</button>';
+    wrap.appendChild(el);
+    var timer = setTimeout(remove, 3800);
+    function remove() { el.classList.add("out"); setTimeout(function () { el.remove(); }, 220); }
+    el.querySelector(".close-x").addEventListener("click", function () { clearTimeout(timer); remove(); });
+  };
+
+  App.download = function (filename, text, mime) {
+    var blob = new Blob([text], { type: mime || "text/plain;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 1200);
+  };
+
+  App.nowStamp = function () {
+    var d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  };
+
+  return App;
+})();

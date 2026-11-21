@@ -1,8 +1,9 @@
 /* ============================================================
-   长夜制作台 V4 · 演示数据
-   所有数据仅为静态原型演示，保存在浏览器 localStorage。
+   长夜制作台 V4 · 数据层
+   只读演示字典：业务数据、演示身份、角色与权限。
+   不引用组件层，不读写页面状态。
    ============================================================ */
-window.SPData = (function () {
+window.DB = (function () {
   function seed() {
     var chapters = [
       ["雨夜来客", 3120], ["黑皮账簿", 2870], ["第二页", 3410], ["红围巾", 2980],
@@ -152,11 +153,11 @@ window.SPData = (function () {
     ];
 
     var assets = [
-      { id: "a1", name: "长夜书店 · 橱窗", type: "scene", status: "locked", version: "REF v4", refs: 14, shots: 12, desc: "暖黄橱窗、旧木书架、雨痕玻璃。全剧核心场景，夜间主光来自橱窗内 2700K 台灯。", prompt: "旧书店橱窗，雨夜，暖黄台灯，玻璃反光，电影感，9:16", color: "#8a6137", initial: "书" },
-      { id: "a2", name: "长夜书店 · 内景", type: "scene", status: "locked", version: "REF v3", refs: 9, shots: 18, desc: "纵深 6 米，左侧柜台，右侧旧书墙。柜台下有一只铁皮桶，后来被用来烧账簿。", prompt: "旧书店内景，木质书架，暖光，灰尘，浅景深", color: "#6b5237", initial: "内" },
-      { id: "a3", name: "雨夜巷道", type: "scene", status: "ready", version: "REF v2", refs: 6, shots: 9, desc: "窄巷，两侧旧墙，湿地面反射橙色灯。警戒线出现在第 4 场。", prompt: "雨夜窄巷，湿地面，橙色路灯，青黑色调，电影感", color: "#33514f", initial: "巷" },
+      { id: "a1", name: "长夜书店 · 橱窗", type: "scene", status: "locked", version: "REF v4", refs: 14, shots: 12, thumb: "assets/img/still-bookstore.png", desc: "暖黄橱窗、旧木书架、雨痕玻璃。全剧核心场景，夜间主光来自橱窗内 2700K 台灯。", prompt: "旧书店橱窗，雨夜，暖黄台灯，玻璃反光，电影感，9:16", color: "#8a6137", initial: "书" },
+      { id: "a2", name: "长夜书店 · 内景", type: "scene", status: "locked", version: "REF v3", refs: 9, shots: 18, thumb: "assets/img/still-bookstore.png", desc: "纵深 6 米，左侧柜台，右侧旧书墙。柜台下有一只铁皮桶，后来被用来烧账簿。", prompt: "旧书店内景，木质书架，暖光，灰尘，浅景深", color: "#6b5237", initial: "内" },
+      { id: "a3", name: "雨夜巷道", type: "scene", status: "ready", version: "REF v2", refs: 6, shots: 9, thumb: "assets/img/still-alley.png", desc: "窄巷，两侧旧墙，湿地面反射橙色灯。警戒线出现在第 4 场。", prompt: "雨夜窄巷，湿地面，橙色路灯，青黑色调，电影感", color: "#33514f", initial: "巷" },
       { id: "a4", name: "旧印刷厂", type: "scene", status: "draft", version: "REF v0", refs: 2, shots: 4, desc: "废弃铅字房，灰尘中的光柱，墙上还挂着一九八七年的生产表。", prompt: "废弃印刷厂，铅字盘，灰尘光柱，冷调，电影感", color: "#5c5e52", initial: "印" },
-      { id: "a5", name: "刑警队办公室", type: "scene", status: "ready", version: "REF v1", refs: 4, shots: 6, desc: "审讯室，单侧顶光，桌面有旧划痕。墙上时钟永远慢十一分钟。", prompt: "审讯室，顶光，旧木桌，冷绿墙面，压抑", color: "#4a5550", initial: "警" },
+      { id: "a5", name: "刑警队办公室", type: "scene", status: "ready", version: "REF v1", refs: 4, shots: 6, thumb: "assets/img/still-room.png", desc: "审讯室，单侧顶光，桌面有旧划痕。墙上时钟永远慢十一分钟。", prompt: "审讯室，顶光，旧木桌，冷绿墙面，压抑", color: "#4a5550", initial: "警" },
       { id: "a6", name: "书店天台", type: "scene", status: "ready", version: "REF v1", refs: 3, shots: 5, desc: "积水天台，城市橙色光斑，栏杆锈迹。第 7 场红围巾挂在这里。", prompt: "雨夜天台，积水，城市灯光虚化，红围巾，电影感", color: "#4b4438", initial: "台" },
       { id: "a7", name: "黑皮账簿", type: "prop", status: "locked", version: "REF v2", refs: 8, shots: 10, desc: "无署名，纸张厚且边缘焦黑。第一页写名字，第二页写时间。翻页时没有声音。", prompt: "黑色皮革账簿，焦边纸张，手写名字，特写，暖光", color: "#3a322c", initial: "簿" },
       { id: "a8", name: "红围巾", type: "prop", status: "locked", version: "REF v3", refs: 7, shots: 8, desc: "羊毛，湿透后接近黑色。口袋里总有一枚铜钥匙。林晚的角色锚点。", prompt: "红色羊毛围巾，湿透，特写，暗光，电影质感", color: "#93443a", initial: "巾" },
@@ -255,7 +256,10 @@ window.SPData = (function () {
 
     return {
       version: 1,
-      user: { name: "陈默", email: "chenmo@studio.cn", role: "制作总监", initial: "陈" },
+      storyVersion: "v5",
+      scriptVersion: "v6",
+      scriptLocked: true,
+      currentUserId: "u-owner",
       project: {
         id: "nyjm", name: "长夜将明", code: "NYJM-26", genre: "悬疑 / 都市 / 温情", episodes: 12, ratio: "9:16", fps: 30,
         tagline: "一间只在雨夜营业的旧书店，一本提前写好名字的账簿。",
@@ -314,6 +318,22 @@ window.SPData = (function () {
         { name: "剪辑师", desc: "时间线与导出", perms: ["剪辑", "导出"] },
         { name: "审核员", desc: "质检与审核结论", perms: ["审核"] }
       ],
+      identities: [
+        { id: "u-owner", code: "owner", name: "陈默", role: "项目所有者", dept: "制作中心", email: "chenmo@studio.cn", initial: "陈", color: "", perms: ["*"] },
+        { id: "u-director", code: "director", name: "苏禾", role: "导演", dept: "制作中心", email: "suhe@studio.cn", initial: "苏", color: "blue", perms: ["project:read", "story:read", "story:write", "script:read", "script:write", "asset:read", "asset:write", "board:read", "board:write", "task:read", "task:run", "qa:read", "qa:review", "timeline:read", "timeline:write", "export:read", "export:run"] },
+        { id: "u-writer", code: "writer", name: "顾青", role: "编剧", dept: "内容组", email: "guqing@studio.cn", initial: "顾", color: "green", perms: ["project:read", "story:read", "story:write", "script:read", "script:write", "asset:read", "board:read", "task:read", "qa:read"] },
+        { id: "u-art", code: "art", name: "白露", role: "美术指导", dept: "视觉组", email: "bailu@studio.cn", initial: "白", color: "red", perms: ["project:read", "story:read", "asset:read", "asset:write", "board:read", "board:write", "task:read", "task:run", "qa:read"] },
+        { id: "u-editor", code: "editor", name: "程野", role: "剪辑师", dept: "后期组", email: "chengye@studio.cn", initial: "程", color: "blue", perms: ["project:read", "asset:read", "board:read", "task:read", "qa:read", "timeline:read", "timeline:write", "export:read", "export:run"] },
+        { id: "u-reviewer", code: "reviewer", name: "周可", role: "审核员", dept: "质控组", email: "zhouke@studio.cn", initial: "周", color: "green", perms: ["project:read", "task:read", "qa:read", "qa:review", "timeline:read", "export:read"] }
+      ],
+      audit: [
+        ["今天 10:24", "陈默", "将「模型与用量」中的默认视频模型设为 mork-video-2", "设置"],
+        ["今天 09:58", "苏禾", "邀请审核员周可加入《长夜将明》", "成员"],
+        ["昨天 22:14", "白露", "更新「林晚」参考图 v3，并提交一致性检查", "资产"],
+        ["昨天 20:40", "顾青", "提交 EP03 剧本 v2，等待导演锁版", "剧本"],
+        ["昨天 18:32", "陈默", "创建导出任务 EX-0211", "导出"],
+        ["昨天 17:58", "程野", "EX-0209 横屏导出失败，已记录 ffprobe 诊断", "导出"]
+      ],
       models: [
         { name: "mork-llm-7b", cap: "文本生成", version: "2026.11", status: "已连接", latency: "1.8s", cost: "¥0.006 / 千字", def: true },
         { name: "mork-image-3", cap: "图像生成", version: "2026.10", status: "已连接", latency: "12s", cost: "¥0.08 / 张", def: true },
@@ -348,5 +368,9 @@ window.SPData = (function () {
     };
   }
 
-  return { seed: seed };
+  return {
+    seed: function () {
+      return JSON.parse(JSON.stringify(seed()));
+    }
+  };
 })();
