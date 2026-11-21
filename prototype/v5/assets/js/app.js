@@ -339,44 +339,28 @@ window.App = (function () {
     return true;
   }
 
-  var collapsedGroups = { system: true };
   var collapsedParents = {};
 
   /* 菜单注册表：业务组按生产链路归类；children 将同域次要视图收纳为二级入口。
      新增主功能时在此追加组或条目即可，路由权限仍由 ROUTE_PERMS 集中控制。 */
   var NAV_GROUPS = [
-    { id: "overview", label: "总览", items: [
-      { path: "overview/dashboard" },
+    { id: "overview", label: "概览", items: [
       { path: "overview/project" }
     ]},
-    { id: "create", label: "创作", items: [
+    { id: "workspace", label: "工作台", items: [
+      { path: "overview/dashboard" },
+      { path: "overview/playground" },
+      { path: "review/tasks" }
+    ]},
+    { id: "assets", label: "资产", items: [
       { path: "story/bible", children: ["story/import"] },
       { path: "production/episodes" },
-      { path: "overview/playground" }
-    ]},
-    { id: "produce", label: "制作", items: [
       { path: "production/assets" },
       { path: "production/storyboard", children: ["production/canvas"] },
-      { path: "production/dubbing" }
-    ]},
-    { id: "review", label: "审核与交付", items: [
-      { path: "review/tasks" },
+      { path: "production/dubbing" },
       { path: "review/qa", children: ["review/timeline"] },
       { path: "review/preview" },
       { path: "delivery/export" }
-    ]},
-    { id: "system", label: "系统管理", system: true, items: [
-      { path: "system/access" },
-      { path: "system/members" },
-      { path: "system/org" },
-      { path: "system/roles" },
-      { path: "system/overview" },
-      { path: "system/security" },
-      { path: "system/audit" },
-      { path: "system/providers" },
-      { path: "system/usage" },
-      { path: "system/workspace" },
-      { path: "system/settings" }
     ]}
   ];
 
@@ -405,7 +389,8 @@ window.App = (function () {
       : "";
     return '<div class="nav-parent' + ((selfActive || childActive) ? " active" : "") + (open ? " open" : "") + '">' +
       '<a class="nav-item' + (selfActive || childActive ? " active" : "") + '" href="' + App.link(r.path) + '">' +
-        '<span class="ni-icon">' + UI.icon(r.icon, 15) + "</span><span>" + UI.esc(r.title.split(" · ")[0]) + "</span>" + caret + "</a>" +
+        '<span class="ni-icon">' + UI.icon(r.icon, 15) + "</span><span>" + UI.esc(r.title.split(" · ")[0]) + "</span></a>" +
+      caret +
       (kids.length ? '<div class="nav nav--sub">' + kidsHTML + "</div>" : "") + "</div>";
   }
 
@@ -419,15 +404,6 @@ window.App = (function () {
       return navItemHTML(r, activePath, 1);
     }).join("");
 
-    if (group.system) {
-      var activeInGroup = visibleItems.some(function (it) { return it.path === activePath; });
-      var open = activeInGroup || !collapsedGroups[group.id];
-      return '<div class="nav-group nav-group--sub' + (open ? " open" : "") + '" data-sub="' + group.id + '">' +
-        '<button class="nav-label--toggle" data-app="toggle-group" data-group="' + group.id + '" aria-expanded="' + open + '">' +
-        '<span class="ni-icon">' + UI.icon("sliders", 16) + '</span><span class="nt-label">' + UI.esc(group.label) + '</span><span class="chev">' + UI.icon("down", 13) + "</span></button>" +
-        '<div class="nav nav--sub">' + itemsHTML + "</div></div>";
-    }
-
     return '<div class="nav-group"><div class="nav-label">' + UI.esc(group.label) + '</div><div class="nav">' + itemsHTML + "</div></div>";
   }
 
@@ -437,24 +413,8 @@ window.App = (function () {
       return groupHTML(g, activePath, hasProject);
     }).join("");
 
-    var visibleProjects = App.visibleProjects();
-    var currentProject = visibleProjects.length ? App.state.project : null;
-    var pct = currentProject ? App.epProgress("01") : 0;
-    var projectSwitch = currentProject
-      ? '<button class="project-switch" data-app="projects"><span class="ps-badge">' + UI.esc(currentProject.name.charAt(0)) + '</span>' +
-        '<span class="ps-main"><span class="ps-name">' + UI.esc(currentProject.name) + '</span>' +
-        '<span class="ps-meta">' + UI.esc(currentProject.code) + " · " + currentProject.members + ' 人 · 项目成员授权</span></span>' +
-        '<span class="chev">' + UI.icon("down", 13) + "</span></button>" +
-        '<div class="ps-progress"><i style="width:' + pct + '%"></i></div>'
-      : '<button class="project-switch" data-app="projects"><span class="ps-badge">锁</span>' +
-        '<span class="ps-main"><span class="ps-name">无项目授权</span><br><span class="ps-meta">联系项目负责人授予成员资格</span></span>' +
-        '<span class="chev">' + UI.icon("down", 13) + "</span></button>";
-
     var u = App.currentUser;
-    return '<div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M5 19V8.5L12 4l7 4.5V19"/><path d="M9 19v-6h6v6"/><circle cx="12" cy="10" r="1.2" fill="#fff" stroke="none"/></svg></span>' +
-      '<span><span class="brand-name">长夜制作台</span><br><span class="brand-sub">Private Studio Platform</span></span></div>' +
-      projectSwitch +
-      '<nav class="rail-nav">' + groups + "</nav>" +
+    return '<nav class="rail-nav">' + groups + "</nav>" +
       '<div class="rail-foot">' +
       '<button class="rail-user" data-app="account" title="账号与配置">' + UI.avatar(u.name, "", u.color) +
       '<span class="ru-main"><span class="ru-name">' + UI.esc(u.name) + '</span><span class="ru-role">' + UI.esc(u.role) + "</span></span></button>" +
@@ -493,12 +453,6 @@ window.App = (function () {
       if (act === "search") openPalette();
       if (act === "account") openPanel("account");
       if (act === "settings") openPanel("settings");
-      if (act === "toggle-group") {
-        var g = el.getAttribute("data-group");
-        collapsedGroups[g] = !collapsedGroups[g];
-        App.refresh();
-        return;
-      }
       if (act === "toggle-parent") {
         e.preventDefault();
         e.stopPropagation();
@@ -596,6 +550,11 @@ window.App = (function () {
       return '<div class="settings-group"><div class="settings-group-label">' + UI.esc(g.label) + "</div>" + items + "</div>";
     }).join("");
 
+    var curProject = App.visibleProjects().length ? App.state.project : null;
+    var projectEntry = curProject
+      ? `<button class="settings-entry" data-app="projects"><span class="se-icon">${UI.icon("folder", 15)}</span><span class="se-main"><span class="se-title">${UI.esc(curProject.name)}</span><span class="se-sub">${UI.esc(curProject.code)} · ${curProject.members} 人 · 项目成员授权</span></span><span class="se-go">${UI.icon("down", 13)}</span></button>`
+      : `<button class="settings-entry" data-app="projects"><span class="se-icon">${UI.icon("lock", 15)}</span><span class="se-main"><span class="se-title">无项目授权</span><span class="se-sub">联系项目负责人授予成员资格</span></span><span class="se-go">${UI.icon("down", 13)}</span></button>`;
+
     var body = '<div class="account-head">' + UI.avatar(u.name, "lg", u.color) +
       '<div><div class="account-name">' + UI.esc(u.name) + '</div><div class="small muted">' + UI.esc(u.email) + " · " + UI.esc(u.title) + "</div>" +
       '<div class="row wrap mt-8"><span class="badge b-teal">' + UI.esc(u.role) + '</span><span class="badge b-outline">' + UI.esc(account) + '</span><span class="badge ' + (u.status === "active" ? "b-done" : "b-warn") + '">' + App.statusLabel(u.status) + "</span></div></div></div>" +
@@ -605,6 +564,8 @@ window.App = (function () {
       App.state.identities.map(function (x) {
         return '<option value="' + x.id + '"' + (x.id === u.id ? " selected" : "") + ">" + UI.esc(x.name + " · " + (x.shortRole || x.role)) + "</option>";
       }).join("") + "</select>" + UI.icon("down", 12) + "</label></div>" +
+
+      '<div class="panel-block"><div class="panel-label">当前项目</div>' + projectEntry + "</div>" +
 
       '<div class="panel-block"><div class="panel-label">账号信息</div>' +
       '<div class="kv"><div class="k">部门</div><div class="v">' + UI.esc(u.dept) + '</div>' +
@@ -622,6 +583,7 @@ window.App = (function () {
       footer: '<button class="btn" data-close>关闭</button>',
       onMount: function (el, close) {
         el.addEventListener("click", function (e) {
+          if (e.target.closest('[data-app="projects"]')) { e.stopPropagation(); close(); openProjects(); return; }
           var b = e.target.closest("[data-panel-nav]");
           if (!b) return;
           var path = b.getAttribute("data-panel-nav");

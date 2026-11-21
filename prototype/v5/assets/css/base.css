@@ -97,48 +97,13 @@ p { margin: 0; }
   display: flex; flex-direction: column; gap: 14px;
   padding: 20px 16px 14px; overflow: hidden; z-index: 40;
 }
-.brand { display: flex; align-items: center; gap: 11px; padding: 2px 6px 0; }
-.brand-mark {
-  width: 34px; height: 34px; border-radius: 10px;
-  background: linear-gradient(145deg, #f0704f, #c9341f);
-  display: grid; place-items: center; box-shadow: 0 4px 14px rgba(226, 85, 61, .35); flex: 0 0 auto;
-}
-.brand-mark svg { width: 19px; height: 19px; }
-.brand-name { font-family: var(--font-serif); font-size: 17px; letter-spacing: .04em; color: #f4efe4; line-height: 1.2; }
-.brand-sub { font-size: 9.5px; letter-spacing: .22em; color: var(--rail-muted); text-transform: uppercase; }
-
-.project-switch {
-  width: 100%; background: var(--rail-2); border: 1px solid var(--rail-line); color: var(--rail-text);
-  border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; text-align: left;
-  transition: border-color .2s, background .2s;
-}
-.project-switch:hover { border-color: #464b55; background: #20242b; }
-.ps-badge { width: 30px; height: 30px; border-radius: 8px; background: #2a2e36; display: grid; place-items: center; font-family: var(--font-serif); font-size: 12px; color: #e8c9a4; flex: 0 0 auto; }
-.ps-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.ps-name { font-size: 12.5px; font-weight: 600; line-height: 1.4; }
-.ps-meta { font-size: 10.5px; color: var(--rail-muted); letter-spacing: .04em; }
-.chev { color: var(--rail-muted); font-size: 12px; }
-.ps-progress { height: 3px; border-radius: 2px; background: #333841; overflow: hidden; margin-top: 8px; }
-.ps-progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), #f2a36d); }
-
 .rail-nav { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
 .nav-group + .nav-group { border-top: 1px solid var(--rail-line); margin-top: 10px; padding-top: 8px; }
 .nav { display: flex; flex-direction: column; gap: 2px; }
 .nav-label { font-size: 10px; letter-spacing: .14em; color: var(--rail-muted); padding: 2px 10px 6px; text-transform: uppercase; }
 
-.nav-label--toggle {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  padding: 9px 10px; border: 0; border-radius: 10px; background: transparent; cursor: pointer;
-  color: #bcb8c1; font-size: 12.5px; transition: background .16s, color .16s;
-}
-.nav-label--toggle:hover { background: #20232a; color: #f2ede2; }
-.nav-label--toggle .ni-icon { opacity: .72; }
-.nav-label--toggle .nt-label { flex: 1; text-align: left; }
-.nav-label--toggle .chev { transition: transform .18s ease; }
-.nav-group--sub.open .nav-label--toggle .chev { transform: rotate(180deg); }
 .nav--sub { display: none; }
-.nav-group--sub.open .nav--sub, .nav-parent.open .nav--sub { display: flex; }
-.nav-group--sub .nav-item { padding-left: 12px; }
+.nav-parent.open .nav--sub { display: flex; }
 
 .nav-item {
   display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px;
@@ -147,18 +112,20 @@ p { margin: 0; }
 .nav-item:hover { background: #20232a; color: #f2ede2; }
 .nav-item.active { background: #2c3038; color: #fff; }
 .ni-icon { width: 16px; height: 16px; opacity: .72; flex: 0 0 auto; }
-.nav-item.active .ni-icon, .nav-label--toggle:hover .ni-icon { opacity: 1; }
+.nav-item.active .ni-icon { opacity: 1; }
 .ni-badge { margin-left: auto; min-width: 18px; height: 18px; border-radius: 9px; background: #3a3f48; color: #dfdbe3; font-size: 10px; display: grid; place-items: center; padding: 0 5px; }
 .ni-badge.hot { background: var(--accent); color: #fff; }
 
+.nav-parent { position: relative; }
 .nav-parent .nav-item .ni-icon { opacity: .72; }
 .ni-caret {
-  margin-left: auto; flex: 0 0 auto; width: 22px; height: 22px; display: grid; place-items: center;
+  position: absolute; right: 8px; top: 8px; width: 22px; height: 22px; display: grid; place-items: center;
   border: 0; background: transparent; color: var(--rail-muted); cursor: pointer; border-radius: 6px;
-  transition: transform .18s ease, background .16s;
+  transition: background .16s;
 }
 .ni-caret:hover { background: #2c3038; color: #fff; }
-.nav-parent.open .ni-caret { transform: rotate(180deg); }
+.nav-parent.open .ni-caret svg { transform: rotate(180deg); }
+.ni-caret svg { transition: transform .18s ease; }
 .nav-sub-item { padding-left: 38px; font-size: 12px; color: #a9a5b0; }
 .nav-sub-item .ni-icon { width: 14px; height: 14px; }
 .nav-sub-item:hover { color: #f2ede2; }
