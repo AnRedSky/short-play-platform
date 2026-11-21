@@ -1,38 +1,56 @@
-# V7 业务追溯矩阵
+# V7.4 业务追溯矩阵
 
-本文件将方案 V1.0 的业务原则映射到 V7 原型页面和交互。V7 从零构建，不复用 V5/V6 页面或组件。
+本文件将方案 V1.0 的业务原则映射到 V7.4 原型页面、工作台环节与交互，并标注路由参数与人工决策节点。V7 从零构建，不复用 V5/V6 页面或组件。
 
-| 方案 V1.0 业务要求 | V7 页面 / 路由 | 可演示内容 |
-|---|---|---|
-| 单一企业主体、内部多租户 | `governance/tenants`、`governance/tenant-detail`、`governance/cross-access` | 创建内部租户、租户资料、预算、数据边界 |
-| 企业身份、员工、角色 | `people/members`、`people/roles` | 成员邀请、角色职责、权限范围 |
-| 员工独立制作 | `studio/brief`、`workspace/projects` | 项目创建、创作需求输入、个人制作工作台 |
-| AI 创意与编剧 | `studio/brief` | 创意需求、题材、受众、视觉风格、生成流程入口 |
-| 人工剧本审核 | `studio/script-review` | 故事大纲、分集、合规预检、通过正式版本 |
-| AI 导演与分镜 | `pipeline/shots` | Shot Unit 镜头生产单元 |
-| 人物与场景视觉资产 | `assets/library` | 资产类型、版本、来源项目和租户归属 |
-| AI 视频、音频与后期 | `pipeline/board` | 阶段状态、生产依赖、任务调度与资源观察 |
-| 自动失败恢复、异常决策 | `pipeline/exceptions` | 暂停受影响任务、备用模型恢复交互 |
-| AI 质量控制 | `delivery/review` | 质量指标与人工终审检查项 |
-| 最终成片审核 | `delivery/review` | 审核清单、人工通过状态 |
-| 作品交付与资产归档 | `delivery/center` | 交付包检查、正式归档状态演示 |
-| 企业与员工产出统计 | `analytics/enterprise`、`analytics/employee` | 交付作品、集数、质量、效率和成本口径 |
-| 模型资源与企业配额 | `platform/models` | 模型能力类型、备用策略、租户白名单治理 |
-| 审计与数据追溯 | `platform/audit` | 跨租户授权、生产操作、交付审计事件 |
-| 平台运维边界 | `platform/system` | 基础设施运行、运维权限边界 |
+## 工作台环节与业务对应
+
+| 环节 | 路由 | 方案 V1.0 业务要求 | 可演示内容 |
+|---|---|---|---|
+| 01 总览 | `overview/home` | 企业生产全局视图 | 授权项目、生产状态、待决事项、交付与能力状态 |
+| 02 项目创建 | `workspace/projects`、`workspace/detail?id=<项目ID>` | 员工独立制作、项目主业务对象 | 新建、编辑、归档、恢复、CSV 导出、项目档案与剧本版本追溯 |
+| 03 剧本创作 | `studio/brief`、`studio/script-review?id=<项目ID>` | AI 创意编剧、人工剧本审核 | 创作需求校验、保存草稿、生成剧本、版本抽屉、下载、通过锁定、退回原因必填 |
+| 04 素材与分镜 | `pipeline/shots`、`assets/library` | 导演分镜、人物与场景视觉资产 | 镜头单元生成/重生成、资产上传、详情抽屉与历史版本、新增版本、下载、移除、类型筛选；资产以项目 ID 关联 |
+| 05 拍摄排期 | `pipeline/schedule`、`pipeline/board`、`pipeline/exceptions` | 生产计划、AI 视频音频生产、失败恢复 | 排期新增/编辑/启动/暂停/恢复/删除、日期校验、启动生产、异常策略与升级协查 |
+| 06 后期制作 | `pipeline/post` | 配音、字幕、剪辑与合成 | 后期环节状态、启动待开工、单环节重试与详情、完成度与终审入口 |
+| 07 审核交付 | `delivery/review?id=<项目ID>`、`delivery/center` | 最终成片审核、作品交付归档 | 7 项清单勾选、集次门槛、退回返修、集次预览、记录导出、交付包生成与清单导出 |
+| 08 发布上线 | `delivery/release` | 渠道发布与上线记录 | 新增排期、立即上线、下线、删除、渠道授权、前置条件提示 |
+| 09 运营分析 | `analytics/enterprise`、`analytics/employee` | 企业与员工产出统计 | 周期切换、交付/集数/质量/成本口径、CSV 导出、员工产出详情 |
+| 10 企业治理 | `governance/tenants`、`governance/tenant-detail?id=<租户ID>`、`governance/cross-access` | 单一企业主体、内部多租户 | 租户新增/编辑/停用/恢复/归档、真实成员与项目计数、跨租户授权新增与撤销 |
+| 11 组织与身份 | `people/members`、`people/roles` | 企业身份、员工与角色 | 成员邀请、详情、改角色、重发邀请、停用/启用、移除、角色权限详情 |
+| 12 平台与审计 | `platform/audit`、`platform/models`、`platform/system` | 模型资源、审计与平台边界 | 审计筛选/详情/CSV 导出、模型切换与测试、备份、缓存、重启、演示重置 |
+
+## 菜单架构
+
+- 一级只有两项：“短剧制作工作台”（环节 01–09）与“企业与平台”（环节 10–12）。
+- 二级为制作环节，三级为具体页面；层级与顺序由 `DB.flow` 编排，模块通过 `stage` 声明归属，不自行创建一级菜单。
+- 制作工作台不再渲染组头，侧栏从“01 总览”直接开始；“企业与平台”保留折叠组头并排在工作台之后，侧栏内容过长时整体滚动。
+- 制作流程、交付与发布、经营分析全部在同一工作台菜单内完成，跨菜单切换只发生在需要企业治理或平台运维时。
 
 ## 业务对象链路
 
-企业主体 → 内部租户 → 成员关系 → 创作项目 → 剧本版本 → 生产计划 → Shot Unit → 音视频资产 → 分集成片 → 最终交付。
+企业主体 → 内部租户 → 成员关系 → 创作项目 → 剧本版本 → 生产计划 → 拍摄排期 → Shot Unit → 音视频资产 → 后期合成 → 分集成片 → 最终交付 → 渠道上线。
 
-每个演示项目、资产、成本与交付均包含租户归属字段。员工通过当前租户上下文访问业务数据；跨租户查看不能仅凭登录身份自动获得。
+每个演示项目、资产、成本、排期与交付均包含租户归属字段。员工通过当前租户上下文访问业务数据；跨租户查看不能仅凭登录身份自动获得。
+
+## 路由与参数约定
+
+- 列表页无参数，详情页统一使用 `?id=`：`governance/tenant-detail?id=tn-*`、`workspace/detail?id=SP-*`、`studio/script-review?id=SP-*`、`delivery/review?id=SP-*`、`pipeline/schedule?id=SP-*`、`pipeline/post?id=SP-*`、`delivery/release?id=SP-*`。
+- `App.renderRoute` 解析 `#/path?query`，把 `URLSearchParams` 传入 `render(params)`；`renderRoute` 与 `App.go(target)` 都通过 `focusContext(id)` 同步项目/租户上下文，保证深链页面与后续操作对象一致。
+- 缺失 `id` 或当前身份无权访问时落到当前上下文并给出提示；未匹配路由为 404，无权限为 403，均提供返回可用首页入口。
 
 ## 人工决策节点
 
-- A / 剧本审核：`studio/script-review`
-- B / 最终成片审核：`delivery/review`
-- 异常处置：`pipeline/exceptions`
+- A / 剧本审核：`studio/script-review?id=<项目ID>`，通过或退回均需二次确认，退回原因至少 10 个字符；通过后锁定正式剧本版本。
+- B / 最终成片审核：`delivery/review?id=<项目ID>`，必须逐项勾选 7 项清单；集数未完成时不提供终审按钮；退回返修需填写原因。
+- 异常处置：`pipeline/exceptions`，恢复前选择恢复策略并填写说明，操作写入审计事件。
+- 交付归档：`delivery/center`，归档为不可逆操作，需二次确认，生成交付单 `DL-*` 并写入审计事件。
+
+## 权限口径
+
+三层判定：模块注册时声明 `permission`，`App.allowed()` 依据 `DB.permissions[identity]` 决定路由可见性，模块内部只渲染当前身份可执行的动作。侧栏条目数量始终等于当前身份可访问路由数量；当前环节与页面同时高亮。
+
+业务状态作为第二道边界：归档项目与归档租户隐藏写操作；归档项目的制作深链仍可查看与导出，但会经过动作守卫拦截生产、上传、审核、发布等写操作，并提示先恢复项目。
 
 ## 明确的原型限制
 
-Mock 数据和状态仅用于演示导航、页面布局和流程关系。模型生成、自动调度、内容检测、媒体处理、持久化、服务端权限和真实交付均未实现。
+Mock 数据和状态统一收敛在 `assets/js/data.js`。模型生成、自动调度、内容检测、媒体处理、服务端权限、真实渠道发布和真实交付均未实现；业务操作写入浏览器 `localStorage`（版本键 `framework.v7.state`），刷新保留，但限定单浏览器演示，可在系统运行配置中重置。CSV 导出为前端 Blob 生成。
