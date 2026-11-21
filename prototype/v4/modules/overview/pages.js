@@ -42,10 +42,17 @@
 
   function dashboard() {
     var s = st();
+    if (!App.visibleProjects().length) {
+      return '<div class="page"><div class="page-head"><div class="ph-main"><span class="eyebrow">Workspace · 2026 年 11 月 21 日</span>' +
+        '<h1 class="page-title">早上好，' + UI.esc(App.currentUser.name) + '。</h1>' +
+        '<p class="page-desc">你的系统角色不自动赋予项目内容访问权；当前账号不在任何项目成员名单中。</p></div></div>' +
+        '<div class="card card-pad mt-16">' + UI.empty("暂无项目成员授权", "项目是资产、剧本、镜头与交付的唯一边界。请联系项目负责人授予成员资格，或提交项目访问申请。",
+          '<a class="btn btn-primary" href="' + App.link("system/access") + '">查看我的权限</a>' + (App.hasPerm("system:read") ? '<a class="btn" href="' + App.link("system/overview") + '">企业概览</a>' : "")) + "</div></div>";
+    }
     var p = s.project;
     var heads = '<div class="page-head"><div class="ph-main"><span class="eyebrow">Workspace · 2026 年 11 月 21 日</span>' +
       '<h1 class="page-title">早上好，' + UI.esc(App.currentUser.name) + '。</h1>' +
-      '<p class="page-desc">今天有 <b>1 集成片</b>等待审核，<b>' + App.taskRunning() + ' 个 AI 任务</b>需要关注。EP01 已完成剧本与资产，正在推进分镜与画面。</p></div>' +
+      '<p class="page-desc">今天有 <b>1 条质量门禁待复核</b>，<b>' + App.taskRunning() + ' 个 AI 任务</b>需要关注。EP01 已完成剧本与资产，正在推进分镜与画面。</p></div>' +
       '<div class="page-actions"><button class="btn" data-act="open-project">' + UI.icon("compass") + '项目总览</button>' +
       (App.hasPerm("story:write") ? '<button class="btn btn-primary" data-act="new-drama">' + UI.icon("plus") + "新建短剧</button>" : "") +
       "</div></div>";
@@ -59,7 +66,7 @@
       '</a><a class="btn" href="' + App.link("review/qa") + '">' + UI.icon("play") + "查看待审成片</a></div></div>" +
       '<div class="hero-side"><div class="hs-label">EP01 · 雨夜书店</div><div class="hs-name">粗剪 v4</div>' +
       '<div class="hs-row"><span>完成度</span><strong>' + App.epProgress("01") + '%</strong></div><div class="hs-bar"><i style="width:' + App.epProgress("01") + '%"></i></div>' +
-      '<div class="hs-row"><span>5 / 8 阶段</span><span>QA 94</span></div></div></section>';
+      '<div class="hs-row"><span>5 / 8 阶段</span><span>REVIEW_REQUIRED</span></div></div></section>';
 
     var stats = '<div class="grid g4 mt-16">' +
       UI.stat({ label: "在制项目", value: "3", unit: "个", delta: "1 个本周交付" }) +
@@ -71,7 +78,7 @@
       title: "今日待办", sub: "3 条需要你在今天处理", cls: "mt-16",
       head: '<a class="btn btn-xs" href="' + App.link("review/tasks") + '">全部任务</a>',
       body: '<div class="todo-list">' +
-        '<button class="todo-row" data-act="go-qa"><span class="todo-icon hot">' + UI.icon("check", 15) + '</span><span class="todo-main"><span class="todo-title">EP01 成片待审核</span><span class="todo-meta">QA 94 分 · 3 条批注 · 截止今天 18:00</span></span><span class="badge b-warn">待处理</span></button>' +
+        '<button class="todo-row" data-act="go-qa"><span class="todo-icon hot">' + UI.icon("check", 15) + '</span><span class="todo-main"><span class="todo-title">EP01 成片待审核</span><span class="todo-meta">REVIEW_REQUIRED · 3 条批注 · 截止今天 18:00</span></span><span class="badge b-warn">待处理</span></button>' +
         '<button class="todo-row" data-act="go-tasks"><span class="todo-icon">' + UI.icon("alert", 15) + '</span><span class="todo-main"><span class="todo-title">T-2039 参考图生成失败</span><span class="todo-meta">FACE_DRIFT · 3/4 候选一致性不足</span></span><span class="badge b-danger">失败</span></button>' +
         '<button class="todo-row" data-act="go-script"><span class="todo-icon">' + UI.icon("feather", 15) + '</span><span class="todo-main"><span class="todo-title">EP03 剧本等待确认</span><span class="todo-meta">顾青提交 · 4 场 · 待导演锁版</span></span><span class="badge b-todo">待确认</span></button>' +
         '<button class="todo-row" data-act="go-assets"><span class="todo-icon">' + UI.icon("image", 15) + '</span><span class="todo-main"><span class="todo-title">2 项资产需要补参考</span><span class="todo-meta">铅字盘、沈知白 · 0 个有效参考</span></span><span class="badge b-warn">待补</span></button>' +
@@ -82,9 +89,9 @@
       ["script:write", "feather", "写下一场", "EP01 · 8 场已完成", "production/script", { ep: "01" }],
       ["asset:write", "image", "补 2 项资产", "铅字盘、沈知白待补参考", "production/assets"],
       ["task:run", "alert", "处理失败任务", "T-2039 · 一致性不足", "review/tasks"],
-      ["qa:review", "check", "终审 EP01", "QA 94 分 · 3 条批注", "review/qa"],
+      ["qa:review", "check", "复核 EP01", "REVIEW_REQUIRED · 3 条批注", "review/qa"],
       ["timeline:write", "activity", "排时间线", "4 轨 · 18 片段 · 92 秒", "review/timeline"],
-      ["export:run", "download", "导出交付", "质检通过后解锁", "delivery/export"]
+      ["export:run", "download", "导出交付", "质量门禁 PASS 后解锁", "delivery/export"]
     ].filter(function (x) { return App.hasPerm(x[0]); }).map(function (x) {
       return '<a class="quick-tile" href="' + App.link(x[4], x[5]) + '"><span class="quick-icon">' + UI.icon(x[1], 15) + '</span>' +
         '<span class="quick-main"><span class="quick-title">' + x[2] + '</span><span class="quick-sub">' + x[3] + "</span></span></a>";
@@ -134,7 +141,7 @@
       ["分镜契约", "12 个镜头 · 5 个已就绪", "active"],
       ["画面生成", "5 / 12 镜头完成", "todo"],
       ["配音与字幕", "等待画面锁定", "locked"],
-      ["质检审核", "QA 94 分 · 待终审", "todo"],
+      ["质检审核", "REVIEW_REQUIRED · 待复核", "todo"],
       ["导出交付", "审核通过后解锁", "locked"]
     ];
     var eps = s.episodes.map(function (e) {
@@ -217,7 +224,7 @@
         body: '<div class="stack">' + list.map(function (m) {
           return '<div class="list-row">' + UI.avatar(m.name, "", m.color) + '<span class="lr-main"><span class="lr-title">' + UI.esc(m.name) + ' · ' + UI.esc(m.role) + '</span><span class="lr-sub">' + UI.esc(m.dept) + " · " + UI.esc(m.email) + '</span></span>' + memberBadge(m) + "</div>";
         }).join("") + "</div>",
-        footer: '<button class="btn" data-close>关闭</button>' + (App.hasPerm("member:read") ? '<a class="btn btn-primary" href="' + App.link("system/members") + '">成员与席位</a>' : "")
+        footer: '<button class="btn" data-close>关闭</button>' + (App.hasPerm("member:read") ? '<a class="btn btn-primary" href="' + App.link("system/members") + '">用户与成员</a>' : "")
       });
     },
     copyCode: function () {

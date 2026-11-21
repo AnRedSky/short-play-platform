@@ -35,7 +35,7 @@
       UI.pageHead({ eyebrow: "Season · 12 episodes", title: "分集与剧本", desc: "用季卡管理 12 集节奏。EP01 已锁版，其余可批量生成剧本；章节映射决定每集覆盖的原文范围。",
         actions: (App.hasPerm("script:write") ? '<button class="btn" data-act="map">' + UI.icon("list") + '章节映射</button><button class="btn" data-act="replan">' + UI.icon("refresh") + '重分集</button><button class="btn btn-primary" data-act="batch">' + UI.icon("spark") + "批量生成剧本</button>" : '<span class="badge b-locked">当前身份只读</span>') }) +
       '<div class="grid g4 mb-16">' + UI.stat({ label: "总集数", value: "12", unit: "集", delta: "24 章 · 2 章/集" }) +
-      UI.stat({ label: "已锁版", value: String(counts.locked), unit: "集", delta: "EP01 已通过终审" }) +
+      UI.stat({ label: "已锁版", value: String(counts.locked), unit: "集", delta: "EP01 已记录 PASS" }) +
       UI.stat({ label: "剧本草稿", value: String(counts.draft), unit: "集", delta: "等待导演确认" }) +
       UI.stat({ label: "待生成", value: String(counts.pending), unit: "集", delta: "可用批量生成" }) + "</div>" +
       '<div class="card"><div class="card-head"><div><h3>季卡</h3><div class="ch-sub">12 集 · 9:16 竖屏 · 目标单集 90 秒</div></div>' + UI.badge("EP01 完成度 " + App.epProgress("01") + "%", "b-active") + "</div>" +

@@ -16,8 +16,8 @@
   function exportPage() {
     var s = st(), approved = s.qa.status === "approved";
     var gate = approved
-      ? '<div class="gate-card ok"><div class="row"><span style="color:var(--success)">' + UI.icon("check", 20) + '</span><div class="lr-main"><b>质检 gate 已通过</b><div class="tiny muted">EP01 · QA 94 分 · 终审通过，可创建交付任务</div></div><span class="badge b-done">READY</span></div></div>'
-      : '<div class="gate-card"><div class="row"><span style="color:var(--danger)">' + UI.icon("lock", 20) + '</span><div class="lr-main"><b>审核通过后才能发布</b><div class="tiny muted">当前 QA 结论：' + (s.qa.status === "rejected" ? "已退回" : "待终审") + '。请先完成人工终审。</div></div><a class="btn btn-sm" href="' + App.link("review/qa") + '">去审核</a></div></div>';
+      ? '<div class="gate-card ok"><div class="row"><span style="color:var(--success)">' + UI.icon("check", 20) + '</span><div class="lr-main"><b>质量门禁 PASS</b><div class="tiny muted">EP01 · PASS · 已解锁时间线与导出，可创建交付任务</div></div><span class="badge b-done">READY</span></div></div>'
+      : '<div class="gate-card"><div class="row"><span style="color:var(--danger)">' + UI.icon("lock", 20) + '</span><div class="lr-main"><b>质量门禁 PASS 后才能发布</b><div class="tiny muted">当前门禁结果：' + (s.qa.status === "rejected" ? "FAIL" : "REVIEW_REQUIRED") + '。请先完成人工复核并记录 PASS。</div></div><a class="btn btn-sm" href="' + App.link("review/qa") + '">去复核</a></div></div>';
 
     var specs = SPECS.map(function (x, i) {
       return '<button class="spec-option' + (i === spec ? " active" : "") + '" data-act="spec" data-i="' + i + '"><span class="so-radio"></span><span class="so-main"><b>' + x.name + '</b><small>' + x.desc + " · " + x.size + "</small></span></button>";
@@ -42,8 +42,8 @@
       '<button class="btn btn-ghost" data-act="fail-demo"' + (approved && App.hasPerm("export:run") ? "" : " disabled") + '>演示失败诊断</button></div></div></div></div>' +
 
       '<div class="stack"><div class="card"><div class="card-head"><h3>冻结输入</h3><span class="tiny muted">创建时锁定</span></div><div class="card-body"><div class="kv">' +
-      '<div class="k">剧本</div><div class="v">EP01 · v6 已锁版</div><div class="k">资产</div><div class="v">18 项 · 参考版本锁定</div><div class="k">分镜</div><div class="v">12 镜头 · 5 就绪</div><div class="k">时间线</div><div class="v">TL v4 · 92s</div><div class="k">质检</div><div class="v">94 分 · ' + (approved ? "通过" : "未通过") + "</div></div></div></div>" +
-      '<div class="card"><div class="card-head"><h3>导出任务</h3></div><div class="card-body" id="exportProgress">' + (lastRun ? runHTML(lastRun) : (approved ? '<div class="tiny muted">尚未创建任务。选择规格后点击「创建导出任务」，任务会依次完成完整解码与 checksum。</div>' : '<div class="notice warn">' + UI.icon("alert", 15) + '<span>导出被审核拦截。先到质检页完成终审。<a href="' + App.link("review/qa") + '">前往质检</a></span></div>')) + "</div></div>" +
+      '<div class="k">剧本</div><div class="v">EP01 · v6 已锁版</div><div class="k">资产</div><div class="v">18 项 · 参考版本锁定</div><div class="k">分镜</div><div class="v">12 镜头 · 5 就绪</div><div class="k">时间线</div><div class="v">TL v4 · 92s</div><div class="k">质量门禁</div><div class="v">' + (approved ? "PASS" : "REVIEW_REQUIRED") + "</div></div></div></div>" +
+      '<div class="card"><div class="card-head"><h3>导出任务</h3></div><div class="card-body" id="exportProgress">' + (lastRun ? runHTML(lastRun) : (approved ? '<div class="tiny muted">尚未创建任务。选择规格后点击「创建导出任务」，任务会依次完成完整解码与 checksum。</div>' : '<div class="notice warn">' + UI.icon("alert", 15) + '<span>导出被质量门禁拦截。先到质检页记录 PASS。<a href="' + App.link("review/qa") + '">前往质检</a></span></div>')) + "</div></div>" +
       '<div class="card"><div class="card-head"><h3>历史记录</h3><span class="tiny muted">永久保留</span></div><div class="card-body tight"><div class="history-scroll">' + history + "</div></div></div></div></div></div>";
   }
 
@@ -115,7 +115,7 @@
 
   function downloadManifest(e) {
     var txt = "长夜制作台 · 交付清单\n\n导出 ID：" + e.id + "\n项目：长夜将明（NYJM-26）\n集数：EP01 雨夜书店\n规格：" + e.profile + "\n文件：" + e.ver + "\n大小：" + e.size + "\n时长：" + e.duration + "\nchecksum：" + e.checksum + "\n创建：" + e.createdAt +
-      "\n\n伴随产物：\n- EP01_v5.srt（字幕，UTF-8）\n- EP01_审核报告.txt（QA 94 分）\n- EP01_shot_contracts.json（12 镜头）\n\n说明：纯静态原型不生成真实 MP4；此清单为可下载的演示交付物。\n";
+      "\n\n伴随产物：\n- EP01_v5.srt（字幕，UTF-8）\n- EP01_质量门禁报告.txt（PASS / REVIEW_REQUIRED / FAIL）\n- EP01_shot_contracts.json（12 镜头）\n\n说明：纯静态原型不生成真实 MP4；此清单为可下载的演示交付物。\n";
     App.download(e.ver.replace(/\.[^.]+$/, "") + "_交付清单.txt", txt);
     App.toast("交付清单已下载", e.id, "success");
   }

@@ -186,7 +186,7 @@ window.DB = (function () {
 
     var tasks = [
       { id: "T-2041", name: "画面生成 · EP01 S0107 雨巷追踪", type: "视频生成", model: "mork-video-2", status: "running", progress: 32, cost: 0.86, started: "23:41:08", duration: "1m 12s", target: "EP01 / S0107", logs: [["23:41:08", "任务已创建，冻结 3 项输入版本"], ["23:41:09", "输入校验通过：REF v3 / Contract v2"], ["23:41:22", "提交 mork-video-2 · 1080×1920 · 24fps"], ["23:42:05", "生成中 32% · 预计剩余 2m 18s"], ["23:42:11", "提示：雨幕密度高于 Contract 参考，已自动重采样"]] },
-      { id: "T-2040", name: "配音合成 · EP01 对白 19 条", type: "语音合成", model: "moss-tts-cn", status: "queued", progress: 0, cost: 0.21, started: "—", duration: "—", target: "EP01 / 全部对白", logs: [["23:40:55", "任务排队中，等待并发槽位"]] },
+      { id: "T-2040", name: "配音合成 · EP01 对白 19 条", type: "语音合成", model: "mork-tts-cn", status: "queued", progress: 0, cost: 0.21, started: "—", duration: "—", target: "EP01 / 全部对白", logs: [["23:40:55", "任务排队中，等待并发槽位"]] },
       { id: "T-2039", name: "参考图生成 · 林晚 REF v3", type: "图像生成", model: "mork-image-3", status: "failed", progress: 68, cost: 0.42, started: "23:18:30", duration: "48s", target: "资产 / 林晚", logs: [["23:18:30", "任务已创建"], ["23:18:31", "参考图 REF v2 冻结"], ["23:18:44", "生成 4 张候选，进入一致性检查"], ["23:19:18", "检查失败：FACE_DRIFT，3/4 候选与锚点偏差 > 0.18"], ["23:19:18", "任务失败，可调整参考权重后重跑"]], error: "FACE_DRIFT · 角色一致性低于阈值" },
       { id: "T-2038", name: "分镜契约解析 · EP01 12 镜头", type: "文本生成", model: "mork-llm-7b", status: "succeeded", progress: 100, cost: 1.86, started: "22:56:10", duration: "3m 12s", target: "EP01 / Storyboard", logs: [["22:56:10", "任务已创建"], ["22:56:40", "解析 8 场 · 19 条对白"], ["22:58:02", "生成 12 个 Shot Contract 草稿"], ["22:59:22", "校验通过，产物 Artifact #2041"]] },
       { id: "T-2037", name: "剧本结构化 · EP01 8 场", type: "文本生成", model: "mork-llm-7b", status: "succeeded", progress: 100, cost: 0.54, started: "22:31:44", duration: "1m 08s", target: "EP01 / Script v6", logs: [["22:31:44", "任务已创建"], ["22:32:12", "识别场次 8 · 角色 4 · 道具 6"], ["22:32:52", "产物 Script v6 已保存"]] },
@@ -246,35 +246,41 @@ window.DB = (function () {
     ];
 
     var roles = [
-      { id: "r-owner", name: "工作区所有者", short: "所有者", desc: "企业空间最终责任人，拥有全部权限与订阅付款权。", scope: "org", color: "red", system: true, perms: ["*"] },
-      { id: "r-admin", name: "企业管理员", short: "管理员", desc: "管理组织、成员、安全与集成，不承担财务付款。", scope: "org", color: "blue", system: true, perms: ["workspace:read", "workspace:manage", "org:read", "dept:manage", "member:read", "member:manage", "role:manage", "security:manage", "audit:read", "integration:manage", "project:read"] },
-      { id: "r-manager", name: "部门负责人", short: "部门负责人", desc: "查看本部门成员与审计，负责部门内项目交付。", scope: "dept", color: "gold", system: false, perms: ["org:read", "member:read", "audit:read", "project:read", "project:write", "story:read", "script:read", "asset:read", "board:read", "task:read", "qa:read", "timeline:read", "export:read"] },
-      { id: "r-director", name: "导演", short: "导演", desc: "内容与成片终审，覆盖从剧本到导出的制作链路。", scope: "project", color: "red", system: false, perms: ["project:read", "project:write", "story:read", "story:write", "script:read", "script:write", "asset:read", "asset:write", "board:read", "board:write", "task:read", "task:run", "qa:read", "qa:review", "timeline:read", "timeline:write", "export:read", "export:run"] },
-      { id: "r-writer", name: "编剧", short: "编剧", desc: "维护故事、分集与剧本，可引用资产但不可改动制作文件。", scope: "project", color: "green", system: false, perms: ["project:read", "story:read", "story:write", "script:read", "script:write", "asset:read", "board:read", "task:read", "qa:read"] },
-      { id: "r-art", name: "美术指导", short: "美术", desc: "维护资产参考与分镜画面，可发起生成任务。", scope: "project", color: "red", system: false, perms: ["project:read", "story:read", "asset:read", "asset:write", "board:read", "board:write", "task:read", "task:run", "qa:read"] },
-      { id: "r-editor", name: "剪辑师", short: "剪辑", desc: "负责时间线、字幕与交付导出。", scope: "project", color: "blue", system: false, perms: ["project:read", "asset:read", "board:read", "task:read", "qa:read", "timeline:read", "timeline:write", "export:read", "export:run"] },
-      { id: "r-reviewer", name: "审核员", short: "审核", desc: "独立质检与审计查看，不参与制作写入。", scope: "project", color: "green", system: false, perms: ["project:read", "task:read", "qa:read", "qa:review", "timeline:read", "export:read", "audit:read"] },
-      { id: "r-guest", name: "外部访客", short: "访客", desc: "仅可查看指定项目的审片页与只读交付记录。", scope: "project", color: "gold", system: false, perms: ["project:read", "qa:read", "timeline:read", "export:read"] }
+      { id: "r-owner", name: "系统管理员", short: "系统", desc: "私有化部署的最终责任人，拥有系统治理与全部项目授权。", scope: "org", color: "red", system: true, perms: ["*"] },
+      { id: "r-admin", name: "组织管理员", short: "组织", desc: "管理组织、用户、角色、Provider、数据外发与审计；项目内容仍按成员授权。", scope: "org", color: "blue", system: true, perms: ["system:read", "system:manage", "org:read", "dept:manage", "member:read", "member:manage", "role:manage", "security:manage", "audit:read", "provider:read", "provider:manage", "usage:read", "usage:manage", "project:read"] },
+      { id: "r-manager", name: "项目负责人 / 制片人", short: "制片", desc: "对授权项目负责，管理项目成员、生产进度、预算与交付。", scope: "project", color: "gold", system: false, perms: ["project:read", "project:write", "settings:manage", "story:read", "script:read", "asset:read", "board:read", "task:read", "task:run", "qa:read", "qa:review", "timeline:read", "export:read", "usage:read"] },
+      { id: "r-director", name: "导演 / 内容负责人", short: "导演", desc: "负责内容终审与镜头落地，覆盖从剧本到导出的制作链路。", scope: "project", color: "red", system: false, perms: ["project:read", "project:write", "settings:manage", "story:read", "story:write", "script:read", "script:write", "asset:read", "asset:write", "board:read", "board:write", "task:read", "task:run", "qa:read", "qa:review", "timeline:read", "timeline:write", "export:read", "export:run"] },
+      { id: "r-writer", name: "编剧 / 策划", short: "编剧", desc: "维护故事、分集与剧本，可引用项目资产但不可改动制作文件。", scope: "project", color: "green", system: false, perms: ["project:read", "story:read", "story:write", "script:read", "script:write", "asset:read", "board:read", "task:read", "qa:read"] },
+      { id: "r-art", name: "美术 / 分镜", short: "美术", desc: "维护角色、场景、道具参考与分镜画面，可发起生成任务。", scope: "project", color: "red", system: false, perms: ["project:read", "story:read", "asset:read", "asset:write", "board:read", "board:write", "task:read", "task:run", "qa:read"] },
+      { id: "r-editor", name: "视频制作人员", short: "视频", desc: "负责生成任务、时间线、字幕与交付导出。", scope: "project", color: "blue", system: false, perms: ["project:read", "asset:read", "board:read", "task:read", "task:run", "qa:read", "timeline:read", "timeline:write", "export:read", "export:run"] },
+      { id: "r-reviewer", name: "审核人员", short: "审核", desc: "执行项目级质检与人工审核，不参与制作写入。", scope: "project", color: "green", system: false, perms: ["project:read", "task:read", "qa:read", "qa:review", "timeline:read", "export:read"] },
+      { id: "r-guest", name: "外部审片成员", short: "外部审片", desc: "仅可查看被授权项目的审片页与只读交付记录，不能进入内部制作。", scope: "project", color: "gold", system: false, perms: ["project:read", "qa:read", "timeline:read", "export:read"] }
     ];
 
     var permissionCatalog = [
-      { id: "workspace", label: "工作区治理", desc: "企业空间、组织、成员、安全与订阅", items: [
-        { key: "workspace:read", label: "查看企业概览", desc: "查看席位、安全评分与治理待办", risk: "low" },
-        { key: "workspace:manage", label: "管理工作区", desc: "修改企业名称、域名、区域与默认策略", risk: "high" },
+      { id: "system", label: "系统治理", desc: "私有化部署的组织、用户、角色、安全与系统设置", items: [
+        { key: "system:read", label: "查看系统概览", desc: "查看成员、项目授权、Provider 与治理待办", risk: "low" },
+        { key: "system:manage", label: "管理系统设置", desc: "修改部署、存储、保留策略与默认行为", risk: "high" },
         { key: "org:read", label: "查看组织架构", desc: "查看部门、负责人和成员归属", risk: "low" },
         { key: "dept:manage", label: "管理组织架构", desc: "新增部门、调整负责人和汇报关系", risk: "high" },
-        { key: "member:read", label: "查看成员目录", desc: "查看成员、席位、登录与项目范围", risk: "low" },
-        { key: "member:manage", label: "管理成员与席位", desc: "邀请、停用、移除成员并调整角色", risk: "high" },
-        { key: "role:manage", label: "管理角色权限", desc: "新建角色、修改权限与数据范围", risk: "high" },
-        { key: "security:manage", label: "管理安全策略", desc: "SSO、MFA、会话、IP 与下载管控", risk: "high" },
-        { key: "audit:read", label: "查看审计日志", desc: "查询、筛选和导出企业审计记录", risk: "low" },
-        { key: "integration:manage", label: "管理集成与 API", desc: "SSO、SCIM、Webhook 与 API Key", risk: "high" },
-        { key: "billing:manage", label: "管理订阅与账单", desc: "席位增购、付款方式与发票", risk: "high" }
+        { key: "member:read", label: "查看用户与成员", desc: "查看账号、角色、项目成员授权与状态", risk: "low" },
+        { key: "member:manage", label: "管理用户与成员", desc: "邀请、停用、移除成员并调整项目授权", risk: "high" },
+        { key: "role:manage", label: "管理角色权限", desc: "维护系统 RBAC 权限与数据范围", risk: "high" },
+        { key: "security:manage", label: "管理安全与访问", desc: "维护会话、数据外发、上传与媒体安全策略", risk: "high" },
+        { key: "audit:read", label: "查看审计日志", desc: "查询、筛选和导出不可变审计记录", risk: "low" }
       ]},
-      { id: "project", label: "项目", desc: "项目上下文、成员范围与项目级设置", items: [
-        { key: "project:read", label: "查看项目", desc: "进入项目总览与生产页面", risk: "low" },
-        { key: "project:write", label: "管理项目", desc: "创建、归档项目并调整项目成员", risk: "high" },
-        { key: "settings:manage", label: "项目设置", desc: "修改项目信息、模型与预算", risk: "high" }
+      { id: "provider", label: "Provider 与模型", desc: "外部模型凭据、能力注册、路由与降级边界", items: [
+        { key: "provider:read", label: "查看 Provider", desc: "查看 Provider 配置、模型能力与健康状态", risk: "low" },
+        { key: "provider:manage", label: "管理 Provider", desc: "新建 Provider、轮换凭据、启停模型与调整路由", risk: "high" }
+      ]},
+      { id: "usage", label: "用量与预算", desc: "按项目、剧集、镜头、Provider 和模型核算成本", items: [
+        { key: "usage:read", label: "查看用量", desc: "查看 token、时长、金额与预算执行", risk: "low" },
+        { key: "usage:manage", label: "管理预算", desc: "设置组织与项目预算、阈值和超限动作", risk: "high" }
+      ]},
+      { id: "project", label: "项目边界", desc: "项目上下文、成员与项目级设置", items: [
+        { key: "project:read", label: "查看项目", desc: "进入被授权的项目总览与生产页面", risk: "low" },
+        { key: "project:write", label: "管理项目", desc: "创建、归档项目并维护项目成员", risk: "high" },
+        { key: "settings:manage", label: "项目设置", desc: "修改项目信息、项目预算与通知", risk: "high" }
       ]},
       { id: "content", label: "内容", desc: "故事设定、分集与剧本", items: [
         { key: "story:read", label: "查看故事圣经", desc: "查看角色、场景、道具与关系", risk: "low" },
@@ -282,15 +288,15 @@ window.DB = (function () {
         { key: "script:read", label: "查看剧本", desc: "查看分集与剧本正文", risk: "low" },
         { key: "script:write", label: "编辑剧本", desc: "编辑、锁版和保存剧本版本", risk: "medium" }
       ]},
-      { id: "production", label: "制作", desc: "资产、分镜、任务与质检", items: [
-        { key: "asset:read", label: "查看资产", desc: "查看参考图与资产版本", risk: "low" },
+      { id: "production", label: "制作", desc: "资产、分镜、任务与质量门禁", items: [
+        { key: "asset:read", label: "查看资产", desc: "查看项目内参考图与资产版本", risk: "low" },
         { key: "asset:write", label: "编辑资产", desc: "锁定资产、生成参考图", risk: "medium" },
         { key: "board:read", label: "查看分镜", desc: "查看镜头与 Shot Contract", risk: "low" },
         { key: "board:write", label: "编辑分镜", desc: "调整镜头、候选与送审", risk: "medium" },
-        { key: "task:read", label: "查看 AI 任务", desc: "查看队列、日志与失败诊断", risk: "low" },
+        { key: "task:read", label: "查看 AI 任务", desc: "查看队列、Attempt 日志与失败诊断", risk: "low" },
         { key: "task:run", label: "运行 AI 任务", desc: "创建、重试和取消生成任务", risk: "medium" },
-        { key: "qa:read", label: "查看质检", desc: "查看质检报告与批注", risk: "low" },
-        { key: "qa:review", label: "执行质检审核", desc: "通过、退回或重新质检", risk: "high" }
+        { key: "qa:read", label: "查看质量门禁", desc: "查看 PASS / REVIEW_REQUIRED / FAIL 结果", risk: "low" },
+        { key: "qa:review", label: "执行人工审核", desc: "记录 PASS 或 FAIL，不提供 WAIVED 豁免", risk: "high" }
       ]},
       { id: "delivery", label: "交付", desc: "时间线与最终导出", items: [
         { key: "timeline:read", label: "查看时间线", desc: "查看轨道、字幕与版本", risk: "low" },
@@ -301,22 +307,29 @@ window.DB = (function () {
     ];
 
     var members = [
-      { id: "u-owner", code: "owner", demo: true, name: "陈默", email: "chenmo@studio.cn", title: "制作总监", deptId: "d-exec", dept: "总经办", roleId: "r-owner", role: "工作区所有者", seatType: "full", status: "active", presence: "online", last: "刚刚", lastActive: "今天 10:24", joined: "2024-06-18", mfa: "enforced", source: "sso", projects: ["nyjm", "whgx", "dlcr", "crgz"], initial: "陈", color: "" },
-      { id: "u-admin", code: "admin", demo: true, name: "沈一", email: "shenyi@studio.cn", title: "企业管理员", deptId: "d-exec", dept: "总经办", roleId: "r-admin", role: "企业管理员", seatType: "full", status: "active", presence: "online", last: "5 分钟前", lastActive: "今天 10:19", joined: "2024-07-02", mfa: "enforced", source: "sso", projects: ["nyjm", "whgx"], initial: "沈", color: "blue" },
-      { id: "u-manager", code: "manager", demo: true, name: "林珊", email: "linshan@studio.cn", title: "商务负责人", deptId: "d-biz", dept: "商务与客户", roleId: "r-manager", role: "部门负责人", seatType: "full", status: "active", presence: "online", last: "18 分钟前", lastActive: "今天 10:06", joined: "2024-09-12", mfa: "enabled", source: "sso", projects: ["nyjm", "whgx", "dlcr"], initial: "林", color: "gold" },
-      { id: "u-director", code: "director", demo: true, name: "苏禾", email: "suhe@studio.cn", title: "导演", deptId: "d-prod", dept: "制作中心", roleId: "r-director", role: "导演", seatType: "full", status: "active", presence: "online", last: "3 分钟前", lastActive: "今天 10:21", joined: "2024-06-18", mfa: "enforced", source: "sso", projects: ["nyjm", "whgx", "dlcr", "crgz"], initial: "苏", color: "blue" },
-      { id: "u-writer", code: "writer", demo: true, name: "顾青", email: "guqing@studio.cn", title: "编剧", deptId: "d-content", dept: "内容组", roleId: "r-writer", role: "编剧", seatType: "full", status: "active", presence: "online", last: "12 分钟前", lastActive: "今天 10:12", joined: "2024-08-05", mfa: "enabled", source: "invite", projects: ["nyjm", "whgx"], initial: "顾", color: "green" },
-      { id: "u-art", code: "art", demo: true, name: "白露", email: "bailu@studio.cn", title: "美术指导", deptId: "d-visual", dept: "视觉组", roleId: "r-art", role: "美术指导", seatType: "full", status: "active", presence: "offline", last: "昨天 22:14", lastActive: "昨天 22:14", joined: "2024-08-20", mfa: "enabled", source: "sso", projects: ["nyjm", "dlcr"], initial: "白", color: "red" },
-      { id: "u-editor", code: "editor", demo: true, name: "程野", email: "chengye@studio.cn", title: "剪辑师", deptId: "d-post", dept: "后期组", roleId: "r-editor", role: "剪辑师", seatType: "full", status: "active", presence: "online", last: "8 分钟前", lastActive: "今天 10:16", joined: "2024-10-09", mfa: "enabled", source: "invite", projects: ["nyjm", "whgx"], initial: "程", color: "blue" },
-      { id: "u-reviewer", code: "reviewer", demo: true, name: "周可", email: "zhouke@studio.cn", title: "审核员", deptId: "d-qa", dept: "质控与合规", roleId: "r-reviewer", role: "审核员", seatType: "full", status: "active", presence: "offline", last: "今天 09:02", lastActive: "今天 09:02", joined: "2025-02-17", mfa: "enforced", source: "sso", projects: ["nyjm"], initial: "周", color: "green" },
-      { id: "u-guest", code: "guest", demo: true, name: "许知", email: "xuzhi@client.com", title: "外部审片嘉宾", deptId: "d-ext", dept: "外部协作", roleId: "r-guest", role: "外部访客", seatType: "guest", status: "active", presence: "online", last: "2 分钟前", lastActive: "今天 10:22", joined: "2026-11-04", mfa: "pending", source: "invite", projects: ["nyjm"], initial: "许", color: "gold" },
-      { id: "m-zhao", code: "", demo: false, name: "赵启明", email: "zhaoqm@studio.cn", title: "编剧", deptId: "d-content", dept: "内容组", roleId: "r-writer", role: "编剧", seatType: "full", status: "active", presence: "offline", last: "今天 08:40", lastActive: "今天 08:40", joined: "2025-01-06", mfa: "pending", source: "invite", projects: ["nyjm"], initial: "赵", color: "green" },
-      { id: "m-tang", code: "", demo: false, name: "唐宁", email: "tangning@studio.cn", title: "概念设计", deptId: "d-visual", dept: "视觉组", roleId: "r-art", role: "美术指导", seatType: "full", status: "invited", presence: "offline", last: "—", lastActive: "—", joined: "待接受", mfa: "pending", source: "invite", projects: [], initial: "唐", color: "red" },
-      { id: "m-he", code: "", demo: false, name: "何川", email: "hechuan@studio.cn", title: "混音师", deptId: "d-post", dept: "后期组", roleId: "r-editor", role: "剪辑师", seatType: "full", status: "active", presence: "offline", last: "昨天 18:20", lastActive: "昨天 18:20", joined: "2024-11-21", mfa: "enabled", source: "scim", projects: ["nyjm", "whgx"], initial: "何", color: "blue" },
-      { id: "m-luo", code: "", demo: false, name: "罗一", email: "luoyi@studio.cn", title: "客户成功", deptId: "d-biz", dept: "商务与客户", roleId: "r-manager", role: "部门负责人", seatType: "full", status: "active", presence: "online", last: "25 分钟前", lastActive: "今天 09:59", joined: "2025-03-03", mfa: "enabled", source: "sso", projects: ["nyjm", "whgx"], initial: "罗", color: "gold" },
-      { id: "m-fang", code: "", demo: false, name: "方可", email: "fangke@studio.cn", title: "合规专员", deptId: "d-qa", dept: "质控与合规", roleId: "r-reviewer", role: "审核员", seatType: "full", status: "active", presence: "offline", last: "昨天 17:36", lastActive: "昨天 17:36", joined: "2025-05-26", mfa: "enforced", source: "scim", projects: ["nyjm"], initial: "方", color: "green" },
-      { id: "m-han", code: "", demo: false, name: "韩序", email: "hanxu@studio.cn", title: "编剧", deptId: "d-prod", dept: "制作中心", roleId: "r-writer", role: "编剧", seatType: "full", status: "suspended", presence: "offline", last: "10 月 28 日", lastActive: "10 月 28 日", joined: "2024-12-02", mfa: "disabled", source: "sso", projects: [], initial: "韩", color: "green" }
+      { id: "u-owner", code: "owner", demo: true, name: "陈默", email: "chenmo@studio.cn", title: "制作总监", deptId: "d-exec", dept: "总经办", roleId: "r-owner", role: "系统管理员", status: "active", presence: "online", last: "刚刚", lastActive: "今天 10:24", joined: "2024-06-18", source: "local", projects: ["nyjm", "whgx", "dlcr", "crgz"], initial: "陈", color: "" },
+      { id: "u-admin", code: "admin", demo: true, name: "沈一", email: "shenyi@studio.cn", title: "平台管理员", deptId: "d-exec", dept: "总经办", roleId: "r-admin", role: "组织管理员", status: "active", presence: "online", last: "5 分钟前", lastActive: "今天 10:19", joined: "2024-07-02", source: "local", projects: [], initial: "沈", color: "blue" },
+      { id: "u-manager", code: "manager", demo: true, name: "林珊", email: "linshan@studio.cn", title: "商务负责人", deptId: "d-biz", dept: "商务与客户", roleId: "r-manager", role: "项目负责人 / 制片人", status: "active", presence: "online", last: "18 分钟前", lastActive: "今天 10:06", joined: "2024-09-12", source: "local", projects: ["nyjm", "whgx", "dlcr"], initial: "林", color: "gold" },
+      { id: "u-director", code: "director", demo: true, name: "苏禾", email: "suhe@studio.cn", title: "导演", deptId: "d-prod", dept: "制作中心", roleId: "r-director", role: "导演", status: "active", presence: "online", last: "3 分钟前", lastActive: "今天 10:21", joined: "2024-06-18", source: "local", projects: ["nyjm", "crgz"], initial: "苏", color: "blue" },
+      { id: "u-writer", code: "writer", demo: true, name: "顾青", email: "guqing@studio.cn", title: "编剧", deptId: "d-content", dept: "内容组", roleId: "r-writer", role: "编剧", status: "active", presence: "online", last: "12 分钟前", lastActive: "今天 10:12", joined: "2024-08-05", source: "invite", projects: ["nyjm", "whgx"], initial: "顾", color: "green" },
+      { id: "u-art", code: "art", demo: true, name: "白露", email: "bailu@studio.cn", title: "美术指导", deptId: "d-visual", dept: "视觉组", roleId: "r-art", role: "美术指导", status: "active", presence: "offline", last: "昨天 22:14", lastActive: "昨天 22:14", joined: "2024-08-20", source: "local", projects: ["nyjm", "dlcr"], initial: "白", color: "red" },
+      { id: "u-editor", code: "editor", demo: true, name: "程野", email: "chengye@studio.cn", title: "剪辑师", deptId: "d-post", dept: "后期组", roleId: "r-editor", role: "剪辑师", status: "active", presence: "online", last: "8 分钟前", lastActive: "今天 10:16", joined: "2024-10-09", source: "invite", projects: ["nyjm", "whgx"], initial: "程", color: "blue" },
+      { id: "u-reviewer", code: "reviewer", demo: true, name: "周可", email: "zhouke@studio.cn", title: "审核员", deptId: "d-qa", dept: "质控与合规", roleId: "r-reviewer", role: "审核员", status: "active", presence: "offline", last: "今天 09:02", lastActive: "今天 09:02", joined: "2025-02-17", source: "local", projects: ["nyjm"], initial: "周", color: "green" },
+      { id: "u-guest", code: "guest", demo: true, name: "许知", email: "xuzhi@client.com", title: "外部审片嘉宾", deptId: "d-ext", dept: "外部协作", roleId: "r-guest", role: "外部审片成员", status: "active", presence: "online", last: "2 分钟前", lastActive: "今天 10:22", joined: "2026-11-04", source: "invite", projects: ["nyjm"], initial: "许", color: "gold" },
+      { id: "m-zhao", code: "", demo: false, name: "赵启明", email: "zhaoqm@studio.cn", title: "编剧", deptId: "d-content", dept: "内容组", roleId: "r-writer", role: "编剧", status: "active", presence: "offline", last: "今天 08:40", lastActive: "今天 08:40", joined: "2025-01-06", source: "invite", projects: ["nyjm"], initial: "赵", color: "green" },
+      { id: "m-tang", code: "", demo: false, name: "唐宁", email: "tangning@studio.cn", title: "概念设计", deptId: "d-visual", dept: "视觉组", roleId: "r-art", role: "美术指导", status: "invited", presence: "offline", last: "—", lastActive: "—", joined: "待接受", source: "invite", projects: [], initial: "唐", color: "red" },
+      { id: "m-he", code: "", demo: false, name: "何川", email: "hechuan@studio.cn", title: "混音师", deptId: "d-post", dept: "后期组", roleId: "r-editor", role: "剪辑师", status: "active", presence: "offline", last: "昨天 18:20", lastActive: "昨天 18:20", joined: "2024-11-21", source: "local", projects: ["nyjm", "whgx"], initial: "何", color: "blue" },
+      { id: "m-luo", code: "", demo: false, name: "罗一", email: "luoyi@studio.cn", title: "客户成功", deptId: "d-biz", dept: "商务与客户", roleId: "r-manager", role: "项目负责人 / 制片人", status: "active", presence: "online", last: "25 分钟前", lastActive: "今天 09:59", joined: "2025-03-03", source: "local", projects: ["nyjm", "whgx"], initial: "罗", color: "gold" },
+      { id: "m-fang", code: "", demo: false, name: "方可", email: "fangke@studio.cn", title: "合规专员", deptId: "d-qa", dept: "质控与合规", roleId: "r-reviewer", role: "审核员", status: "active", presence: "offline", last: "昨天 17:36", lastActive: "昨天 17:36", joined: "2025-05-26", source: "local", projects: ["nyjm"], initial: "方", color: "green" },
+      { id: "m-han", code: "", demo: false, name: "韩序", email: "hanxu@studio.cn", title: "编剧", deptId: "d-prod", dept: "制作中心", roleId: "r-writer", role: "编剧", status: "suspended", presence: "offline", last: "10 月 28 日", lastActive: "10 月 28 日", joined: "2024-12-02", source: "local", projects: [], initial: "韩", color: "green" }
     ];
+
+    members.forEach(function (m) {
+      var role = roles.filter(function (r) { return r.id === m.roleId; })[0] || roles[0];
+      m.role = role.name;
+      m.accountType = m.roleId === "r-guest" ? "external" : "internal";
+      m.source = m.status === "invited" ? "invite" : "local";
+    });
 
     var identities = members.filter(function (m) { return m.demo; }).map(function (m) {
       var role = roles.filter(function (r) { return r.id === m.roleId; })[0] || roles[0];
@@ -324,8 +337,8 @@ window.DB = (function () {
         id: m.id, code: m.code, name: m.name, role: role.name, shortRole: role.short,
         roleId: role.id, dept: m.dept, deptId: m.deptId, email: m.email, title: m.title,
         initial: m.initial, color: m.color, perms: role.perms.slice(), scope: role.scope,
-        seatType: m.seatType, status: m.status, projectIds: m.projects.slice(),
-        mfa: m.mfa, tempPerms: []
+        accountType: m.accountType, status: m.status, projectIds: m.projects.slice(),
+        tempPerms: []
       };
     });
 
@@ -342,61 +355,116 @@ window.DB = (function () {
     ];
 
     var workspace = {
-      name: "长夜影视", legalName: "长夜影视文化传媒有限公司", domain: "studio.cn", domainVerified: true,
-      plan: "enterprise", planName: "企业版", region: "中国大陆 · 上海", timezone: "Asia/Shanghai",
-      locale: "zh-CN", weekStart: "周一", createdAt: "2024-06-18", contractEnd: "2027-06-30",
-      seatsPurchased: 24, dataRetention: 180, defaultTemplate: "竖屏短剧 · 12 集",
-      defaultModel: "mork-video-2", requireProjectApproval: true, allowGuests: true,
+      name: "长夜影视", legalName: "长夜影视文化传媒有限公司", emailDomain: "studio.cn",
+      deployment: "私有化部署 · 企业内网", region: "中国大陆 · 上海", timezone: "Asia/Shanghai",
+      locale: "zh-CN", weekStart: "周一", createdAt: "2024-06-18", updatedAt: "2026-11-19",
+      dataRetention: 180, backupRetention: 30, defaultTemplate: "竖屏短剧 · 12 集",
+      defaultModel: "mork-video-2", requireProjectApproval: true, allowExternalReviewer: true,
+      runtime: {
+        compose: "Docker Compose", web: "Nginx + Vue 3", api: "FastAPI · Python 3.12",
+        queue: "Redis + Celery", worker: "AI Worker / Media Worker", database: "PostgreSQL 16",
+        storage: "私有对象存储 · 本地加密卷", ffmpeg: "FFmpeg 7.1 · 参数数组调用",
+        maxUpload: "2 GB", containerUser: "非 root"
+      },
+      backup: { last: "今天 03:00", lastSize: "42.6 GB", target: "私有备份卷 / backup", retention: 30, restoreDrill: "2026-11-05 · 通过" },
       notifications: [
-        { key: "task_failed", label: "任务失败", desc: "立即通知任务创建者与项目所有者", on: true },
-        { key: "review", label: "成片待审核", desc: "审核任务到达时通知导演与审核员", on: true },
-        { key: "member", label: "成员与权限变更", desc: "邀请、停用或角色调整时通知管理员", on: true },
-        { key: "weekly", label: "每周治理摘要", desc: "每周一 09:00 发送席位与安全摘要", on: false },
-        { key: "export", label: "导出完成", desc: "交付完成后通知项目成员与客户", on: true }
+        { key: "task_failed", label: "任务失败", desc: "立即通知任务创建者与项目负责人", on: true },
+        { key: "review", label: "质量门禁待审核", desc: "出现 REVIEW_REQUIRED 时通知项目审核人", on: true },
+        { key: "member", label: "成员与授权变更", desc: "邀请、停用或项目成员调整时通知管理员", on: true },
+        { key: "budget", label: "预算阈值提醒", desc: "达到 80% 或 100% 时通知系统管理员与项目负责人", on: true },
+        { key: "export", label: "导出完成", desc: "交付完成后通知项目成员", on: true }
       ]
     };
 
     var security = {
-      sso: { provider: "Okta", protocol: "SAML 2.0", domain: "studio.cn", verified: true, enforced: true, lastSync: "今天 09:42", coverage: "13 / 13", loginUrl: "https://changye.okta.com/home/changye" },
-      mfa: { policy: "required", coverage: 94, methods: ["TOTP", "WebAuthn"], graceDays: 7, enforcedAt: "2026-08-12" },
-      scim: { enabled: true, endpoint: "https://scim.studio.cn/v2", token: "scim_live_9f2a…6c1d", lastSync: "今天 09:42", synced: 12, mode: "自动同步" },
-      session: { idle: 30, max: 12, remember: 14, singleDevice: false },
-      ip: { enabled: false, mode: "warn", entries: [
-        { cidr: "203.0.113.0/24", label: "上海办公室", added: "2025-08-12" },
-        { cidr: "198.51.100.18/32", label: "后期机房", added: "2026-01-09" },
-        { cidr: "2001:db8:8f::/48", label: "异地备灾", added: "2026-05-21" }
-      ]},
-      device: { trust: "managed", managed: 12, unmanaged: 3, blocked: 1 },
-      dlp: { watermark: true, downloadApproval: true, externalShare: false }
+      session: { idle: 30, max: 12, refresh: 7, revokeOnSuspend: true, projectRecheck: true },
+      access: { rbac: true, projectMembership: true, denyByDefault: true, crossProject: false, lastReview: "2026-11-18" },
+      credentials: { algorithm: "AES-256-GCM", storage: "secret_ref", masked: true, rotationDays: 90, lastRotation: "2026-10-28", injectedBy: "部署环境变量 / Secret Manager" },
+      dataPolicy: {
+        defaultAction: "deny", allowedProviders: ["mork"], allowedRegions: ["中国大陆"],
+        requireContract: true, contractReview: "2026-09-01 · Mork 企业服务条款",
+        sensitiveClasses: ["剧本原文", "未公开角色设定", "未发布成片"], allowSensitive: false,
+        logPayload: false, externalStorage: false, lastReview: "2026-11-12"
+      },
+      upload: { allowedMime: ["image/*", "video/*", "audio/*", "application/pdf"], maxFile: "2 GB", magicCheck: true, checksum: "SHA-256", antivirus: "ClamAV · 每日更新" },
+      media: { ffmpeg: "参数数组调用", resourceLimit: true, tempDir: "私有临时卷", probe: "ffprobe 校验", nonRoot: true }
     };
 
     var securityChecks = [
-      { key: "sso", label: "企业 SSO", score: 100, status: "done", detail: "SAML 已强制，13 名活跃成员全部走企业身份源" },
-      { key: "mfa", label: "多因素认证", score: 94, status: "done", detail: "覆盖 94%，外部访客与待接受成员待完成" },
-      { key: "scim", label: "目录自动同步", score: 82, status: "active", detail: "12 名成员已同步，1 名待接受未写入" },
-      { key: "session", label: "会话策略", score: 75, status: "warn", detail: "空闲 30 分钟，未启用单设备登录" },
-      { key: "ip", label: "网络边界", score: 58, status: "warn", detail: "IP 允许清单已配置但处于观察模式" },
-      { key: "audit", label: "审计留痕", score: 100, status: "done", detail: "保留 180 天，导出与下载均有记录" },
-      { key: "dlp", label: "下载与水印", score: 78, status: "active", detail: "外部下载需审批，审片版默认带水印" }
+      { key: "access", label: "项目访问校验", score: 100, status: "done", detail: "RBAC + 项目成员双层校验，跨项目读取默认拒绝" },
+      { key: "credentials", label: "Provider 凭据", score: 92, status: "done", detail: "AES-256-GCM 加密，界面仅展示 secret_ref 掩码" },
+      { key: "outbound", label: "数据外发策略", score: 88, status: "active", detail: "默认拒绝；仅 Mork 与中国大陆区域通过合同审查" },
+      { key: "session", label: "会话与账号", score: 84, status: "active", detail: "空闲 30 分钟、最长 12 小时，停用即撤销会话" },
+      { key: "upload", label: "上传校验", score: 90, status: "done", detail: "MIME + 文件签名 + 大小 + SHA-256 校验" },
+      { key: "audit", label: "审计留痕", score: 100, status: "done", detail: "append-only，actor / action / resource / time / request_id" },
+      { key: "media", label: "媒体处理", score: 94, status: "done", detail: "FFmpeg 参数数组、资源限制、非 root 容器与私有临时卷" }
     ];
 
-    var integrations = [
-      { id: "int-okta", name: "Okta", category: "身份", desc: "企业 SSO 与 SAML 断言", status: "connected", meta: "SAML 2.0 · 强制登录", initial: "O", color: "blue", lastSync: "今天 09:42" },
-      { id: "int-scim", name: "SCIM 2.0", category: "身份", desc: "从目录同步成员与部门", status: "connected", meta: "12 已同步 · 自动", initial: "S", color: "teal", lastSync: "今天 09:42" },
-      { id: "int-feishu", name: "飞书", category: "协作", desc: "组织架构、审批与消息卡片", status: "connected", meta: "组织 + 审批", initial: "飞", color: "blue", lastSync: "今天 09:30" },
-      { id: "int-slack", name: "Slack", category: "协作", desc: "任务失败与审核通知", status: "connected", meta: "#production #review", initial: "S", color: "gold", lastSync: "今天 09:18" },
-      { id: "int-s3", name: "Amazon S3", category: "存储", desc: "交付物与审片版对象存储", status: "connected", meta: "ap-east-1 · 版本化", initial: "A", color: "green", lastSync: "今天 10:02" },
-      { id: "int-webhook", name: "Webhook", category: "自动化", desc: "向客户系统推送导出状态", status: "connected", meta: "3 个订阅 · 签名校验", initial: "W", color: "gold", lastSync: "今天 09:58" },
-      { id: "int-wecom", name: "企业微信", category: "协作", desc: "客户群审片通知", status: "unconfigured", meta: "未配置", initial: "企", color: "green", lastSync: "—" },
-      { id: "int-sentry", name: "Sentry", category: "运维", desc: "前端异常与任务失败告警", status: "connected", meta: "错误率 0.12%", initial: "S", color: "red", lastSync: "今天 10:20" }
+    var providers = [
+      {
+        id: "mork", key: "mork", name: "Mork Provider Adapter", kind: "默认生产",
+        desc: "多模态外部模型适配器，统一文本、图像、视频、语音与音乐能力。",
+        baseUrl: "https://mork.internal/v1", secretRef: "secret://provider/mork", secretMasked: "mork_live_••••7f3a",
+        secretStatus: "已加密 · 可轮换", secretUpdated: "2026-10-28",
+        timeout: 300, rateLimit: "60 req/min", enabled: true, configured: true, health: "healthy",
+        lastCheck: "今天 10:20", capabilities: ["文本", "图像", "视频", "语音合成", "语音识别", "音乐"],
+        models: 5, contract: "Mork 企业服务条款 · 2026-09-01", region: "中国大陆",
+        initial: "M", color: "blue"
+      },
+      {
+        id: "mock", key: "mock", name: "Mock Provider", kind: "CI / 显式演示",
+        desc: "仅用于自动化测试和明确标记的演示环境，生产任务不得静默回退。",
+        baseUrl: "local://mock/v1", secretRef: "—", secretMasked: "无需凭据",
+        secretStatus: "不适用", secretUpdated: "—",
+        timeout: 30, rateLimit: "不限", enabled: false, configured: true, health: "restricted",
+        lastCheck: "—", capabilities: ["文本", "图像", "视频"],
+        models: 3, contract: "仅测试环境", region: "本地",
+        initial: "K", color: "gold"
+      }
     ];
 
-    var apiKeys = [
-      { id: "key-1", name: "生产自动化", prefix: "sp_live_7f3a", scopes: ["project:read", "task:run"], owner: "沈一", created: "2026-03-18", lastUsed: "2 分钟前", status: "active" },
-      { id: "key-2", name: "交付回调", prefix: "sp_live_2c9d", scopes: ["export:read"], owner: "程野", created: "2026-05-09", lastUsed: "今天 09:58", status: "active" },
-      { id: "key-3", name: "CI 预览环境", prefix: "sp_test_81be", scopes: ["project:read", "story:read"], owner: "沈一", created: "2026-08-21", lastUsed: "昨天 16:40", status: "active" },
-      { id: "key-4", name: "旧版同步脚本", prefix: "sp_live_0d4f", scopes: ["project:read", "member:read"], owner: "陈默", created: "2025-11-02", lastUsed: "2026-10-12", status: "revoked" }
+    var providerRoutes = [
+      { cap: "文本", label: "剧本与分镜解析", modelIds: ["mork-llm-7b"], defaultId: "mork-llm-7b" },
+      { cap: "图像", label: "角色与场景参考", modelIds: ["mork-image-3"], defaultId: "mork-image-3" },
+      { cap: "视频", label: "镜头生成", modelIds: ["mork-video-2"], defaultId: "mork-video-2" },
+      { cap: "语音合成", label: "对白与旁白", modelIds: ["mork-tts-cn"], defaultId: "mork-tts-cn" },
+      { cap: "语音识别", label: "对白转写", modelIds: ["mork-asr-cn"], defaultId: "mork-asr-cn" },
+      { cap: "音乐", label: "配乐与氛围", modelIds: ["mork-music-1"], defaultId: "mork-music-1" }
     ];
+
+    var orgUsage = {
+      period: "2026-11-01 — 2026-11-21", budget: 50000, spent: 28640, estimatedMonth: 40800,
+      threshold: 80, blockOnExceed: true, lastUpdated: "今天 10:22",
+      byProject: [
+        { id: "nyjm", name: "长夜将明", episodes: 12, shots: 168, tokens: "2.18M", vendorBilled: 9840, estimated: 10120, budget: 18000, status: "normal" },
+        { id: "whgx", name: "雾港来信", episodes: 8, shots: 96, tokens: "1.42M", vendorBilled: 6320, estimated: 6480, budget: 12000, status: "normal" },
+        { id: "dlcr", name: "第六次日落", episodes: 6, shots: 72, tokens: "780K", vendorBilled: 3280, estimated: 3360, budget: 9000, status: "normal" },
+        { id: "crgz", name: "春日故障", episodes: 4, shots: 41, tokens: "460K", vendorBilled: 1960, estimated: 2040, budget: 5000, status: "normal" }
+      ],
+      byModel: [
+        { model: "mork-video-2", provider: "Mork", cap: "视频", calls: 214, units: "1,284 秒", estimated: 11040, share: 39 },
+        { model: "mork-image-3", provider: "Mork", cap: "图像", calls: 386, units: "386 张", estimated: 5740, share: 20 },
+        { model: "mork-llm-7b", provider: "Mork", cap: "文本", calls: 642, units: "3.26M token", estimated: 6820, share: 24 },
+        { model: "mork-tts-cn", provider: "Mork", cap: "语音合成", calls: 188, units: "42K 字", estimated: 3120, share: 11 },
+        { model: "mork-asr-cn", provider: "Mork", cap: "语音识别", calls: 64, units: "186 分钟", estimated: 1920, share: 7 }
+      ],
+      byDept: [
+        { name: "制作中心", estimated: 12640, share: 44 },
+        { name: "视觉组", estimated: 8240, share: 29 },
+        { name: "后期组", estimated: 5160, share: 18 },
+        { name: "内容组", estimated: 2600, share: 9 }
+      ],
+      byUser: [
+        { name: "白露", role: "美术 / 分镜", estimated: 6180 },
+        { name: "苏禾", role: "导演 / 内容负责人", estimated: 5420 },
+        { name: "程野", role: "视频制作人员", estimated: 4860 },
+        { name: "顾青", role: "编剧 / 策划", estimated: 2140 }
+      ],
+      alerts: [
+        { level: "warning", text: "《春日故障》项目已用 68%，接近 80% 预警阈值。", at: "今天 09:40" },
+        { level: "info", text: "10-28 轮换 Mork 凭据后未产生失败调用。", at: "昨天 18:20" }
+      ]
+    };
 
     var accessRequests = [
       { id: "R-1048", type: "project", requesterId: "m-tang", requester: "唐宁", title: "申请加入《长夜将明》视觉组", target: "项目访问 · 视觉组", reason: "客户预审 EP01–EP03，需要查看分镜与资产参考。", risk: "low", status: "pending", createdAt: "今天 10:12", approver: "" },
@@ -404,40 +472,33 @@ window.DB = (function () {
       { id: "R-1046", type: "download", requesterId: "u-guest", requester: "许知", title: "申请下载审阅版", target: "EX-0211 · 720p 带水印", reason: "客户内部确认会需要离线播放。", risk: "low", status: "approved", createdAt: "昨天 18:50", approver: "陈默" }
     ];
 
-    var billing = {
-      cycle: "年付", seatsPurchased: 24, unitPrice: 1280, amount: 30720, renewal: "2027-06-30",
-      method: "企业银行转账 · 尾号 8842", contact: "财务共享中心 · billing@studio.cn",
-      taxId: "91310000MA1K7X2E6Q", invoiceTitle: "长夜影视文化传媒有限公司",
-      invoices: [
-        { id: "INV-2026-018", period: "2026-07-01 — 2027-06-30", amount: 30720, status: "paid", issued: "2026-06-28", note: "企业版 · 24 席" },
-        { id: "INV-2025-011", period: "2025-07-01 — 2026-06-30", amount: 28160, status: "paid", issued: "2025-06-26", note: "企业版 · 22 席" },
-        { id: "INV-2024-008", period: "2024-07-01 — 2025-06-30", amount: 21760, status: "paid", issued: "2024-06-24", note: "企业版 · 17 席" }
-      ]
-    };
-
     var audit = [
-      { id: "A-1042", time: "今天 10:24", actor: "陈默", actorId: "u-owner", category: "成员", action: "邀请成员", target: "周可 · 审核员", detail: "通过企业邮箱邀请周可加入质控与合规，默认项目为《长夜将明》。", ip: "203.0.113.42", result: "success", severity: "normal", deptId: "d-qa", projectId: "nyjm" },
-      { id: "A-1041", time: "今天 10:18", actor: "沈一", actorId: "u-admin", category: "安全", action: "启用 SSO 强制登录", target: "studio.cn · SAML", detail: "所有企业成员必须通过 Okta 登录，访客保留邀请链接登录。", ip: "203.0.113.56", result: "success", severity: "normal", deptId: "d-exec", projectId: null },
+      { id: "A-1042", time: "今天 10:24", actor: "陈默", actorId: "u-owner", category: "成员", action: "邀请成员", target: "周可 · 审核人员", detail: "通过企业邮箱邀请周可加入质控与合规，并授予《长夜将明》项目成员授权。", ip: "203.0.113.42", result: "success", severity: "normal", deptId: "d-qa", projectId: "nyjm" },
+      { id: "A-1041", time: "今天 10:18", actor: "沈一", actorId: "u-admin", category: "Provider", action: "校验 Mork Provider", target: "mork · 5 个模型", detail: "测试连接通过，base_url、timeout 与 rate_limit 均符合配置，未触发数据外发拒绝。", ip: "203.0.113.56", result: "success", severity: "normal", deptId: "d-exec", projectId: null },
       { id: "A-1040", time: "今天 09:58", actor: "林珊", actorId: "u-manager", category: "项目", action: "提交交付审批", target: "《雾港来信》EP08", detail: "客户审片通过，提交商务与制作联合交付审批。", ip: "198.51.100.18", result: "success", severity: "normal", deptId: "d-biz", projectId: "whgx" },
-      { id: "A-1039", time: "今天 09:42", actor: "系统", actorId: "system", category: "集成", action: "SCIM 目录同步", target: "12 名成员", detail: "从 Okta 同步成员与部门，新增 0、更新 3、跳过 1 名待接受成员。", ip: "10.0.4.12", result: "success", severity: "normal", deptId: "d-exec", projectId: null },
-      { id: "A-1038", time: "今天 09:21", actor: "周可", actorId: "u-reviewer", category: "审核", action: "通过 EP01 质检", target: "EP01 · 雨夜书店", detail: "质检 94 分，5 项检查全部通过，允许进入时间线与导出。", ip: "203.0.113.72", result: "success", severity: "normal", deptId: "d-qa", projectId: "nyjm" },
+      { id: "A-1039", time: "今天 09:42", actor: "系统", actorId: "system", category: "Provider", action: "模型能力健康检查", target: "5 个 Mork 模型", detail: "文本、图像、视频、TTS、ASR 能力均返回可用；Mock 仍保持禁用，未发生生产回退。", ip: "10.0.4.12", result: "success", severity: "normal", deptId: "d-exec", projectId: null },
+      { id: "A-1038", time: "今天 09:21", actor: "周可", actorId: "u-reviewer", category: "审核", action: "记录 EP01 质量门禁结果", target: "EP01 · 雨夜书店", detail: "人工复核结论 REVIEW_REQUIRED → PASS；4 项 PASS、1 项复核后 PASS，允许进入时间线与导出。", ip: "203.0.113.72", result: "success", severity: "normal", deptId: "d-qa", projectId: "nyjm" },
       { id: "A-1037", time: "今天 09:02", actor: "顾青", actorId: "u-writer", category: "剧本", action: "提交剧本版本", target: "EP03 · v2", detail: "提交 4 场修改，等待导演锁版。", ip: "203.0.113.33", result: "success", severity: "normal", deptId: "d-content", projectId: "nyjm" },
-      { id: "A-1036", time: "今天 08:48", actor: "沈一", actorId: "u-admin", category: "角色", action: "调整成员角色", target: "赵启明 · 编剧", detail: "由「外部访客」调整为「编剧」，项目范围同步为《长夜将明》。", ip: "203.0.113.56", result: "success", severity: "normal", deptId: "d-content", projectId: "nyjm" },
+      { id: "A-1036", time: "今天 08:48", actor: "沈一", actorId: "u-admin", category: "角色", action: "调整成员角色", target: "赵启明 · 编剧", detail: "由「外部审片成员」调整为「编剧」，项目范围同步为《长夜将明》。", ip: "203.0.113.56", result: "success", severity: "normal", deptId: "d-content", projectId: "nyjm" },
       { id: "A-1035", time: "昨天 22:14", actor: "白露", actorId: "u-art", category: "资产", action: "更新参考图", target: "林晚 · REF v3", detail: "上传 4 张候选并提交一致性检查。", ip: "198.51.100.18", result: "success", severity: "normal", deptId: "d-visual", projectId: "nyjm" },
       { id: "A-1034", time: "昨天 20:40", actor: "程野", actorId: "u-editor", category: "导出", action: "创建导出任务", target: "EX-0211 · 竖屏", detail: "EP01 竖屏 1080×1920 导出，使用 TL v4 与 QA #118。", ip: "198.51.100.18", result: "success", severity: "normal", deptId: "d-post", projectId: "nyjm" },
       { id: "A-1033", time: "昨天 19:58", actor: "系统", actorId: "system", category: "导出", action: "导出任务失败", target: "EX-0209 · 16:9", detail: "FFMPEG_ENCODE_FAILED，第 42s 音轨缺失，已保留诊断日志。", ip: "10.0.4.12", result: "failed", severity: "warning", deptId: "d-post", projectId: "nyjm" },
-      { id: "A-1032", time: "昨天 18:32", actor: "陈默", actorId: "u-owner", category: "集成", action: "轮换 API Key", target: "生产自动化 · sp_live_7f3a", detail: "旧密钥立即失效，新密钥仅保留 project:read 与 task:run。", ip: "203.0.113.42", result: "success", severity: "normal", deptId: "d-exec", projectId: null },
-      { id: "A-1031", time: "昨天 17:20", actor: "沈一", actorId: "u-admin", category: "成员", action: "停用成员", target: "韩序 · 编剧", detail: "合同结束，席位保留至本计费周期结束。", ip: "203.0.113.56", result: "success", severity: "warning", deptId: "d-prod", projectId: null },
-      { id: "A-1030", time: "昨天 16:04", actor: "林珊", actorId: "u-manager", category: "项目", action: "邀请外部审片人", target: "许知 · 外部访客", detail: "仅授予《长夜将明》审片与导出只读权限。", ip: "198.51.100.18", result: "success", severity: "normal", deptId: "d-biz", projectId: "nyjm" },
-      { id: "A-1029", time: "昨天 15:12", actor: "陈默", actorId: "u-owner", category: "订阅", action: "增购席位", target: "24 席 · 企业版", detail: "由 22 席增购至 24 席，按年付比例计费。", ip: "203.0.113.42", result: "success", severity: "normal", deptId: "d-exec", projectId: null },
-      { id: "A-1028", time: "昨天 14:30", actor: "系统", actorId: "system", category: "安全", action: "拦截异常登录", target: "未知设备 · 新加坡", detail: "非受信任设备触发 MFA 挑战，连续失败 5 次后阻断。", ip: "203.0.113.201", result: "blocked", severity: "critical", deptId: "d-exec", projectId: null },
-      { id: "A-1027", time: "昨天 11:20", actor: "陈默", actorId: "u-owner", category: "工作区", action: "修改数据保留周期", target: "180 天", detail: "审计与导出记录保留 180 天，到期自动归档。", ip: "203.0.113.42", result: "success", severity: "normal", deptId: "d-exec", projectId: null },
+      { id: "A-1032", time: "昨天 18:32", actor: "陈默", actorId: "u-owner", category: "Provider", action: "轮换 Provider 凭据", target: "mork · secret://provider/mork", detail: "旧凭据立即失效，新凭据由部署环境注入；界面只保留掩码引用。", ip: "203.0.113.42", result: "success", severity: "high", deptId: "d-exec", projectId: null },
+      { id: "A-1031", time: "昨天 17:20", actor: "沈一", actorId: "u-admin", category: "成员", action: "停用成员", target: "韩序 · 编剧 / 策划", detail: "账号转入 deactivated，撤销现有会话并移除全部项目访问；历史审计保留。", ip: "203.0.113.56", result: "success", severity: "warning", deptId: "d-prod", projectId: null },
+      { id: "A-1030", time: "昨天 16:04", actor: "林珊", actorId: "u-manager", category: "项目", action: "授权外部审片成员", target: "许知 · 外部审片成员", detail: "仅授予《长夜将明》审片与导出只读权限；未授予内部制作页访问。", ip: "198.51.100.18", result: "success", severity: "normal", deptId: "d-biz", projectId: "nyjm" },
+      { id: "A-1029", time: "昨天 15:12", actor: "陈默", actorId: "u-owner", category: "用量", action: "调整组织预算", target: "2026-11 · ¥50,000", detail: "预警阈值 80%，达到 100% 时阻止新生成任务，不提供静默超额。", ip: "203.0.113.42", result: "success", severity: "normal", deptId: "d-exec", projectId: null },
+      { id: "A-1028", time: "昨天 14:30", actor: "系统", actorId: "system", category: "安全", action: "阻断异常会话", target: "未知设备 · 境外 IP", detail: "来源不在企业网络基线，且缺少有效会话签名；连续失败后阻断并撤销会话。", ip: "203.0.113.201", result: "blocked", severity: "critical", deptId: "d-exec", projectId: null },
+      { id: "A-1027", time: "昨天 11:20", actor: "陈默", actorId: "u-owner", category: "系统", action: "修改数据保留周期", target: "180 天", detail: "审计与导出记录保留 180 天，到期归档；资产不在归档范围内。", ip: "203.0.113.42", result: "success", severity: "normal", deptId: "d-exec", projectId: null },
       { id: "A-1026", time: "昨天 10:05", actor: "周可", actorId: "u-reviewer", category: "审计", action: "导出审计包", target: "2026-11 · 质控", detail: "导出 28 条质检与审核记录，用于客户合规审查。", ip: "203.0.113.72", result: "success", severity: "normal", deptId: "d-qa", projectId: "nyjm" },
-      { id: "A-1025", time: "前天 18:22", actor: "沈一", actorId: "u-admin", category: "安全", action: "重置恢复码", target: "工作区所有者", detail: "重新生成 10 组一次性恢复码，旧码全部失效。", ip: "203.0.113.56", result: "success", severity: "warning", deptId: "d-exec", projectId: null },
+      { id: "A-1025", time: "前天 18:22", actor: "沈一", actorId: "u-admin", category: "安全", action: "重置管理员密码", target: "系统管理员 · 陈默", detail: "由管理员发起密码重置，旧会话全部失效，新密码通过一次性链接设置。", ip: "203.0.113.56", result: "success", severity: "warning", deptId: "d-exec", projectId: null },
       { id: "A-1024", time: "前天 16:40", actor: "顾青", actorId: "u-writer", category: "剧本", action: "锁定剧本版本", target: "EP01 · v6", detail: "导演确认后锁版，后续修改需新建版本。", ip: "203.0.113.33", result: "success", severity: "normal", deptId: "d-content", projectId: "nyjm" },
-      { id: "A-1023", time: "前天 09:15", actor: "系统", actorId: "system", category: "安全", action: "检测到异常登录", target: "韩序 · 已停用账号", detail: "停用账号尝试 SSO 登录，身份源返回 account_disabled。", ip: "203.0.113.88", result: "blocked", severity: "critical", deptId: "d-prod", projectId: null }
+      { id: "A-1023", time: "前天 09:15", actor: "系统", actorId: "system", category: "安全", action: "拒绝停用账号登录", target: "韩序 · deactivated", detail: "停用账号尝试登录，认证层返回 account_disabled；未创建任何会话。", ip: "203.0.113.88", result: "blocked", severity: "critical", deptId: "d-prod", projectId: null }
     ];
 
+    audit.forEach(function (a, i) {
+      a.requestId = a.requestId || ("req_20261121_" + String(i + 1).padStart(4, "0"));
+      a.resource = a.resource || (a.projectId ? "project:" + a.projectId : "workspace:changye");
+    });
 
     return {
       version: 2,
@@ -504,18 +565,19 @@ window.DB = (function () {
       identities: identities,
       security: security,
       securityChecks: securityChecks,
-      integrations: integrations,
-      apiKeys: apiKeys,
+      providers: providers,
+      providerRoutes: providerRoutes,
       accessRequests: accessRequests,
-      billing: billing,
+      orgUsage: orgUsage,
       audit: audit,
       models: [
-        { name: "mork-llm-7b", cap: "文本生成", version: "2026.11", status: "已连接", latency: "1.8s", cost: "¥0.006 / 千字", def: true },
-        { name: "mork-image-3", cap: "图像生成", version: "2026.10", status: "已连接", latency: "12s", cost: "¥0.08 / 张", def: true },
-        { name: "mork-video-2", cap: "视频生成", version: "2026.11", status: "已连接", latency: "2m 40s", cost: "¥0.86 / 5s", def: true },
-        { name: "moss-tts-cn", cap: "语音合成", version: "2026.09", status: "已连接", latency: "0.6s", cost: "¥0.01 / 百字", def: true },
-        { name: "qa-rules-2026.11", cap: "质检规则", version: "2026.11", status: "已连接", latency: "36s", cost: "固定", def: true },
-        { name: "enhance-video-pro", cap: "视频增强", version: "—", status: "未配置", latency: "—", cost: "—", def: false }
+        { id: "mork-llm-7b", providerId: "mork", provider: "Mork", name: "mork-llm-7b", modelId: "mork-llm-7b", cap: "文本生成", capabilities: ["text", "json"], version: "2026.11", status: "已连接", enabled: true, latency: "1.8s", cost: "¥0.006 / 千字", timeout: 120, priority: 1, updated: "2026-11-18", def: true },
+        { id: "mork-image-3", providerId: "mork", provider: "Mork", name: "mork-image-3", modelId: "mork-image-3", cap: "图像生成", capabilities: ["image"], version: "2026.10", status: "已连接", enabled: true, latency: "12s", cost: "¥0.08 / 张", timeout: 180, priority: 1, updated: "2026-11-12", def: true },
+        { id: "mork-video-2", providerId: "mork", provider: "Mork", name: "mork-video-2", modelId: "mork-video-2", cap: "视频生成", capabilities: ["video"], version: "2026.11", status: "已连接", enabled: true, latency: "2m 40s", cost: "¥0.86 / 5s", timeout: 300, priority: 1, updated: "2026-11-18", def: true },
+        { id: "mork-tts-cn", providerId: "mork", provider: "Mork", name: "mork-tts-cn", modelId: "mork-tts-cn", cap: "语音合成", capabilities: ["tts"], version: "2026.09", status: "已连接", enabled: true, latency: "0.6s", cost: "¥0.01 / 百字", timeout: 60, priority: 1, updated: "2026-10-09", def: true },
+        { id: "mork-asr-cn", providerId: "mork", provider: "Mork", name: "mork-asr-cn", modelId: "mork-asr-cn", cap: "语音识别", capabilities: ["asr"], version: "2026.09", status: "已连接", enabled: true, latency: "3.2s", cost: "¥0.02 / 分钟", timeout: 120, priority: 1, updated: "2026-10-09", def: true },
+        { id: "mork-music-1", providerId: "mork", provider: "Mork", name: "mork-music-1", modelId: "mork-music-1", cap: "音乐生成", capabilities: ["music"], version: "2026.08", status: "已连接", enabled: true, latency: "18s", cost: "¥0.12 / 段", timeout: 180, priority: 1, updated: "2026-09-20", def: true },
+        { id: "qa-rules-2026.11", providerId: "internal", provider: "内部规则", name: "qa-rules-2026.11", modelId: "qa-rules-2026.11", cap: "质检规则", capabilities: ["qa"], version: "2026.11", status: "已连接", enabled: true, latency: "36s", cost: "固定", timeout: 120, priority: 1, updated: "2026-11-01", def: true }
       ],
       usage: {
         budget: 12000, spent: 6842,
@@ -531,13 +593,13 @@ window.DB = (function () {
         ["20:12", "系统", "《长夜将明》24 章解析完成，46 个实体待确认", "ok"]
       ],
       inbox: [
-        { kind: "review", title: "EP01 成片待审核", meta: "质检 94 分 · 3 条批注 · 截止今天 18:00", path: "review/qa" },
+        { kind: "review", title: "EP01 成片待审核", meta: "质量门禁 REVIEW_REQUIRED · 3 条批注 · 截止今天 18:00", path: "review/qa" },
         { kind: "task", title: "T-2039 参考图生成失败", meta: "FACE_DRIFT · 3/4 候选一致性不足", path: "review/tasks" },
         { kind: "script", title: "EP03 剧本等待确认", meta: "顾青提交 · 4 场 · 待导演锁版", path: "production/script", params: { ep: "03" } },
         { kind: "asset", title: "2 项资产需要补参考", meta: "铅字盘、沈知白 · 0 个有效参考", path: "production/assets" }
       ],
       notices: [
-        { type: "review", title: "EP01 成片待审核", meta: "质检 94 分 · 3 条批注", path: "review/qa" },
+        { type: "review", title: "EP01 成片待审核", meta: "质量门禁 REVIEW_REQUIRED · 3 条批注", path: "review/qa" },
         { type: "task", title: "参考图生成失败", meta: "FACE_DRIFT · 可重试", path: "review/tasks" },
         { type: "member", title: "唐宁的加入申请待审批", meta: "项目访问 · 视觉组", path: "system/overview" }
       ]

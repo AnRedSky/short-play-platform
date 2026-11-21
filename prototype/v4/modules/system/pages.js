@@ -1,7 +1,8 @@
 /* ============================================================
    模块：系统（system）
-   企业概览 / 组织 / 成员席位 / 角色权限 / 安全 / 审计 /
-   集成 / 订阅 / 我的权限 / 工作区设置 / 项目设置
+   系统（system）
+   企业概览 / 组织 / 用户成员 / 角色权限 / 安全访问 / 审计 /
+   Provider 与模型 / 用量预算 / 我的权限 / 系统设置 / 项目设置
    ============================================================ */
 (function () {
   function st() { return App.state; }
@@ -30,11 +31,6 @@
   function statusBadge(m) {
     var tone = m.status === "active" ? "b-done" : m.status === "invited" ? "b-warn" : "b-danger";
     return '<span class="badge ' + tone + '"><span class="dot"></span>' + App.statusLabel(m.status) + "</span>";
-  }
-  function mfaBadge(m) {
-    var map = { enforced: ["b-done", "强制"], enabled: ["b-teal", "已启用"], pending: ["b-warn", "待完成"], disabled: ["b-danger", "未启用"] };
-    var v = map[m.mfa] || ["b-todo", m.mfa];
-    return '<span class="badge ' + v[0] + '">' + v[1] + "</span>";
   }
   function riskBadge(risk) {
     var map = { low: ["b-teal", "低风险"], medium: ["b-warn", "中风险"], high: ["b-danger", "高风险"] };
@@ -79,16 +75,17 @@
     var temp = (u.tempPerms || []).length ? u.tempPerms.map(function (p) { return '<span class="chip">' + UI.esc(p) + "</span>"; }).join("") : '<span class="tiny muted">没有临时授权。临时权限到期后自动失效。</span>';
 
     return '<div class="page">' +
-      UI.pageHead({ eyebrow: "System · My access", title: "我的权限", desc: "企业权限按「身份 → 角色 → 数据范围」三层判定。这里展示当前身份实际可见的路由、可执行操作与项目边界。", actions: '<button class="btn" data-act="request-access">' + UI.icon("lock") + '申请额外权限</button>' + '<a class="btn" href="' + App.link("system/audit") + '">查看审计</a>' }) +
+      UI.pageHead({ eyebrow: "System · My access", title: "我的权限", desc: "系统权限只决定管理能力；进入任何项目资源还要通过项目成员授权。这里展示当前身份的系统权限、项目成员关系与可见路由。", actions: '<button class="btn" data-act="request-access">' + UI.icon("lock") + '申请项目授权</button>' + '<a class="btn" href="' + App.link("system/audit") + '">查看审计</a>' }) +
       '<div class="access-hero card card-pad"><div class="account-head" style="padding-top:0">' + UI.avatar(u.name, "lg", u.color) +
-      '<div><div class="account-name">' + UI.esc(u.name) + '</div><div class="small muted">' + UI.esc(u.title) + " · " + UI.esc(u.email) + '</div><div class="row wrap mt-8"><span class="badge b-teal">' + UI.esc(u.role) + "</span>" + scopeBadge(u.scope) + '<span class="badge b-outline">' + (u.seatType === "guest" ? "访客席位" : "企业席位") + "</span>" + statusBadge({ status: u.status }) + "</div></div>" +
+      '<div><div class="account-name">' + UI.esc(u.name) + '</div><div class="small muted">' + UI.esc(u.title) + " · " + UI.esc(u.email) + '</div><div class="row wrap mt-8"><span class="badge b-teal">' + UI.esc(u.role) + "</span>" + scopeBadge(u.scope) + '<span class="badge b-outline">' + (u.accountType === "external" ? "外部审片账号" : "内部成员账号") + "</span>" + statusBadge({ status: u.status }) + "</div></div>" +
       '<div class="spacer"></div><div class="access-score"><div class="tiny muted">权限覆盖</div><div class="access-num">' + granted + "/" + total + '</div><div class="tiny muted">' + routeAllowed + " 个页面可访问</div></div></div></div>" +
-      '<div class="grid g4 mt-16">' + UI.stat({ label: "当前角色", value: u.role, delta: App.scopeLabel(u.scope) + "数据范围" }) +
-      UI.stat({ label: "已授予权限", value: String(granted), unit: "项", delta: "共 " + total + " 项权限" }) +
+      '<div class="grid g4 mt-16">' + UI.stat({ label: "当前角色", value: u.role, delta: App.scopeLabel(u.scope) }) +
+      UI.stat({ label: "已授予权限", value: String(granted), unit: "项", delta: "共 " + total + " 项系统权限" }) +
       UI.stat({ label: "可访问页面", value: String(routeAllowed), unit: "个", delta: "权限不足的页面显示 403" }) +
-      UI.stat({ label: "身份安全", value: u.mfa === "enforced" || u.mfa === "enabled" ? "正常" : "待补", delta: "MFA " + UI.esc(u.mfa) }) + "</div>" +
-      '<div class="grid g-2-1 mt-16"><div class="card"><div class="card-head"><div><h3>权限明细</h3><div class="ch-sub">按权限组展开 · 未授予项保留可见，便于申请</div></div><span class="tag">' + granted + " / " + total + "</span></div><div class=\"card-body\">" + groupHtml + "</div></div>" +
-      '<div class="stack"><div class="card"><div class="card-head"><div><h3>数据范围</h3><div class="ch-sub">角色决定可触达的组织与项目边界</div></div>' + scopeBadge(u.scope) + '</div><div class="card-body"><div class="kv"><div class="k">所属部门</div><div class="v">' + UI.esc(u.dept) + '</div><div class="k">角色范围</div><div class="v">' + App.scopeLabel(u.scope) + '</div><div class="k">项目访问</div><div class="v">' + (projectChips || '<span class="muted">暂无项目</span>') + '</div><div class="k">临时授权</div><div class="v">' + temp + "</div></div></div></div>" +
+      UI.stat({ label: "项目成员授权", value: String(projectChips ? App.visibleProjects().length : 0), unit: "个", delta: "跨项目资源默认拒绝" }) + "</div>" +
+      '<div class="grid g-2-1 mt-16"><div class="card"><div class="card-head"><div><h3>权限明细</h3><div class="ch-sub">系统 RBAC · 未授予项保留可见，便于申请</div></div><span class="tag">' + granted + " / " + total + "</span></div><div class=\"card-body\">" + groupHtml + "</div></div>" +
+      '<div class="stack"><div class="card"><div class="card-head"><div><h3>项目成员授权</h3><div class="ch-sub">双层校验的第二层，独立于系统角色</div></div>' + scopeBadge(u.scope) + '</div><div class="card-body"><div class="kv"><div class="k">所属部门</div><div class="v">' + UI.esc(u.dept) + '</div><div class="k">系统角色范围</div><div class="v">' + App.scopeLabel(u.scope) + '</div><div class="k">可进入项目</div><div class="v">' + (projectChips || '<span class="muted">暂无项目授权</span>') + '</div><div class="k">临时授权</div><div class="v">' + temp + "</div></div>" +
+      '<div class="notice info mt-12">' + UI.icon("lock", 15) + "<span>组织与部门只用于人员管理，不代表租户；资产、剧本、镜头、任务与导出都必须校验 project_id 和项目成员关系。</span></div></div></div>" +
       '<div class="card"><div class="card-head"><div><h3>可访问路由</h3><div class="ch-sub">侧栏、搜索与直达 URL 使用同一份权限表</div></div><span class="tag">' + routeAllowed + "</span></div><div class=\"card-body\">" + routeHtml + "</div></div></div></div></div>";
   }
 
@@ -123,8 +120,11 @@
   /* ================= 企业概览 ================= */
   function enterpriseOverview() {
     var s = st();
-    var seats = App.seatStats();
+    var ms = App.memberStats();
+    var projects = App.visibleProjects();
+    var usage = s.orgUsage;
     var pending = s.accessRequests.filter(function (r) { return r.status === "pending"; });
+    var providerOk = s.providers.filter(function (p) { return p.enabled && p.configured; }).length;
     var checks = s.securityChecks.map(function (c) {
       return '<div class="sec-check-row"><span class="sec-check-main"><b>' + UI.esc(c.label) + '</b><small>' + UI.esc(c.detail) + '</small></span>' +
         '<span class="sec-check-score">' + c.score + '</span>' + UI.statusBadge(c.status) + "</div>";
@@ -132,7 +132,7 @@
     var requests = pending.length ? pending.map(function (r) {
       return '<div class="request-row"><div class="req-main"><div class="req-title">' + UI.esc(r.requester) + " · " + UI.esc(r.title) + '</div><div class="req-sub">' + UI.esc(r.target) + " · " + UI.esc(r.createdAt) + '</div><div class="tiny muted mt-4">' + UI.esc(r.reason) + "</div></div>" + riskBadge(r.risk) +
         '<div class="row" style="gap:6px"><button class="btn btn-xs" data-act="deny" data-id="' + r.id + '">拒绝</button><button class="btn btn-xs btn-primary" data-act="approve" data-id="' + r.id + '">通过</button></div></div>';
-    }).join("") : UI.empty("没有待审批申请", "成员申请会在这里进入审批队列。");
+    }).join("") : UI.empty("没有待审批申请", "项目授权申请会在这里进入审批队列。");
     var roleDist = s.roles.map(function (r) {
       var n = roleMembers(r.id).length;
       return '<div class="role-dist-row"><span class="rd-name">' + UI.esc(r.name) + '</span><div class="progress thin"><i style="width:' + Math.round(n / s.members.length * 100) + '%"></i></div><span class="mono tiny">' + n + "</span></div>";
@@ -140,26 +140,40 @@
     var recent = s.audit.filter(function (a) { return App.inScope(a.deptId, a.projectId); }).slice(0, 5).map(function (a) {
       return '<div class="list-row"><span class="mono tiny" style="width:48px">' + UI.esc(a.time) + '</span><span class="lr-main"><span class="lr-title">' + UI.esc(a.action) + '</span><span class="lr-sub">' + UI.esc(a.actor) + " · " + UI.esc(a.target) + "</span></span>" + resultBadge(a.result) + "</div>";
     }).join("");
+    var projectRows = projects.map(function (p) {
+      var owner = memberById(p.ownerId);
+      return '<div class="list-row"><span class="lr-main"><span class="lr-title">' + UI.esc(p.name) + '</span><span class="lr-sub mono">' + UI.esc(p.code) + " · " + (p.memberIds || []).length + ' 人</span></span><span class="badge b-outline">' + UI.esc(owner ? owner.name : "—") + "</span></div>";
+    }).join("") || UI.empty("当前没有项目授权", "项目负责人由组织管理员授予项目成员资格。");
+    var budgetPct = Math.round(usage.spent / usage.budget * 100);
     return '<div class="page">' +
-      UI.pageHead({ eyebrow: "Enterprise · Governance", title: "企业概览", desc: "工作区治理视图：席位、安全态势、访问审批与最近管理动作。仅企业所有者与管理员可见。", actions: (App.hasPerm("member:manage") ? '<button class="btn" data-act="invite">' + UI.icon("users") + '邀请成员</button>' : "") + '<a class="btn btn-primary" href="' + App.link("system/security") + '">' + UI.icon("lock") + "安全策略</a>" }) +
-      '<div class="grid g4">' + UI.stat({ label: "已用席位", value: String(seats.total), unit: "/ " + seats.purchased, delta: seats.available + " 席可用 · 企业版" }) +
-      UI.stat({ label: "活跃成员", value: String(seats.active), unit: "人", delta: seats.invited + " 待接受 · " + seats.suspended + " 已停用" }) +
-      UI.stat({ label: "安全评分", value: "86", unit: "分", delta: "2 项策略待收紧" }) +
-      UI.stat({ label: "治理待办", value: String(pending.length), unit: "条", delta: "访问申请待审批" }) + "</div>" +
+      UI.pageHead({ eyebrow: "System · Governance", title: "企业概览", desc: "私有化部署的内部生产治理视图：用户、项目授权、Provider、用量与审计。仅具备系统权限的身份可见。", actions: (App.hasPerm("member:manage") ? '<button class="btn" data-act="invite">' + UI.icon("users") + '邀请成员</button>' : "") + '<a class="btn btn-primary" href="' + App.link("system/providers") + '">' + UI.icon("grid") + "Provider 与模型</a>" }) +
+      '<div class="grid g4">' + UI.stat({ label: "用户账号", value: String(ms.total), unit: "人", delta: ms.active + " 正常 · " + ms.invited + " 待接受" }) +
+      UI.stat({ label: "项目授权", value: String(projects.length), unit: "个", delta: ms.projectMemberships + " 条成员授权" }) +
+      UI.stat({ label: "生产 Provider", value: String(providerOk), unit: "个", delta: "Mork 默认 · Mock 仅测试" }) +
+      UI.stat({ label: "本月用量", value: Math.round(budgetPct) + "%", delta: App.formatMoney(usage.spent) + " / " + App.formatMoney(usage.budget) }) + "</div>" +
       '<div class="grid g-2-1 mt-16"><div class="stack">' +
-      UI.card({ title: "安全态势", sub: "按身份、会话、网络与审计四个维度检查", head: '<a class="btn btn-xs" href="' + App.link("system/security") + '">去加固</a>', body: '<div class="sec-checks">' + checks + "</div>" }) +
-      UI.card({ title: "访问审批", sub: "项目访问、临时权限与下载审批", head: '<span class="tag">' + pending.length + " 待处理</span>", body: requests }) +
+      UI.card({ title: "系统能力", sub: "企业内部平台的管理范围，不含租户计费与自助开通", body: '<div class="quick-grid">' +
+        '<a class="quick-tile" href="' + App.link("system/org") + '"><span class="quick-icon">' + UI.icon("folder", 15) + '</span><span class="quick-main"><span class="quick-title">组织与部门</span><span class="quick-sub">人员组织，不是 SaaS tenant</span></span></a>' +
+        '<a class="quick-tile" href="' + App.link("system/roles") + '"><span class="quick-icon">' + UI.icon("check", 15) + '</span><span class="quick-main"><span class="quick-title">系统 RBAC</span><span class="quick-sub">角色、权限与管理范围</span></span></a>' +
+        '<a class="quick-tile" href="' + App.link("system/providers") + '"><span class="quick-icon">' + UI.icon("grid", 15) + '</span><span class="quick-main"><span class="quick-title">Provider 与模型</span><span class="quick-sub">凭据、能力注册与路由</span></span></a>' +
+        '<a class="quick-tile" href="' + App.link("system/security") + '"><span class="quick-icon">' + UI.icon("lock", 15) + '</span><span class="quick-main"><span class="quick-title">数据外发策略</span><span class="quick-sub">默认拒绝 · 合同审查</span></span></a>' +
+        '<a class="quick-tile" href="' + App.link("system/usage") + '"><span class="quick-icon">' + UI.icon("download", 15) + '</span><span class="quick-main"><span class="quick-title">用量与预算</span><span class="quick-sub">项目 / 镜头 / 模型</span></span></a>' +
+        '<a class="quick-tile" href="' + App.link("system/audit") + '"><span class="quick-icon">' + UI.icon("list", 15) + '</span><span class="quick-main"><span class="quick-title">审计日志</span><span class="quick-sub">不可变 · request_id</span></span></a>' +
+        "</div>" }) +
+      UI.card({ title: "安全基线", sub: "项目授权、凭据、外发、会话、上传、审计与媒体处理", head: '<a class="btn btn-xs" href="' + App.link("system/security") + '">查看策略</a>', body: '<div class="sec-checks">' + checks + "</div>" }) +
+      UI.card({ title: "访问审批", sub: "项目成员授权、临时权限与下载审批", head: '<span class="tag">' + pending.length + " 待处理</span>", body: requests }) +
       UI.card({ title: "最近管理动作", sub: "当前数据范围内可见的审计事件", head: '<a class="btn btn-xs" href="' + App.link("system/audit") + '">全部审计</a>', body: recent }) +
       "</div><div class=\"stack\">" +
-      UI.card({ title: "订阅与席位", sub: s.workspace.planName + " · " + s.billing.cycle, head: '<a class="btn btn-xs" href="' + App.link("system/billing") + '">账单</a>', body: '<div class="plan-mini"><div class="plan-price">' + App.formatMoney(s.billing.amount) + '<small>/ 年</small></div><div class="tiny muted">续费 ' + UI.esc(s.billing.renewal) + " · " + s.billing.seatsPurchased + ' 席</div></div>' +
-      '<div class="between mt-12"><span class="tiny muted">席位使用</span><span class="mono tiny">' + seats.total + " / " + seats.purchased + "</span></div>" + UI.progress(Math.round(seats.total / seats.purchased * 100)) +
-      '<div class="seat-legend mt-12"><span><i class="lg-dot full"></i>企业席位 ' + (seats.total - seats.guests) + '</span><span><i class="lg-dot guest"></i>访客 ' + seats.guests + "</span></div>" }) +
-      UI.card({ title: "角色分布", sub: "按成员实际角色统计", body: '<div class="role-dist">' + roleDist + "</div>" }) +
-      UI.card({ title: "治理快捷入口", sub: "企业管理员的高频动作", body: '<div class="quick-grid">' +
-        '<a class="quick-tile" href="' + App.link("system/org") + '"><span class="quick-icon">' + UI.icon("folder", 15) + '</span><span class="quick-main"><span class="quick-title">组织架构</span><span class="quick-sub">部门与负责人</span></span></a>' +
-        '<a class="quick-tile" href="' + App.link("system/roles") + '"><span class="quick-icon">' + UI.icon("check", 15) + '</span><span class="quick-main"><span class="quick-title">角色权限</span><span class="quick-sub">权限与数据范围</span></span></a>' +
-        '<a class="quick-tile" href="' + App.link("system/integrations") + '"><span class="quick-icon">' + UI.icon("grid", 15) + '</span><span class="quick-main"><span class="quick-title">集成与 API</span><span class="quick-sub">SSO · SCIM · Webhook</span></span></a>' +
-        '<a class="quick-tile" href="' + App.link("system/audit") + '"><span class="quick-icon">' + UI.icon("list", 15) + '</span><span class="quick-main"><span class="quick-title">审计日志</span><span class="quick-sub">导出与合规</span></span></a>' +
+      UI.card({ title: "预算执行", sub: usage.period, head: '<a class="btn btn-xs" href="' + App.link("system/usage") + '">明细</a>', body: '<div class="plan-mini"><div class="plan-price">' + App.formatMoney(usage.spent) + '<small> / ' + App.formatMoney(usage.budget) + '</small></div><div class="tiny muted">预计月末 ' + App.formatMoney(usage.estimatedMonth) + " · 阈值 " + usage.threshold + '%</div></div>' +
+        '<div class="between mt-12"><span class="tiny muted">组织预算执行</span><span class="mono tiny">' + budgetPct + '%</span></div>' + UI.progress(budgetPct) +
+        '<div class="tiny muted mt-12">项目 ' + projects.length + ' · 模型 ' + App.state.models.length + " · 成员 " + App.memberStats().total + '</div>' }) +
+      UI.card({ title: "项目成员授权", sub: "当前管理范围内可见的项目与负责人", head: '<span class="tag">' + projects.length + "</span>", body: projectRows }) +
+      UI.card({ title: "角色分布", sub: "仅统计系统角色；项目成员不计入", body: '<div class="role-dist">' + roleDist + "</div>" }) +
+      UI.card({ title: "系统入口", sub: "管理员的常用治理动作", body: '<div class="quick-grid">' +
+        '<a class="quick-tile" href="' + App.link("system/providers") + '"><span class="quick-icon">' + UI.icon("grid", 15) + '</span><span class="quick-main"><span class="quick-title">Provider</span><span class="quick-sub">凭据与模型</span></span></a>' +
+        '<a class="quick-tile" href="' + App.link("system/usage") + '"><span class="quick-icon">' + UI.icon("download", 15) + '</span><span class="quick-main"><span class="quick-title">用量预算</span><span class="quick-sub">成本与阈值</span></span></a>' +
+        '<a class="quick-tile" href="' + App.link("system/audit") + '"><span class="quick-icon">' + UI.icon("list", 15) + '</span><span class="quick-main"><span class="quick-title">审计日志</span><span class="quick-sub">不可变记录</span></span></a>' +
+        '<a class="quick-tile" href="' + App.link("system/workspace") + '"><span class="quick-icon">' + UI.icon("sliders", 15) + '</span><span class="quick-main"><span class="quick-title">系统设置</span><span class="quick-sub">部署、存储与备份</span></span></a>' +
         "</div>" }) + "</div></div></div>";
   }
 
@@ -210,18 +224,22 @@
     var root = s.departments.filter(function (d) { return d.parent === null; })[0];
     var visibleMembers = s.members.filter(function (m) { return App.inScope(m.deptId, null); });
     var projectRows = s.projects.map(function (p) {
-      return '<tr><td><b>' + UI.esc(p.name) + '</b><span class="t-sub mono">' + UI.esc(p.code) + '</span></td><td>' + UI.esc(p.ownerId ? (memberById(p.ownerId) || {}).name || "—" : "—") + '</td><td>' + (p.memberIds ? p.memberIds.length : 0) + ' 人</td><td>' + UI.badge(p.visibility === "org" ? "组织可见" : "成员可见", p.visibility === "org" ? "b-teal" : "b-info") + "</td><td>" + UI.esc(p.stage) + "</td></tr>";
+      return '<tr><td><b>' + UI.esc(p.name) + '</b><span class="t-sub mono">' + UI.esc(p.code) + '</span></td><td>' + UI.esc(p.ownerId ? (memberById(p.ownerId) || {}).name || "—" : "—") + '</td><td>' + (p.memberIds ? p.memberIds.length : 0) + ' 人</td><td>' + UI.badge("项目成员授权", "b-info") + "</td><td>" + UI.esc(p.stage) + "</td></tr>";
     }).join("");
     return '<div class="page">' +
-      UI.pageHead({ eyebrow: "Enterprise · Organization", title: "组织架构", desc: "部门、负责人和成员归属构成数据范围边界。部门负责人只能查看本部门成员与项目。", actions: (App.hasPerm("dept:manage") ? '<button class="btn" data-act="add-dept">' + UI.icon("plus") + '新增部门</button>' : "") + '<button class="btn" data-act="export-org">' + UI.icon("download") + "导出组织</button>" }) +
+      UI.pageHead({ eyebrow: "System · Organization", title: "组织架构", desc: "部门、负责人和成员归属用于人员组织与管理，不等同 SaaS tenant。任何项目内容访问仍由项目成员授权决定。", actions: (App.hasPerm("dept:manage") ? '<button class="btn" data-act="add-dept">' + UI.icon("plus") + '新增部门</button>' : "") + '<button class="btn" data-act="export-org">' + UI.icon("download") + "导出组织</button>" }) +
       '<div class="grid g4">' + UI.stat({ label: "部门", value: String(s.departments.length), unit: "个", delta: "3 个一级部门" }) +
-      UI.stat({ label: "企业成员", value: String(s.members.length), unit: "人", delta: s.members.filter(function (m) { return m.status === "active"; }).length + " 人在职" }) +
-      UI.stat({ label: "当前可见", value: String(visibleMembers.length), unit: "人", delta: App.scopeLabel(App.currentUser.scope) + "范围" }) +
-      UI.stat({ label: "外部协作", value: String(deptMembers("d-ext").length), unit: "人", delta: "访客席位独立管控" }) + "</div>" +
+      UI.stat({ label: "企业成员", value: String(s.members.length), unit: "人", delta: s.members.filter(function (m) { return m.status === "active"; }).length + " 人正常" }) +
+      UI.stat({ label: "当前可见", value: String(visibleMembers.length), unit: "人", delta: App.scopeLabel(App.currentUser.scope) }) +
+      UI.stat({ label: "项目成员授权", value: String(App.memberStats().projectMemberships), unit: "条", delta: "项目边界独立于部门" }) + "</div>" +
       '<div class="grid g-2-1 mt-16"><div class="card"><div class="card-head"><div><h3>组织树</h3><div class="ch-sub">点击部门查看成员与负责人</div></div><span class="badge b-teal">' + App.scopeLabel(App.currentUser.scope) + "可见</span></div><div class=\"card-body\">" + (root ? deptNode(root, 0) : UI.empty("暂无组织", "新增根部门开始搭建组织。")) + "</div></div>" +
-      '<div class="stack"><div class="card"><div class="card-head"><div><h3>数据范围规则</h3><div class="ch-sub">角色与组织共同决定可见边界</div></div></div><div class="card-body"><div class="scope-rule"><span class="badge b-teal">全组织</span><p>所有者与管理员可查看全部部门、成员和审计。</p></div><div class="scope-rule"><span class="badge b-warn">本部门</span><p>部门负责人仅查看本部门成员；跨部门数据在列表中隐藏。</p></div><div class="scope-rule"><span class="badge b-info">所属项目</span><p>制作角色仅可进入被分配的项目；项目切换器按成员名单过滤。</p></div><div class="scope-rule"><span class="badge b-todo">仅本人</span><p>预留范围，适用于外部顾问的单条数据授权。</p></div></div></div>' +
-      UI.card({ title: "当前身份", body: '<div class="account-head" style="padding:0 0 10px">' + UI.avatar(App.currentUser.name, "lg", App.currentUser.color) + '<div><div class="account-name">' + UI.esc(App.currentUser.name) + '</div><div class="small muted">' + UI.esc(App.currentUser.role) + " · " + UI.esc(App.currentUser.dept) + '</div></div></div><div class="kv"><div class="k">数据范围</div><div class="v">' + App.scopeLabel(App.currentUser.scope) + '</div><div class="k">可见成员</div><div class="v">' + visibleMembers.length + " / " + s.members.length + "</div></div>" }) + "</div></div>" +
-      '<div class="card mt-16"><div class="card-head"><div><h3>项目成员映射</h3><div class="ch-sub">项目是数据隔离与交付权限的最小单元</div></div></div><div class="card-body tight"><div class="table-wrap"><table><thead><tr><th>项目</th><th>负责人</th><th>成员</th><th>可见性</th><th>阶段</th></tr></thead><tbody>' + projectRows + "</tbody></table></div></div></div></div>";
+      '<div class="stack"><div class="card"><div class="card-head"><div><h3>双层校验规则</h3><div class="ch-sub">系统 RBAC 只决定管理能力，项目成员授权决定内容访问</div></div></div><div class="card-body">' +
+      '<div class="scope-rule"><span class="badge b-teal">全组织</span><p>系统管理员与组织管理员可管理组织、用户、角色、Provider 与审计；不自动读取未授权项目内容。</p></div>' +
+      '<div class="scope-rule"><span class="badge b-warn">本部门</span><p>部门负责人只管理本部门人员与组织信息；项目内容仍需项目成员授权。</p></div>' +
+      '<div class="scope-rule"><span class="badge b-info">项目成员</span><p>读取、修改、生成、审核和导出项目资源时，服务端必须校验 project_id 与成员资格。</p></div>' +
+      '<div class="scope-rule"><span class="badge b-danger">禁止跨项目</span><p>资产只归属单一 project_id；跨项目搜索、引用、共享默认拒绝，管理员也不例外。</p></div></div></div>' +
+      UI.card({ title: "当前身份", body: '<div class="account-head" style="padding:0 0 10px">' + UI.avatar(App.currentUser.name, "lg", App.currentUser.color) + '<div><div class="account-name">' + UI.esc(App.currentUser.name) + '</div><div class="small muted">' + UI.esc(App.currentUser.role) + " · " + UI.esc(App.currentUser.dept) + '</div></div></div><div class="kv"><div class="k">管理范围</div><div class="v">' + App.scopeLabel(App.currentUser.scope) + '</div><div class="k">可见成员</div><div class="v">' + visibleMembers.length + " / " + s.members.length + '</div><div class="k">项目授权</div><div class="v">' + App.visibleProjects().length + " 个项目</div></div>" }) + "</div></div>" +
+      '<div class="card mt-16"><div class="card-head"><div><h3>项目成员映射</h3><div class="ch-sub">项目是协作、资产与授权的唯一边界；组织管理员也不会自动获得项目内容</div></div></div><div class="card-body tight"><div class="table-wrap"><table><thead><tr><th>项目</th><th>负责人</th><th>成员</th><th>授权方式</th><th>阶段</th></tr></thead><tbody>' + projectRows + "</tbody></table></div></div></div></div>";
   }
 
   function addDept() {
@@ -230,7 +248,7 @@
       '<div class="field"><label>负责人</label><select class="select" id="dpLead">' + st().members.filter(function (m) { return m.status === "active"; }).map(function (m) { return '<option value="' + m.id + '">' + UI.esc(m.name) + " · " + UI.esc(m.title) + "</option>"; }).join("") + "</select></div>" +
       '<div class="field"><label>部门说明</label><input class="input" id="dpDesc" placeholder="职责范围"></div></div>';
     App.modal({
-      title: "新增部门", sub: "部门是数据范围与审批链的一级边界。", body: body,
+      title: "新增部门", sub: "部门只用于人员组织与管理，不授予项目内容访问。", body: body,
       footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="dpGo">创建部门</button>',
       onMount: function (el, close) {
         el.querySelector("#dpGo").addEventListener("click", function () {
@@ -238,7 +256,7 @@
           if (!name) { el.querySelector("#dpErr").classList.add("show"); return; }
           var lead = memberById(el.querySelector("#dpLead").value);
           st().departments.push({ id: "d-" + Date.now(), name: name, parent: el.querySelector("#dpParent").value, leadId: lead.id, lead: lead.name, type: "team", desc: el.querySelector("#dpDesc").value.trim() || "新建部门" });
-          App.logAudit("新增部门", name, "工作区", "建立部门并指定负责人 " + lead.name, "normal", null);
+          App.logAudit("新增部门", name, "组织", "建立部门并指定负责人 " + lead.name, "normal", null);
           close(); App.refresh(); App.toast("部门已创建", name + " · 负责人 " + lead.name, "success");
         });
       }
@@ -262,14 +280,14 @@
         if (save) save.addEventListener("click", function () {
           var lead = memberById(el.querySelector("#dLead").value);
           d.leadId = lead.id; d.lead = lead.name;
-          App.logAudit("调整部门负责人", d.name + " → " + lead.name, "工作区", "部门负责人变更", "normal", null);
+          App.logAudit("调整部门负责人", d.name + " → " + lead.name, "组织", "部门负责人变更", "normal", null);
           close(); App.refresh(); App.toast("负责人已更新", d.name + " → " + lead.name, "success");
         });
       }
     });
   }
 
-  /* ================= 成员与席位 ================= */
+  /* ================= 用户与成员 ================= */
   function filteredMembers() {
     var q = pageState.memberQuery.toLowerCase();
     return st().members.filter(function (m) {
@@ -283,28 +301,30 @@
 
   function membersPage() {
     var s = st();
-    var seats = App.seatStats();
+    var ms = App.memberStats();
     var list = filteredMembers();
     var roleOptions = s.roles.filter(function (r) { return r.id !== "r-owner"; });
     var rows = list.map(function (m) {
+      var projects = (m.projects || []).map(function (id) { return projectName(id); });
       return '<tr class="member-row" data-act="member" data-id="' + m.id + '"><td><div class="member-cell">' + UI.avatar(m.name, "sm", m.color) + '<span><b>' + UI.esc(m.name) + '</b><span class="t-sub">' + UI.esc(m.email) + "</span></span></div></td>" +
         "<td>" + UI.esc(m.dept) + "</td><td><b>" + UI.esc(m.role) + '</b><span class="t-sub">' + App.scopeLabel((App.roleOf(m) || {}).scope) + "</span></td>" +
-        "<td>" + (m.seatType === "guest" ? UI.badge("访客", "b-info") : UI.badge("企业", "b-teal")) + '</td><td>' + statusBadge(m) + "</td><td>" + mfaBadge(m) + "</td><td>" + UI.esc(m.last) + '</td><td><button class="btn btn-xs" data-act="member" data-id="' + m.id + '">详情</button></td></tr>';
+        '<td>' + (m.accountType === "external" ? UI.badge("外部审片", "b-info") : UI.badge("内部成员", "b-teal")) + "</td>" +
+        '<td><b class="mono tiny">' + projects.length + "</b><span class=\"t-sub\">" + (projects.slice(0, 2).join("、") || "未授权项目") + "</span></td><td>" + statusBadge(m) + "</td><td>" + UI.esc(m.last) + '</td><td><button class="btn btn-xs" data-act="member" data-id="' + m.id + '">详情</button></td></tr>';
     }).join("");
     return '<div class="page">' +
-      UI.pageHead({ eyebrow: "Enterprise · Members", title: "成员与席位", desc: "成员生命周期、角色分配与席位占用。当前数据范围：" + App.scopeLabel(App.currentUser.scope) + "。", actions: (App.hasPerm("member:manage") ? '<button class="btn btn-primary" data-act="invite">' + UI.icon("users") + '邀请成员</button>' : "") + (App.hasPerm("integration:manage") ? '<button class="btn" data-act="scim">' + UI.icon("refresh") + "同步 SCIM</button>" : "") }) +
-      '<div class="grid g4">' + UI.stat({ label: "成员", value: String(s.members.filter(function (m) { return App.inScope(m.deptId, null); }).length), unit: "人", delta: "当前可见范围" }) +
-      UI.stat({ label: "企业席位", value: String(seats.total - seats.guests), unit: "席", delta: "已购 " + seats.purchased + " 席" }) +
-      UI.stat({ label: "访客席位", value: String(seats.guests), unit: "席", delta: "审片与外部协作" }) +
-      UI.stat({ label: "待接受", value: String(seats.invited), unit: "人", delta: seats.suspended + " 人已停用" }) + "</div>" +
-      '<div class="card mt-16"><div class="card-head"><div><h3>成员目录</h3><div class="ch-sub">按状态、角色与关键词筛选；点击行查看完整档案</div></div></div><div class="card-body">' +
+      UI.pageHead({ eyebrow: "System · Users & members", title: "用户与成员", desc: "账号生命周期、系统角色与项目成员授权。系统角色不替代项目授权；当前管理范围：" + App.scopeLabel(App.currentUser.scope) + "。", actions: (App.hasPerm("member:manage") ? '<button class="btn btn-primary" data-act="invite">' + UI.icon("users") + '邀请成员</button>' : "") + '<a class="btn" href="' + App.link("system/roles") + '">角色与权限</a>' }) +
+      '<div class="grid g4">' + UI.stat({ label: "用户账号", value: String(ms.total), unit: "人", delta: "当前可见 " + s.members.filter(function (m) { return App.inScope(m.deptId, null); }).length + " 人" }) +
+      UI.stat({ label: "正常账号", value: String(ms.active), unit: "人", delta: ms.external + " 个外部审片账号" }) +
+      UI.stat({ label: "待接受 / 停用", value: String(ms.invited) + " / " + String(ms.suspended), delta: "停用即撤销会话与项目访问" }) +
+      UI.stat({ label: "项目成员授权", value: String(ms.projectMemberships), unit: "条", delta: "覆盖 " + ms.projectsCovered + " 个项目" }) + "</div>" +
+      '<div class="card mt-16"><div class="card-head"><div><h3>成员目录</h3><div class="ch-sub">按状态、角色与关键词筛选；点击行查看账号档案与项目授权</div></div></div><div class="card-body">' +
       '<form class="member-toolbar" data-form="member-search"><label class="filter-search">' + UI.icon("search", 14) + '<input class="input" id="mQuery" value="' + UI.esc(pageState.memberQuery) + '" placeholder="搜索姓名、邮箱、部门或角色"></label>' +
       '<select class="select" id="mRole" style="width:150px"><option value="all">全部角色</option>' + (App.hasPerm("member:manage") ? roleOptions : s.roles).map(function (r) { return '<option value="' + r.id + '"' + (pageState.memberRole === r.id ? " selected" : "") + ">" + UI.esc(r.name) + "</option>"; }).join("") + "</select>" +
       '<button class="btn btn-sm" type="submit">筛选</button><button class="btn btn-sm btn-ghost" type="button" data-act="mreset">重置</button></form>' +
       '<div class="row wrap mt-8">' + [["all", "全部"], ["active", "正常"], ["invited", "待接受"], ["suspended", "已停用"]].map(function (x) {
         return '<button class="chip' + (pageState.memberStatus === x[0] ? " on" : "") + '" data-act="mstatus" data-key="' + x[0] + '">' + x[1] + "</button>";
       }).join("") + '<span class="spacer"></span><span class="tiny muted">' + list.length + " / " + s.members.length + " 人</span></div>" +
-      (rows ? '<div class="table-wrap mt-12"><table class="member-table"><thead><tr><th>成员</th><th>部门</th><th>角色</th><th>席位</th><th>状态</th><th>MFA</th><th>最近活跃</th><th></th></tr></thead><tbody>' + rows + "</tbody></table></div>" : UI.empty("没有匹配成员", "调整筛选条件，或邀请新成员。", App.hasPerm("member:manage") ? '<button class="btn btn-primary mt-16" data-act="invite">邀请成员</button>' : "")) +
+      (rows ? '<div class="table-wrap mt-12"><table class="member-table"><thead><tr><th>成员</th><th>部门</th><th>系统角色</th><th>账号类型</th><th>项目授权</th><th>状态</th><th>最近活跃</th><th></th></tr></thead><tbody>' + rows + "</tbody></table></div>" : UI.empty("没有匹配成员", "调整筛选条件，或邀请新成员。", App.hasPerm("member:manage") ? '<button class="btn btn-primary mt-16" data-act="invite">邀请成员</button>' : "")) +
       "</div></div></div>";
   }
 
@@ -314,10 +334,10 @@
       '<div class="field"><label>企业邮箱<span class="req">*</span></label><input class="input" id="invEmail" placeholder="name@studio.cn"><span class="err-msg" id="invErr">请输入有效邮箱</span></div>' +
       '<div class="field"><label>角色</label><select class="select" id="invRole">' + roles.map(function (r) { return '<option value="' + r.id + '">' + UI.esc(r.name) + " · " + App.scopeLabel(r.scope) + "</option>"; }).join("") + "</select></div>" +
       '<div class="field"><label>部门</label><select class="select" id="invDept">' + st().departments.filter(function (d) { return d.parent !== null; }).map(function (d) { return '<option value="' + d.id + '">' + UI.esc(d.name) + "</option>"; }).join("") + "</select></div>" +
-      '<div class="field"><label>席位类型</label><select class="select" id="invSeat"><option value="full">企业席位</option><option value="guest">访客席位</option></select></div>' +
-      '<div class="field"><label>初始项目</label><select class="select" id="invProject">' + st().projects.map(function (p) { return '<option value="' + p.id + '">' + UI.esc(p.name) + "</option>"; }).join("") + "</select></div>" +
-      '<div class="field span2"><label class="checkline"><input type="checkbox" id="invApproval" checked> 外部访客需要管理员审批后才能下载</label></div></div>' +
-      '<div class="notice info mt-12">' + UI.icon("users", 15) + "<span>邀请后成员为「待接受」，席位立即预占；接受后通过 SSO 完成首次登录。</span></div>";
+      '<div class="field"><label>账号类型</label><select class="select" id="invAccount"><option value="internal">内部成员账号</option><option value="external">外部审片账号</option></select></div>' +
+      '<div class="field"><label>初始项目授权</label><select class="select" id="invProject">' + st().projects.map(function (p) { return '<option value="' + p.id + '">' + UI.esc(p.name) + "</option>"; }).join("") + "</select></div>" +
+      '<div class="field span2"><label class="checkline"><input type="checkbox" id="invApproval" checked> 外部审片账号默认禁止内部制作页与导出下载</label></div></div>' +
+      '<div class="notice info mt-12">' + UI.icon("users", 15) + "<span>邀请后账号为「待接受」。系统角色决定管理能力，项目成员授权单独生效；外部账号不会自动获得内部制作权限。</span></div>";
     App.modal({
       title: "邀请成员", sub: "按角色与部门授予最小权限，邀请会写入审计。", size: "lg", body: body,
       footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="invGo">发送邀请</button>',
@@ -333,16 +353,18 @@
             App.toast("成员已存在", email + " 已在成员目录中。", "warn"); return;
           }
           var role = App.roleById(el.querySelector("#invRole").value);
+          var accountType = el.querySelector("#invAccount").value;
+          if (accountType === "external") role = App.roleById("r-guest");
           var dept = deptById(el.querySelector("#invDept").value);
           var project = el.querySelector("#invProject").value;
           st().members.push({
             id: "m-" + Date.now(), code: "", demo: false, name: name, email: email, title: role.name,
             deptId: dept.id, dept: dept.name, roleId: role.id, role: role.name,
-            seatType: el.querySelector("#invSeat").value, status: "invited", presence: "offline",
-            last: "—", lastActive: "—", joined: "待接受", mfa: "pending", source: "invite",
+            accountType: accountType, status: "invited", presence: "offline",
+            last: "—", lastActive: "—", joined: "待接受", source: "invite",
             projects: [project], initial: name.charAt(0), color: "green", tempPerms: []
           });
-          App.logAudit("邀请成员", email + " · " + role.name, "成员", "邀请加入 " + dept.name + "，初始项目 " + projectName(project), "normal", project);
+          App.logAudit("邀请成员", email + " · " + role.name, "成员", "邀请加入 " + dept.name + "，项目成员授权 " + projectName(project), "normal", project);
           close(); App.refresh(); App.toast("邀请已发送", email + " · " + role.name + "，等待接受。", "success");
         });
       }
@@ -354,21 +376,26 @@
     if (!m) return;
     var role = App.roleOf(m);
     var can = App.hasPerm("member:manage");
-    var body = '<div class="account-head">' + UI.avatar(m.name, "lg", m.color) + '<div><div class="account-name">' + UI.esc(m.name) + '</div><div class="small muted">' + UI.esc(m.title) + " · " + UI.esc(m.email) + '</div><div class="row wrap mt-8">' + statusBadge(m) + (m.seatType === "guest" ? UI.badge("访客席位", "b-info") : UI.badge("企业席位", "b-teal")) + mfaBadge(m) + "</div></div></div>" +
-      '<div class="kv"><div class="k">成员 ID</div><div class="v mono">' + UI.esc(m.id) + '</div><div class="k">部门</div><div class="v">' + UI.esc(m.dept) + '</div><div class="k">加入时间</div><div class="v">' + UI.esc(m.joined) + '</div><div class="k">来源</div><div class="v">' + ({ sso: "企业 SSO", invite: "邮件邀请", scim: "SCIM 同步" })[m.source] + '</div><div class="k">最近活跃</div><div class="v">' + UI.esc(m.lastActive) + "</div></div>" +
-      (can ? '<div class="form-grid mt-16"><div class="field"><label>角色</label><select class="select" id="mdRole">' + st().roles.map(function (r) { return '<option value="' + r.id + '"' + (r.id === m.roleId ? " selected" : "") + ">" + UI.esc(r.name) + " · " + App.scopeLabel(r.scope) + "</option>"; }).join("") + "</select></div>" +
-        '<div class="field"><label>部门</label><select class="select" id="mdDept">' + st().departments.filter(function (d) { return d.parent !== null; }).map(function (d) { return '<option value="' + d.id + '"' + (d.id === m.deptId ? " selected" : "") + ">" + UI.esc(d.name) + "</option>"; }).join("") + "</select></div>" +
-        '<div class="field"><label>席位</label><select class="select" id="mdSeat"><option value="full"' + (m.seatType === "full" ? " selected" : "") + '>企业席位</option><option value="guest"' + (m.seatType === "guest" ? " selected" : "") + ">访客席位</option></select></div></div>" : "") +
-      '<div class="eyebrow mt-20">项目范围</div><div class="row wrap mt-8">' + st().projects.map(function (p) {
+    var body = '<div class="account-head">' + UI.avatar(m.name, "lg", m.color) + '<div><div class="account-name">' + UI.esc(m.name) + '</div><div class="small muted">' + UI.esc(m.title) + " · " + UI.esc(m.email) + '</div><div class="row wrap mt-8">' + statusBadge(m) + (m.accountType === "external" ? UI.badge("外部审片账号", "b-info") : UI.badge("内部成员账号", "b-teal")) + "</div></div></div>" +
+      '<div class="kv"><div class="k">成员 ID</div><div class="v mono">' + UI.esc(m.id) + '</div><div class="k">部门</div><div class="v">' + UI.esc(m.dept) + '</div><div class="k">加入时间</div><div class="v">' + UI.esc(m.joined) + '</div><div class="k">来源</div><div class="v">' + ({ local: "本地账号", invite: "邮件邀请" })[m.source] + '</div><div class="k">最近活跃</div><div class="v">' + UI.esc(m.lastActive) + "</div></div>" +
+      (can ? '<div class="form-grid mt-16"><div class="field"><label>系统角色</label><select class="select" id="mdRole">' + st().roles.map(function (r) { return '<option value="' + r.id + '"' + (r.id === m.roleId ? " selected" : "") + ">" + UI.esc(r.name) + " · " + App.scopeLabel(r.scope) + "</option>"; }).join("") + "</select></div>" +
+        '<div class="field"><label>部门</label><select class="select" id="mdDept">' + st().departments.filter(function (d) { return d.parent !== null; }).map(function (d) { return '<option value="' + d.id + '"' + (d.id === m.deptId ? " selected" : "") + ">" + UI.esc(d.name) + "</option>"; }).join("") + "</select></div></div>" : "") +
+      '<div class="eyebrow mt-20">项目成员授权</div><div class="stack mt-8">' +
+      (m.projects || []).map(function (pid) {
+        var p = st().projects.filter(function (x) { return x.id === pid; })[0];
+        if (!p) return "";
+        return '<div class="list-row"><span class="lr-main"><span class="lr-title">' + UI.esc(p.name) + '</span><span class="lr-sub mono">' + UI.esc(p.code) + " · 项目 ID " + UI.esc(p.id) + '</span></span><span class="badge b-info">' + UI.esc(App.projectRoleOf(m, pid)) + "</span></div>";
+      }).join("") + "</div>" +
+      '<div class="eyebrow mt-20">调整项目授权</div><div class="row wrap mt-8">' + st().projects.map(function (p) {
         var checked = m.projects.indexOf(p.id) > -1;
         return '<label class="chip' + (checked ? " on" : "") + '" style="cursor:pointer"><input type="checkbox" data-mproj="' + p.id + '"' + (checked ? " checked" : "") + (can ? "" : " disabled") + ' style="width:13px;height:13px;margin-right:2px">' + UI.esc(p.name) + "</label>";
       }).join("") + "</div>" +
-      '<div class="notice info mt-16">' + UI.icon("lock", 15) + "<span>角色变更只影响该成员下一次会话；已建立的项目上下文会按新数据范围重新判定。</span></div>";
+      '<div class="notice info mt-16">' + UI.icon("lock", 15) + "<span>角色变更立即影响后续请求，但不会篡改历史审计；项目授权变更只影响该成员在对应项目内的资源访问。</span></div>";
     var footer = '<button class="btn" data-close>关闭</button>';
     if (can && role && role.id !== "r-owner") {
       footer = '<button class="btn" data-close>关闭</button><button class="btn btn-soft" id="mToggle">' + (m.status === "suspended" ? "恢复账号" : "停用账号") + '</button><button class="btn btn-danger" id="mRemove">移除</button><button class="btn btn-primary" id="mSave">保存变更</button>';
     } else if (can) {
-      footer = '<button class="btn" data-close>关闭</button><span class="tiny muted" style="margin-right:auto">工作区所有者不可在此降级</span>';
+      footer = '<button class="btn" data-close>关闭</button><span class="tiny muted" style="margin-right:auto">系统管理员不可在此降级</span>';
     }
     App.drawer({
       eyebrow: "Member profile", title: m.name, sub: m.role + " · " + m.dept, body: body, footer: footer,
@@ -382,19 +409,18 @@
           m.deptId = dept.id; m.dept = dept.name;
           var identity = st().identities.filter(function (x) { return x.id === m.id; })[0];
           if (identity) { identity.deptId = dept.id; identity.dept = dept.name; }
-          m.seatType = el.querySelector("#mdSeat").value;
           m.projects = [];
           el.querySelectorAll("[data-mproj]").forEach(function (cb) { if (cb.checked) m.projects.push(cb.getAttribute("data-mproj")); });
           if (identity) identity.projectIds = m.projects.slice();
-          if (roleChanged) App.logAudit("调整成员角色", m.name + " → " + m.role, "角色", "角色与数据范围同步更新", "normal", m.projects[0] || null);
-          App.logAudit("更新成员档案", m.name, "成员", "更新部门、席位与项目范围", "normal", m.projects[0] || null);
+          if (roleChanged) App.logAudit("调整成员角色", m.name + " → " + m.role, "角色", "系统 RBAC 角色与管理范围同步更新", "normal", m.projects[0] || null);
+          App.logAudit("更新成员授权", m.name, "成员", "更新部门与项目成员授权：" + m.projects.join("、"), "normal", m.projects[0] || null);
           if (App.currentUser.id === m.id) App.currentUser = identity || App.currentUser;
           close(); App.refresh(); App.toast("成员已更新", m.name + " → " + m.role + " · " + m.dept, "success");
         });
         var toggle = el.querySelector("#mToggle");
         if (toggle) toggle.addEventListener("click", function () {
           var suspend = m.status !== "suspended";
-          App.confirm({ title: suspend ? "停用账号" : "恢复账号", message: suspend ? "停用 " + m.name + " 后，该成员无法登录，但席位仍保留至本计费周期结束。" : "恢复 " + m.name + " 的登录与项目访问？", danger: suspend, okText: suspend ? "确认停用" : "确认恢复" }).then(function (ok) {
+          App.confirm({ title: suspend ? "停用账号" : "恢复账号", message: suspend ? "停用 " + m.name + " 后，该账号无法登录，现有会话立即撤销，并失去全部项目访问。" : "恢复 " + m.name + " 的登录与已有项目授权？", danger: suspend, okText: suspend ? "确认停用" : "确认恢复" }).then(function (ok) {
             if (!ok) return;
             App.applyMemberStatus(m.id, suspend ? "suspended" : "active");
             App.logAudit(suspend ? "停用成员" : "恢复成员", m.name, "成员", suspend ? "账号已停用" : "账号已恢复", suspend ? "warning" : "normal", null);
@@ -404,7 +430,7 @@
         var remove = el.querySelector("#mRemove");
         if (remove) remove.addEventListener("click", function () {
           if (m.id === App.currentUser.id) { App.toast("不能移除自己", "请先切换到其他管理员身份。", "danger"); return; }
-          App.confirm({ title: "移除成员", message: "移除 " + m.name + " 后，该成员立即失去所有项目访问与企业数据。", detail: "审计记录与历史交付物保留；席位在下一计费周期释放。", danger: true, okText: "确认移除" }).then(function (ok) {
+          App.confirm({ title: "移除成员", message: "移除 " + m.name + " 后，该账号立即失去所有项目访问与内部数据权限。", detail: "审计记录、资产版本与历史交付物保留；账号不可恢复。", danger: true, okText: "确认移除" }).then(function (ok) {
             if (!ok) return;
             App.logAudit("移除成员", m.name, "成员", "成员与登录资格已移除", "critical", null);
             st().members = st().members.filter(function (x) { return x.id !== m.id; });
@@ -415,15 +441,6 @@
         });
       }
     });
-  }
-
-  function scimSync() {
-    var s = st();
-    s.security.scim.lastSync = "今天 " + App.nowStamp();
-    s.security.scim.synced = s.members.filter(function (m) { return m.source === "scim" || m.source === "sso"; }).length;
-    App.logAudit("SCIM 目录同步", s.security.scim.synced + " 名成员", "集成", "从 Okta 同步成员与部门", "normal", null);
-    App.refresh();
-    App.toast("目录同步完成", s.security.scim.synced + " 名成员已同步。", "success");
   }
 
   /* ================= 角色与权限 ================= */
@@ -443,14 +460,15 @@
         }).join("") + "</div>";
     }).join("");
     return '<div class="page">' +
-      UI.pageHead({ eyebrow: "Enterprise · RBAC", title: "角色与权限", desc: "角色定义权限集合与数据范围，成员通过角色获得访问资格。权限变更需要保存后生效。", actions: '<button class="btn btn-primary" data-act="new-role">' + UI.icon("plus") + '新建角色</button>' }) +
-      '<div class="grid g4">' + UI.stat({ label: "角色", value: String(s.roles.length), unit: "个", delta: "1 个系统所有者角色" }) +
-      UI.stat({ label: "权限项", value: String(s.permissionCatalog.reduce(function (n, g) { return n + g.items.length; }, 0)), unit: "项", delta: "5 个权限组" }) +
-      UI.stat({ label: "部门负责人", value: String(roleMembers("r-manager").length), unit: "人", delta: "本部门数据范围" }) +
-      UI.stat({ label: "外部访客", value: String(roleMembers("r-guest").length), unit: "人", delta: "项目只读" }) + "</div>" +
+      UI.pageHead({ eyebrow: "System · RBAC", title: "角色与权限", desc: "系统 RBAC 定义管理能力与管理范围；项目内容访问仍由项目成员授权二次校验。权限变更保存后立即影响后续请求。", actions: '<button class="btn btn-primary" data-act="new-role">' + UI.icon("plus") + '新建角色</button>' }) +
+      '<div class="grid g4">' + UI.stat({ label: "角色", value: String(s.roles.length), unit: "个", delta: "1 个系统管理员角色" }) +
+      UI.stat({ label: "权限项", value: String(s.permissionCatalog.reduce(function (n, g) { return n + g.items.length; }, 0)), unit: "项", delta: String(s.permissionCatalog.length) + " 个权限组" }) +
+      UI.stat({ label: "项目负责人", value: String(roleMembers("r-manager").length), unit: "人", delta: "项目成员授权" }) +
+      UI.stat({ label: "外部审片", value: String(roleMembers("r-guest").length), unit: "人", delta: "只读项目内容" }) + "</div>" +
+      '<div class="notice info mt-16">' + UI.icon("lock", 15) + "<span>系统管理员和组织管理员也只管理平台，不自动读取项目资产。组织、部门与角色都不等于 SaaS tenant；每个项目资源请求都必须同时校验 project_id 与项目成员资格。</span></div>" +
       '<div class="perm-layout mt-16"><div class="role-list">' + roleList + "</div>" +
       '<div class="card"><div class="card-head"><div><h3>' + UI.esc(selected.name) + '</h3><div class="ch-sub">' + UI.esc(selected.desc) + '</div></div><div class="row">' + scopeBadge(selected.scope) + (selected.system ? '<span class="badge b-locked">系统角色</span>' : "") + "</div></div><div class=\"card-body\">" +
-      (ownerLocked ? '<div class="notice warn">' + UI.icon("lock", 15) + "<span>工作区所有者拥有全部权限，不能在此降级。订阅与账单权随所有者身份固定。</span></div>" : "") +
+      (ownerLocked ? '<div class="notice warn">' + UI.icon("lock", 15) + "<span>系统管理员拥有全部权限，不能在此降级。其项目访问仍受项目成员授权约束。</span></div>" : "") +
       '<div class="between"><div><div class="eyebrow">数据范围</div><div class="tiny muted mt-4">决定该角色可查看的组织、成员与项目</div></div><select class="select" id="roleScope" style="width:150px"' + (ownerLocked ? " disabled" : "") + '>' + ["org", "dept", "project", "own"].map(function (x) { return '<option value="' + x + '"' + (selected.scope === x ? " selected" : "") + ">" + App.scopeLabel(x) + "</option>"; }).join("") + "</select></div>" +
       '<div class="perm-groups mt-16">' + groups + '</div><div class="row mt-16"><button class="btn btn-primary" data-act="save-role"' + (ownerLocked ? " disabled" : "") + ">保存角色策略</button><span class=\"tiny muted\">变更会同步给 " + roleMembers(selected.id).length + " 名成员</span></div></div></div></div></div>";
   }
@@ -475,7 +493,7 @@
       '<div class="field"><label>数据范围</label><select class="select" id="nrScope"><option value="project">所属项目</option><option value="dept">本部门</option><option value="org">全组织</option><option value="own">仅本人</option></select></div>' +
       '<div class="field span2"><label>角色说明</label><textarea class="textarea" id="nrDesc" rows="2" placeholder="这个角色负责什么，不负责什么。"></textarea></div></div>';
     App.modal({
-      title: "新建角色", sub: "新角色从空权限开始，保存后在右侧编辑。", body: body,
+      title: "新建角色", sub: "新角色从空权限开始；项目内容访问仍由项目成员授权单独控制。", body: body,
       footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="nrGo">创建角色</button>',
       onMount: function (el, close) {
         el.querySelector("#nrGo").addEventListener("click", function () {
@@ -491,50 +509,59 @@
     });
   }
 
-  /* ================= 安全与登录 ================= */
+  /* ================= 安全与访问 ================= */
   function securityPage() {
     var s = st(), sec = s.security;
     var checks = s.securityChecks.map(function (c) {
       return '<div class="sec-check-row"><span class="sec-check-main"><b>' + UI.esc(c.label) + '</b><small>' + UI.esc(c.detail) + '</small></span><span class="sec-check-score">' + c.score + "</span>" + UI.statusBadge(c.status) + "</div>";
     }).join("");
-    var ipRows = sec.ip.entries.map(function (e) {
-      return '<tr><td class="mono">' + UI.esc(e.cidr) + '</td><td>' + UI.esc(e.label) + '</td><td class="tiny muted">' + UI.esc(e.added) + '</td><td><button class="btn btn-xs" data-act="remove-ip" data-cidr="' + UI.esc(e.cidr) + '">移除</button></td></tr>';
-    }).join("");
-    var ipCard = '<div class="card mt-16"><div class="card-head"><div><h3>IP 允许清单</h3><div class="ch-sub">' + sec.ip.entries.length + ' 个网段 · ' + (sec.ip.enabled ? "强制拦截" : "观察模式") + " · 不在清单内的登录会被记录或阻断</div></div><button class=\"switch " + (sec.ip.enabled ? "on" : "") + '" data-act="toggle-ip" aria-label="启用 IP 限制"><i></i></button></div><div class="card-body tight"><div class="table-wrap"><table><thead><tr><th>网段</th><th>标签</th><th>添加日期</th><th></th></tr></thead><tbody>' + ipRows + '</tbody></table></div><div class="row mt-8"><button class="btn btn-xs" data-act="add-ip">+ 添加网段</button><span class="tiny muted">建议至少保留一个管理员可访问的固定出口网段。</span></div></div></div>';
+    var policy = sec.dataPolicy;
+    var policyChips = policy.sensitiveClasses.map(function (x) { return '<span class="chip">' + UI.esc(x) + "</span>"; }).join("");
+    var mimeChips = sec.upload.allowedMime.map(function (x) { return '<span class="chip mono">' + UI.esc(x) + "</span>"; }).join("");
+    var avgScore = Math.round(s.securityChecks.reduce(function (n, c) { return n + c.score; }, 0) / s.securityChecks.length);
     return '<div class="page">' +
-      UI.pageHead({ eyebrow: "Enterprise · Security", title: "安全与登录", desc: "企业身份源、多因素认证、会话边界与下载管控。高风险策略变更会记录审计。", actions: '<button class="btn" data-act="security-report">' + UI.icon("download") + '下载安全报告</button><a class="btn" href="' + App.link("system/audit") + '">审计日志</a>' }) +
-      '<div class="grid g4">' + UI.stat({ label: "安全评分", value: "86", unit: "分", delta: "较上月 +4" }) +
-      UI.stat({ label: "SSO 覆盖", value: sec.sso.coverage, delta: sec.sso.enforced ? "已强制登录" : "观察模式" }) +
-      UI.stat({ label: "MFA 覆盖", value: String(sec.mfa.coverage), unit: "%", delta: sec.mfa.policy === "required" ? "全员强制" : "可选" }) +
-      UI.stat({ label: "风险事件", value: "2", unit: "条", delta: "近 7 天 · 均已阻断" }) + "</div>" +
-      '<div class="security-grid mt-16"><div class="card"><div class="card-head"><div><h3>安全态势</h3><div class="ch-sub">按控制项评分，点击右侧策略加固</div></div><span class="ring" style="--p:86;--size:52px"><span>86</span></span></div><div class="card-body">' + checks + "</div></div>" +
-      '<div class="stack"><div class="card"><div class="card-head"><div><h3>企业 SSO</h3><div class="ch-sub">' + UI.esc(sec.sso.provider) + " · " + UI.esc(sec.sso.protocol) + '</div></div><button class="switch ' + (sec.sso.enforced ? "on" : "") + '" data-act="toggle-sso" aria-label="强制 SSO"><i></i></button></div><div class="card-body">' +
-      '<div class="kv"><div class="k">身份源</div><div class="v">' + UI.esc(sec.sso.provider) + '</div><div class="k">企业域名</div><div class="v">' + UI.esc(sec.sso.domain) + " " + UI.badge("已验证", "b-done") + '</div><div class="k">最近同步</div><div class="v">' + UI.esc(sec.sso.lastSync) + '</div><div class="k">登录地址</div><div class="v mono tiny">' + UI.esc(sec.sso.loginUrl) + "</div></div>" +
-      '<div class="row mt-16"><button class="btn btn-sm" data-act="test-sso">测试 SSO</button><button class="btn btn-sm btn-ghost" data-act="sync-scim">同步目录</button></div></div></div>' +
-      '<div class="card"><div class="card-head"><div><h3>MFA 与恢复</h3><div class="ch-sub">TOTP / WebAuthn · 宽限 ' + sec.mfa.graceDays + ' 天</div></div><button class="switch ' + (sec.mfa.policy === "required" ? "on" : "") + '" data-act="toggle-mfa" aria-label="强制 MFA"><i></i></button></div><div class="card-body">' + UI.progress(sec.mfa.coverage) + '<div class="between mt-8"><span class="tiny muted">覆盖 ' + sec.mfa.coverage + '%</span><span class="tiny muted">强制于 ' + UI.esc(sec.mfa.enforcedAt) + '</span></div><div class="row wrap mt-12">' + sec.mfa.methods.map(function (m) { return '<span class="chip">' + UI.esc(m) + '</span>'; }).join("") + '<button class="btn btn-xs" data-act="reset-recovery">重置恢复码</button></div></div></div></div>' +
-      '<div class="stack"><div class="card"><div class="card-head"><div><h3>会话策略</h3><div class="ch-sub">空闲、最长时长与记住登录</div></div></div><div class="card-body"><div class="form-grid"><div class="field"><label>空闲超时（分钟）</label><input class="input" id="sessIdle" type="number" value="' + sec.session.idle + '"></div><div class="field"><label>最长会话（小时）</label><input class="input" id="sessMax" type="number" value="' + sec.session.max + '"></div><div class="field"><label>记住登录（天）</label><input class="input" id="sessRemember" type="number" value="' + sec.session.remember + '"></div><div class="field"><label class="checkline"><input type="checkbox" id="sessSingle"' + (sec.session.singleDevice ? " checked" : "") + "> 单设备登录</label></div></div><button class=\"btn btn-sm mt-12\" data-act=\"save-session\">保存会话策略</button></div></div>" +
-      '<div class="card"><div class="card-head"><div><h3>加固建议</h3><div class="ch-sub">按影响与成本排序</div></div></div><div class="card-body"><div class="scope-rule"><span class="badge b-warn">高优先</span><p>将 IP 允许清单从观察模式切换为强制拦截，先加入上海与北京办公出口。</p></div><div class="scope-rule"><span class="badge b-info">中优先</span><p>外部访客 MFA 完成率仅 50%，在邀请流程中要求首次登录绑定 WebAuthn。</p></div><div class="scope-rule"><span class="badge b-teal">已覆盖</span><p>SSO 强制与下载水印已开启，审计保留 180 天符合企业合规要求。</p></div></div></div></div></div>' +
-      ipCard +
-      '<div class="card mt-16"><div class="card-head"><div><h3>下载与数据防泄漏</h3><div class="ch-sub">外部访客与交付物下载策略</div></div></div><div class="card-body"><div class="setting-toggle-row"><div><b>审阅版水印</b><div class="tiny muted">导出审阅版自动嵌入成员邮箱与时间戳</div></div><button class="switch ' + (sec.dlp.watermark ? "on" : "") + '" data-act="toggle-dlp" data-key="watermark"><i></i></button></div>' +
-      '<div class="setting-toggle-row"><div><b>外部下载审批</b><div class="tiny muted">访客下载成片需要管理员审批</div></div><button class="switch ' + (sec.dlp.downloadApproval ? "on" : "") + '" data-act="toggle-dlp" data-key="downloadApproval"><i></i></button></div>' +
-      '<div class="setting-toggle-row"><div><b>允许外部分享链接</b><div class="tiny muted">关闭后只能通过工作区登录查看</div></div><button class="switch ' + (sec.dlp.externalShare ? "on" : "") + '" data-act="toggle-dlp" data-key="externalShare"><i></i></button></div></div></div></div>';
-  }
-
-  function addIp() {
-    var body = '<div class="form-grid"><div class="field"><label>CIDR / IP<span class="req">*</span></label><input class="input" id="ipCidr" placeholder="203.0.113.0/24"><span class="err-msg" id="ipErr">请输入合法网段</span></div><div class="field"><label>标签</label><input class="input" id="ipLabel" placeholder="例如：北京办公室"></div></div>';
-    App.modal({
-      title: "添加 IP 网段", sub: "仅在启用强制拦截时生效。", body: body,
-      footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="ipGo">添加</button>',
-      onMount: function (el, close) {
-        el.querySelector("#ipGo").addEventListener("click", function () {
-          var cidr = el.querySelector("#ipCidr").value.trim();
-          if (!/^[0-9a-fA-F:./]+$/.test(cidr)) { el.querySelector("#ipErr").classList.add("show"); return; }
-          st().security.ip.entries.push({ cidr: cidr, label: el.querySelector("#ipLabel").value.trim() || "自定义网段", added: "今天" });
-          App.logAudit("新增 IP 网段", cidr, "安全", "网络边界允许清单更新", "warning", null);
-          close(); App.refresh(); App.toast("网段已添加", cidr, "success");
-        });
-      }
-    });
+      UI.pageHead({ eyebrow: "System · Security & access", title: "安全与访问", desc: "项目访问复核、Provider 凭据、数据外发、上传与媒体处理、部署安全。高风险变更全部进入不可变审计。", actions: '<button class="btn" data-act="security-report">' + UI.icon("download") + '下载安全基线</button><a class="btn" href="' + App.link("system/audit") + '">审计日志</a>' }) +
+      '<div class="grid g4">' + UI.stat({ label: "安全基线", value: String(avgScore), unit: "分", delta: "7 项控制检查" }) +
+      UI.stat({ label: "项目访问复核", value: sec.access.projectMembership ? "开启" : "关闭", delta: "跨项目默认拒绝" }) +
+      UI.stat({ label: "数据外发", value: policy.defaultAction === "deny" ? "默认拒绝" : "允许", delta: "仅 Mork · 中国大陆" }) +
+      UI.stat({ label: "审计保留", value: String(s.workspace.dataRetention), unit: "天", delta: "append-only" }) + "</div>" +
+      '<div class="grid g-2-1 mt-16"><div class="stack">' +
+      UI.card({ title: "安全态势", sub: "按项目访问、凭据、外发、会话、上传、审计与媒体处理检查", head: '<span class="ring" style="--p:' + avgScore + ';--size:52px"><span>' + avgScore + "</span></span>", body: checks }) +
+      UI.card({ title: "数据外发策略", sub: "外部模型调用前的强制检查，不存在静默允许", head: UI.badge(policy.defaultAction === "deny" ? "DENY BY DEFAULT" : "ALLOW", policy.defaultAction === "deny" ? "b-teal" : "b-danger"), body:
+        '<div class="kv"><div class="k">允许 Provider</div><div class="v">' + policy.allowedProviders.map(function (id) { return UI.esc(id.toUpperCase()); }).join("、") + '</div>' +
+        '<div class="k">允许区域</div><div class="v">' + policy.allowedRegions.join("、") + '</div>' +
+        '<div class="k">合同与条款</div><div class="v">' + UI.esc(policy.contractReview) + " " + UI.badge("已审查", "b-done") + '</div>' +
+        '<div class="k">敏感数据外发</div><div class="v">' + (policy.allowSensitive ? "允许" : "禁止") + '</div>' +
+        '<div class="k">请求体日志</div><div class="v">' + (policy.logPayload ? "记录" : "不记录 · 仅元数据") + '</div>' +
+        '<div class="k">外部存储</div><div class="v">' + (policy.externalStorage ? "允许" : "禁止") + '</div></div>' +
+        '<div class="eyebrow mt-16">默认禁止外发的数据类别</div><div class="row wrap mt-8">' + policyChips + '</div>' +
+        '<div class="notice warn mt-12">' + UI.icon("lock", 15) + "<span>剧本原文、未公开角色设定与未发布成片默认不发送到外部 Provider；命中策略时任务在创建前失败，不产生计费。</span></div>" +
+        '<div class="row mt-12"><button class="btn btn-sm" data-act="run-outbound-check">运行外发自检</button><a class="btn btn-sm btn-ghost" href="' + App.link("system/providers") + '">查看 Provider</a></div>' }) +
+      UI.card({ title: "上传与媒体处理", sub: "所有上传与 FFmpeg 调用的安全基线", body:
+        '<div class="kv"><div class="k">允许 MIME</div><div class="v">' + mimeChips + '</div><div class="k">单文件上限</div><div class="v">' + UI.esc(sec.upload.maxFile) + '</div>' +
+        '<div class="k">文件签名</div><div class="v">' + (sec.upload.magicCheck ? "校验 magic bytes" : "未校验") + '</div><div class="k">完整性</div><div class="v">' + UI.esc(sec.upload.checksum) + '</div>' +
+        '<div class="k">恶意文件</div><div class="v">' + UI.esc(sec.upload.antivirus) + '</div><div class="k">FFmpeg</div><div class="v">' + UI.esc(sec.media.ffmpeg) + " · " + (sec.media.resourceLimit ? "资源受限" : "未限制") + '</div>' +
+        '<div class="k">临时文件</div><div class="v">' + UI.esc(sec.media.tempDir) + '</div><div class="k">成片校验</div><div class="v">' + UI.esc(sec.media.probe) + '</div></div>' }) +
+      "</div><div class=\"stack\">" +
+      UI.card({ title: "会话与访问控制", sub: "账号停用、角色变更与项目授权立即影响后续请求", body:
+        '<div class="form-grid"><div class="field"><label>空闲超时（分钟）</label><input class="input" id="sessIdle" type="number" value="' + sec.session.idle + '"></div>' +
+        '<div class="field"><label>最长会话（小时）</label><input class="input" id="sessMax" type="number" value="' + sec.session.max + '"></div>' +
+        '<div class="field"><label>刷新周期（天）</label><input class="input" id="sessRefresh" type="number" value="' + sec.session.refresh + '"></div></div>' +
+        '<div class="setting-toggle-row"><div><b>停用即撤销会话</b><div class="tiny muted">离职、停用与角色移除同步失效</div></div>' + (sec.session.revokeOnSuspend ? UI.badge("开启", "b-done") : UI.badge("关闭", "b-danger")) + "</div>" +
+        '<div class="setting-toggle-row"><div><b>项目访问双层校验</b><div class="tiny muted">每个项目请求校验 project_id 与成员关系</div></div>' + (sec.access.projectMembership ? UI.badge("开启", "b-done") : UI.badge("关闭", "b-danger")) + "</div>" +
+        '<div class="setting-toggle-row"><div><b>跨项目搜索 / 引用</b><div class="tiny muted">资产只在所属项目内共享</div></div>' + (!sec.access.crossProject ? UI.badge("禁止", "b-done") : UI.badge("允许", "b-danger")) + "</div>" +
+        '<div class="row mt-12"><button class="btn btn-sm" data-act="save-session">保存会话策略</button><span class="tiny muted">上次复核 ' + UI.esc(sec.access.lastReview) + "</span></div>" }) +
+      UI.card({ title: "Provider 凭据", sub: "应用层加密，材料独立注入，界面只显示引用掩码", body:
+        '<div class="kv"><div class="k">加密算法</div><div class="v mono">' + UI.esc(sec.credentials.algorithm) + '</div><div class="k">存储方式</div><div class="v mono">' + UI.esc(sec.credentials.storage) + '</div>' +
+        '<div class="k">界面展示</div><div class="v">' + (sec.credentials.masked ? "仅掩码" : "明文") + '</div><div class="k">轮换周期</div><div class="v">' + sec.credentials.rotationDays + ' 天</div>' +
+        '<div class="k">最近轮换</div><div class="v">' + UI.esc(sec.credentials.lastRotation) + '</div><div class="k">注入来源</div><div class="v">' + UI.esc(sec.credentials.injectedBy) + '</div></div>' +
+        '<div class="notice info mt-12">' + UI.icon("lock", 15) + "<span>数据库不保存明文密钥；secret_ref 只供 API 进程读取，导出与审计日志不包含凭据材料。</span></div>" }) +
+      UI.card({ title: "部署安全", sub: "私有化容器与日志边界", body:
+        '<div class="kv"><div class="k">容器用户</div><div class="v">' + UI.esc(s.workspace.runtime.containerUser) + '</div><div class="k">存储</div><div class="v">' + UI.esc(s.workspace.runtime.storage) + '</div>' +
+        '<div class="k">配置注入</div><div class="v">部署环境变量 / Secret Manager</div><div class="k">日志脱敏</div><div class="v">token、密钥、台词正文不落日志</div>' +
+        '<div class="k">备份</div><div class="v">' + UI.esc(s.workspace.backup.last) + ' · ' + UI.esc(s.workspace.backup.lastSize) + '</div></div>' +
+        '<div class="row mt-12"><a class="btn btn-sm" href="' + App.link("system/workspace") + '">系统设置</a><button class="btn btn-sm btn-ghost" data-act="security-report">导出基线</button></div>' }) +
+      "</div></div></div>";
   }
 
   /* ================= 审计日志 ================= */
@@ -555,7 +582,7 @@
     var scoped = s.audit.filter(function (a) { return App.inScope(a.deptId, a.projectId); });
     var critical = scoped.filter(function (a) { return a.severity === "critical"; }).length;
     var roleChanges = scoped.filter(function (a) { return a.category === "角色"; }).length;
-    var cats = ["all", "成员", "安全", "角色", "项目", "剧本", "资产", "导出", "集成", "订阅", "工作区", "审计", "审核"];
+    var cats = ["all", "成员", "组织", "角色", "项目", "安全", "Provider", "用量", "系统", "剧本", "资产", "导出", "审计", "审核"];
     var rows = list.map(function (a) {
       return '<tr><td class="mono tiny">' + UI.esc(a.time) + '</td><td><b>' + UI.esc(a.actor) + '</b><span class="t-sub mono">' + UI.esc(a.ip) + '</span></td><td><b>' + UI.esc(a.action) + '</b><span class="t-sub">' + UI.esc(a.target) + '</span></td><td>' + UI.badge(a.category, "b-outline") + '</td><td>' + resultBadge(a.result) + '</td><td>' + riskBadge(a.severity === "critical" ? "high" : a.severity === "warning" ? "medium" : "low") + '</td><td><button class="btn btn-xs" data-act="audit-detail" data-id="' + a.id + '">详情</button></td></tr>';
     }).join("");
@@ -563,12 +590,12 @@
       '<select class="select" id="aSeverity" style="width:130px"><option value="all">全部级别</option><option value="normal"' + (pageState.auditSeverity === "normal" ? " selected" : "") + '>常规</option><option value="warning"' + (pageState.auditSeverity === "warning" ? " selected" : "") + '>警告</option><option value="critical"' + (pageState.auditSeverity === "critical" ? " selected" : "") + '>高风险</option></select><button class="btn btn-sm" type="submit">筛选</button></form>' +
       '<div class="row wrap mt-8">' + cats.map(function (c) { return '<button class="chip' + (pageState.auditCategory === c ? " on" : "") + '" data-act="afilter" data-key="' + c + '">' + (c === "all" ? "全部" : c) + "</button>"; }).join("") + "</div>";
     return '<div class="page">' +
-      UI.pageHead({ eyebrow: "Enterprise · Audit", title: "审计与合规", desc: "企业级审计覆盖登录、权限、成员、项目、导出与集成。审计按数据范围过滤，保留 " + s.workspace.dataRetention + " 天。", actions: '<button class="btn" data-act="export-audit">' + UI.icon("download") + '导出 CSV</button><button class="btn" data-act="audit-config">审计设置</button>' }) +
+      UI.pageHead({ eyebrow: "System · Audit", title: "审计日志", desc: "不可变审计覆盖登录、权限、成员、项目授权、Provider、用量、系统设置与导出。字段包含 actor / action / resource / time / request_id。", actions: '<button class="btn" data-act="export-audit">' + UI.icon("download") + '导出 CSV</button><button class="btn" data-act="audit-config">保留策略</button>' }) +
       '<div class="grid g4">' + UI.stat({ label: "可见事件", value: String(scoped.length), unit: "条", delta: "全部审计 " + s.audit.length + " 条" }) +
-      UI.stat({ label: "高风险", value: String(critical), unit: "条", delta: "异常登录与账号停用" }) +
-      UI.stat({ label: "权限变更", value: String(roleChanges), unit: "条", delta: "角色与成员调整" }) +
-      UI.stat({ label: "保留周期", value: String(s.workspace.dataRetention), unit: "天", delta: "到期自动归档" }) + "</div>" +
-      '<div class="card mt-16"><div class="card-head"><div><h3>审计事件</h3><div class="ch-sub">按时间倒序 · 当前范围：' + App.scopeLabel(App.currentUser.scope) + '</div></div><span class="tag">' + list.length + ' 条</span></div><div class="card-body">' + filterHtml +
+      UI.stat({ label: "高风险", value: String(critical), unit: "条", delta: "凭据、停用与阻断" }) +
+      UI.stat({ label: "权限变更", value: String(roleChanges), unit: "条", delta: "角色、项目授权" }) +
+      UI.stat({ label: "保留周期", value: String(s.workspace.dataRetention), unit: "天", delta: "到期归档 · 不可修改" }) + "</div>" +
+      '<div class="card mt-16"><div class="card-head"><div><h3>审计事件</h3><div class="ch-sub">按时间倒序 · 当前范围：' + App.scopeLabel(App.currentUser.scope) + ' · 项目事件仅在项目成员授权范围内可见</div></div><span class="tag">' + list.length + ' 条</span></div><div class="card-body">' + filterHtml +
       (rows ? '<div class="table-wrap mt-12"><table class="audit-table"><thead><tr><th>时间</th><th>操作人 / IP</th><th>动作 / 目标</th><th>分类</th><th>结果</th><th>级别</th><th></th></tr></thead><tbody>' + rows + "</tbody></table></div>" : UI.empty("没有匹配审计事件", "调整关键词、分类或级别。")) + "</div></div></div>";
   }
 
@@ -576,162 +603,238 @@
     var a = st().audit.filter(function (x) { return x.id === id; })[0];
     if (!a) return;
     var body = '<div class="account-head">' + UI.avatar(a.actor, "lg") + '<div><div class="account-name">' + UI.esc(a.action) + '</div><div class="small muted">' + UI.esc(a.actor) + " · " + UI.esc(a.time) + '</div></div></div>' +
-      '<div class="kv"><div class="k">事件 ID</div><div class="v mono">' + UI.esc(a.id) + '</div><div class="k">分类</div><div class="v">' + UI.esc(a.category) + '</div><div class="k">目标</div><div class="v">' + UI.esc(a.target) + '</div><div class="k">结果</div><div class="v">' + resultBadge(a.result) + '</div><div class="k">级别</div><div class="v">' + riskBadge(a.severity === "critical" ? "high" : a.severity === "warning" ? "medium" : "low") + '</div><div class="k">来源 IP</div><div class="v mono">' + UI.esc(a.ip) + '</div><div class="k">部门</div><div class="v">' + UI.esc(deptById(a.deptId) ? deptById(a.deptId).name : "—") + '</div><div class="k">项目</div><div class="v">' + UI.esc(a.projectId ? projectName(a.projectId) : "工作区级") + '</div></div><div class="notice info mt-16"><b>事件详情</b><br>' + UI.esc(a.detail) + "</div>";
+      '<div class="kv"><div class="k">事件 ID</div><div class="v mono">' + UI.esc(a.id) + '</div><div class="k">request_id</div><div class="v mono">' + UI.esc(a.requestId) + '</div><div class="k">资源</div><div class="v mono">' + UI.esc(a.resource) + '</div><div class="k">分类</div><div class="v">' + UI.esc(a.category) + '</div><div class="k">目标</div><div class="v">' + UI.esc(a.target) + '</div><div class="k">结果</div><div class="v">' + resultBadge(a.result) + '</div><div class="k">级别</div><div class="v">' + riskBadge(a.severity === "critical" ? "high" : a.severity === "warning" ? "medium" : "low") + '</div><div class="k">来源 IP</div><div class="v mono">' + UI.esc(a.ip) + '</div><div class="k">部门</div><div class="v">' + UI.esc(deptById(a.deptId) ? deptById(a.deptId).name : "—") + '</div><div class="k">项目</div><div class="v">' + UI.esc(a.projectId ? projectName(a.projectId) : "系统级") + '</div></div><div class="notice info mt-16"><b>事件详情</b><br>' + UI.esc(a.detail) + "</div>";
     App.drawer({ eyebrow: "Audit event", title: a.action, sub: a.id + " · " + a.time, body: body, footer: '<button class="btn" data-close>关闭</button>' });
   }
 
   function exportAudit() {
     var rows = auditRows();
-    var csv = "\uFEFF时间,操作人,动作,目标,分类,结果,级别,IP,详情\n" + rows.map(function (a) {
-      return [a.time, a.actor, a.action, a.target, a.category, a.result, a.severity, a.ip, a.detail].map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(",");
+    var csv = "\uFEFF时间,操作人,动作,目标,分类,结果,级别,IP,资源,request_id,详情\n" + rows.map(function (a) {
+      return [a.time, a.actor, a.action, a.target, a.category, a.result, a.severity, a.ip, a.resource, a.requestId, a.detail].map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(",");
     }).join("\n");
     App.download("changye_audit_" + Date.now() + ".csv", csv, "text/csv;charset=utf-8");
     App.toast("审计已导出", rows.length + " 条事件 · CSV", "success");
   }
 
-  /* ================= 集成与 API ================= */
-  function integrationsPage() {
+  /* ================= Provider 与模型 ================= */
+  function providersPage() {
     var s = st();
-    var ints = s.integrations.map(function (it) {
-      return '<div class="int-card"><div class="int-top"><span class="int-logo ' + UI.esc(it.color) + '">' + UI.esc(it.initial) + '</span><span class="int-status">' + UI.statusBadge(it.status === "connected" ? "connected" : "unconfigured") + '</span></div>' +
-        '<div class="int-name">' + UI.esc(it.name) + '</div><div class="int-desc">' + UI.esc(it.desc) + '</div><div class="int-meta">' + UI.esc(it.meta) + "</div>" +
-        '<div class="between mt-12"><span class="tiny muted">' + UI.esc(it.lastSync) + '</span><button class="btn btn-xs" data-act="test-int" data-id="' + it.id + '">' + (it.status === "connected" ? "测试" : "连接") + "</button></div></div>";
+    var cards = s.providers.map(function (p) {
+      var status = p.enabled ? UI.statusBadge("connected") : (p.id === "mock" ? UI.badge("受限", "b-warn") : UI.statusBadge("unconfigured"));
+      var caps = p.capabilities.map(function (c) { return '<span class="chip">' + UI.esc(c) + '</span>'; }).join("");
+      return '<div class="int-card"><div class="int-top"><span class="int-logo ' + UI.esc(p.color) + '">' + UI.esc(p.initial) + '</span><span class="int-status">' + status + '</div>' +
+        '<div class="int-name">' + UI.esc(p.name) + '</div><div class="int-desc">' + UI.esc(p.desc) + '</div>' +
+        '<div class="int-meta mono tiny">' + UI.esc(p.baseUrl) + '</div>' +
+        '<div class="kv mt-12" style="grid-template-columns:70px 1fr"><div class="k">凭据</div><div class="v mono tiny">' + UI.esc(p.secretRef) + '</div>' +
+        '<div class="k">掩码</div><div class="v mono tiny">' + UI.esc(p.secretMasked) + '</div>' +
+        '<div class="k">超时</div><div class="v">' + p.timeout + ' 秒</div><div class="k">限流</div><div class="v">' + UI.esc(p.rateLimit) + '</div>' +
+        '<div class="k">区域</div><div class="v">' + UI.esc(p.region) + '</div><div class="k">合同</div><div class="v tiny">' + UI.esc(p.contract) + '</div></div>' +
+        '<div class="row wrap mt-12">' + caps + '</div>' +
+        '<div class="between mt-12"><span class="tiny muted">' + (p.lastCheck === '—' ? '未校验' : '校验 ' + UI.esc(p.lastCheck)) + '</span><div class="row" style="gap:4px">' +
+        '<button class="btn btn-xs" data-act="test-provider" data-id="' + p.id + '">测试</button>' +
+        (App.hasPerm('provider:manage') ? '<button class="btn btn-xs" data-act="toggle-provider" data-id="' + p.id + '">' + (p.enabled ? '停用' : '启用') + '</button><button class="btn btn-xs" data-act="rotate-secret" data-id="' + p.id + '">轮换凭据</button><button class="btn btn-xs" data-act="config-provider" data-id="' + p.id + '">配置</button>' : '') + '</div></div></div>';
     }).join("");
-    var keys = s.apiKeys.map(function (k) {
-      return '<tr><td><b>' + UI.esc(k.name) + '</b><span class="t-sub mono">' + UI.esc(k.prefix) + '…</span></td><td>' + k.scopes.map(function (p) { return '<span class="chip">' + UI.esc(p) + "</span>"; }).join(" ") + '</td><td>' + UI.esc(k.owner) + '</td><td class="tiny muted">' + UI.esc(k.lastUsed) + '</td><td>' + UI.statusBadge(k.status === "active" ? "active" : "locked", k.status === "active" ? "启用" : "已撤销") + '</td><td class="cell-actions"><button class="btn btn-xs" data-act="rotate-key" data-id="' + k.id + '"' + (k.status === "revoked" ? " disabled" : "") + '>轮换</button><button class="btn btn-xs btn-danger" data-act="revoke-key" data-id="' + k.id + '"' + (k.status === "revoked" ? " disabled" : "") + ">撤销</button></td></tr>";
+    var modelRows = s.models.map(function (m, i) {
+      var isInternal = m.providerId === 'internal';
+      return '<tr><td><b class="mono">' + UI.esc(m.modelId) + '</b><span class="t-sub">' + UI.esc(m.version) + '</span></td><td>' + UI.esc(m.provider) + '</td><td><span class="chip">' + UI.esc(m.cap) + '</span></td><td class="mono tiny">' + UI.esc((m.capabilities || []).join(' / ')) + '</td><td>' + m.timeout + 's</td><td class="mono tiny">P' + m.priority + '</td><td class="tiny">' + UI.esc(m.cost) + '</td><td>' + UI.statusBadge(m.enabled ? 'connected' : 'unconfigured', m.enabled ? '已启用' : '已停用') + '</td><td class="cell-actions"><button class="btn btn-xs" data-act="toggle-model" data-i="' + i + '">' + (m.enabled ? '停用' : '启用') + '</button>' + (isInternal ? '' : '<button class="btn btn-xs" data-act="config-model" data-i="' + i + '">配置</button>') + '</td></tr>';
     }).join("");
-    var models = s.models.map(function (m, i) {
-      return '<div class="model-row"><span><b>' + UI.esc(m.name) + '</b><span class="t-sub">' + UI.esc(m.cap) + '</span></span><span class="m-ver tiny muted">' + UI.esc(m.version) + '</span><span class="m-lat tiny muted">' + UI.esc(m.latency) + '</span><span class="row" style="justify-content:flex-end;gap:4px">' + UI.statusBadge(m.status === "已连接" ? "connected" : "unconfigured") + '<button class="btn btn-xs" data-act="test-model" data-i="' + i + '">测试</button><button class="btn btn-xs" data-act="config-model" data-i="' + i + '">配置</button></span></div>';
+    var routes = s.providerRoutes.map(function (r) {
+      return '<div class="list-row"><span class="lr-main"><span class="lr-title">' + UI.esc(r.cap) + ' · ' + UI.esc(r.label) + '</span><span class="lr-sub mono">' + UI.esc(r.defaultId) + '</span></span><span class="badge b-teal">默认路由</span><span class="tiny muted">不可用则任务失败</span></div>';
     }).join("");
     return '<div class="page">' +
-      UI.pageHead({ eyebrow: "Enterprise · Integrations", title: "集成与 API", desc: "身份、协作、存储和模型接入。API Key 按最小权限签发，轮换与撤销立即生效。", actions: '<button class="btn btn-primary" data-act="add-key">' + UI.icon("plus") + '新建 API Key</button>' }) +
-      '<div class="grid g4">' + UI.stat({ label: "已连接", value: String(s.integrations.filter(function (i) { return i.status === "connected"; }).length), unit: "个", delta: "共 " + s.integrations.length + " 个集成" }) +
-      UI.stat({ label: "API Key", value: String(s.apiKeys.filter(function (k) { return k.status === "active"; }).length), unit: "个", delta: "1 个已撤销" }) +
-      UI.stat({ label: "Webhook", value: "3", unit: "个", delta: "签名校验已开启" }) +
-      UI.stat({ label: "最近同步", value: "09:42", delta: "SCIM / SSO" }) + "</div>" +
-      '<div class="int-grid mt-16">' + ints + "</div>" +
-      '<div class="grid g-2-1 mt-16"><div class="card"><div class="card-head"><div><h3>API Key</h3><div class="ch-sub">按作用域签发 · 前端只展示前缀</div></div><span class="tag">' + s.apiKeys.length + "</span></div><div class=\"card-body tight\"><div class=\"table-wrap\"><table><thead><tr><th>名称 / 前缀</th><th>作用域</th><th>负责人</th><th>最近使用</th><th>状态</th><th></th></tr></thead><tbody>" + keys + "</tbody></table></div></div></div>" +
-      '<div class="stack"><div class="card"><div class="card-head"><div><h3>Webhook 订阅</h3><div class="ch-sub">交付与任务状态回调</div></div><button class="btn btn-xs" data-act="test-webhook">发送测试</button></div><div class="card-body tight">' +
-      [["https://client.changye.cn/hooks/export", "export.completed", "成功 214 次"], ["https://ops.changye.cn/hooks/task", "task.failed", "成功 86 次"], ["https://feishu.cn/open-apis/bot/v2/hook/…", "review.approved", "成功 42 次"]].map(function (w) {
-        return '<div class="list-row"><span class="lr-main"><span class="lr-title mono tiny">' + UI.esc(w[0]) + '</span><span class="lr-sub">' + UI.esc(w[1]) + " · " + UI.esc(w[2]) + '</span></span><span class="dot on"></span></div>';
-      }).join("") + "</div></div>" +
-      '<div class="card"><div class="card-head"><div><h3>策略提示</h3><div class="ch-sub">企业集成的最小权限原则</div></div></div><div class="card-body"><div class="notice info">' + UI.icon("lock", 15) + "<span>生产 Key 不应授予 member:manage 或 billing:manage；外部回调使用单独 Key 并限制 IP。</span></div><div class=\"tiny muted mt-12\">上次安全扫描：今天 09:50 · 未发现泄露</div></div></div></div></div>" +
-      '<div class="card mt-16"><div class="card-head"><div><h3>模型接入</h3><div class="ch-sub">文本、图像、视频、语音与质检</div></div><button class="btn btn-sm" data-act="add-model">' + UI.icon("plus") + '新增接入</button></div><div class="card-body tight">' + models + "</div></div></div>";
+      UI.pageHead({ eyebrow: 'System · Providers & models', title: 'Provider 与模型', desc: '私有化部署的外部模型适配层：凭据、能力、模型与路由。默认生产适配器为 Mork；Mock 仅用于 CI 与显式演示。', actions: (App.hasPerm('provider:manage') ? '<button class="btn" data-act="test-providers">' + UI.icon('refresh') + '校验全部</button><button class="btn btn-primary" data-act="add-provider">' + UI.icon('plus') + '新增 Provider</button>' : '') }) +
+      '<div class="grid g4">' + UI.stat({ label: '生产 Provider', value: String(s.providers.filter(function (p) { return p.enabled && p.id !== 'mock'; }).length), unit: '个', delta: 'Mork Adapter' }) +
+      UI.stat({ label: '注册模型', value: String(s.models.filter(function (m) { return m.enabled; }).length), unit: '个', delta: '6 个外部能力 · 1 个内部规则' }) +
+      UI.stat({ label: '能力路由', value: String(s.providerRoutes.length), unit: '条', delta: '无静默降级' }) +
+      UI.stat({ label: 'Mock', value: '禁用', delta: '仅 CI / 显式演示' }) + '</div>' +
+      '<div class="notice warn mt-16">' + UI.icon('lock', 15) + '<span>未配置 Provider 时任务创建直接返回 <b class="mono">PROVIDER_NOT_CONFIGURED</b>，不会静默回退到 Mock；凭据只以 secret_ref 掩码展示，不进入前端与审计日志。</span></div>' +
+      '<div class="grid g2 mt-16">' + cards + '</div>' +
+      '<div class="card mt-16"><div class="card-head"><div><h3>模型能力注册</h3><div class="ch-sub">provider_key · model_id · capabilities · timeout · rate_limit</div></div><span class="tag">' + s.models.length + ' 个模型</span></div><div class="card-body tight"><div class="table-wrap"><table><thead><tr><th>model_id</th><th>Provider</th><th>能力</th><th>capabilities</th><th>超时</th><th>优先级</th><th>计价</th><th>状态</th><th></th></tr></thead><tbody>' + modelRows + '</tbody></table></div></div></div>' +
+      '<div class="grid g2 mt-16"><div class="card"><div class="card-head"><div><h3>能力路由</h3><div class="ch-sub">每类能力绑定默认模型，不做多供应商自动降级</div></div></div><div class="card-body">' + routes + '</div></div>' +
+      '<div class="card"><div class="card-head"><div><h3>Mock 边界</h3><div class="ch-sub">测试替身，不是生产兜底</div></div></div><div class="card-body"><div class="scope-rule"><span class="badge b-info">CI</span><p>自动化测试可显式启用 Mock，生成结果标记 mock_artifact。</p></div><div class="scope-rule"><span class="badge b-warn">演示</span><p>演示环境需显式开关；生产环境拒绝静默回退。</p></div><div class="scope-rule"><span class="badge b-danger">不可用</span><p>Provider 未配置、超时或限流时任务失败并保留 Attempt，等待重试。</p></div></div></div></div></div>';
   }
 
-  function addApiKey() {
-    var body = '<div class="form-grid"><div class="field span2"><label>Key 名称<span class="req">*</span></label><input class="input" id="akName" placeholder="例如：客户交付回调"><span class="err-msg" id="akErr">请填写名称</span></div>' +
-      '<div class="field span2"><label>作用域</label><div class="row wrap">' + ["project:read", "task:run", "export:read", "qa:read"].map(function (p) { return '<label class="checkline"><input type="checkbox" data-kscope value="' + p + '"> ' + p + "</label>"; }).join("") + "</div></div></div>" +
-      '<div class="notice warn mt-12">' + UI.icon("lock", 15) + "<span>Key 只在创建时展示一次。原型会立即写入列表，但不会生成真实密钥。</span></div>";
+  function configProvider(id) {
+    var p = st().providers.filter(function (x) { return x.id === id; })[0];
+    if (!p) return;
+    var caps = ['文本', '图像', '视频', '语音合成', '语音识别', '音乐'];
+    var body = '<div class="form-grid"><div class="field"><label>provider_key</label><input class="input" id="cpKey" value="' + UI.esc(p.key) + '"></div>' +
+      '<div class="field"><label>base_url</label><input class="input" id="cpBase" value="' + UI.esc(p.baseUrl) + '"></div>' +
+      '<div class="field"><label>secret_ref</label><input class="input mono" id="cpSecret" value="' + UI.esc(p.secretRef) + '" placeholder="secret://provider/..."></div>' +
+      '<div class="field"><label>model_id（默认）</label><input class="input mono" id="cpModel" value="' + UI.esc(p.id === 'mork' ? 'mork-video-2' : 'mock-video') + '"></div>' +
+      '<div class="field"><label>timeout（秒）</label><input class="input" id="cpTimeout" type="number" value="' + p.timeout + '"></div>' +
+      '<div class="field"><label>rate_limit</label><input class="input" id="cpRate" value="' + UI.esc(p.rateLimit) + '"></div>' +
+      '<div class="field span2"><label>capabilities</label><div class="row wrap">' + caps.map(function (c) { return '<label class="checkline"><input type="checkbox" data-cpcap value="' + c + '"' + (p.capabilities.indexOf(c) > -1 ? ' checked' : '') + '> ' + c + '</label>'; }).join('') + '</div></div>' +
+      '<div class="field span2"><label class="checkline"><input type="checkbox" id="cpEnabled"' + (p.enabled ? ' checked' : '') + '> 启用该 Provider（生产任务可路由）</label></div></div>' +
+      '<div class="notice info mt-12">' + UI.icon('lock', 15) + '<span>原型不保存密钥，也不发起真实外部请求；secret_ref 仅表示部署环境中的引用。</span></div>';
     App.modal({
-      title: "新建 API Key", sub: "最小作用域 · 负责人为当前身份", body: body,
-      footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="akGo">创建 Key</button>',
+      title: '配置 ' + p.name, sub: p.kind + ' · ' + p.baseUrl, body: body,
+      footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="cpGo">保存配置</button>',
       onMount: function (el, close) {
-        el.querySelector("#akGo").addEventListener("click", function () {
-          var name = el.querySelector("#akName").value.trim();
-          if (!name) { el.querySelector("#akErr").classList.add("show"); return; }
-          var scopes = [];
-          el.querySelectorAll("[data-kscope]").forEach(function (cb) { if (cb.checked) scopes.push(cb.value); });
-          if (!scopes.length) { App.toast("缺少作用域", "至少选择一个作用域。", "danger"); return; }
-          st().apiKeys.unshift({ id: "key-" + Date.now(), name: name, prefix: "sp_live_" + Math.random().toString(16).slice(2, 6), scopes: scopes, owner: App.currentUser.name, created: "今天", lastUsed: "—", status: "active" });
-          App.logAudit("创建 API Key", name, "集成", "作用域：" + scopes.join(", "), "high", null);
-          close(); App.refresh(); App.toast("API Key 已创建", name + " · " + scopes.length + " 个作用域", "success");
+        el.querySelector('#cpGo').addEventListener('click', function () {
+          var base = el.querySelector('#cpBase').value.trim();
+          if (!/^https?:\/\//.test(base) && p.id !== 'mock') { App.toast('base_url 无效', '必须为 http(s) 地址。', 'danger'); return; }
+          var selected = [];
+          el.querySelectorAll('[data-cpcap]').forEach(function (cb) { if (cb.checked) selected.push(cb.value); });
+          if (!selected.length) { App.toast('缺少能力', '至少选择一个 capability。', 'danger'); return; }
+          p.key = el.querySelector('#cpKey').value.trim();
+          p.baseUrl = base;
+          p.secretRef = el.querySelector('#cpSecret').value.trim();
+          p.timeout = Number(el.querySelector('#cpTimeout').value) || 120;
+          p.rateLimit = el.querySelector('#cpRate').value.trim();
+          p.capabilities = selected;
+          p.enabled = el.querySelector('#cpEnabled').checked;
+          p.configured = p.secretRef !== '—';
+          p.lastCheck = '今天 ' + App.nowStamp();
+          p.health = p.enabled ? 'healthy' : 'restricted';
+          App.logAudit('保存 Provider 配置', p.name, 'Provider', p.baseUrl + ' · ' + selected.join('、') + ' · ' + (p.enabled ? '启用' : '停用'), 'high', null);
+          close(); App.refresh(); App.toast('Provider 配置已保存', p.name + ' · ' + selected.length + ' 项能力', 'success');
         });
       }
     });
   }
 
-  /* ================= 订阅与账单 ================= */
-  function billingPage() {
-    var s = st(), b = s.billing, seats = App.seatStats();
-    var invoices = b.invoices.map(function (i) {
-      return '<tr><td class="mono">' + UI.esc(i.id) + '</td><td>' + UI.esc(i.period) + '</td><td class="num-cell">' + App.formatMoney(i.amount) + '</td><td>' + UI.statusBadge(i.status === "paid" ? "done" : "pending", i.status === "paid" ? "已支付" : "待支付") + '</td><td class="tiny muted">' + UI.esc(i.issued) + '</td><td><button class="btn btn-xs" data-act="download-invoice" data-id="' + i.id + '">下载</button></td></tr>';
-    }).join("");
+  function addProvider() {
+    var body = '<div class="form-grid"><div class="field"><label>provider_key<span class="req">*</span></label><input class="input" id="npKey" placeholder="例如：mork-backup"></div>' +
+      '<div class="field"><label>显示名称<span class="req">*</span></label><input class="input" id="npName" placeholder="例如：Mork 备用适配器"></div>' +
+      '<div class="field span2"><label>base_url</label><input class="input" id="npBase" placeholder="https://provider.internal/v1"></div>' +
+      '<div class="field"><label>secret_ref</label><input class="input mono" id="npSecret" placeholder="secret://provider/backup"></div>' +
+      '<div class="field"><label>timeout / rate_limit</label><div class="row"><input class="input" id="npTimeout" type="number" value="300" style="width:90px"><input class="input" id="npRate" value="60 req/min"></div></div></div>' +
+      '<div class="notice warn mt-12">新增 Provider 默认未启用。保存后必须先校验连接，再在能力路由中绑定模型。</div>';
+    App.modal({
+      title: '新增 Provider', sub: '企业私有化部署的外部模型适配器', body: body,
+      footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="npGo">创建</button>',
+      onMount: function (el, close) {
+        el.querySelector('#npGo').addEventListener('click', function () {
+          var key = el.querySelector('#npKey').value.trim(), name = el.querySelector('#npName').value.trim();
+          if (!key || !name) { App.toast('信息不完整', 'provider_key 与显示名称必填。', 'danger'); return; }
+          st().providers.push({ id: key, key: key, name: name, kind: '自建配置', desc: '待校验的外部模型适配器。', baseUrl: el.querySelector('#npBase').value.trim() || 'https://provider.internal/v1', secretRef: el.querySelector('#npSecret').value.trim() || '—', secretMasked: '待配置', secretStatus: '待注入', secretUpdated: '—', timeout: Number(el.querySelector('#npTimeout').value) || 300, rateLimit: el.querySelector('#npRate').value.trim() || '60 req/min', enabled: false, configured: false, health: 'unconfigured', lastCheck: '—', capabilities: ['文本'], models: 0, contract: '待合同审查', region: '中国大陆', initial: name.charAt(0), color: 'blue' });
+          App.logAudit('新增 Provider', name, 'Provider', 'provider_key=' + key + '，等待凭据与能力校验', 'high', null);
+          close(); App.refresh(); App.toast('Provider 已创建', name + ' · 待校验', 'success');
+        });
+      }
+    });
+  }
+
+  function toggleProvider(id) {
+    var p = st().providers.filter(function (x) { return x.id === id; })[0];
+    if (!p) return;
+    if (p.id === 'mock' && !p.enabled) { App.toast('Mock 不可在生产启用', 'Mock 只能在 CI 或显式演示环境启用。', 'danger'); return; }
+    App.confirm({ title: (p.enabled ? '停用' : '启用') + ' Provider', message: p.name + (p.enabled ? ' 停用后，绑定该 Provider 的任务会返回 PROVIDER_NOT_CONFIGURED，不会回退 Mock。' : ' 启用前请确认凭据、合同与 data policy 均已通过。'), danger: p.enabled, okText: '确认' + (p.enabled ? '停用' : '启用') }).then(function (ok) {
+      if (!ok) return;
+      p.enabled = !p.enabled;
+      p.health = p.enabled ? 'healthy' : 'restricted';
+      App.logAudit((p.enabled ? '启用' : '停用') + ' Provider', p.name, 'Provider', '生产路由状态更新', 'high', null);
+      App.refresh(); App.toast('Provider 状态已更新', p.name + ' · ' + (p.enabled ? '启用' : '停用'), 'success');
+    });
+  }
+
+  function testProvider(id) {
+    var p = st().providers.filter(function (x) { return x.id === id; })[0];
+    if (!p) return;
+    if (!p.configured || p.secretRef === '—') {
+      App.logAudit('Provider 校验失败', p.name, 'Provider', 'PROVIDER_NOT_CONFIGURED', 'warning', null);
+      App.toast('PROVIDER_NOT_CONFIGURED', '缺少 base_url / secret_ref，任务不会回退 Mock。', 'danger'); return;
+    }
+    p.lastCheck = '今天 ' + App.nowStamp(); p.health = p.enabled ? 'healthy' : 'restricted';
+    App.logAudit('校验 Provider', p.name + ' · ' + p.models + ' 个模型', 'Provider', '连接与能力检查通过', 'normal', null);
+    App.refresh(); App.toast('Provider 可用', p.name + ' · ' + (p.enabled ? '生产启用' : '仅测试'), 'success');
+  }
+
+  function rotateSecret(id) {
+    var p = st().providers.filter(function (x) { return x.id === id; })[0];
+    if (!p || p.secretRef === '—') return;
+    App.confirm({ title: '轮换 Provider 凭据', message: '轮换 ' + p.name + ' 的 secret_ref 后，旧凭据立即失效；正在运行的任务使用已注入的旧连接完成或失败。', detail: '新凭据由部署环境注入，界面只保留掩码引用。', danger: false, okText: '确认轮换' }).then(function (ok) {
+      if (!ok) return;
+      p.secretUpdated = '今天 ' + App.nowStamp();
+      p.lastCheck = p.secretUpdated;
+      p.secretMasked = p.id + '_live_••••' + Math.random().toString(16).slice(2, 6);
+      App.logAudit('轮换 Provider 凭据', p.name + ' · ' + p.secretRef, 'Provider', '旧凭据失效，新凭据由部署环境注入', 'high', null);
+      App.refresh(); App.toast('凭据已轮换', p.name + ' · 旧凭据已失效', 'success');
+    });
+  }
+
+  function testModel(i) {
+    var m = st().models[i]; if (!m) return;
+    if (!m.enabled) { App.toast('模型已停用', m.name + ' 当前不可路由。', 'danger'); return; }
+    App.toast('模型校验通过', m.name + ' · ' + m.latency, 'success');
+  }
+
+  function toggleModel(i) {
+    var m = st().models[i]; if (!m) return;
+    if (m.providerId === 'internal') { App.toast('内部规则不可停用', '质量门禁规则由系统内置维护。', 'warning'); return; }
+    m.enabled = !m.enabled;
+    m.status = m.enabled ? '已连接' : '已停用';
+    App.logAudit((m.enabled ? '启用' : '停用') + '模型', m.modelId, 'Provider', m.cap + ' · ' + (m.enabled ? '可路由' : '停止路由'), 'high', null);
+    App.refresh(); App.toast('模型状态已更新', m.modelId + ' · ' + (m.enabled ? '启用' : '停用'), 'success');
+  }
+
+  /* ================= 用量与预算 ================= */
+  function usagePage() {
+    var s = st(), u = s.orgUsage;
+    var pct = Math.round(u.spent / u.budget * 100);
+    var projectRows = u.byProject.map(function (p) {
+      var used = Math.round(p.estimated / p.budget * 100);
+      return '<tr><td><b>' + UI.esc(p.name) + '</b><span class="t-sub mono">' + UI.esc(p.id) + '</span></td><td>' + p.episodes + ' 集</td><td>' + p.shots + ' 镜</td><td class="mono tiny">' + UI.esc(p.tokens) + '</td><td>' + App.formatMoney(p.vendorBilled) + '</td><td>' + App.formatMoney(p.estimated) + '</td><td>' + App.formatMoney(p.budget) + '</td><td><div class="row" style="gap:8px"><div class="progress thin" style="width:70px"><i style="width:' + used + '%"></i></div><span class="tiny">' + used + '%</span></div></td><td>' + (p.status === 'warning' ? UI.badge('接近阈值', 'b-warn') : UI.badge('正常', 'b-done')) + '</td></tr>';
+    }).join('');
+    var modelRows = u.byModel.map(function (m) {
+      return '<tr><td><b class="mono">' + UI.esc(m.model) + '</b><span class="t-sub">' + UI.esc(m.provider) + '</span></td><td><span class="chip">' + UI.esc(m.cap) + '</span></td><td>' + m.calls + '</td><td>' + UI.esc(m.units) + '</td><td>' + App.formatMoney(m.estimated) + '</td><td><div class="row" style="gap:8px"><div class="progress thin" style="width:70px"><i style="width:' + m.share + '%"></i></div><span class="tiny">' + m.share + '%</span></div></td></tr>';
+    }).join('');
+    var deptRows = u.byDept.map(function (d) { return '<div class="role-dist-row"><span class="rd-name">' + UI.esc(d.name) + '</span><div class="progress thin"><i style="width:' + d.share + '%"></i></div><span class="mono tiny">' + App.formatMoney(d.estimated) + '</span></div>'; }).join('');
+    var userRows = u.byUser.map(function (x) { return '<div class="list-row"><span class="lr-main"><span class="lr-title">' + UI.esc(x.name) + '</span><span class="lr-sub">' + UI.esc(x.role) + '</span></span><span class="mono tiny">' + App.formatMoney(x.estimated) + '</span></div>'; }).join('');
+    var alerts = u.alerts.map(function (a) { return '<div class="scope-rule"><span class="badge ' + (a.level === 'warning' ? 'b-warn' : 'b-info') + '">' + (a.level === 'warning' ? '预警' : '信息') + '</span><p>' + UI.esc(a.text) + '<span class="tiny muted"> · ' + UI.esc(a.at) + '</span></p></div>'; }).join('');
     return '<div class="page">' +
-      UI.pageHead({ eyebrow: "Enterprise · Billing", title: "订阅与账单", desc: "企业版按年计费，席位与 AI 用量分开结算。仅工作区所有者可修改付款方式与增购席位。", actions: '<button class="btn btn-primary" data-act="buy-seats">' + UI.icon("plus") + '增购席位</button><button class="btn" data-act="payment">更新付款方式</button>' }) +
-      '<div class="grid g4">' + UI.stat({ label: "当前套餐", value: s.workspace.planName, delta: b.cycle + " · 合同至 " + b.renewal }) +
-      UI.stat({ label: "年费", value: fmt(b.amount), unit: "元", delta: b.seatsPurchased + " 席 · ¥" + b.unitPrice + "/席" }) +
-      UI.stat({ label: "已用席位", value: String(seats.total), unit: "/ " + seats.purchased, delta: seats.available + " 席可分配" }) +
-      UI.stat({ label: "本月 AI 用量", value: fmt(s.usage.spent), unit: "元", delta: "预算 " + fmt(s.usage.budget) + " · " + Math.round(s.usage.spent / s.usage.budget * 100) + "%" }) + "</div>" +
-      '<div class="grid g-2-1 mt-16"><div class="stack"><div class="card"><div class="card-head"><div><h3>企业版订阅</h3><div class="ch-sub">2026-07-01 起 · 到期自动续费</div></div><span class="badge b-teal">自动续费</span></div><div class="card-body"><div class="plan-summary"><div><div class="plan-name">长夜影视 · 企业版</div><div class="plan-price">' + App.formatMoney(b.amount) + '<small>/ 年</small></div><div class="tiny muted">合同编号 ENT-2026-0718 · 税号 ' + UI.esc(b.taxId) + "</div></div><div class=\"plan-seats\"><div class=\"big\">" + seats.total + "</div><div class=\"tiny muted\">已用 / " + seats.purchased + ' 席</div></div></div>' +
-      '<div class="between mt-16"><span class="tiny muted">席位使用</span><span class="mono tiny">' + Math.round(seats.total / seats.purchased * 100) + '%</span></div>' + UI.progress(Math.round(seats.total / seats.purchased * 100)) +
-      '<div class="seat-breakdown mt-12"><span>企业席位 ' + (seats.total - seats.guests) + '</span><span>访客 ' + seats.guests + '</span><span>待接受 ' + seats.invited + '</span><span>已停用 ' + seats.suspended + "</span></div></div></div>" +
-      '<div class="card"><div class="card-head"><div><h3>发票记录</h3><div class="ch-sub">电子发票 · 下载后可用于报销</div></div></div><div class="card-body tight"><div class="table-wrap"><table><thead><tr><th>发票号</th><th>服务周期</th><th>金额</th><th>状态</th><th>开具日期</th><th></th></tr></thead><tbody>' + invoices + "</tbody></table></div></div></div></div>" +
-      '<div class="stack"><div class="card"><div class="card-head"><div><h3>付款与账单联系人</h3><div class="ch-sub">企业银行转账</div></div><button class="btn btn-xs" data-act="payment">编辑</button></div><div class="card-body"><div class="kv"><div class="k">付款方式</div><div class="v">' + UI.esc(b.method) + '</div><div class="k">账单联系人</div><div class="v">' + UI.esc(b.contact) + '</div><div class="k">发票抬头</div><div class="v">' + UI.esc(b.invoiceTitle) + '</div><div class="k">税号</div><div class="v mono">' + UI.esc(b.taxId) + "</div></div></div></div>" +
-      '<div class="card"><div class="card-head"><div><h3>席位分布</h3><div class="ch-sub">按部门统计</div></div></div><div class="card-body">' + deptSeatRows() + "</div></div>" +
-      '<div class="card"><div class="card-head"><div><h3>AI 用量</h3><div class="ch-sub">本月按能力拆分</div></div><a class="btn btn-xs" href="' + App.link("system/settings") + '">预算</a></div><div class="card-body">' + usageBars() + "</div></div></div></div></div>";
+      UI.pageHead({ eyebrow: 'System · Usage & budget', title: '用量与预算', desc: '按用户、部门、项目、剧集、镜头、Provider 和模型核算 token、时长与金额。任务创建前检查预算，超限不静默放行。', actions: (App.hasPerm('usage:manage') ? '<button class="btn" data-act="edit-budget">' + UI.icon('plus') + '调整预算</button>' : '') + '<button class="btn" data-act="export-usage">' + UI.icon('download') + '导出用量</button>' }) +
+      '<div class="grid g4">' + UI.stat({ label: '本月已用', value: App.formatMoney(u.spent), delta: u.period }) +
+      UI.stat({ label: '组织预算', value: App.formatMoney(u.budget), delta: '阈值 ' + u.threshold + '% · 超限阻断' }) +
+      UI.stat({ label: '预计月末', value: App.formatMoney(u.estimatedMonth), delta: Math.round(u.estimatedMonth / u.budget * 100) + '% 的预算' }) +
+      UI.stat({ label: '项目数', value: String(u.byProject.length), unit: '个', delta: '按项目独立预算' }) + '</div>' +
+      '<div class="grid g-2-1 mt-16">' +
+      UI.card({ title: '预算执行', sub: u.period + ' · 最后更新 ' + UI.esc(u.lastUpdated), head: UI.badge(pct + '%', pct >= u.threshold ? 'b-warn' : 'b-teal'), body: '<div class="plan-mini"><div class="plan-price">' + App.formatMoney(u.spent) + '<small> / ' + App.formatMoney(u.budget) + '</small></div><div class="tiny muted">供应商账单与平台估算分列，报表标注口径。</div></div>' + '<div class="between mt-12"><span class="tiny muted">已用</span><span class="mono tiny">' + pct + '%</span></div>' + UI.progress(pct) + '<div class="row mt-12"><span class="tiny muted">达到 ' + u.threshold + '% 通知系统管理员与项目负责人；达到 100% 阻止新生成任务。</span></div><div class="grid g3 mt-16"><div><div class="tiny muted">剩余预算</div><div class="mono">' + App.formatMoney(u.budget - u.spent) + '</div></div><div><div class="tiny muted">预计月末</div><div class="mono">' + App.formatMoney(u.estimatedMonth) + '</div></div><div><div class="tiny muted">超限动作</div><div class="mono">' + (u.blockOnExceed ? '阻止新任务' : '仅告警') + '</div></div></div>' }) +
+      UI.card({ title: '预算提示', sub: '预警与阻断规则', body: alerts }) +
+      '</div>' +
+      UI.card({ cls: 'mt-16', title: '按项目', sub: '剧集、镜头、token、供应商账单、平台估算与预算', head: '<span class="tag">' + u.byProject.length + ' 个项目</span>', body: '<div class="table-wrap"><table class="usage-project-table"><thead><tr><th>项目</th><th>剧集</th><th>镜头</th><th>token</th><th>供应商账单</th><th>平台估算</th><th>预算</th><th>执行</th><th>状态</th></tr></thead><tbody>' + projectRows + '</tbody></table></div>' }) +
+      UI.card({ cls: 'mt-16', title: '按 Provider / 模型', sub: '调用量、计量单位与估算成本', body: '<div class="table-wrap"><table><thead><tr><th>模型</th><th>能力</th><th>调用</th><th>用量</th><th>估算成本</th><th>占比</th></tr></thead><tbody>' + modelRows + '</tbody></table></div>' }) +
+      '<div class="grid g3 mt-16">' +
+      UI.card({ title: '部门成本', sub: '按成员所属部门聚合', body: '<div class="role-dist">' + deptRows + '</div>' }) +
+      UI.card({ title: '高用量成员', sub: '用于复核任务归属与预算责任', body: userRows }) +
+      UI.card({ title: '口径说明', sub: '三种成本口径不可混用', body: '<div class="scope-rule"><span class="badge b-info">供应商账单</span><p>Provider 结算金额，可能有延迟与最小计费单位。</p></div><div class="scope-rule"><span class="badge b-info">返回 usage</span><p>响应中的 token、秒数或字符数，用于核对调用。</p></div><div class="scope-rule"><span class="badge b-teal">平台估算</span><p>按能力单价估算，任务创建前用于预算检查。</p></div></div>' }) +
+      '</div></div>';
   }
 
-  function deptSeatRows() {
-    return st().departments.filter(function (d) { return d.parent !== null; }).map(function (d) {
-      var n = deptMembers(d.id).length;
-      return '<div class="role-dist-row"><span class="rd-name">' + UI.esc(d.name) + '</span><div class="progress thin"><i style="width:' + Math.round(n / Math.max(1, st().members.length) * 100) + '%"></i></div><span class="mono tiny">' + n + "</span></div>";
-    }).join("");
-  }
-
-  function usageBars() {
-    var u = st().usage;
-    var days = [214, 386, 302, 640, 812, 468, 286, 510, 420, 360, 580, 720, 390, 286];
-    var max = Math.max.apply(null, days);
-    return '<div class="between"><span class="tiny muted">已用 ' + App.formatMoney(u.spent) + '</span><span class="tiny muted">预算 ' + App.formatMoney(u.budget) + " · " + Math.round(u.spent / u.budget * 100) + "%</span></div>" + UI.progress(Math.round(u.spent / u.budget * 100)) +
-      '<div class="budget-bar mt-16">' + u.byCap.map(function (c) { return '<div class="budget-row"><span>' + c[0] + '</span><div class="progress thin"><i style="width:' + c[2] + '%"></i></div><span class="mono tiny">¥' + fmt(c[1]) + "</span></div>"; }).join("") + "</div>" +
-      '<div class="bars mt-16">' + days.map(function (d) { return '<div class="bar" title="¥' + d + '"><i style="height:' + Math.round(d / max * 100) + '%"></i></div>'; }).join("") + "</div>";
-  }
-
-  function buySeats() {
-    var s = st();
-    var body = '<div class="form-grid"><div class="field"><label>增购席位</label><input class="input" id="bsCount" type="number" min="1" max="30" value="4"></div><div class="field"><label>单价</label><input class="input" value="¥' + s.billing.unitPrice + ' / 席 / 年" disabled></div>' +
-      '<div class="field span2"><div class="notice info">' + UI.icon("alert", 15) + "<span>按年付比例计费；席位立即生效，可用于邀请成员或增加访客。</span></div></div></div>";
+  function editBudget() {
+    var u = st().orgUsage;
+    var body = '<div class="form-grid"><div class="field"><label>组织月度预算（元）</label><input class="input" id="ubBudget" type="number" value="' + u.budget + '"></div><div class="field"><label>预警阈值（%）</label><input class="input" id="ubThreshold" type="number" value="' + u.threshold + '"></div><div class="field span2"><label class="checkline"><input type="checkbox" id="ubBlock"' + (u.blockOnExceed ? ' checked' : '') + '> 达到预算时阻止新生成任务</label></div></div><div class="notice info mt-12">预算只影响任务创建前的检查；已提交任务继续执行并记录用量。</div>';
     App.modal({
-      title: "增购席位", sub: "当前 " + App.seatStats().total + " / " + s.workspace.seatsPurchased + " 席", body: body,
-      footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="bsGo">确认增购</button>',
+      title: '调整组织预算', sub: '当前周期 ' + u.period, body: body,
+      footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="ubGo">保存</button>',
       onMount: function (el, close) {
-        el.querySelector("#bsGo").addEventListener("click", function () {
-          var n = Number(el.querySelector("#bsCount").value);
-          if (!n || n < 1) { App.toast("数量无效", "请填写至少 1 席。", "danger"); return; }
-          s.workspace.seatsPurchased += n;
-          s.billing.seatsPurchased = s.workspace.seatsPurchased;
-          s.billing.amount = s.workspace.seatsPurchased * s.billing.unitPrice;
-          App.logAudit("增购席位", "+ " + n + " 席", "订阅", "席位总数 " + s.workspace.seatsPurchased, "high", null);
-          close(); App.refresh(); App.toast("席位已增购", "+" + n + " 席 · 年费 " + App.formatMoney(s.billing.amount), "success");
+        el.querySelector('#ubGo').addEventListener('click', function () {
+          var b = Number(el.querySelector('#ubBudget').value), t = Number(el.querySelector('#ubThreshold').value);
+          if (!b || b < 1 || !t || t < 1 || t > 100) { App.toast('预算无效', '请填写正数预算与 1–100 的阈值。', 'danger'); return; }
+          u.budget = b; u.threshold = t; u.blockOnExceed = el.querySelector('#ubBlock').checked;
+          App.logAudit('调整组织预算', App.formatMoney(b) + ' · ' + t + '%', '用量', '超限动作：' + (u.blockOnExceed ? '阻止新任务' : '仅告警'), 'normal', null);
+          close(); App.refresh(); App.toast('预算已保存', App.formatMoney(b) + ' · 阈值 ' + t + '%', 'success');
         });
       }
     });
   }
 
-  function paymentModal() {
-    var b = st().billing;
-    var body = '<div class="form-grid"><div class="field span2"><label>付款方式</label><input class="input" id="pmMethod" value="' + UI.esc(b.method) + '"></div><div class="field span2"><label>账单联系人</label><input class="input" id="pmContact" value="' + UI.esc(b.contact) + '"></div><div class="field"><label>发票抬头</label><input class="input" id="pmTitle" value="' + UI.esc(b.invoiceTitle) + '"></div><div class="field"><label>税号</label><input class="input" id="pmTax" value="' + UI.esc(b.taxId) + '"></div></div>';
-    App.modal({
-      title: "更新付款方式", sub: "仅影响后续账单与发票。", body: body,
-      footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="pmGo">保存</button>',
-      onMount: function (el, close) {
-        el.querySelector("#pmGo").addEventListener("click", function () {
-          b.method = el.querySelector("#pmMethod").value.trim();
-          b.contact = el.querySelector("#pmContact").value.trim();
-          b.invoiceTitle = el.querySelector("#pmTitle").value.trim();
-          b.taxId = el.querySelector("#pmTax").value.trim();
-          App.logAudit("更新付款信息", b.contact, "订阅", "付款方式与发票抬头更新", "warning", null);
-          close(); App.refresh(); App.toast("付款信息已更新", b.method, "success");
-        });
-      }
-    });
+  function exportUsage() {
+    var u = st().orgUsage;
+    var csv = '\uFEFF口径,项目/模型,剧集,镜头,token,供应商账单,平台估算,预算,占比\n' + u.byProject.map(function (p) {
+      return ['项目', p.name, p.episodes, p.shots, p.tokens, p.vendorBilled, p.estimated, p.budget, ''].map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+    }).concat(u.byModel.map(function (m) {
+      return ['模型', m.model, '', '', m.units, '', m.estimated, '', m.share].map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+    })).join('\n');
+    App.download('changye_usage_' + Date.now() + '.csv', csv, 'text/csv;charset=utf-8');
+    App.toast('用量已导出', u.period + ' · ' + u.byProject.length + ' 个项目', 'success');
   }
-
-  function downloadInvoice(id) {
-    var i = st().billing.invoices.filter(function (x) { return x.id === id; })[0];
-    if (!i) return;
-    var text = "长夜影视文化传媒有限公司\n电子发票\n\n发票号：" + i.id + "\n服务周期：" + i.period + "\n金额：" + App.formatMoney(i.amount) + "\n状态：" + i.status + "\n开具日期：" + i.issued + "\n说明：" + i.note + "\n\n本文件由静态原型生成，仅用于演示。";
-    App.download(i.id + ".txt", text, "text/plain;charset=utf-8");
-    App.toast("发票已下载", i.id + " · " + App.formatMoney(i.amount), "success");
-  }
-
-  /* ================= 工作区设置 ================= */
+  /* ================= 系统设置 ================= */
   function workspacePage() {
-    var s = st();
-    var sections = [["general", "工作区信息"], ["project", "项目默认"], ["notify", "通知策略"], ["data", "数据与演示"], ["danger", "危险操作"]];
+    var sections = [["general", "通用信息"], ["runtime", "运行与存储"], ["backup", "备份恢复"], ["project", "项目默认"], ["notify", "通知策略"], ["danger", "危险操作"]];
     return '<div class="page">' +
-      UI.pageHead({ eyebrow: "Enterprise · Workspace", title: "工作区设置", desc: "工作区名称、区域、项目默认与数据保留。设置只保存在内存，刷新恢复演示初始值。", actions: '<button class="btn" data-act="export-workspace">' + UI.icon("download") + '导出工作区状态</button>' }) +
+      UI.pageHead({ eyebrow: "System · Settings", title: "系统设置", desc: "私有化部署的通用信息、运行约束、存储、备份恢复与默认行为。设置只保存在原型内存，刷新恢复演示初始值。", actions: '<button class="btn" data-act="export-workspace">' + UI.icon("download") + '导出系统配置</button>' }) +
       '<div class="settings-layout"><div class="settings-nav">' + sections.map(function (x) {
         return '<button class="' + (workspaceSection === x[0] ? "active" : "") + '" data-act="ws-section" data-key="' + x[0] + '">' + x[1] + "</button>";
       }).join("") + '</div><div>' + workspacePanel() + "</div></div></div>";
@@ -740,18 +843,34 @@
   function workspacePanel() {
     var w = st().workspace;
     if (workspaceSection === "general") {
-      return '<div class="card"><div class="card-head"><div><h3>工作区信息</h3><div class="ch-sub">企业名称、域名与区域决定登录与数据驻留</div></div><span class="badge b-teal">企业版</span></div><div class="card-body">' +
-        '<div class="form-grid"><div class="field"><label>工作区名称</label><input class="input" id="wsName" value="' + UI.esc(w.name) + '"></div><div class="field"><label>企业主体</label><input class="input" id="wsLegal" value="' + UI.esc(w.legalName) + '"></div>' +
-        '<div class="field"><label>企业域名</label><div class="row"><input class="input" id="wsDomain" value="' + UI.esc(w.domain) + '" disabled>' + UI.badge("已验证", "b-done") + "</div></div>" +
-        '<div class="field"><label>数据区域</label><select class="select" id="wsRegion"><option' + (w.region.indexOf("上海") > -1 ? " selected" : "") + ">中国大陆 · 上海</option><option>中国大陆 · 北京</option><option>新加坡</option><option>欧洲 · 法兰克福</option></select></div>" +
+      return '<div class="card"><div class="card-head"><div><h3>通用信息</h3><div class="ch-sub">企业主体、部署方式与数据驻留</div></div><span class="badge b-teal">私有化</span></div><div class="card-body">' +
+        '<div class="form-grid"><div class="field"><label>平台名称</label><input class="input" id="wsName" value="' + UI.esc(w.name) + '"></div><div class="field"><label>企业主体</label><input class="input" id="wsLegal" value="' + UI.esc(w.legalName) + '"></div>' +
+        '<div class="field"><label>企业邮箱域名</label><div class="row"><input class="input" id="wsDomain" value="' + UI.esc(w.emailDomain) + '" disabled>' + UI.badge("内部账号", "b-outline") + "</div></div>" +
+        '<div class="field"><label>部署方式</label><input class="input" value="' + UI.esc(w.deployment) + '" disabled></div>' +
+        '<div class="field"><label>数据区域</label><input class="input" value="' + UI.esc(w.region) + '" disabled><span class="hint">私有化部署固定数据驻留，不提供多区域切换</span></div>' +
         '<div class="field"><label>时区</label><input class="input" id="wsTz" value="' + UI.esc(w.timezone) + '"></div><div class="field"><label>语言</label><select class="select" id="wsLocale"><option value="zh-CN"' + (w.locale === "zh-CN" ? " selected" : "") + '>简体中文</option><option value="en-US"' + (w.locale === "en-US" ? " selected" : "") + ">English</option></select></div></div>" +
-        '<div class="row mt-16"><button class="btn btn-primary" data-act="save-workspace">保存工作区</button><span class="tiny muted">创建于 ' + UI.esc(w.createdAt) + " · 合同至 " + UI.esc(w.contractEnd) + "</span></div></div></div>";
+        '<div class="row mt-16"><button class="btn btn-primary" data-act="save-workspace">保存通用设置</button><span class="tiny muted">创建于 ' + UI.esc(w.createdAt) + " · 最近更新 " + UI.esc(w.updatedAt) + "</span></div></div></div>";
+    }
+    if (workspaceSection === "runtime") {
+      var r = w.runtime;
+      return '<div class="card"><div class="card-head"><div><h3>运行与存储</h3><div class="ch-sub">Docker Compose 私有化部署的固定约束</div></div><span class="badge b-outline">只读</span></div><div class="card-body"><div class="kv" style="grid-template-columns:130px 1fr">' +
+        '<div class="k">编排</div><div class="v mono">' + UI.esc(r.compose) + '</div><div class="k">Web</div><div class="v">' + UI.esc(r.web) + '</div><div class="k">API</div><div class="v">' + UI.esc(r.api) + '</div>' +
+        '<div class="k">队列</div><div class="v">' + UI.esc(r.queue) + '</div><div class="k">Worker</div><div class="v">' + UI.esc(r.worker) + '</div><div class="k">数据库</div><div class="v">' + UI.esc(r.database) + '</div>' +
+        '<div class="k">对象存储</div><div class="v">' + UI.esc(r.storage) + '</div><div class="k">媒体处理</div><div class="v">' + UI.esc(r.ffmpeg) + '</div><div class="k">上传上限</div><div class="v">' + UI.esc(r.maxUpload) + '</div>' +
+        '<div class="k">容器用户</div><div class="v">' + UI.esc(r.containerUser) + '</div></div>' +
+        '<div class="notice info mt-16">' + UI.icon("lock", 15) + "<span>不部署 Ollama / vLLM / ComfyUI，不自建 GPU 推理；外部模型通过 Provider Adapter 调用。配置只通过部署环境注入，仓库不保存生产密钥。</span></div></div></div>";
+    }
+    if (workspaceSection === "backup") {
+      var b = w.backup;
+      return '<div class="card"><div class="card-head"><div><h3>备份与恢复</h3><div class="ch-sub">数据库、资产元数据与导出物的私有备份</div></div></div><div class="card-body"><div class="kv"><div class="k">最近备份</div><div class="v">' + UI.esc(b.last) + ' · ' + UI.esc(b.lastSize) + '</div><div class="k">备份目标</div><div class="v mono">' + UI.esc(b.target) + '</div><div class="k">保留周期</div><div class="v">' + b.retention + ' 天</div><div class="k">恢复演练</div><div class="v">' + UI.esc(b.restoreDrill) + '</div><div class="k">备份范围</div><div class="v">PostgreSQL、项目元数据、资产清单与导出记录</div></div>' +
+        '<div class="row mt-16"><button class="btn" data-act="run-backup">立即备份</button><button class="btn btn-ghost" data-act="restore-drill">恢复演练</button></div>' +
+        '<div class="notice warn mt-12">恢复演练在隔离环境执行；生产恢复必须停止写入并二次确认。</div></div></div>';
     }
     if (workspaceSection === "project") {
-      return '<div class="card"><div class="card-head"><div><h3>项目默认</h3><div class="ch-sub">新建项目时应用的模板与生成模型</div></div></div><div class="card-body"><div class="form-grid">' +
+      return '<div class="card"><div class="card-head"><div><h3>项目默认</h3><div class="ch-sub">新建项目应用的模板、模型与成员审批</div></div></div><div class="card-body"><div class="form-grid">' +
         '<div class="field"><label>默认模板</label><select class="select" id="wTemplate"><option' + (w.defaultTemplate.indexOf("12") > -1 ? " selected" : "") + ">竖屏短剧 · 12 集</option><option>横屏短片 · 6 集</option><option>品牌定制 · 8 集</option></select></div>" +
-        '<div class="field"><label>默认视频模型</label><select class="select" id="wModel">' + st().models.map(function (m) { return '<option' + (m.name === w.defaultModel ? " selected" : "") + ">" + UI.esc(m.name) + "</option>"; }).join("") + "</select></div>" +
-        '<div class="field span2"><label class="checkline"><input type="checkbox" id="wApproval"' + (w.requireProjectApproval ? " checked" : "") + "> 新建项目需要管理员审批</label><label class=\"checkline\"><input type=\"checkbox\" id=\"wGuest\"" + (w.allowGuests ? " checked" : "") + "> 允许外部访客加入项目</label></div></div>" +
+        '<div class="field"><label>默认视频模型</label><select class="select" id="wModel">' + st().models.map(function (m) { return '<option' + (m.id === w.defaultModel ? " selected" : "") + ">" + UI.esc(m.id) + "</option>"; }).join("") + "</select></div>" +
+        '<div class="field span2"><label class="checkline"><input type="checkbox" id="wApproval"' + (w.requireProjectApproval ? " checked" : "") + "> 新建项目需要管理员审批</label><label class=\"checkline\"><input type=\"checkbox\" id=\"wGuest\"" + (w.allowExternalReviewer ? " checked" : "") + "> 允许外部审片账号加入项目</label></div></div>" +
         '<button class="btn btn-primary mt-16" data-act="save-project-defaults">保存项目默认</button></div></div>';
     }
     if (workspaceSection === "notify") {
@@ -759,21 +878,16 @@
         return '<div class="setting-toggle-row"><div><b>' + UI.esc(n.label) + '</b><div class="tiny muted">' + UI.esc(n.desc) + '</div></div><button class="switch ' + (n.on ? "on" : "") + '" data-act="toggle-ws" data-key="' + n.key + '"><i></i></button></div>';
       }).join("") + "</div></div>";
     }
-    if (workspaceSection === "data") {
-      return '<div class="card"><div class="card-head"><div><h3>数据与演示</h3><div class="ch-sub">审计保留、状态导出与重置</div></div></div><div class="card-body"><div class="kv"><div class="k">存储</div><div class="v">纯内存 · 无 localStorage</div><div class="k">审计保留</div><div class="v">' + w.dataRetention + ' 天</div><div class="k">状态规模</div><div class="v">' + st().members.length + " 成员 / " + st().audit.length + " 审计</div></div>" +
-        '<div class="field mt-16" style="max-width:220px"><label>审计保留（天）</label><input class="input" id="wRetention" type="number" value="' + w.dataRetention + '"></div><div class="row mt-12"><button class="btn" data-act="save-retention">保存保留周期</button><button class="btn" data-act="export-workspace">导出状态</button><button class="btn btn-soft" data-act="reset-workspace">重置演示</button></div></div></div>';
-    }
     return '<div class="card" style="border-color:#f0cfc9"><div class="card-head"><div><h3 style="color:#8c332b">危险操作</h3><div class="ch-sub">不可逆 · 需二次确认</div></div></div><div class="card-body">' +
-      '<div class="between" style="padding:10px 0"><div><b class="small">转移工作区所有权</b><div class="tiny muted">将企业治理与订阅付款转交给另一名管理员。</div></div><button class="btn btn-sm btn-danger" data-act="transfer">转移</button></div>' +
-      '<div class="between" style="padding:10px 0;border-top:1px solid #eee9df"><div><b class="small">删除工作区</b><div class="tiny muted">原型只演示确认流程，不会真实删除数据。</div></div><button class="btn btn-sm btn-danger" data-act="delete-workspace">删除</button></div></div></div>';
+      '<div class="between" style="padding:10px 0"><div><b class="small">转移系统管理员</b><div class="tiny muted">将平台治理责任转交给另一名内部管理员，不改变项目成员授权与项目资产归属。</div></div><button class="btn btn-sm btn-danger" data-act="transfer">转移</button></div>' +
+      '<div class="between" style="padding:10px 0;border-top:1px solid #eee9df"><div><b class="small">重置演示数据</b><div class="tiny muted">仅恢复原型内存状态，不会删除真实文件或数据库。</div></div><button class="btn btn-sm btn-danger" data-act="reset-workspace">重置</button></div></div></div>';
   }
-
   /* ================= 项目设置（沿用项目级能力） ================= */
   function projectSettingsPage() {
     var s = st();
-    var sections = [["info", "项目信息"], ["models", "模型接入"], ["cost", "用量与预算"], ["notify", "通知"], ["team", "团队"], ["demo", "演示数据"], ["danger", "危险操作"]];
+    var sections = [["info", "项目信息"], ["team", "成员与授权"], ["models", "模型路由"], ["cost", "用量与预算"], ["notify", "通知"], ["demo", "演示数据"], ["danger", "危险操作"]];
     return '<div class="page">' +
-      UI.pageHead({ eyebrow: "Settings · NYJM-26", title: "项目设置", desc: "项目信息、模型接入、预算与通知。设置只保存在内存，刷新恢复演示初始值。", actions: '<button class="btn" data-act="state">' + UI.icon("download") + '导出项目状态</button><a class="btn" href="' + App.link("system/members") + '">成员与席位</a>' }) +
+      UI.pageHead({ eyebrow: "Project settings · NYJM-26", title: "项目设置", desc: "项目是协作、资产与授权的唯一边界。这里管理项目信息、项目成员、模型路由、预算与通知，不提供 Provider 凭据配置。", actions: '<button class="btn" data-act="state">' + UI.icon("download") + '导出项目状态</button><a class="btn" href="' + App.link("system/members") + '">用户与成员</a>' }) +
       '<div class="settings-layout"><div class="settings-nav">' + sections.map(function (x) {
         return '<button class="' + (settingsSection === x[0] ? "active" : "") + '" data-act="section" data-key="' + x[0] + '">' + x[1] + "</button>";
       }).join("") + '</div><div>' + settingsPanel() + "</div></div></div>";
@@ -801,17 +915,17 @@
   }
 
   function modelsPanel() {
-    var list = st().models;
-    return '<div class="card"><div class="card-head"><div><h3>模型接入</h3><div class="ch-sub">文本、图像、视频、语音与质检</div></div><button class="btn btn-sm" data-act="add-model">' + UI.icon("plus") + '新增接入</button></div><div class="card-body tight">' +
-      list.map(function (m, i) {
-        return '<div class="model-row"><span><b>' + UI.esc(m.name) + '</b><span class="t-sub">' + UI.esc(m.cap) + '</span></span><span class="m-ver tiny muted">' + UI.esc(m.version) + '</span><span class="m-lat tiny muted">' + UI.esc(m.latency) + "</span>" +
-          '<span class="row" style="justify-content:flex-end;gap:4px">' + UI.statusBadge(m.status) + '<button class="btn btn-xs" data-act="test-model" data-i="' + i + '">测试</button><button class="btn btn-xs" data-act="config-model" data-i="' + i + '">' + (m.status === "未配置" ? "去配置" : "配置") + "</button></span></div>";
-      }).join("") + "</div></div>" +
-      '<div class="card mt-16"><div class="card-head"><h3>默认模型</h3><span class="tiny muted">新建任务时使用</span></div><div class="card-body"><div class="grid g2">' +
+    var list = st().models.filter(function (m) { return m.enabled && m.providerId !== "internal"; });
+    return '<div class="card"><div class="card-head"><div><h3>项目模型路由</h3><div class="ch-sub">继承系统 Provider 与模型配置，项目只选择可用模型</div></div></div><div class="card-body tight">' +
+      list.map(function (m) {
+        return '<div class="model-row"><span><b class="mono">' + UI.esc(m.modelId) + '</b><span class="t-sub">' + UI.esc(m.cap) + " · " + UI.esc(m.provider) + '</span></span><span class="m-ver tiny muted">' + UI.esc(m.version) + '</span><span class="m-lat tiny muted">' + UI.esc(m.latency) + "</span>" +
+          '<span class="row" style="justify-content:flex-end;gap:4px">' + UI.statusBadge(m.enabled ? "connected" : "unconfigured") + '<span class="badge b-outline">系统注册</span></span></div>';
+      }).join("") + '<div class="notice info mt-8">' + UI.icon("lock", 15) + "<span>项目内不配置 base_url、secret_ref 或 API Key；Provider 凭据由系统管理员在系统域维护。</span></div></div></div>" +
+      '<div class="card mt-16"><div class="card-head"><h3>项目默认模型</h3><span class="tiny muted">新建任务时使用</span></div><div class="card-body"><div class="grid g2">' +
       ["文本生成", "图像生成", "视频生成", "语音合成"].map(function (cap) {
         var opts = list.filter(function (m) { return m.cap === cap; });
-        return '<div class="field"><label>' + cap + '</label><select class="select">' + opts.map(function (m) { return "<option>" + UI.esc(m.name) + "</option>"; }).join("") + "</select></div>";
-      }).join("") + "</div></div></div>";
+        return '<div class="field"><label>' + cap + '</label><select class="select">' + (opts.map(function (m) { return "<option>" + UI.esc(m.modelId) + "</option>"; }).join("") || "<option>未注册</option>") + "</select></div>";
+      }).join("") + '</div><div class="tiny muted mt-8">若系统未配置对应能力，任务返回 PROVIDER_NOT_CONFIGURED，不回退 Mock。</div></div></div>';
   }
 
   function costPanel() {
@@ -824,23 +938,24 @@
       usage.byCap.map(function (c) { return '<div class="budget-row"><span>' + c[0] + '</span><div class="progress thin"><i style="width:' + c[2] + '%"></i></div><span class="mono tiny">¥' + fmt(c[1]) + "</span></div>"; }).join("") +
       '</div><div class="eyebrow mt-20">近 14 天消耗</div><div class="bars">' + days.map(function (d) { return '<div class="bar" title="¥' + d + '"><i style="height:' + Math.round(d / max * 100) + '%"></i></div>'; }).join("") + "</div>" +
       '<div class="bar-labels">' + ["11-08","11-09","11-10","11-11","11-12","11-13","11-14","11-15","11-16","11-17","11-18","11-19","11-20","11-21"].map(function (d) { return "<span>" + d.slice(3) + "</span>"; }).join("") + "</div></div></div>" +
-      '<div class="card mt-16"><div class="card-head"><h3>预算提醒</h3></div><div class="card-body"><div class="field"><label>月度预算</label><div class="row"><input class="input" style="max-width:160px" value="' + usage.budget + '"><span class="tiny muted">元 / 月</span></div></div>' +
-      '<div class="row mt-12"><label class="checkline"><input type="checkbox" checked> 达到 80% 时通知项目所有者</label><label class="checkline"><input type="checkbox" checked> 达到 100% 时暂停生成任务</label></div></div></div>';
+      '<div class="card mt-16"><div class="card-head"><h3>预算提醒</h3></div><div class="card-body"><div class="field"><label>项目月度预算</label><div class="row"><input class="input" style="max-width:160px" value="' + usage.budget + '" disabled><span class="tiny muted">元 / 月 · 在系统用量页调整</span></div></div>' +
+      '<div class="row mt-12"><label class="checkline"><input type="checkbox" checked disabled> 达到 80% 时通知项目经理</label><label class="checkline"><input type="checkbox" checked disabled> 达到 100% 时阻止新生成任务</label></div><div class="row mt-12"><a class="btn btn-sm" href="' + App.link("system/usage") + '">查看项目用量</a></div></div></div>';
   }
 
   function notifyPanel() {
     return '<div class="card"><div class="card-head"><div><h3>项目通知</h3><div class="ch-sub">站内信 · 邮件 · 失败提醒</div></div></div><div class="card-body">' +
-      [["任务失败", "立即通知任务创建者与项目所有者", true], ["成片待审核", "审核任务到达时通知导演", true], ["成员邀请", "邀请发送与接受时通知", true], ["每周用量摘要", "每周一 09:00 发送邮件", false], ["导出完成", "交付完成后通知客户", true]].map(function (n) {
+      [["任务失败", "立即通知任务创建者与项目负责人", true], ["质量门禁待审核", "出现 REVIEW_REQUIRED 时通知项目审核人", true], ["项目成员变更", "邀请、移除与授权调整时通知项目负责人", true], ["每周用量摘要", "每周一 09:00 发送项目预算摘要", false], ["导出完成", "交付完成后通知项目成员", true]].map(function (n) {
         return '<div class="between" style="padding:11px 0;border-bottom:1px solid #eee9df"><div><b class="small">' + n[0] + '</b><div class="tiny muted">' + n[1] + '</div></div><button class="switch ' + (n[2] ? "on" : "") + '" data-act="toggle" aria-label="切换通知"><i></i></button></div>';
       }).join("") + "</div></div>";
   }
 
   function teamPanel() {
-    var seats = App.seatStats();
-    return '<div class="card"><div class="card-head"><div><h3>项目团队</h3><div class="ch-sub">' + seats.total + " 名企业成员 · " + seats.guests + " 名访客</div></div><a class=\"btn btn-sm\" href=\"" + App.link("system/members") + "\">成员与席位</a></div><div class=\"card-body tight\">" +
-      st().members.slice(0, 6).map(function (m) {
-        return '<div class="list-row">' + UI.avatar(m.name, "sm", m.color) + '<span class="lr-main"><span class="lr-title">' + UI.esc(m.name) + '</span><span class="lr-sub">' + UI.esc(m.email) + " · " + UI.esc(m.role) + '</span></span>' + statusBadge(m) + "</div>";
-      }).join("") + '<div class="tiny muted mt-8">仅展示前 6 位成员，完整目录请进入「成员与席位」。</div></div></div>';
+    var p = st().project;
+    var members = App.projectMembers(p.id);
+    return '<div class="card"><div class="card-head"><div><h3>项目成员与授权</h3><div class="ch-sub">' + members.length + " 名项目成员 · 项目负责人 " + UI.esc((memberById(p.ownerId) || {}).name || "—") + '</div></div><a class="btn btn-sm" href="' + App.link("system/members") + '">用户与成员</a></div><div class="card-body tight">' +
+      members.map(function (m) {
+        return '<div class="list-row">' + UI.avatar(m.name, "sm", m.color) + '<span class="lr-main"><span class="lr-title">' + UI.esc(m.name) + '</span><span class="lr-sub">' + UI.esc(m.role) + " · " + UI.esc(m.dept) + '</span></span><span class="badge ' + (m.id === p.ownerId ? "b-teal" : "b-info") + '">' + UI.esc(App.projectRoleOf(m, p.id)) + "</span></div>";
+      }).join("") + '<div class="notice info mt-8">' + UI.icon("lock", 15) + "<span>项目负责人不可被移除；移除其他成员会立即撤销其项目访问与未完成任务的查看权限。</span></div></div></div>";
   }
 
   function demoPanel() {
@@ -858,37 +973,32 @@
   /* ================= 弹层与动作 ================= */
   function configModel(i) {
     var m = st().models[i]; if (!m) return;
-    var body = '<div class="form-grid"><div class="field span2"><label>模型名称</label><input class="input" value="' + UI.esc(m.name) + '" disabled></div><div class="field"><label>能力</label><input class="input" value="' + UI.esc(m.cap) + '" disabled></div><div class="field"><label>API Base</label><input class="input" value="https://api.mork.local/v1"></div>' +
-      '<div class="field span2"><label>密钥</label><input class="input" type="password" value="demo-key-2026"><span class="hint">原型不保存密钥，也不发起真实请求。</span></div></div>' +
-      '<div class="notice info mt-12">' + UI.icon("lock", 15) + "<span>离线演示环境不会连接 provider；测试只改变连接状态。</span></div>";
+    var provider = st().providers.filter(function (p) { return p.id === m.providerId; })[0];
+    var body = '<div class="form-grid"><div class="field"><label>model_id</label><input class="input mono" value="' + UI.esc(m.modelId) + '" disabled></div>' +
+      '<div class="field"><label>Provider</label><input class="input" value="' + UI.esc(provider ? provider.name : '内部规则') + '" disabled></div>' +
+      '<div class="field"><label>能力</label><input class="input" value="' + UI.esc(m.cap) + '" disabled></div>' +
+      '<div class="field"><label>capabilities</label><input class="input mono" value="' + UI.esc((m.capabilities || []).join(', ')) + '" disabled></div>' +
+      '<div class="field"><label>timeout（秒）</label><input class="input" id="cmTimeout" type="number" value="' + m.timeout + '"></div>' +
+      '<div class="field"><label>优先级</label><input class="input" id="cmPriority" type="number" value="' + m.priority + '"></div>' +
+      '<div class="field"><label>计价</label><input class="input" id="cmCost" value="' + UI.esc(m.cost) + '"></div>' +
+      '<div class="field"><label class="checkline"><input type="checkbox" id="cmEnabled"' + (m.enabled ? ' checked' : '') + '> 允许生产任务路由</label></div></div>' +
+      '<div class="notice info mt-12">' + UI.icon('lock', 15) + '<span>模型配置不包含 base_url 与 secret_ref；这些字段属于 Provider，只由系统管理员维护。</span></div>';
     App.modal({
-      title: "配置 " + m.name, sub: m.cap + " · " + m.version, body: body,
-      footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="cfgGo">保存并测试</button>',
+      title: '配置模型 ' + m.modelId, sub: m.cap + ' · ' + m.version, body: body,
+      footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="cmGo">保存模型配置</button>',
       onMount: function (el, close) {
-        el.querySelector("#cfgGo").addEventListener("click", function () {
-          m.status = "已连接"; m.def = true; App.logAudit("配置模型接入", m.name, "集成", m.cap + " · " + m.version, "normal", null); close(); App.refresh(); App.toast("配置已保存", m.name + " 已连接。", "success");
+        el.querySelector('#cmGo').addEventListener('click', function () {
+          m.timeout = Number(el.querySelector('#cmTimeout').value) || 120;
+          m.priority = Number(el.querySelector('#cmPriority').value) || 1;
+          m.cost = el.querySelector('#cmCost').value.trim();
+          m.enabled = el.querySelector('#cmEnabled').checked;
+          m.status = m.enabled ? '已连接' : '已停用';
+          App.logAudit('保存模型配置', m.modelId, 'Provider', m.cap + ' · timeout ' + m.timeout + 's · ' + (m.enabled ? '启用' : '停用'), 'high', null);
+          close(); App.refresh(); App.toast('模型配置已保存', m.modelId + ' · ' + (m.enabled ? '可路由' : '已停用'), 'success');
         });
       }
     });
   }
-
-  function addModel() {
-    var body = '<div class="form-grid"><div class="field"><label>能力</label><select class="select" id="amCap"><option>文本生成</option><option>图像生成</option><option>视频生成</option><option>语音合成</option><option>质检</option></select></div>' +
-      '<div class="field"><label>模型名称</label><input class="input" id="amName" placeholder="例如：local-video-3"></div>' +
-      '<div class="field span2"><label>API Base</label><input class="input" value="https://api.local/v1"></div></div><div class="notice info mt-12">新增接入会先进入「未配置」，测试成功后变为「已连接」。</div>';
-    App.modal({
-      title: "新增模型接入", sub: "离线环境只维护配置记录", body: body,
-      footer: '<button class="btn" data-close>取消</button><button class="btn btn-primary" id="amGo">保存</button>',
-      onMount: function (el, close) {
-        el.querySelector("#amGo").addEventListener("click", function () {
-          var name = el.querySelector("#amName").value.trim(); if (!name) { App.toast("缺少名称", "请填写模型名称。", "danger"); return; }
-          st().models.push({ name: name, cap: el.querySelector("#amCap").value, version: "—", status: "未配置", latency: "—", cost: "—", def: false });
-          close(); App.refresh(); App.toast("已新增", name + " 等待配置。", "success");
-        });
-      }
-    });
-  }
-
   function resetDemo() {
     App.confirm({ title: "重置演示数据", message: "把所有项目、审核、任务、成员、角色与安全策略恢复到初始状态？", detail: "当前内存中的修改会丢失；页面刷新也会得到同样结果。", okText: "重置并刷新" }).then(function (ok) {
       if (!ok) return;
@@ -910,14 +1020,23 @@
   }
 
   function securityReport() {
-    var s = st();
-    var lines = ["长夜影视 · 企业安全报告", "生成时间：" + new Date().toLocaleString("zh-CN"), "安全评分：86 / 100", ""];
+    var s = st(), sec = s.security, p = sec.dataPolicy;
+    var avg = Math.round(s.securityChecks.reduce(function (n, c) { return n + c.score; }, 0) / s.securityChecks.length);
+    var lines = ["长夜影视 · 企业安全基线", "生成时间：" + new Date().toLocaleString("zh-CN"), "安全评分：" + avg + " / 100", ""];
     s.securityChecks.forEach(function (c) { lines.push("- " + c.label + "：" + c.score + " 分 · " + c.detail); });
-    lines.push("", "SSO：" + s.security.sso.provider + " · " + (s.security.sso.enforced ? "已强制" : "观察模式"));
-    lines.push("MFA 覆盖：" + s.security.mfa.coverage + "%");
-    lines.push("IP 白名单：" + s.security.ip.entries.length + " 个网段 · " + (s.security.ip.enabled ? "强制" : "观察"));
-    App.download("changye_security_report.txt", lines.join("\n"), "text/plain;charset=utf-8");
-    App.toast("安全报告已下载", "包含 7 项控制评分与策略状态。", "success");
+    lines.push("", "项目访问复核：" + (sec.access.projectMembership ? "开启" : "关闭"));
+    lines.push("跨项目搜索 / 引用：" + (sec.access.crossProject ? "允许" : "禁止"));
+    lines.push("数据外发默认动作：" + p.defaultAction);
+    lines.push("允许 Provider：" + p.allowedProviders.join(", "));
+    lines.push("允许区域：" + p.allowedRegions.join(", "));
+    lines.push("敏感数据外发：" + (p.allowSensitive ? "允许" : "禁止"));
+    lines.push("请求体日志：" + (p.logPayload ? "记录" : "不记录"));
+    lines.push("Provider 凭据：" + sec.credentials.algorithm + " · " + sec.credentials.storage);
+    lines.push("会话：空闲 " + sec.session.idle + " 分钟 · 最长 " + sec.session.max + " 小时");
+    lines.push("上传：" + sec.upload.allowedMime.join(" / ") + " · " + sec.upload.maxFile);
+    lines.push("媒体：" + sec.media.ffmpeg + " · " + sec.media.tempDir);
+    App.download("changye_security_baseline.txt", lines.join("\n"), "text/plain;charset=utf-8");
+    App.toast("安全基线已下载", "项目访问、外发、凭据、上传与媒体处理", "success");
   }
 
   function exportOrg() {
@@ -955,7 +1074,6 @@
       member: function (b) { memberDrawer(b.getAttribute("data-id")); },
       mstatus: function (b) { pageState.memberStatus = b.getAttribute("data-key"); App.refresh(); },
       invite: inviteMember,
-      scim: scimSync,
       mreset: function () { pageState.memberStatus = "all"; pageState.memberQuery = ""; pageState.memberRole = "all"; App.refresh(); },
       "form:member-search": function (form) {
         pageState.memberQuery = form.querySelector("#mQuery").value.trim();
@@ -968,7 +1086,7 @@
 
   /* ---------- 路由注册 ---------- */
   AppModule.register({
-    group: "system", label: "企业系统", icon: "sliders",
+    group: "system", label: "系统管理", icon: "sliders",
     routes: [
       { path: "system/access", title: "我的权限", icon: "lock", render: accessPage,
         mount: function (root) { bindPage(root, { "request-access": requestAccess }); }
@@ -991,7 +1109,7 @@
           });
         }
       },
-      { path: "system/members", title: "成员与席位", icon: "users", render: membersPage, mount: memberPageMount },
+      { path: "system/members", title: "用户与成员", icon: "users", render: membersPage, mount: memberPageMount },
       { path: "system/roles", title: "角色与权限", icon: "check", render: rolesPage,
         mount: function (root) {
           bindPage(root, {
@@ -1005,73 +1123,32 @@
           });
         }
       },
-      { path: "system/security", title: "安全与登录", icon: "lock", render: securityPage,
+      { path: "system/security", title: "安全与访问", icon: "lock", render: securityPage,
         mount: function (root) {
           bindPage(root, {
-            "toggle-sso": function (b) {
-              var s = st(); var target = !s.security.sso.enforced;
-              App.confirm({ title: target ? "强制企业 SSO" : "关闭 SSO 强制", message: target ? "未通过 Okta 登录的成员将被拒绝访问。" : "成员可使用邮箱密码登录，安全评分会下降。", danger: !target, okText: "确认变更" }).then(function (ok) {
-                if (!ok) return;
-                s.security.sso.enforced = target;
-                App.logAudit(target ? "启用 SSO 强制登录" : "关闭 SSO 强制登录", "studio.cn", "安全", "企业登录策略变更", "high", null);
-                App.refresh(); App.toast("SSO 策略已更新", target ? "已强制企业登录" : "已切换为观察模式", target ? "success" : "warn");
-              });
-            },
-            "test-sso": function (b) {
-              var old = b.textContent; b.disabled = true; b.textContent = "测试中…";
-              setTimeout(function () { b.disabled = false; b.textContent = old; st().security.sso.lastSync = "今天 " + App.nowStamp(); App.logAudit("测试 SSO 连接", st().security.sso.provider, "安全", "SAML 断言校验通过", "normal", null); App.refresh(); App.toast("SSO 连接正常", "SAML 断言与属性映射通过。", "success"); }, 900);
-            },
-            "sync-scim": scimSync,
-            "toggle-mfa": function (b) {
-              var s = st(); s.security.mfa.policy = s.security.mfa.policy === "required" ? "optional" : "required";
-              App.logAudit("更新 MFA 策略", s.security.mfa.policy === "required" ? "全员强制" : "可选", "安全", "MFA 策略变更", "high", null);
-              App.refresh(); App.toast("MFA 策略已更新", s.security.mfa.policy === "required" ? "全员强制" : "仅建议启用", "success");
-            },
-            "reset-recovery": function () {
-              App.confirm({ title: "重置恢复码", message: "重新生成 10 组一次性恢复码，旧码立即失效。", detail: "新恢复码只在原型中演示，不会真实展示。", danger: true, okText: "确认重置" }).then(function (ok) {
-                if (!ok) return;
-                App.logAudit("重置恢复码", "工作区所有者", "安全", "一次性恢复码已重新生成", "warning", null);
-                App.toast("恢复码已重置", "旧恢复码已全部失效。", "success");
-              });
-            },
             "save-session": function () {
               var sec = st().security.session;
               sec.idle = Number(document.getElementById("sessIdle").value) || 30;
               sec.max = Number(document.getElementById("sessMax").value) || 12;
-              sec.remember = Number(document.getElementById("sessRemember").value) || 14;
-              sec.singleDevice = document.getElementById("sessSingle").checked;
-              App.logAudit("更新会话策略", "空闲 " + sec.idle + " 分钟", "安全", "会话与记住登录策略变更", "normal", null);
+              sec.refresh = Number(document.getElementById("sessRefresh").value) || 7;
+              App.logAudit("更新会话策略", "空闲 " + sec.idle + " 分钟 · 最长 " + sec.max + " 小时", "安全", "会话与项目访问复核策略变更", "normal", null);
               App.refresh(); App.toast("会话策略已保存", "空闲 " + sec.idle + " 分钟 · 最长 " + sec.max + " 小时", "success");
             },
-            "toggle-ip": function () {
-              var sec = st().security; var target = !sec.ip.enabled;
-              App.confirm({ title: target ? "启用 IP 强制" : "关闭 IP 强制", message: target ? "不在允许清单内的登录会被阻断。" : "IP 清单保留，但仅记录不阻断。", okText: "确认" }).then(function (ok) {
-                if (!ok) return;
-                sec.ip.enabled = target;
-                App.logAudit(target ? "启用 IP 强制" : "关闭 IP 强制", sec.ip.entries.length + " 个网段", "安全", "网络边界策略变更", "high", null);
-                App.refresh(); App.toast("IP 策略已更新", target ? "强制拦截" : "观察模式", "success");
-              });
-            },
-            "add-ip": addIp,
-            "remove-ip": function (b) {
-              var cidr = b.getAttribute("data-cidr");
-              App.confirm({ title: "移除网段", message: "移除 " + cidr + " 后，该网络将不再被识别。", danger: true, okText: "移除" }).then(function (ok) {
-                if (!ok) return;
-                var sec = st().security; sec.ip.entries = sec.ip.entries.filter(function (x) { return x.cidr !== cidr; });
-                App.logAudit("移除 IP 网段", cidr, "安全", "网络允许清单更新", "warning", null);
-                App.refresh(); App.toast("网段已移除", cidr, "warn");
-              });
-            },
-            "toggle-dlp": function (b) {
-              var key = b.getAttribute("data-key"); var dlp = st().security.dlp; dlp[key] = !dlp[key];
-              App.logAudit("更新下载策略", key + " → " + (dlp[key] ? "开启" : "关闭"), "安全", "数据防泄漏策略变更", "high", null);
-              App.refresh(); App.toast("下载策略已更新", key + " · " + (dlp[key] ? "已开启" : "已关闭"), "success");
+            "run-outbound-check": function () {
+              var s = st(), p = s.security.dataPolicy, bad = [];
+              if (p.defaultAction !== "deny") bad.push("默认动作不是拒绝");
+              if (p.allowedProviders.indexOf("mork") < 0) bad.push("Mork 未在允许清单");
+              if (p.allowedRegions.indexOf("中国大陆") < 0) bad.push("区域不在中国大陆");
+              if (p.allowSensitive) bad.push("敏感数据允许外发");
+              if (p.logPayload) bad.push("请求体写入日志");
+              if (bad.length) { App.logAudit("数据外发自检失败", bad.join("；"), "安全", "策略不满足 MVP 基线", "critical", null); App.toast("外发自检未通过", bad.join("；"), "danger"); }
+              else { p.lastReview = "今天 " + App.nowStamp(); App.logAudit("运行数据外发自检", "Mork · 中国大陆 · 默认拒绝", "安全", "8 项外发检查全部通过", "normal", null); App.refresh(); App.toast("外发自检通过", "Mork · 中国大陆 · 敏感内容禁止外发", "success"); }
             },
             "security-report": securityReport
           });
         }
       },
-      { path: "system/audit", title: "审计与合规", icon: "list", render: auditPage,
+      { path: "system/audit", title: "审计日志", icon: "list", render: auditPage,
         mount: function (root) {
           bindPage(root, {
             afilter: function (b) { pageState.auditCategory = b.getAttribute("data-key"); App.refresh(); },
@@ -1098,62 +1175,30 @@
           });
         }
       },
-      { path: "system/integrations", title: "集成与 API", icon: "grid", render: integrationsPage,
+      { path: "system/providers", title: "Provider 与模型", icon: "grid", render: providersPage,
         mount: function (root) {
           bindPage(root, {
-            "test-int": function (b) {
-              var it = st().integrations.filter(function (x) { return x.id === b.getAttribute("data-id"); })[0];
-              if (!it) return;
-              if (it.status === "connected") { App.toast("连接正常", it.name + " · " + it.meta, "success"); return; }
-              App.confirm({ title: "连接 " + it.name, message: "允许 " + it.name + " 使用企业身份与通知权限？", okText: "连接" }).then(function (ok) {
-                if (!ok) return;
-                it.status = "connected"; it.meta = "连接成功 · 待配置"; it.lastSync = "今天 " + App.nowStamp();
-                App.logAudit("连接集成", it.name, "集成", "OAuth 授权完成", "normal", null);
-                App.refresh(); App.toast("已连接", it.name + "，请继续配置作用域。", "success");
-              });
-            },
-            "add-key": addApiKey,
-            "rotate-key": function (b) {
-              var k = st().apiKeys.filter(function (x) { return x.id === b.getAttribute("data-id"); })[0];
-              if (!k) return;
-              App.confirm({ title: "轮换 API Key", message: "旧 Key 将立即失效，使用方需要更新配置。", danger: true, okText: "轮换" }).then(function (ok) {
-                if (!ok) return;
-                k.prefix = "sp_live_" + Math.random().toString(16).slice(2, 6); k.lastUsed = "刚刚";
-                App.logAudit("轮换 API Key", k.name, "集成", "旧密钥立即失效", "high", null);
-                App.refresh(); App.toast("Key 已轮换", k.name + " · 新前缀 " + k.prefix + "…", "success");
-              });
-            },
-            "revoke-key": function (b) {
-              var k = st().apiKeys.filter(function (x) { return x.id === b.getAttribute("data-id"); })[0];
-              if (!k) return;
-              App.confirm({ title: "撤销 API Key", message: "撤销 " + k.name + " 后，所有调用立即失败。", danger: true, okText: "撤销" }).then(function (ok) {
-                if (!ok) return;
-                k.status = "revoked";
-                App.logAudit("撤销 API Key", k.name, "集成", "密钥已失效", "critical", null);
-                App.refresh(); App.toast("Key 已撤销", k.name, "warn");
-              });
-            },
-            "test-model": function (b) {
-              var idx = Number(b.getAttribute("data-i")), m = st().models[idx];
-              var old = b.textContent; b.textContent = "测试中…"; b.disabled = true;
-              setTimeout(function () { b.textContent = old; b.disabled = false; m.status = "已连接"; m.latency = "1.2s"; App.refresh(); App.toast("连接正常", m.name + " · " + m.latency, "success"); }, 900);
-            },
-            "config-model": function (b) { configModel(Number(b.getAttribute("data-i"))); },
-            "add-model": addModel,
-            "test-webhook": function () { App.toast("测试已发送", "3 个 Webhook 均返回 200。", "success"); }
+            "test-provider": function (b) { testProvider(b.getAttribute("data-id")); },
+            "test-providers": function () { st().providers.forEach(function (p) { testProvider(p.id); }); },
+            "config-provider": function (b) { configProvider(b.getAttribute("data-id")); },
+            "add-provider": addProvider,
+            "toggle-provider": function (b) { toggleProvider(b.getAttribute("data-id")); },
+            "rotate-secret": function (b) { rotateSecret(b.getAttribute("data-id")); },
+            "test-model": function (b) { testModel(Number(b.getAttribute("data-i"))); },
+            "toggle-model": function (b) { toggleModel(Number(b.getAttribute("data-i"))); },
+            "config-model": function (b) { configModel(Number(b.getAttribute("data-i"))); }
           });
         }
       },
-      { path: "system/billing", title: "订阅与账单", icon: "download", render: billingPage,
+      { path: "system/usage", title: "用量与预算", icon: "download", render: usagePage,
         mount: function (root) {
           bindPage(root, {
-            "buy-seats": buySeats,
-            payment: paymentModal,
-            "download-invoice": function (b) { downloadInvoice(b.getAttribute("data-id")); }
+            "edit-budget": editBudget,
+            "export-usage": exportUsage
           });
         }
       },
-      { path: "system/workspace", title: "工作区设置", icon: "sliders", render: workspacePage,
+      { path: "system/workspace", title: "系统设置", icon: "sliders", render: workspacePage,
         mount: function (root) {
           bindPage(root, {
             "ws-section": function (b) { workspaceSection = b.getAttribute("data-key"); App.refresh(); },
@@ -1161,19 +1206,19 @@
               var w = st().workspace;
               w.name = document.getElementById("wsName").value.trim() || w.name;
               w.legalName = document.getElementById("wsLegal").value.trim();
-              w.region = document.getElementById("wsRegion").value;
               w.timezone = document.getElementById("wsTz").value.trim();
               w.locale = document.getElementById("wsLocale").value;
-              App.logAudit("更新工作区信息", w.name, "工作区", w.region + " · " + w.timezone, "normal", null);
-              App.refresh(); App.toast("工作区已保存", w.name + " · " + w.region, "success");
+              w.updatedAt = "今天 " + App.nowStamp();
+              App.logAudit("更新系统通用信息", w.name, "系统", w.timezone + " · " + w.locale, "normal", null);
+              App.refresh(); App.toast("系统设置已保存", w.name + " · " + w.timezone, "success");
             },
             "save-project-defaults": function () {
               var w = st().workspace;
               w.defaultTemplate = document.getElementById("wTemplate").value;
               w.defaultModel = document.getElementById("wModel").value;
               w.requireProjectApproval = document.getElementById("wApproval").checked;
-              w.allowGuests = document.getElementById("wGuest").checked;
-              App.logAudit("更新项目默认", w.defaultTemplate, "工作区", "默认模型 " + w.defaultModel, "normal", null);
+              w.allowExternalReviewer = document.getElementById("wGuest").checked;
+              App.logAudit("更新项目默认", w.defaultTemplate, "系统", "默认模型 " + w.defaultModel + " · 外部审片 " + (w.allowExternalReviewer ? "允许" : "禁止"), "normal", null);
               App.refresh(); App.toast("项目默认已保存", w.defaultTemplate + " · " + w.defaultModel, "success");
             },
             "toggle-ws": function (b) {
@@ -1182,33 +1227,41 @@
               if (!n) return;
               n.on = !n.on; App.refresh(); App.toast("通知策略已更新", n.label + " · " + (n.on ? "开启" : "关闭"), "success");
             },
-            "save-retention": function () {
+            "run-backup": function () {
               var w = st().workspace;
-              w.dataRetention = Number(document.getElementById("wRetention").value) || 180;
-              App.logAudit("修改数据保留周期", w.dataRetention + " 天", "工作区", "审计与导出记录保留周期", "normal", null);
-              App.refresh(); App.toast("保留周期已保存", w.dataRetention + " 天", "success");
+              w.backup.last = "今天 " + App.nowStamp();
+              App.logAudit("执行系统备份", w.backup.target, "系统", "PostgreSQL 与项目元数据备份完成", "normal", null);
+              App.refresh(); App.toast("备份完成", w.backup.target + " · " + w.backup.last, "success");
+            },
+            "restore-drill": function () {
+              App.confirm({ title: "恢复演练", message: "在隔离环境从最近备份恢复 PostgreSQL 与资产清单，验证可读性后丢弃演练实例。", detail: "不会影响生产数据。", okText: "开始演练" }).then(function (ok) {
+                if (!ok) return;
+                var w = st().workspace;
+                w.backup.restoreDrill = "今天 " + App.nowStamp() + " · 通过";
+                App.logAudit("执行恢复演练", w.backup.lastSize, "系统", "隔离环境恢复通过，生产未变更", "warning", null);
+                App.refresh(); App.toast("恢复演练通过", "隔离环境校验成功", "success");
+              });
             },
             "export-workspace": function () {
               var s = st();
-              App.download("changye_workspace.json", JSON.stringify({ workspace: s.workspace, departments: s.departments, roles: s.roles, security: s.security, billing: s.billing }, null, 2), "application/json;charset=utf-8");
-              App.toast("工作区状态已导出", "JSON · 含组织、角色与安全策略", "success");
+              App.download("changye_system_config.json", JSON.stringify({ workspace: s.workspace, providers: s.providers, models: s.models, security: s.security, roles: s.roles }, null, 2), "application/json;charset=utf-8");
+              App.toast("系统配置已导出", "JSON · 不含 Provider 凭据材料", "success");
             },
             "reset-workspace": resetDemo,
             transfer: function () {
               var candidates = st().members.filter(function (m) { return m.status === "active" && m.roleId !== "r-owner" && m.roleId !== "r-guest"; });
-              var body = '<div class="form-grid"><div class="field span2"><label>新所有者</label><select class="select" id="trOwner">' + candidates.map(function (m) { return '<option value="' + m.id + '">' + UI.esc(m.name) + " · " + UI.esc(m.role) + "</option>"; }).join("") + '</select></div></div><div class="notice danger mt-12">转移后当前所有者将降为管理员，订阅与账单权一并转移。</div>';
-              App.modal({ title: "转移工作区所有权", sub: "高风险操作 · 需要二次确认", body: body, footer: '<button class="btn" data-close>取消</button><button class="btn btn-danger" id="trGo">确认转移</button>',
+              var body = '<div class="form-grid"><div class="field span2"><label>新系统管理员</label><select class="select" id="trOwner">' + candidates.map(function (m) { return '<option value="' + m.id + '">' + UI.esc(m.name) + " · " + UI.esc(m.role) + "</option>"; }).join("") + '</select></div></div><div class="notice danger mt-12">转移后当前系统管理员降为组织管理员；平台治理责任转移，项目成员授权与项目资产归属不变。</div>';
+              App.modal({ title: "转移系统管理员", sub: "高风险操作 · 需要二次确认", body: body, footer: '<button class="btn" data-close>取消</button><button class="btn btn-danger" id="trGo">确认转移</button>',
                 onMount: function (el, close) {
                   el.querySelector("#trGo").addEventListener("click", function () {
                     var id = el.querySelector("#trOwner").value;
                     st().workspace.ownerId = id;
-                    App.logAudit("转移工作区所有权", (memberById(id) || {}).name, "工作区", "企业治理与订阅权转移", "critical", null);
-                    close(); App.refresh(); App.toast("所有权已转移", "请重新登录确认权限。", "warn");
+                    App.logAudit("转移系统管理员", (memberById(id) || {}).name, "系统", "平台治理责任转移", "critical", null);
+                    close(); App.refresh(); App.toast("系统管理员已转移", "请重新登录确认权限。", "warn");
                   });
                 }
               });
-            },
-            "delete-workspace": function () { confirmed("删除工作区", "原型不会真实删除工作区。", "确认删除", true); }
+            }
           });
         }
       },
@@ -1224,16 +1277,9 @@
               st().project.due = document.getElementById("pDue").value;
               st().project.genre = document.getElementById("pGenre").value;
               st().project.updated = "刚刚";
-              App.logAudit("更新项目信息", name, "工作区", "项目名称、简介与交付日期", "normal", st().project.id);
+              App.logAudit("更新项目信息", name, "项目", "项目名称、简介与交付日期", "normal", st().project.id);
               App.refresh(); App.toast("已保存", "项目信息已更新。", "success");
             },
-            "test-model": function (b) {
-              var idx = Number(b.getAttribute("data-i")), m = st().models[idx];
-              var old = b.textContent; b.textContent = "测试中…"; b.disabled = true;
-              setTimeout(function () { b.textContent = old; b.disabled = false; m.status = "已连接"; m.latency = "1.2s"; App.refresh(); App.toast("连接正常", m.name + " · " + m.latency, "success"); }, 900);
-            },
-            "config-model": function (b) { configModel(Number(b.getAttribute("data-i"))); },
-            "add-model": addModel,
             toggle: function (b) { b.classList.toggle("on"); App.toast("通知设置已更新", b.classList.contains("on") ? "已开启" : "已关闭", "success"); },
             reset: resetDemo,
             state: exportState,
@@ -1242,7 +1288,7 @@
           });
         }
       },
-      { path: "system/team", title: "成员与席位", icon: "users", nav: false, navParent: "system/members", render: membersPage, mount: memberPageMount }
+      { path: "system/team", title: "用户与成员", icon: "users", nav: false, navParent: "system/members", render: membersPage, mount: memberPageMount }
     ]
   });
 })();

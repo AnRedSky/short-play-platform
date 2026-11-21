@@ -39,7 +39,7 @@
       (list.length ? "" : UI.empty("没有符合条件的任务", "切换状态筛选，或新建一个生成任务。")) + "</div></div>" +
       '<div class="grid g-2-1 mt-16"><div class="card"><div class="card-head"><h3>队列槽位</h3><span class="tiny muted">3 并发 · 2 占用</span></div><div class="card-body"><div class="queue-grid">' +
       '<div class="queue-slot"><div class="qs-top"><span>槽位 1</span><span class="dot on"></span></div><div class="qs-main">T-2041 视频生成</div><div class="tiny muted">mork-video-2 · 1080p</div><div class="mt-8">' + UI.progress(32) + "</div></div>" +
-      '<div class="queue-slot"><div class="qs-top"><span>槽位 2</span><span class="dot on"></span></div><div class="qs-main">T-2040 配音合成</div><div class="tiny muted">moss-tts-cn · 19 条</div><div class="mt-8">' + UI.progress(0) + "</div></div>" +
+      '<div class="queue-slot"><div class="qs-top"><span>槽位 2</span><span class="dot on"></span></div><div class="qs-main">T-2040 配音合成</div><div class="tiny muted">mork-tts-cn · 19 条</div><div class="mt-8">' + UI.progress(0) + "</div></div>" +
       '<div class="queue-slot" style="border-style:dashed"><div class="qs-top"><span>槽位 3</span><span class="dot"></span></div><div class="qs-main muted">空闲</div><div class="tiny muted">下一任务可直接开始</div></div></div></div></div>' +
       '<div class="card"><div class="card-head"><h3>失败诊断</h3><a class="btn btn-xs" href="' + App.link("review/tasks") + '" data-act="only-failed">只看失败</a></div><div class="card-body">' +
       (s.tasks.filter(function (t) { return t.status === "failed"; }).map(function (t) {
@@ -81,7 +81,7 @@
 
   function newTask() {
     var caps = ["视频生成", "图像生成", "文本生成", "语音合成", "质检"];
-    var models = { "视频生成": ["mork-video-2"], "图像生成": ["mork-image-3"], "文本生成": ["mork-llm-7b"], "语音合成": ["moss-tts-cn"], "质检": ["qa-rules-2026.11"] };
+    var models = { "视频生成": ["mork-video-2"], "图像生成": ["mork-image-3"], "文本生成": ["mork-llm-7b"], "语音合成": ["mork-tts-cn"], "质检": ["qa-rules-2026.11"] };
     var opt = function (cap) { return '<option value="' + cap + '">' + cap + "</option>"; };
     var body = '<div class="form-grid"><div class="field"><label>能力</label><select class="select" id="ntCap">' + caps.map(opt).join("") + "</select></div>" +
       '<div class="field"><label>模型</label><select class="select" id="ntModel">' + models["视频生成"].map(function (m) { return "<option>" + m + "</option>"; }).join("") + "</select></div>" +
@@ -111,34 +111,43 @@
   }
 
   /* ================= 质检审核 ================= */
+  function qaGate(q) {
+    if (q.status === "approved") return { key: "PASS", tone: "b-done", label: "PASS · 已通过", desc: "质量门禁通过，时间线与导出已解锁。" };
+    if (q.status === "rejected") return { key: "FAIL", tone: "b-danger", label: "FAIL · 已退回返工", desc: "质量门禁失败，时间线与导出保持锁定。" };
+    return { key: "REVIEW_REQUIRED", tone: "b-warn", label: "REVIEW_REQUIRED · 待人工复核", desc: "存在需人工确认的检查项，暂不能进入导出。" };
+  }
+
   function qaPage() {
     var s = st(), q = s.qa;
     var approved = q.status === "approved", rejected = q.status === "rejected";
+    var gate = qaGate(q);
+    var passCount = q.items.filter(function (x) { return x.result === "PASS"; }).length;
+    var reviewCount = q.items.filter(function (x) { return x.result !== "PASS"; }).length;
     var checks = q.items.map(function (it) {
-      return '<div class="qa-check"><span class="' + (it.result === "PASS" ? "ok" : "warn") + '">' + UI.icon(it.result === "PASS" ? "check" : "alert", 14) + '</span><span class="qc-main"><span>' + UI.esc(it.name) + '</span><span class="qc-sub">' + UI.esc(it.note) + '</span></span><span class="mono tiny">' + it.score + "</span></div>";
+      return '<div class="qa-check"><span class="' + (it.result === "PASS" ? "ok" : "warn") + '">' + UI.icon(it.result === "PASS" ? "check" : "alert", 14) + '</span><span class="qc-main"><span>' + UI.esc(it.name) + '</span><span class="qc-sub">' + UI.esc(it.note) + '</span></span><span class="badge ' + (it.result === "PASS" ? "b-done" : "b-warn") + '">' + UI.esc(it.result) + "</span></div>";
     }).join("");
     var comments = q.comments.map(function (c) {
       return '<div class="comment-row"><div class="comment-head">' + UI.avatar(c.author, "sm") + "<b>" + UI.esc(c.author) + "</b><span>" + UI.esc(c.role) + "</span><span>" + UI.esc(c.time) + "</span>" +
         '<span class="badge ' + (c.level === "需修改" ? "b-danger" : "b-todo") + '" style="margin-left:auto">' + UI.esc(c.level) + "</span></div>" +
         '<div class="comment-text">' + UI.esc(c.text) + '</div><div class="tiny muted">' + UI.esc(c.shot) + (c.resolved ? " · 已解决" : "") + "</div></div>";
     }).join("");
-    var decision = '<div class="gate-card ' + (approved ? "ok" : "") + '"><div class="eyebrow">Review decision</div>' +
-      '<div class="between mt-8"><div><b>' + (approved ? "已通过终审" : rejected ? "已退回修改" : "等待终审") + "</b><div class=\"tiny muted\">" + (approved ? "时间线与导出已解锁" : "通过后解锁时间线与导出") + "</div></div>" + UI.statusBadge(q.status) + "</div>" +
-      '<div class="stack mt-12">' + (App.hasPerm("qa:review") && !approved ? '<button class="btn btn-primary btn-block" data-act="approve">' + UI.icon("check") + "通过审核</button>" : "") +
-      (App.hasPerm("qa:review") && !rejected ? '<button class="btn btn-block" data-act="reject">退回修改</button>' : "") +
+    var decision = '<div class="gate-card ' + (approved ? "ok" : rejected ? "bad" : "") + '"><div class="eyebrow">Quality gate</div>' +
+      '<div class="between mt-8"><div><b>' + gate.label + "</b><div class=\"tiny muted\">" + gate.desc + "</div></div>" + UI.badge(gate.key, gate.tone) + "</div>" +
+      '<div class="stack mt-12">' + (App.hasPerm("qa:review") && !approved ? '<button class="btn btn-primary btn-block" data-act="approve">' + UI.icon("check") + "记录 PASS</button>" : "") +
+      (App.hasPerm("qa:review") && !rejected ? '<button class="btn btn-block" data-act="reject">标记 FAIL · 退回返工</button>' : "") +
       '<button class="btn btn-block" data-act="download">' + UI.icon("download") + "下载审核报告</button></div>" +
-      '<div class="tiny muted mt-12">' + (approved ? "EP01 已通过，可前往导出交付。" : "只有 PASS 才允许进入导出。") + "</div></div>";
+      '<div class="tiny muted mt-12">' + (approved ? "当前为 PASS，可进入时间线与导出。" : "只有 PASS 才允许进入时间线与导出；MVP 不提供 WAIVED 豁免。") + "</div></div>";
 
     return '<div class="page">' +
-      UI.pageHead({ eyebrow: "QA & review · EP01", title: "质检与审核", desc: "9:16 成片预览 + QA 规则结果 + 人工终审。审核结论会同步到流水线与导出 gate。",
-        actions: '<span class="badge b-warn">QA 94 分</span><button class="btn" data-act="requalify">' + UI.icon("refresh") + "重新质检</button>" + (App.hasPerm("qa:review") && !approved ? '<button class="btn btn-primary" data-act="approve">' + UI.icon("check") + "通过审核</button>" : "") }) +
+      UI.pageHead({ eyebrow: "QA & review · EP01", title: "质检与审核", desc: "质量门禁结果只有 PASS / REVIEW_REQUIRED / FAIL。自动规则结果与人工复核共同决定是否解锁时间线与导出，MVP 不提供 WAIVED。",
+        actions: '<span class="badge ' + gate.tone + '">' + gate.key + '</span><button class="btn" data-act="requalify">' + UI.icon("refresh") + "重新质检</button>" + (App.hasPerm("qa:review") && !approved ? '<button class="btn btn-primary" data-act="approve">' + UI.icon("check") + "记录 PASS</button>" : "") }) +
       '<div class="qa-grid"><div><div class="qa-video-card"><div class="player" style="background-image:url(' + UI.scene("bookstore") + ')"><span class="pl-scene">EP01 · S0109 · 00:42</span>' +
       '<div class="pl-caption">别翻下一页。</div><div class="pl-controls"><div class="pl-scrub" data-act="seek"><i id="scrubBar"></i></div><div class="pl-row"><button class="pl-play" data-act="play">' + UI.icon("play", 10) + '</button><span id="ptime">00:42 / 01:32</span><span style="margin-left:auto">9:16 · 1080p</span></div></div></div>' +
       '<div class="between mt-12"><div><b class="small">EP01 · 雨夜书店</b><div class="tiny muted">粗剪 v4 · 92s · 30fps</div></div><a class="btn btn-sm" href="' + App.link("review/timeline") + '">打开时间线</a></div></div>' +
       '<div class="card mt-16"><div class="card-head"><h3>质检项目</h3><span class="tiny muted">' + q.rule + " · " + q.checkedAt + '</span></div><div class="card-body tight">' + checks + "</div></div></div>" +
       '<div><div class="card"><div class="card-head"><div><h3>QA 结论</h3><div class="ch-sub">自动规则 + 人工复核</div></div></div><div class="card-body">' +
-      '<div class="qa-score">' + UI.ring(94, 64) + '<div><div class="qs-num">94</div><div class="tiny muted">综合评分 · 5 项检查</div><div class="row mt-8">' + UI.badge("4 PASS", "b-done") + UI.badge("1 REVIEW", "b-warn") + "</div></div></div>" +
-      '<div class="notice warn mt-12">' + UI.icon("alert", 15) + "<span>时序与节奏：第 5 场到第 6 场转场偏快，建议延长 0.4s。</span></div></div></div>" +
+      '<div class="qa-score"><div class="qa-gate-badge"><div class="qs-num" style="font-size:20px;line-height:1.2">' + gate.key + '</div><div class="tiny muted">Quality gate · ' + passCount + " PASS / " + reviewCount + ' 待复核</div><div class="row mt-8">' + (passCount ? UI.badge(passCount + " PASS", "b-done") : "") + (reviewCount ? UI.badge(reviewCount + " REVIEW_REQUIRED", "b-warn") : "") + '</div></div><div><div class="tiny muted">规则得分仅作诊断</div><div class="mono">' + q.score + " / 100</div></div></div>" +
+      '<div class="notice warn mt-12">' + UI.icon("alert", 15) + "<span>时序与节奏：第 5 场到第 6 场转场偏快，建议延长 0.4s。该项为 REVIEW_REQUIRED，需人工复核后记录 PASS 或 FAIL。</span></div></div></div>" +
       decision + '<div class="card mt-16"><div class="card-head"><div><h3>批注</h3><div class="ch-sub">' + q.comments.length + " 条 · " + q.comments.filter(function (c) { return !c.resolved; }).length + ' 条未解决</div></div><button class="btn btn-xs" data-act="composer">添加批注</button></div><div class="card-body tight">' + comments + "</div>" +
       '<div class="card-foot" id="composerWrap" style="display:none"><div class="field" style="flex:1"><textarea class="textarea" id="commentText" rows="2" placeholder="描述问题、镜头与建议…"></textarea></div><button class="btn btn-primary" data-act="add-comment">保存</button></div></div>' +
       "</div></div></div>";
@@ -159,23 +168,23 @@
 
   function approve() {
     App.confirm({
-      title: "通过终审", message: "确认 EP01 通过质检，并解锁时间线与导出？", detail: "通过后本集状态变为「已通过」；后续修改需重新质检。", okText: "通过并解锁"
+      title: "记录 PASS", message: "确认 EP01 的质量门禁结果为 PASS，并解锁时间线与导出？", detail: "PASS 后本集可进入时间线与导出；后续修改会重新触发质量检查。", okText: "记录 PASS 并解锁"
     }).then(function (ok) {
       if (!ok) return;
       var s = st();
       s.qa.status = "approved"; s.pipeline.qa = "done"; s.pipeline.timeline = "active"; s.pipeline.export = "active";
       s.timeline.approved = true; s.episodes[0].qa = 94;
-      s.activity.unshift([App.nowStamp(), App.currentUser.name, "EP01 通过终审，解锁时间线与导出", "ok"]);
-      App.refresh(); App.toast("已通过终审", "时间线与导出已解锁，可创建交付任务。", "success");
+      s.activity.unshift([App.nowStamp(), App.currentUser.name, "EP01 质量门禁记录 PASS，解锁时间线与导出", "ok"]);
+      App.refresh(); App.toast("已记录 PASS", "时间线与导出已解锁，可创建交付任务。", "success");
     });
   }
 
   function reject() {
-    var body = '<div class="field"><label>退回原因<span class="req">*</span></label><textarea class="textarea" id="rejectReason" rows="4" placeholder="写明具体镜头、问题与修改建议。"></textarea><span class="err-msg" id="rjErr">请填写退回原因</span></div>' +
-      '<div class="notice warn mt-12">' + UI.icon("alert", 15) + "<span>退回会锁定时间线与导出，并生成返工任务。</span></div>";
+    var body = '<div class="field"><label>FAIL 原因<span class="req">*</span></label><textarea class="textarea" id="rejectReason" rows="4" placeholder="写明具体镜头、问题与修改建议。"></textarea><span class="err-msg" id="rjErr">请填写 FAIL 原因</span></div>' +
+      '<div class="notice warn mt-12">' + UI.icon("alert", 15) + "<span>记录 FAIL 会锁定时间线与导出，并生成返工任务；不提供 WAIVED 豁免。</span></div>";
     App.modal({
-      title: "退回修改", sub: "EP01 · 雨夜书店", body: body,
-      footer: '<button class="btn" data-close>取消</button><button class="btn btn-danger" id="rjGo">确认退回</button>',
+      title: "标记 FAIL · 退回返工", sub: "EP01 · 雨夜书店", body: body,
+      footer: '<button class="btn" data-close>取消</button><button class="btn btn-danger" id="rjGo">确认 FAIL</button>',
       onMount: function (el, close) {
         el.querySelector("#rjGo").addEventListener("click", function () {
           var reason = el.querySelector("#rejectReason").value.trim();
@@ -184,7 +193,7 @@
           s.qa.status = "rejected"; s.qa.reviewerNote = reason;
           s.pipeline.timeline = "locked"; s.pipeline.export = "locked"; s.timeline.approved = false;
           s.tasks.unshift({ id: "T-2051", name: "返工 · EP01 S0109 审讯对视", type: "视频生成", model: "mork-video-2", status: "queued", progress: 0, cost: 0, started: App.nowStamp(), duration: "—", target: "EP01 / S0109", logs: [[App.nowStamp(), "由审核退回自动生成"], [App.nowStamp(), reason]] });
-          close(); App.refresh(); App.toast("已退回", "时间线与导出已锁定，返工任务 T-2051 已创建。", "warn");
+          close(); App.refresh(); App.toast("已记录 FAIL", "时间线与导出已锁定，返工任务 T-2051 已创建。", "warn");
         });
       }
     });
@@ -200,7 +209,7 @@
           if (p >= 100) {
             clearInterval(timer);
             st().qa.status = "review"; st().qa.score = 96; st().qa.checkedAt = "刚刚";
-            setTimeout(function () { close(); App.refresh(); App.toast("质检完成", "综合评分 96 · 1 项建议调整，等待终审。", "success"); }, 300);
+            setTimeout(function () { close(); App.refresh(); App.toast("质检完成 · REVIEW_REQUIRED", "1 项需人工复核，门禁未解锁。", "warn"); }, 300);
           }
         }, 320);
       }
@@ -209,12 +218,13 @@
 
   function downloadReport() {
     var q = st().qa;
-    var txt = "长夜制作台 · EP01 审核报告\n\n项目：长夜将明（NYJM-26）\n集数：EP01 雨夜书店\n审核人：" + (q.reviewer || "周可") + "\n结论：" + q.status + "\n综合评分：" + q.score + "\n规则：" + q.rule + "\n时间：" + q.checkedAt + "\n\n检查项：\n" +
+    var gate = qaGate(q);
+    var txt = "长夜制作台 · EP01 质量门禁报告\n\n项目：长夜将明（NYJM-26）\n集数：EP01 雨夜书店\n审核人：" + (q.reviewer || "周可") + "\n门禁结论：" + gate.key + "\n规则得分（仅诊断）：" + q.score + " / 100\n规则：" + q.rule + "\n时间：" + q.checkedAt + "\n\n检查项（PASS / REVIEW_REQUIRED / FAIL）：\n" +
       q.items.map(function (x, i) { return (i + 1) + ". " + x.name + " · " + x.result + " · " + x.score + " 分\n   " + x.note; }).join("\n") +
       "\n\n批注：\n" + q.comments.map(function (c, i) { return (i + 1) + ". [" + c.time + " / " + c.shot + "] " + c.author + "：" + c.text; }).join("\n") +
-      "\n\n说明：这是纯静态原型的演示报告，不含真实视频文件。\n";
-    App.download("EP01_审核报告_" + (q.status === "approved" ? "通过" : "待审") + ".txt", txt);
-    App.toast("报告已下载", "EP01_审核报告.txt", "success");
+      "\n\n说明：MVP 不提供 WAIVED 豁免；这是纯静态原型的演示报告，不含真实视频文件。\n";
+    App.download("EP01_质量门禁报告_" + gate.key + ".txt", txt);
+    App.toast("报告已下载", "EP01_质量门禁报告_" + gate.key + ".txt", "success");
   }
 
   /* ================= 时间线 ================= */
@@ -245,8 +255,8 @@
       "</div>" : '<div class="inspector-block"><div class="tiny muted">点击片段查看属性；拖动片段改变起点，超过相邻片段会自动吸附。</div></div>';
     return '<div class="page">' +
       UI.pageHead({ eyebrow: "Timeline · EP01", title: "剪辑时间线", desc: "4 轨 · 18 个片段 · 92 秒。拖动片段、缩放刻度、调整字幕，保存版本后进入导出。",
-        actions: '<span class="badge ' + (approved ? "b-done" : "b-warn") + '">' + (approved ? "质检已通过" : "质检未通过") + '</span><button class="btn" data-act="save-version">' + UI.icon("plus") + "保存版本</button>" }) +
-      (approved ? "" : '<div class="notice warn mb-12">' + UI.icon("lock", 15) + '<span>质检通过后才能发布导出。当前可查看与排练时间线，保存版本仅记录草稿。</span></div>') +
+        actions: '<span class="badge ' + (approved ? "b-done" : "b-warn") + '">' + (approved ? "质量门禁 PASS" : "质量门禁未 PASS") + '</span><button class="btn" data-act="save-version">' + UI.icon("plus") + "保存版本</button>" }) +
+      (approved ? "" : '<div class="notice warn mb-12">' + UI.icon("lock", 15) + '<span>只有质量门禁 PASS 后才能发布导出。当前可查看与排练时间线，保存版本仅记录草稿。</span></div>') +
       '<div class="timeline-layout"><div class="tl-preview"><div class="poster" style="background-image:url(' + UI.scene("bookstore") + ')"><span class="p-no">EP01</span><span class="p-label">粗剪 v4 · 92s</span></div>' +
       '<div class="row mt-8" style="justify-content:space-between"><span class="tiny muted">00:' + String(playhead).padStart(2, "0") + '</span><span class="tiny muted">01:32</span></div></div>' +
       '<div><div class="tl-shell"><div class="tl-toolbar"><button class="tl-btn" data-act="play">' + UI.icon("play", 11) + '</button><span class="tl-tc">TC 00:00:' + String(playhead).padStart(2, "0") + ':00</span>' +
@@ -257,7 +267,7 @@
       '<div class="row mt-12" style="justify-content:space-between"><span class="tiny muted">拖动片段：改变起点 · 右侧边缘拖动：改变时长 · 滚轮横向滚动</span><span class="tiny muted">18 个片段 · 4 轨</span></div></div>' +
       '<div class="tl-inspector"><div class="inspector-block"><div class="between"><h4>版本</h4><span class="tag">' + UI.esc(tl.version) + '</span></div><div class="tiny muted">' + UI.esc(tl.name) + " · " + tl.duration + "s · " + tl.fps + "fps</div><div class=\"tl-sum mt-8\">V2 主画面 7 段 · 字幕 3 段 · 对白 5 段 · 环境 3 段</div></div>" +
       inspector + '<div class="inspector-block"><h4>导出前检查</h4>' +
-      [["画面全部生成", true], ["字幕 19 条已校对", true], ["对白音轨完整", true], ["质检 gate", approved]].map(function (c) {
+      [["画面全部生成", true], ["字幕 19 条已校对", true], ["对白音轨完整", true], ["质量门禁 PASS", approved]].map(function (c) {
         return '<div class="check-row"><span class="' + (c[1] ? "ok" : "warn") + '">' + UI.icon(c[1] ? "check" : "lock", 13) + "</span><span>" + c[0] + "</span></div>";
       }).join("") + '<a class="btn btn-primary btn-block mt-12" href="' + App.link("delivery/export") + '"' + (approved ? "" : ' aria-disabled="true"') + ">前往导出</a></div></div></div></div>";
   }

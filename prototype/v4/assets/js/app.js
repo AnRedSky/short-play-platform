@@ -25,15 +25,15 @@ window.App = (function () {
     "review/timeline": "timeline:read",
     "delivery/export": "export:read",
     "system/access": null,
-    "system/overview": "workspace:read",
+    "system/overview": "system:read",
     "system/org": "org:read",
     "system/members": "member:read",
     "system/roles": "role:manage",
     "system/security": "security:manage",
     "system/audit": "audit:read",
-    "system/integrations": "integration:manage",
-    "system/billing": "billing:manage",
-    "system/workspace": "workspace:manage",
+    "system/providers": "provider:read",
+    "system/usage": "usage:read",
+    "system/workspace": "system:manage",
     "system/settings": "settings:manage",
     "system/team": "member:read"
   };
@@ -78,35 +78,33 @@ window.App = (function () {
     return member ? App.roleById(member.roleId) : null;
   };
   App.scopeLabel = function (scope) {
-    return ({ org: "全组织", dept: "本部门", project: "所属项目", own: "仅本人" })[scope] || "未知范围";
+    return ({ org: "全组织（管理范围）", dept: "本部门（管理范围）", project: "仅所属项目", own: "仅本人" })[scope] || "未知范围";
   };
   App.statusLabel = function (status) {
-    return ({ active: "正常", invited: "待接受", suspended: "已停用", revoked: "已撤销" })[status] || status;
+    return ({ active: "正常", invited: "待接受", suspended: "已停用", deactivated: "已停用", revoked: "已撤销" })[status] || status;
   };
 
-  /* 数据范围判定：身份 -> 角色 -> 范围，用于成员、组织、审计的行级过滤 */
+  /* 数据范围判定：管理范围与项目成员授权分离；项目资源一律要求项目成员关系 */
   App.inScope = function (deptId, projectId) {
     var u = App.currentUser;
     if (!u) return false;
+    if (projectId) return (u.projectIds || []).indexOf(projectId) > -1;
     if ((u.perms || []).indexOf("*") > -1 || u.scope === "org") return true;
     if (u.scope === "dept") return !deptId || deptId === u.deptId;
-    if (u.scope === "project") {
-      if (!projectId) return true;
-      return (u.projectIds || []).indexOf(projectId) > -1;
-    }
+    if (u.scope === "project") return !deptId || deptId === u.deptId;
     return false;
   };
 
-  App.seatStats = function () {
+  App.memberStats = function () {
     var ms = App.state.members;
     return {
       total: ms.length,
       active: ms.filter(function (m) { return m.status === "active"; }).length,
       invited: ms.filter(function (m) { return m.status === "invited"; }).length,
-      suspended: ms.filter(function (m) { return m.status === "suspended"; }).length,
-      guests: ms.filter(function (m) { return m.seatType === "guest"; }).length,
-      purchased: App.state.workspace.seatsPurchased,
-      available: Math.max(0, App.state.workspace.seatsPurchased - ms.length)
+      suspended: ms.filter(function (m) { return m.status === "suspended" || m.status === "deactivated"; }).length,
+      external: ms.filter(function (m) { return m.accountType === "external"; }).length,
+      projectMemberships: ms.reduce(function (n, m) { return n + (m.projects || []).length; }, 0),
+      projectsCovered: App.state.projects.filter(function (p) { return (p.memberIds || []).length > 0; }).length
     };
   };
 
@@ -114,9 +112,25 @@ window.App = (function () {
     var u = App.currentUser;
     if (!u || !App.hasPerm("project:read")) return [];
     return App.state.projects.filter(function (p) {
-      if (u.scope === "org") return true;
-      return (u.projectIds || []).indexOf(p.id) > -1;
+      return (u.projectIds || []).indexOf(p.id) > -1 && (p.memberIds || []).indexOf(u.id) > -1;
     });
+  };
+
+  App.projectMembers = function (projectId) {
+    var p = App.state.projects.filter(function (x) { return x.id === projectId; })[0];
+    if (!p) return [];
+    return (p.memberIds || []).map(function (id) { return App.memberById(id); }).filter(Boolean);
+  };
+
+  App.projectRoleOf = function (member, projectId) {
+    var p = App.state.projects.filter(function (x) { return x.id === projectId; })[0];
+    if (!p || !member) return "—";
+    if (p.ownerId === member.id) return "项目负责人";
+    if (member.roleId === "r-guest") return "外部审片";
+    if (member.roleId === "r-reviewer") return "审核";
+    if (member.roleId === "r-editor" || member.roleId === "r-art") return "制作";
+    if (member.roleId === "r-writer") return "内容";
+    return "项目成员";
   };
 
   App.logAudit = function (action, target, category, detail, severity, projectId) {
@@ -126,10 +140,12 @@ window.App = (function () {
       time: "今天 " + App.nowStamp(),
       actor: u.name || "系统",
       actorId: u.id || "system",
-      category: category || "工作区",
+      category: category || "系统",
       action: action,
       target: target || "—",
       detail: detail || "",
+      requestId: "req_" + Date.now().toString(36),
+      resource: projectId ? "project:" + projectId : "workspace:changye",
       ip: "203.0.113.42",
       result: "success",
       severity: severity || "normal",
@@ -224,7 +240,7 @@ window.App = (function () {
     var u = App.state.identities.filter(function (x) { return x.id === id; })[0];
     if (!u) return;
     if (u.status !== "active") {
-      App.toast("无法切换身份", u.name + " 当前为「" + App.statusLabel(u.status) + "」状态，不能进入工作区。", "warn");
+      App.toast("无法切换身份", u.name + " 当前为「" + App.statusLabel(u.status) + "」状态，不能进入平台。", "warn");
       return;
     }
     App.state.currentUserId = id;
@@ -274,6 +290,13 @@ window.App = (function () {
       document.title = "暂无权限 · 长夜制作台";
       return;
     }
+    if (route.group !== "system" && route.path !== "overview/dashboard" && !App.visibleProjects().length) {
+      currentRoute = route;
+      renderShell(route, "无项目授权");
+      document.getElementById("view").innerHTML = statusPage("403", "无项目授权", "系统角色不自动授予项目内容访问权。当前账号不在任何项目成员名单中，请先申请项目访问。", "返回工作台");
+      document.title = "无项目授权 · 长夜制作台";
+      return;
+    }
 
     currentRoute = route;
     renderShell(route, route.title);
@@ -308,9 +331,10 @@ window.App = (function () {
   }
 
   function railHTML(activePath) {
+    var hasProject = App.visibleProjects().length > 0;
     var groups = navGroups().map(function (m) {
       var visible = m.routes.filter(function (r) {
-        return r.nav !== false && App.routeAllowed(r);
+        return r.nav !== false && App.routeAllowed(r) && (r.path === "overview/dashboard" || m.group === "system" || hasProject);
       });
       if (!visible.length) return "";
       var items = visible.map(function (r) {
@@ -324,16 +348,28 @@ window.App = (function () {
       return '<div class="nav-group"><div class="nav-label">' + UI.esc(m.label) + '</div><div class="nav">' + items + "</div></div>";
     }).join("");
 
-    var pct = App.epProgress("01");
+    var visibleProjects = App.visibleProjects();
+    var currentProject = visibleProjects.length ? App.state.project : null;
+    var pct = currentProject ? App.epProgress("01") : 0;
+    var projectSwitch = currentProject
+      ? '<button class="project-switch" data-app="projects"><span class="ps-badge">' + UI.esc(currentProject.name.charAt(0)) + '</span>' +
+        '<span class="ps-main"><span class="ps-name">' + UI.esc(currentProject.name) + '</span><br><span class="ps-meta">' + UI.esc(currentProject.code) + " · " + currentProject.members + ' 人 · 项目成员授权</span></span>' +
+        '<span class="chev">' + UI.icon("down", 13) + "</span></button>"
+      : '<button class="project-switch" data-app="projects"><span class="ps-badge">锁</span>' +
+        '<span class="ps-main"><span class="ps-name">无项目授权</span><br><span class="ps-meta">联系项目负责人授予成员资格</span></span>' +
+        '<span class="chev">' + UI.icon("down", 13) + "</span></button>";
+    var railProgress = currentProject
+      ? '<div class="rail-progress"><div class="rp-top"><strong>EP01 雨夜书店</strong><span>' + pct + '%</span></div>' +
+        '<div class="rp-bar"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="rp-foot"><span>资产与分镜进行中</span><span>5 / 8</span></div></div>'
+      : '<div class="rail-progress"><div class="rp-top"><strong>项目上下文未建立</strong><span>—</span></div>' +
+        '<div class="rp-bar"><i style="width:0"></i></div>' +
+        '<div class="rp-foot"><span>系统治理页仍可访问</span><span>0 项目</span></div></div>';
     return '<div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M5 19V8.5L12 4l7 4.5V19"/><path d="M9 19v-6h6v6"/><circle cx="12" cy="10" r="1.2" fill="#fff" stroke="none"/></svg></span>' +
-      '<span><span class="brand-name">长夜制作台</span><br><span class="brand-sub">Enterprise Workspace</span></span></div>' +
-      '<button class="project-switch" data-app="projects"><span class="ps-badge">长</span>' +
-      '<span class="ps-main"><span class="ps-name">' + UI.esc(App.state.project.name) + '</span><br><span class="ps-meta">' + UI.esc(App.state.project.code) + " · " + App.state.project.members + ' 人 · 企业版</span></span>' +
-      '<span class="chev">' + UI.icon("down", 13) + "</span></button>" +
+      '<span><span class="brand-name">长夜制作台</span><br><span class="brand-sub">Private Studio Platform</span></span></div>' +
+      projectSwitch +
       '<nav class="rail-nav">' + groups + "</nav>" +
-      '<div class="rail-progress"><div class="rp-top"><strong>EP01 雨夜书店</strong><span>' + pct + '%</span></div>' +
-      '<div class="rp-bar"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="rp-foot"><span>资产与分镜进行中</span><span>5 / 8</span></div></div>' +
+      railProgress +
       '<button class="rail-user" data-app="account">' + UI.avatar(App.currentUser.name, "", App.currentUser.color) +
       '<span class="ru-main"><span class="ru-name">' + UI.esc(App.currentUser.name) + '</span><br><span class="ru-role">' + UI.esc(App.currentUser.role) + "</span></span>" +
       '<span class="ru-more">' + UI.icon("more", 16) + "</span></button>";
@@ -346,7 +382,7 @@ window.App = (function () {
         return '<option value="' + u.id + '"' + (u.id === App.currentUser.id ? " selected" : "") + ">" + UI.esc(u.name + " · " + (u.shortRole || u.role)) + "</option>";
       }).join("") + "</select>" + UI.icon("down", 12) + "</label>";
     return '<div class="topbar-left"><button class="icon-btn menu-btn" data-app="menu" aria-label="打开导航">' + UI.icon("menu") + "</button>" +
-      '<div class="crumb"><span class="crumb-project">' + UI.esc(App.state.workspace.name) + '</span><span class="sep">/</span><b>' + UI.esc(crumb || "") + '</b><span class="badge b-teal">企业版</span></div></div>' +
+      '<div class="crumb"><span class="crumb-project">' + UI.esc(App.state.workspace.name) + '</span><span class="sep">/</span><b>' + UI.esc(crumb || "") + '</b><span class="badge b-teal">私有化</span></div></div>' +
       '<div class="spacer"></div>' +
       '<button class="search-trigger" data-app="search">' + UI.icon("search", 14) + '<span>搜索页面、成员、角色、镜头…</span><span class="kbd">⌘ K</span></button>' +
       '<button class="task-pill" data-app="tasks"><span class="pulse"></span><span class="tp-count">' + running + '</span><span class="tp-text"> 个任务运行中</span></button>' +
@@ -422,7 +458,7 @@ window.App = (function () {
         '<small>' + UI.esc(p.code) + " · " + p.episodes + " 集 · " + UI.esc(p.genre) + " · " + UI.esc(p.stage) + "</small></span>" +
         (cur ? '<span class="badge b-active">当前项目</span>' : '<span class="badge b-todo">' + UI.esc(p.status) + "</span>") + "</button>";
     }).join("") + "</div>" +
-      '<div class="notice info mt-16">' + UI.icon("lock", 15) + "<span>项目切换按角色数据范围过滤。外部访客仅看到被邀请的项目；跨项目数据不会带入当前上下文。</span></div>";
+      '<div class="notice info mt-16">' + UI.icon("lock", 15) + "<span>项目切换按角色数据范围过滤。外部审片成员仅看到被授权项目；跨项目数据不会带入当前上下文。</span></div>";
     App.modal({
       title: "切换项目", sub: "当前身份「" + App.currentUser.name + " · " + App.currentUser.role + "」，数据范围：" + App.scopeLabel(App.currentUser.scope) + "。", body: body,
       footer: '<button class="btn" data-close>取消</button>',
@@ -440,25 +476,25 @@ window.App = (function () {
   function openAccount() {
     var u = App.currentUser;
     var s = App.state;
-    var seat = u.seatType === "guest" ? "访客席位" : "企业席位";
-    var mfa = ({ enforced: "已强制", enabled: "已启用", pending: "待完成", disabled: "已停用" })[u.mfa] || u.mfa;
+    var account = u.accountType === "external" ? "外部审片账号" : "内部成员账号";
     var body = '<div class="account-head">' + UI.avatar(u.name, "lg", u.color) +
       '<div><div class="account-name">' + UI.esc(u.name) + '</div><div class="small muted">' + UI.esc(u.email) + " · " + UI.esc(u.title) + "</div>" +
-      '<div class="row wrap mt-8"><span class="badge b-teal">' + UI.esc(u.role) + '</span><span class="badge b-outline">' + UI.esc(seat) + '</span><span class="badge ' + (u.status === "active" ? "b-done" : "b-warn") + '">' + App.statusLabel(u.status) + "</span></div></div></div>" +
-      '<div class="kv mt-8"><div class="k">企业空间</div><div class="v">' + UI.esc(s.workspace.name) + " · " + UI.esc(s.workspace.planName) + '</div>' +
+      '<div class="row wrap mt-8"><span class="badge b-teal">' + UI.esc(u.role) + '</span><span class="badge b-outline">' + UI.esc(account) + '</span><span class="badge ' + (u.status === "active" ? "b-done" : "b-warn") + '">' + App.statusLabel(u.status) + "</span></div></div></div>" +
+      '<div class="kv mt-8"><div class="k">部署方式</div><div class="v">' + UI.esc(s.workspace.deployment) + '</div>' +
       '<div class="k">部门</div><div class="v">' + UI.esc(u.dept) + '</div>' +
-      '<div class="k">数据范围</div><div class="v">' + App.scopeLabel(u.scope) + '</div>' +
-      '<div class="k">登录方式</div><div class="v">企业 SSO · MFA ' + mfa + '</div>' +
-      '<div class="k">最近登录</div><div class="v">今天 09:42 · 上海</div></div>' +
-      '<div class="notice mt-16">' + UI.icon("lock", 15) + "<span>原型不接真实鉴权。身份切换只改变前端菜单、页面与操作入口；角色与数据范围由企业管理员维护。</span></div>" +
+      '<div class="k">管理范围</div><div class="v">' + App.scopeLabel(u.scope) + '</div>' +
+      '<div class="k">项目授权</div><div class="v">' + App.visibleProjects().map(function (p) { return UI.esc(p.name); }).join("、") + '</div>' +
+      '<div class="k">登录方式</div><div class="v">本地账号 · 会话由管理员维护</div>' +
+      '<div class="k">最近登录</div><div class="v">今天 09:42 · 企业内网</div></div>' +
+      '<div class="notice mt-16">' + UI.icon("lock", 15) + "<span>原型不接真实鉴权。身份切换只改变前端菜单、页面与操作入口；系统权限与项目成员授权由管理员维护，服务端必须二次校验。</span></div>" +
       '<div class="grid g2 mt-16">' +
       '<a class="btn" href="' + App.link("system/access") + '">我的权限</a>' +
-      (App.hasPerm("member:read") ? '<a class="btn" href="' + App.link("system/members") + '">成员与席位</a>' : "") +
-      (App.hasPerm("workspace:manage") ? '<a class="btn" href="' + App.link("system/workspace") + '">工作区设置</a>' : "") +
-      (App.hasPerm("billing:manage") ? '<a class="btn" href="' + App.link("system/billing") + '">订阅与账单</a>' : "") +
+      (App.hasPerm("member:read") ? '<a class="btn" href="' + App.link("system/members") + '">用户与成员</a>' : "") +
+      (App.hasPerm("system:manage") ? '<a class="btn" href="' + App.link("system/workspace") + '">系统设置</a>' : "") +
+      (App.hasPerm("usage:read") ? '<a class="btn" href="' + App.link("system/usage") + '">用量与预算</a>' : "") +
       "</div>";
     App.modal({
-      title: "账号与工作区", sub: "企业级多用户演示身份，切换后立即生效。",
+      title: "账号与权限", sub: "企业内部多用户演示身份，切换后立即生效。",
       body: body,
       footer: '<button class="btn" data-close>关闭</button>'
     });
@@ -472,7 +508,7 @@ window.App = (function () {
         '<span class="lr-main"><span class="lr-title">' + UI.esc(n.title) + '</span><span class="lr-sub">' + UI.esc(n.meta) + '</span></span>' +
         '<span class="badge b-warn">待查看</span></button>';
     }).join("") + "</div>" +
-      '<div class="notice info mt-16">' + UI.icon("bell", 15) + "<span>通知中心只展示与当前工作区相关的待办；外部访客不会收到内部制作通知。</span></div>";
+      '<div class="notice info mt-16">' + UI.icon("bell", 15) + "<span>通知中心只展示与当前身份和项目授权相关的待办；外部审片成员不会收到内部制作通知。</span></div>";
     App.drawer({
       eyebrow: "Notification center", title: "通知中心", sub: notices.length + " 条待处理 · 站内信与邮件同步",
       body: body,
@@ -499,21 +535,24 @@ window.App = (function () {
   function openPalette() {
     closePalette();
     var items = [];
+    var hasProject = App.visibleProjects().length > 0;
     routes.forEach(function (r) {
-      if (App.routeAllowed(r)) items.push({ group: "页面", title: r.title, sub: r.groupLabel + " · " + r.path, path: r.path, icon: r.icon });
+      if (App.routeAllowed(r) && (r.group === "system" || r.path === "overview/dashboard" || hasProject)) items.push({ group: "页面", title: r.title, sub: r.groupLabel + " · " + r.path, path: r.path, icon: r.icon });
     });
-    App.state.episodes.forEach(function (ep) {
-      items.push({ group: "剧集", title: "EP" + ep.no + " · " + ep.title, sub: ep.hook, path: "production/script", params: { ep: ep.no }, icon: "book" });
-    });
-    App.state.characters.forEach(function (c) {
-      items.push({ group: "角色", title: c.name, sub: c.role, path: "story/bible", params: { tab: "character", id: c.id }, icon: "users" });
-    });
-    App.state.assets.forEach(function (a) {
-      items.push({ group: "资产", title: a.name, sub: a.version + " · 引用 " + a.refs + " 次", path: "production/assets", params: { id: a.id }, icon: "image" });
-    });
-    App.state.shots.forEach(function (s) {
-      items.push({ group: "镜头", title: s.id + " · " + s.title, sub: "EP" + s.ep + " · " + s.size, path: "production/storyboard", params: { shot: s.id }, icon: "activity" });
-    });
+    if (hasProject) {
+      App.state.episodes.forEach(function (ep) {
+        items.push({ group: "剧集", title: "EP" + ep.no + " · " + ep.title, sub: ep.hook, path: "production/script", params: { ep: ep.no }, icon: "book" });
+      });
+      App.state.characters.forEach(function (c) {
+        items.push({ group: "角色", title: c.name, sub: c.role, path: "story/bible", params: { tab: "character", id: c.id }, icon: "users" });
+      });
+      App.state.assets.forEach(function (a) {
+        items.push({ group: "资产", title: a.name, sub: a.version + " · 引用 " + a.refs + " 次", path: "production/assets", params: { id: a.id }, icon: "image" });
+      });
+      App.state.shots.forEach(function (s) {
+        items.push({ group: "镜头", title: s.id + " · " + s.title, sub: "EP" + s.ep + " · " + s.size, path: "production/storyboard", params: { shot: s.id }, icon: "activity" });
+      });
+    }
     if (App.hasPerm("member:read")) {
       App.state.members.forEach(function (m) {
         if (!App.inScope(m.deptId, null)) return;
