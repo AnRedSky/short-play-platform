@@ -33,6 +33,10 @@
 - [工作流引擎决策](13-ai-governance/WORKFLOW_ENGINE_DECISION.md)
 - [第三方软件与许可证治理](14-compliance/THIRD_PARTY_LICENSES.md)
 
+## 原型与竞品调研
+- [V5 高保真静态原型](../prototype/v5/README.md)：28 条路由，私有化内部制作台定位；含独立生成台、分镜画布、配音台、成片预览中心。
+- [短剧平台开源竞品分析清单](15-competitor/COMPETITOR_ANALYSIS.md)：GitHub 主流项目三组对照、五维归纳、与基线能力矩阵及 V5 机会点映射。
+
 ## 规范性约定
 - MUST/必须：交付必须满足的要求；SHOULD/建议：默认采用，例外需记录理由；MAY/可选：按阶段启用。
 - 所有设计状态、开发状态、测试状态和发布状态分开记录。
