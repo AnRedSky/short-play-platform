@@ -159,6 +159,7 @@ window.App = (function () {
       result: "success",
       severity: severity || "normal",
       deptId: u.deptId || "d-exec",
+      tenantId: App.state.currentTenantId || null,
       projectId: projectId === undefined ? App.state.project.id : projectId
     };
     App.state.audit.unshift(entry);

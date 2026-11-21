@@ -604,7 +604,13 @@ window.DB = (function () {
       ],
       pipeline: { story: "done", episodes: "done", assets: "active", board: "active", generate: "todo", qa: "todo", timeline: "locked", export: "locked" },
       chapters: chapters.map(function (c, i) {
-        return { no: String(i + 1).padStart(2, "0"), title: c[0], words: c[1], range: "第 " + (i + 1) + " 章", status: i < 3 ? "parsed" : "pending", ep: i < 24 ? String(Math.min(12, Math.floor(i / 2) + 1)).padStart(2, "0") : "" };
+        /* V6 tenant ownership: all production artifacts inherit their owning project tenant. */
+    [episodes,scenes,characters,assets,shots,tasks,exports,dubbingLines,canvasNodes,canvasEdges,previews].forEach(function(rows){
+      rows.forEach(function(item){item.tenantId=item.tenantId||"tn-prod";item.projectId=item.projectId||"nyjm";});
+    });
+    playground.forEach(function(item){item.tenantId=item.tenantId||"tn-prod";});
+    audit.forEach(function(item){var map={nyjm:"tn-prod",whgx:"tn-prod",dlcr:"tn-lab",crgz:"tn-brand"};item.tenantId=item.projectId?map[item.projectId]||"tn-prod":null;});
+    return { no: String(i + 1).padStart(2, "0"), title: c[0], words: c[1], range: "第 " + (i + 1) + " 章", status: i < 3 ? "parsed" : "pending", ep: i < 24 ? String(Math.min(12, Math.floor(i / 2) + 1)).padStart(2, "0") : "" };
       }),
       entities: [
         { name: "周砚", type: "人物", mentions: 218, status: "confirmed", note: "主角 · 书店店主" },
@@ -635,8 +641,8 @@ window.DB = (function () {
       ],
       shots: shots,
       tasks: tasks,
-      qa: { ep: "01", score: 94, status: "review", checkedAt: "今天 00:02", rule: "qa-rules-2026.11", items: qaItems, comments: comments, reviewer: "周可", reviewerNote: "" },
-      timeline: { ep: "01", version: "TL v4", name: "EP01 · 雨夜书店 · 粗剪", duration: 92, fps: 30, tracks: tracks, approved: false },
+      qa: { tenantId: "tn-prod", projectId: "nyjm", ep: "01", score: 94, status: "review", checkedAt: "今天 00:02", rule: "qa-rules-2026.11", items: qaItems, comments: comments, reviewer: "周可", reviewerNote: "" },
+      timeline: { tenantId: "tn-prod", projectId: "nyjm", ep: "01", version: "TL v4", name: "EP01 · 雨夜书店 · 粗剪", duration: 92, fps: 30, tracks: tracks, approved: false },
       exports: exports,
       members: members,
       roles: roles,
