@@ -356,7 +356,7 @@ window.App = (function () {
     var visible = visibleRoutes(m, hasProject);
     if (!visible.length) return "";
     var items = visible.map(function (r) { return navItemHTML(r, activePath); }).join("");
-    return '<div class="nav-group"><div class="nav-label">' + UI.esc(m.label) + '</div><div class="nav">' + items + "</div></div>";
+    return '<div class="nav-group"><div class="nav">' + items + "</div></div>";
   }
 
   function systemGroupHTML(m, activePath, hasProject) {
@@ -366,8 +366,8 @@ window.App = (function () {
     var open = activeInGroup || !collapsedGroups[m.group];
     var items = visible.map(function (r) { return navItemHTML(r, activePath); }).join("");
     return '<div class="nav-group nav-group--sub' + (open ? " open" : "") + '" data-sub="' + m.group + '">' +
-      '<button class="nav-label nav-label--toggle" data-app="toggle-group" data-group="' + m.group + '" aria-expanded="' + open + '">' +
-      '<span>' + UI.esc(m.label) + '</span><span class="chev">' + UI.icon("down", 13) + "</span></button>" +
+      '<button class="nav-label--toggle" data-app="toggle-group" data-group="' + m.group + '" aria-expanded="' + open + '">' +
+      '<span class="ni-icon">' + UI.icon(m.icon || "sliders", 16) + '</span><span class="nt-label">' + UI.esc(m.label) + '</span><span class="chev">' + UI.icon("down", 13) + "</span></button>" +
       '<div class="nav nav--sub">' + items + "</div></div>";
   }
 
