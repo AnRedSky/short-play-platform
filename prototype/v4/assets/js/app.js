@@ -24,8 +24,18 @@ window.App = (function () {
     "review/qa": "qa:read",
     "review/timeline": "timeline:read",
     "delivery/export": "export:read",
-    "system/team": "team:manage",
-    "system/settings": "settings:manage"
+    "system/access": null,
+    "system/overview": "workspace:read",
+    "system/org": "org:read",
+    "system/members": "member:read",
+    "system/roles": "role:manage",
+    "system/security": "security:manage",
+    "system/audit": "audit:read",
+    "system/integrations": "integration:manage",
+    "system/billing": "billing:manage",
+    "system/workspace": "workspace:manage",
+    "system/settings": "settings:manage",
+    "system/team": "member:read"
   };
 
   var App = {
@@ -52,10 +62,109 @@ window.App = (function () {
   /* ---------- 工具 ---------- */
   App.hasPerm = function (perm) {
     if (!perm) return true;
-    var p = App.currentUser && App.currentUser.perms || [];
+    var u = App.currentUser || {};
+    var p = (u.perms || []).concat(u.tempPerms || []);
     return p.indexOf("*") > -1 || p.indexOf(perm) > -1;
   };
   App.can = App.hasPerm;
+
+  App.memberById = function (id) {
+    return App.state.members.filter(function (m) { return m.id === id; })[0] || null;
+  };
+  App.roleById = function (id) {
+    return App.state.roles.filter(function (r) { return r.id === id; })[0] || null;
+  };
+  App.roleOf = function (member) {
+    return member ? App.roleById(member.roleId) : null;
+  };
+  App.scopeLabel = function (scope) {
+    return ({ org: "全组织", dept: "本部门", project: "所属项目", own: "仅本人" })[scope] || "未知范围";
+  };
+  App.statusLabel = function (status) {
+    return ({ active: "正常", invited: "待接受", suspended: "已停用", revoked: "已撤销" })[status] || status;
+  };
+
+  /* 数据范围判定：身份 -> 角色 -> 范围，用于成员、组织、审计的行级过滤 */
+  App.inScope = function (deptId, projectId) {
+    var u = App.currentUser;
+    if (!u) return false;
+    if ((u.perms || []).indexOf("*") > -1 || u.scope === "org") return true;
+    if (u.scope === "dept") return !deptId || deptId === u.deptId;
+    if (u.scope === "project") {
+      if (!projectId) return true;
+      return (u.projectIds || []).indexOf(projectId) > -1;
+    }
+    return false;
+  };
+
+  App.seatStats = function () {
+    var ms = App.state.members;
+    return {
+      total: ms.length,
+      active: ms.filter(function (m) { return m.status === "active"; }).length,
+      invited: ms.filter(function (m) { return m.status === "invited"; }).length,
+      suspended: ms.filter(function (m) { return m.status === "suspended"; }).length,
+      guests: ms.filter(function (m) { return m.seatType === "guest"; }).length,
+      purchased: App.state.workspace.seatsPurchased,
+      available: Math.max(0, App.state.workspace.seatsPurchased - ms.length)
+    };
+  };
+
+  App.visibleProjects = function () {
+    var u = App.currentUser;
+    if (!u || !App.hasPerm("project:read")) return [];
+    return App.state.projects.filter(function (p) {
+      if (u.scope === "org") return true;
+      return (u.projectIds || []).indexOf(p.id) > -1;
+    });
+  };
+
+  App.logAudit = function (action, target, category, detail, severity, projectId) {
+    var u = App.currentUser || {};
+    var entry = {
+      id: "A-" + (1043 + App.state.audit.length),
+      time: "今天 " + App.nowStamp(),
+      actor: u.name || "系统",
+      actorId: u.id || "system",
+      category: category || "工作区",
+      action: action,
+      target: target || "—",
+      detail: detail || "",
+      ip: "203.0.113.42",
+      result: "success",
+      severity: severity || "normal",
+      deptId: u.deptId || "d-exec",
+      projectId: projectId === undefined ? App.state.project.id : projectId
+    };
+    App.state.audit.unshift(entry);
+    return entry;
+  };
+
+  App.applyMemberRole = function (memberId, roleId) {
+    var m = App.memberById(memberId);
+    var role = App.roleById(roleId);
+    if (!m || !role) return null;
+    m.roleId = role.id;
+    m.role = role.name;
+    var identity = App.state.identities.filter(function (x) { return x.id === memberId; })[0];
+    if (identity) {
+      identity.roleId = role.id;
+      identity.role = role.name;
+      identity.shortRole = role.short;
+      identity.scope = role.scope;
+      identity.perms = role.perms.slice();
+      if (App.currentUser && App.currentUser.id === identity.id) App.currentUser = identity;
+    }
+    return role;
+  };
+
+  App.applyMemberStatus = function (memberId, status) {
+    var m = App.memberById(memberId);
+    if (!m) return;
+    m.status = status;
+    var identity = App.state.identities.filter(function (x) { return x.id === memberId; })[0];
+    if (identity) identity.status = status;
+  };
 
   App.routeAllowed = function (route) {
     var perm = ROUTE_PERMS[route.path];
@@ -114,10 +223,14 @@ window.App = (function () {
   App.setIdentity = function (id) {
     var u = App.state.identities.filter(function (x) { return x.id === id; })[0];
     if (!u) return;
+    if (u.status !== "active") {
+      App.toast("无法切换身份", u.name + " 当前为「" + App.statusLabel(u.status) + "」状态，不能进入工作区。", "warn");
+      return;
+    }
     App.state.currentUserId = id;
     App.currentUser = u;
     App.render();
-    App.toast("已切换身份", u.name + " · " + u.role, "success");
+    App.toast("已切换身份", u.name + " · " + u.role + " · " + App.scopeLabel(u.scope), "success");
   };
 
   App.resetDemo = function () {
@@ -213,9 +326,9 @@ window.App = (function () {
 
     var pct = App.epProgress("01");
     return '<div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M5 19V8.5L12 4l7 4.5V19"/><path d="M9 19v-6h6v6"/><circle cx="12" cy="10" r="1.2" fill="#fff" stroke="none"/></svg></span>' +
-      '<span><span class="brand-name">长夜制作台</span><br><span class="brand-sub">Long Night Studio</span></span></div>' +
+      '<span><span class="brand-name">长夜制作台</span><br><span class="brand-sub">Enterprise Workspace</span></span></div>' +
       '<button class="project-switch" data-app="projects"><span class="ps-badge">长</span>' +
-      '<span class="ps-main"><span class="ps-name">' + UI.esc(App.state.project.name) + '</span><br><span class="ps-meta">' + UI.esc(App.state.project.code) + " · " + App.state.project.episodes + ' 集 · 9:16</span></span>' +
+      '<span class="ps-main"><span class="ps-name">' + UI.esc(App.state.project.name) + '</span><br><span class="ps-meta">' + UI.esc(App.state.project.code) + " · " + App.state.project.members + ' 人 · 企业版</span></span>' +
       '<span class="chev">' + UI.icon("down", 13) + "</span></button>" +
       '<nav class="rail-nav">' + groups + "</nav>" +
       '<div class="rail-progress"><div class="rp-top"><strong>EP01 雨夜书店</strong><span>' + pct + '%</span></div>' +
@@ -230,13 +343,14 @@ window.App = (function () {
     var running = App.taskRunning();
     var select = '<label class="identity-switch" title="切换演示身份"><span class="is-avatar">' + UI.avatar(App.currentUser.name, "sm", App.currentUser.color) + "</span>" +
       '<select data-identity aria-label="切换演示身份">' + App.state.identities.map(function (u) {
-        return '<option value="' + u.id + '"' + (u.id === App.currentUser.id ? " selected" : "") + ">" + UI.esc(u.name + " · " + u.role) + "</option>";
+        return '<option value="' + u.id + '"' + (u.id === App.currentUser.id ? " selected" : "") + ">" + UI.esc(u.name + " · " + (u.shortRole || u.role)) + "</option>";
       }).join("") + "</select>" + UI.icon("down", 12) + "</label>";
     return '<div class="topbar-left"><button class="icon-btn menu-btn" data-app="menu" aria-label="打开导航">' + UI.icon("menu") + "</button>" +
-      '<div class="crumb"><span class="crumb-project">' + UI.esc(App.state.project.name) + '</span><span class="sep">/</span><b>' + UI.esc(crumb || "") + '</b><span class="badge b-teal">制作中</span></div></div>' +
+      '<div class="crumb"><span class="crumb-project">' + UI.esc(App.state.workspace.name) + '</span><span class="sep">/</span><b>' + UI.esc(crumb || "") + '</b><span class="badge b-teal">企业版</span></div></div>' +
       '<div class="spacer"></div>' +
-      '<button class="search-trigger" data-app="search">' + UI.icon("search", 14) + '<span>搜索页面、角色、镜头…</span><span class="kbd">⌘ K</span></button>' +
+      '<button class="search-trigger" data-app="search">' + UI.icon("search", 14) + '<span>搜索页面、成员、角色、镜头…</span><span class="kbd">⌘ K</span></button>' +
       '<button class="task-pill" data-app="tasks"><span class="pulse"></span><span class="tp-count">' + running + '</span><span class="tp-text"> 个任务运行中</span></button>' +
+      '<button class="icon-btn notify-btn" data-app="notify" aria-label="通知中心">' + UI.icon("bell", 17) + '<span class="notify-dot"></span></button>' +
       select;
   }
 
@@ -261,6 +375,7 @@ window.App = (function () {
       if (act === "search") openPalette();
       if (act === "account") openAccount();
       if (act === "projects") openProjects();
+      if (act === "notify") openNotifications();
       if (act === "tasks") {
         if (App.hasPerm("task:read")) App.navigate("review/tasks");
         else App.toast("暂无权限", "当前身份不能查看 AI 任务。", "warn");
@@ -295,23 +410,28 @@ window.App = (function () {
 
   /* ---------- 项目切换 / 账号 ---------- */
   function openProjects() {
-    var body = '<div class="stack">' + App.state.projects.map(function (p) {
+    var visible = App.visibleProjects();
+    if (!visible.length) {
+      App.toast("暂无可见项目", "当前身份不在任何项目的成员名单中。可前往「我的权限」申请项目访问。", "warn");
+      return;
+    }
+    var body = '<div class="stack">' + visible.map(function (p) {
       var cur = p.id === App.state.project.id;
       return '<button class="card card-pad project-choice' + (cur ? " is-current" : "") + '" data-proj="' + p.id + '">' +
         '<span class="pc-mark">' + UI.esc(p.name.charAt(0)) + "</span><span class=\"pc-main\"><b>" + UI.esc(p.name) + "</b>" +
         '<small>' + UI.esc(p.code) + " · " + p.episodes + " 集 · " + UI.esc(p.genre) + " · " + UI.esc(p.stage) + "</small></span>" +
         (cur ? '<span class="badge b-active">当前项目</span>' : '<span class="badge b-todo">' + UI.esc(p.status) + "</span>") + "</button>";
     }).join("") + "</div>" +
-      '<div class="notice info mt-16">' + UI.icon("alert", 15) + "<span>V4 演示数据完整覆盖《长夜将明》。其余项目为工作台示例卡，不承载独立数据。</span></div>";
+      '<div class="notice info mt-16">' + UI.icon("lock", 15) + "<span>项目切换按角色数据范围过滤。外部访客仅看到被邀请的项目；跨项目数据不会带入当前上下文。</span></div>";
     App.modal({
-      title: "切换项目", sub: "项目是生产数据与权限的边界。原型只在内存中切换当前上下文。", body: body,
+      title: "切换项目", sub: "当前身份「" + App.currentUser.name + " · " + App.currentUser.role + "」，数据范围：" + App.scopeLabel(App.currentUser.scope) + "。", body: body,
       footer: '<button class="btn" data-close>取消</button>',
       onMount: function (el, close) {
         el.addEventListener("click", function (e) {
           var b = e.target.closest("[data-proj]");
           if (!b) return;
           if (b.getAttribute("data-proj") === App.state.project.id) { close(); return; }
-          App.toast("示例项目", "该卡片仅用于演示项目切换版式，暂无独立数据。", "warn");
+          App.toast("示例项目", "该卡片用于演示项目数据隔离，暂无独立生产数据。", "warn");
         });
       }
     });
@@ -319,17 +439,59 @@ window.App = (function () {
 
   function openAccount() {
     var u = App.currentUser;
+    var s = App.state;
+    var seat = u.seatType === "guest" ? "访客席位" : "企业席位";
+    var mfa = ({ enforced: "已强制", enabled: "已启用", pending: "待完成", disabled: "已停用" })[u.mfa] || u.mfa;
     var body = '<div class="account-head">' + UI.avatar(u.name, "lg", u.color) +
-      '<div><div class="account-name">' + UI.esc(u.name) + '</div><div class="small muted">' + UI.esc(u.email) + " · " + UI.esc(u.role) + "</div></div></div>" +
-      '<div class="notice mt-16">账号归属「长夜工作室」。原型不接真实鉴权；身份切换只影响菜单、页面与操作入口的可见性。</div>' +
+      '<div><div class="account-name">' + UI.esc(u.name) + '</div><div class="small muted">' + UI.esc(u.email) + " · " + UI.esc(u.title) + "</div>" +
+      '<div class="row wrap mt-8"><span class="badge b-teal">' + UI.esc(u.role) + '</span><span class="badge b-outline">' + UI.esc(seat) + '</span><span class="badge ' + (u.status === "active" ? "b-done" : "b-warn") + '">' + App.statusLabel(u.status) + "</span></div></div></div>" +
+      '<div class="kv mt-8"><div class="k">企业空间</div><div class="v">' + UI.esc(s.workspace.name) + " · " + UI.esc(s.workspace.planName) + '</div>' +
+      '<div class="k">部门</div><div class="v">' + UI.esc(u.dept) + '</div>' +
+      '<div class="k">数据范围</div><div class="v">' + App.scopeLabel(u.scope) + '</div>' +
+      '<div class="k">登录方式</div><div class="v">企业 SSO · MFA ' + mfa + '</div>' +
+      '<div class="k">最近登录</div><div class="v">今天 09:42 · 上海</div></div>' +
+      '<div class="notice mt-16">' + UI.icon("lock", 15) + "<span>原型不接真实鉴权。身份切换只改变前端菜单、页面与操作入口；角色与数据范围由企业管理员维护。</span></div>" +
       '<div class="grid g2 mt-16">' +
-      (App.hasPerm("team:manage") ? '<a class="btn" href="' + App.link("system/team") + '">团队与权限</a>' : "") +
-      (App.hasPerm("settings:manage") ? '<a class="btn" href="' + App.link("system/settings") + '">模型与用量</a>' : "") +
+      '<a class="btn" href="' + App.link("system/access") + '">我的权限</a>' +
+      (App.hasPerm("member:read") ? '<a class="btn" href="' + App.link("system/members") + '">成员与席位</a>' : "") +
+      (App.hasPerm("workspace:manage") ? '<a class="btn" href="' + App.link("system/workspace") + '">工作区设置</a>' : "") +
+      (App.hasPerm("billing:manage") ? '<a class="btn" href="' + App.link("system/billing") + '">订阅与账单</a>' : "") +
       "</div>";
     App.modal({
-      title: "账号与工作区", sub: "当前为演示身份，切换后立即生效。",
+      title: "账号与工作区", sub: "企业级多用户演示身份，切换后立即生效。",
       body: body,
       footer: '<button class="btn" data-close>关闭</button>'
+    });
+  }
+
+  function openNotifications() {
+    var notices = App.state.notices || [];
+    var body = '<div class="stack">' + notices.map(function (n) {
+      return '<button class="list-row notify-row" data-notice="' + UI.esc(n.path || "overview/dashboard") + '" data-params="' + UI.esc(JSON.stringify(n.params || {})) + '">' +
+        '<span class="todo-icon">' + UI.icon(n.type === "review" ? "check" : n.type === "member" ? "users" : "alert", 15) + '</span>' +
+        '<span class="lr-main"><span class="lr-title">' + UI.esc(n.title) + '</span><span class="lr-sub">' + UI.esc(n.meta) + '</span></span>' +
+        '<span class="badge b-warn">待查看</span></button>';
+    }).join("") + "</div>" +
+      '<div class="notice info mt-16">' + UI.icon("bell", 15) + "<span>通知中心只展示与当前工作区相关的待办；外部访客不会收到内部制作通知。</span></div>";
+    App.drawer({
+      eyebrow: "Notification center", title: "通知中心", sub: notices.length + " 条待处理 · 站内信与邮件同步",
+      body: body,
+      footer: '<button class="btn btn-soft" data-act="read-all">全部标记已读</button><button class="btn" data-close>关闭</button>',
+      onMount: function (el, close) {
+        el.addEventListener("click", function (e) {
+          if (e.target.closest('[data-act="read-all"]')) {
+            App.state.notices = [];
+            close(); App.refresh(); App.toast("已全部标记已读", "通知中心已清空。", "success");
+            return;
+          }
+          var b = e.target.closest("[data-notice]");
+          if (!b) return;
+          var path = b.getAttribute("data-notice");
+          var params = {};
+          try { params = JSON.parse(b.getAttribute("data-params") || "{}"); } catch (err) { params = {}; }
+          close(); App.navigate(path, params);
+        });
+      }
     });
   }
 
@@ -352,6 +514,17 @@ window.App = (function () {
     App.state.shots.forEach(function (s) {
       items.push({ group: "镜头", title: s.id + " · " + s.title, sub: "EP" + s.ep + " · " + s.size, path: "production/storyboard", params: { shot: s.id }, icon: "activity" });
     });
+    if (App.hasPerm("member:read")) {
+      App.state.members.forEach(function (m) {
+        if (!App.inScope(m.deptId, null)) return;
+        items.push({ group: "成员", title: m.name, sub: m.role + " · " + m.dept + " · " + App.statusLabel(m.status), path: "system/members", params: { member: m.id }, icon: "users" });
+      });
+    }
+    if (App.hasPerm("org:read")) {
+      App.state.departments.forEach(function (d) {
+        items.push({ group: "部门", title: d.name, sub: "负责人 " + d.lead + " · " + d.desc, path: "system/org", params: { dept: d.id }, icon: "folder" });
+      });
+    }
 
     palette = document.createElement("div");
     palette.className = "palette open";

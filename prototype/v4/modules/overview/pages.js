@@ -5,6 +5,17 @@
 (function () {
   function st() { return App.state; }
 
+  function projectMembers() {
+    var s = st();
+    return s.project.memberIds.map(function (id) {
+      return s.members.filter(function (m) { return m.id === id; })[0];
+    }).filter(Boolean);
+  }
+
+  function memberBadge(m) {
+    return '<span class="badge ' + (m.status === "active" ? "b-done" : m.status === "invited" ? "b-warn" : "b-danger") + '">' + App.statusLabel(m.status) + "</span>";
+  }
+
   var PIPE = [
     ["story", "故事"], ["episodes", "分集"], ["assets", "资产"], ["board", "分镜"],
     ["generate", "生成"], ["qa", "质检"], ["timeline", "时间线"], ["export", "导出"]
@@ -84,9 +95,9 @@
     });
 
     var projects = UI.card({
-      title: "项目", sub: "最近编辑的 4 个工作区", cls: "mt-16",
-      head: '<span class="tiny muted">共 ' + s.projects.length + " 个</span>",
-      body: s.projects.map(function (x) {
+      title: "项目", sub: "当前身份可访问 " + App.visibleProjects().length + " 个", cls: "mt-16",
+      head: '<span class="tiny muted">共 ' + App.visibleProjects().length + " 个</span>",
+      body: App.visibleProjects().map(function (x) {
         var cur = x.id === p.id;
         return '<button class="list-row" data-act="project" data-id="' + x.id + '" style="width:100%;text-align:left;background:none;border-left:0;border-right:0;border-top:0">' +
           '<span class="pc-mark" style="width:30px;height:30px;font-size:12px;' + (cur ? "background:" + "var(--accent);color:#fff" : "") + '">' + UI.esc(x.name.charAt(0)) + "</span>" +
@@ -141,7 +152,7 @@
       '<div class="project-banner"><div class="pb-cover" style="background-image:url(' + UI.scene("bookstore") + ')"><span>NYJM-26 · KEY VISUAL</span></div>' +
       '<div class="pb-main"><div class="pb-title"><h2>' + UI.esc(p.name) + '</h2><span class="badge b-teal">制作中</span><span class="tag">' + UI.esc(p.code) + "</span></div>" +
       '<div class="pb-sub">' + UI.esc(p.genre) + " · " + p.episodes + " 集 · " + UI.esc(p.ratio) + " · " + p.fps + "fps</div>" +
-      '<div class="pb-meta"><div><div class="k">交付日期</div><div class="v">' + UI.esc(p.due) + '</div></div><div><div class="k">当前阶段</div><div class="v">' + UI.esc(p.stage) + '</div></div><div><div class="k">预算 / 已用</div><div class="v">¥12,000 / ¥6,842</div></div><div><div class="k">项目成员</div><div class="v">' + s.members.length + " 人</div></div></div></div></div>" +
+      '<div class="pb-meta"><div><div class="k">交付日期</div><div class="v">' + UI.esc(p.due) + '</div></div><div><div class="k">当前阶段</div><div class="v">' + UI.esc(p.stage) + '</div></div><div><div class="k">预算 / 已用</div><div class="v">¥12,000 / ¥6,842</div></div><div><div class="k">项目成员</div><div class="v">' + p.members + " 人</div></div></div></div></div>" +
 
       '<div class="card pipeline-card"><div class="card-head"><div><h3>八阶段流水线</h3><div class="ch-sub">完成 5 / 8 · 当前卡在资产与分镜</div></div><span class="badge b-active">42% 总进度</span></div>' +
       '<div class="card-body">' + UI.progress(42) + '<div class="mt-16">' + pipelineHTML() + "</div></div></div>" +
@@ -153,10 +164,10 @@
       }).join("") }) +
       UI.card({ title: "12 集季卡", sub: "点击剧集查看剧本；EP01 已锁版", body: '<div class="ep-grid">' + eps + "</div>" }) +
       "</div><div class=\"stack\">" +
-      UI.card({ title: "项目信息", body: '<div class="kv"><div class="k">项目编号</div><div class="v mono">' + UI.esc(p.code) + '</div><div class="k">类型</div><div class="v">' + UI.esc(p.genre) + '</div><div class="k">画幅</div><div class="v">9:16 竖屏 · 1080×1920</div><div class="k">帧率</div><div class="v">30 fps</div><div class="k">所有者</div><div class="v">' + UI.esc(p.owner) + '</div><div class="k">成员</div><div class="v">' + s.members.length + ' 人</div><div class="k">最近更新</div><div class="v">' + UI.esc(p.updated) + "</div></div>" }) +
-      UI.card({ title: "成员", sub: "6 人 · 3 人在线", head: '<button class="btn btn-xs" data-act="members">管理</button>', body: s.members.slice(0, 5).map(function (m) {
-        return '<div class="list-row">' + UI.avatar(m.name, "sm", m.color) + '<span class="lr-main"><span class="lr-title">' + UI.esc(m.name) + '</span><span class="lr-sub">' + UI.esc(m.role) + '</span></span><span class="dot ' + (m.status === "在线" ? "on" : "") + '"></span></div>';
-      }).join("") + '<div class="tiny muted mt-8">还有 1 位成员，点击「管理」查看全部。</div>' }) +
+      UI.card({ title: "项目信息", body: '<div class="kv"><div class="k">项目编号</div><div class="v mono">' + UI.esc(p.code) + '</div><div class="k">类型</div><div class="v">' + UI.esc(p.genre) + '</div><div class="k">画幅</div><div class="v">9:16 竖屏 · 1080×1920</div><div class="k">帧率</div><div class="v">30 fps</div><div class="k">所有者</div><div class="v">' + UI.esc(p.owner) + '</div><div class="k">成员</div><div class="v">' + p.members + ' 人</div><div class="k">最近更新</div><div class="v">' + UI.esc(p.updated) + "</div></div>" }) +
+      UI.card({ title: "成员", sub: projectMembers().length + " 人 · " + projectMembers().filter(function (m) { return m.presence === "online"; }).length + " 人在线", head: '<button class="btn btn-xs" data-act="members">管理</button>', body: projectMembers().slice(0, 5).map(function (m) {
+        return '<div class="list-row">' + UI.avatar(m.name, "sm", m.color) + '<span class="lr-main"><span class="lr-title">' + UI.esc(m.name) + '</span><span class="lr-sub">' + UI.esc(m.role) + '</span></span><span class="dot ' + (m.presence === "online" ? "on" : "") + '"></span></div>';
+      }).join("") + '<div class="tiny muted mt-8">还有 ' + Math.max(0, projectMembers().length - 5) + ' 位成员，点击「管理」查看全部。</div>' }) +
       UI.card({ title: "最近动态", body: activityRows(4) }) +
       "</div></div></div>";
   }
@@ -200,13 +211,13 @@
       });
     },
     members: function () {
-      var s = st();
+      var list = projectMembers();
       App.modal({
-        title: "项目成员", sub: "6 人 · 项目所有者可管理权限", size: "lg",
-        body: '<div class="stack">' + s.members.map(function (m) {
-          return '<div class="list-row">' + UI.avatar(m.name, "", m.color) + '<span class="lr-main"><span class="lr-title">' + UI.esc(m.name) + ' · ' + UI.esc(m.role) + '</span><span class="lr-sub">' + UI.esc(m.dept) + " · " + UI.esc(m.email) + '</span></span><span class="badge ' + (m.status === "在线" ? "b-done" : "b-todo") + '">' + m.status + "</span></div>";
+        title: "项目成员", sub: list.length + " 人 · 项目角色由企业角色与数据范围决定", size: "lg",
+        body: '<div class="stack">' + list.map(function (m) {
+          return '<div class="list-row">' + UI.avatar(m.name, "", m.color) + '<span class="lr-main"><span class="lr-title">' + UI.esc(m.name) + ' · ' + UI.esc(m.role) + '</span><span class="lr-sub">' + UI.esc(m.dept) + " · " + UI.esc(m.email) + '</span></span>' + memberBadge(m) + "</div>";
         }).join("") + "</div>",
-        footer: '<button class="btn" data-close>关闭</button>' + (App.hasPerm("team:manage") ? '<a class="btn btn-primary" href="' + App.link("system/team") + '">团队与权限</a>' : "")
+        footer: '<button class="btn" data-close>关闭</button>' + (App.hasPerm("member:read") ? '<a class="btn btn-primary" href="' + App.link("system/members") + '">成员与席位</a>' : "")
       });
     },
     copyCode: function () {
