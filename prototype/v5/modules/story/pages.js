@@ -61,7 +61,7 @@
     var total = st().characters.length + st().assets.length;
     return '<div class="page">' +
       UI.pageHead({ eyebrow: "Story bible · " + st().storyVersion, title: "故事圣经", desc: "锁定人物、场景、道具与服装的视觉锚点。下游剧本、分镜和生成都会引用这里的版本。",
-        actions: (App.hasPerm("story:write") ? '<button class="btn" data-act="check">' + UI.icon("check") + '一致性检查</button><button class="btn" data-act="new">' + UI.icon("plus") + '新增设定</button><button class="btn btn-primary" data-act="version">保存新版本</button>' : '<span class="badge b-locked">只读身份</span>') }) +
+        actions: '<a class="btn" href="' + App.link("story/import") + '">小说改编</a>' + (App.hasPerm("story:write") ? '<button class="btn" data-act="check">' + UI.icon("check") + '一致性检查</button><button class="btn" data-act="new">' + UI.icon("plus") + '新增设定</button><button class="btn btn-primary" data-act="version">保存新版本</button>' : '<span class="badge b-locked">只读身份</span>') }) +
       '<div class="card"><div class="card-head"><div><h3>设定库</h3><div class="ch-sub">共 ' + total + ' 项 · ' + st().characters.length + ' 角色 + ' + st().assets.length + ' 项制作资产 · 当前 <b>' + st().storyVersion + "</b></div></div><span class=\"badge b-teal\">" + count + " 项当前视图</span></div>" +
       '<div class="card-body">' + tabs + body + "</div></div>" +
       '<div class="notice info mt-16">' + UI.icon("lock", 15) + "<span>保存设定会产生新版本；已被镜头引用的资产会标记待检查。导出前必须通过质检 gate。</span></div></div>";

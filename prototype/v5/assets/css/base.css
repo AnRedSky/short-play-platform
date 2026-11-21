@@ -122,8 +122,9 @@ p { margin: 0; }
 .ps-progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), #f2a36d); }
 
 .rail-nav { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
-.nav-group + .nav-group { border-top: 1px solid var(--rail-line); margin-top: 8px; padding-top: 8px; }
+.nav-group + .nav-group { border-top: 1px solid var(--rail-line); margin-top: 10px; padding-top: 8px; }
 .nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-label { font-size: 10px; letter-spacing: .14em; color: var(--rail-muted); padding: 2px 10px 6px; text-transform: uppercase; }
 
 .nav-label--toggle {
   display: flex; align-items: center; gap: 10px; width: 100%;
@@ -136,8 +137,9 @@ p { margin: 0; }
 .nav-label--toggle .chev { transition: transform .18s ease; }
 .nav-group--sub.open .nav-label--toggle .chev { transform: rotate(180deg); }
 .nav--sub { display: none; }
-.nav-group--sub.open .nav--sub { display: flex; }
+.nav-group--sub.open .nav--sub, .nav-parent.open .nav--sub { display: flex; }
 .nav-group--sub .nav-item { padding-left: 12px; }
+
 .nav-item {
   display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px;
   color: #bcb8c1; font-size: 12.5px; transition: background .16s, color .16s; position: relative;
@@ -148,6 +150,18 @@ p { margin: 0; }
 .nav-item.active .ni-icon, .nav-label--toggle:hover .ni-icon { opacity: 1; }
 .ni-badge { margin-left: auto; min-width: 18px; height: 18px; border-radius: 9px; background: #3a3f48; color: #dfdbe3; font-size: 10px; display: grid; place-items: center; padding: 0 5px; }
 .ni-badge.hot { background: var(--accent); color: #fff; }
+
+.nav-parent .nav-item .ni-icon { opacity: .72; }
+.ni-caret {
+  margin-left: auto; flex: 0 0 auto; width: 22px; height: 22px; display: grid; place-items: center;
+  border: 0; background: transparent; color: var(--rail-muted); cursor: pointer; border-radius: 6px;
+  transition: transform .18s ease, background .16s;
+}
+.ni-caret:hover { background: #2c3038; color: #fff; }
+.nav-parent.open .ni-caret { transform: rotate(180deg); }
+.nav-sub-item { padding-left: 38px; font-size: 12px; color: #a9a5b0; }
+.nav-sub-item .ni-icon { width: 14px; height: 14px; }
+.nav-sub-item:hover { color: #f2ede2; }
 
 .rail-foot {
   display: flex; align-items: center; gap: 8px;

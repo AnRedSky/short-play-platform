@@ -329,52 +329,112 @@ window.App = (function () {
     return out;
   }
 
-  function navGroups() {
-    return App.groupOrder.map(function (g) {
-      return modules.filter(function (m) { return m.group === g; })[0];
-    }).filter(Boolean);
+  function navRoute(path) { return routeMap[path] || null; }
+
+  function navVisible(path, hasProject) {
+    var r = routeMap[path];
+    if (!r || r.nav === false) return false;
+    if (!App.routeAllowed(r)) return false;
+    if (r.path !== "overview/dashboard" && r.group !== "system" && !hasProject) return false;
+    return true;
   }
 
   var collapsedGroups = { system: true };
+  var collapsedParents = {};
 
-  function visibleRoutes(m, hasProject) {
-    return m.routes.filter(function (r) {
-      return r.nav !== false && App.routeAllowed(r) && (r.path === "overview/dashboard" || m.group === "system" || hasProject);
-    });
+  /* 菜单注册表：业务组按生产链路归类；children 将同域次要视图收纳为二级入口。
+     新增主功能时在此追加组或条目即可，路由权限仍由 ROUTE_PERMS 集中控制。 */
+  var NAV_GROUPS = [
+    { id: "overview", label: "总览", items: [
+      { path: "overview/dashboard" },
+      { path: "overview/project" }
+    ]},
+    { id: "create", label: "创作", items: [
+      { path: "story/bible", children: ["story/import"] },
+      { path: "production/episodes" },
+      { path: "overview/playground" }
+    ]},
+    { id: "produce", label: "制作", items: [
+      { path: "production/assets" },
+      { path: "production/storyboard", children: ["production/canvas"] },
+      { path: "production/dubbing" }
+    ]},
+    { id: "review", label: "审核与交付", items: [
+      { path: "review/tasks" },
+      { path: "review/qa", children: ["review/timeline"] },
+      { path: "review/preview" },
+      { path: "delivery/export" }
+    ]},
+    { id: "system", label: "系统管理", system: true, items: [
+      { path: "system/access" },
+      { path: "system/members" },
+      { path: "system/org" },
+      { path: "system/roles" },
+      { path: "system/overview" },
+      { path: "system/security" },
+      { path: "system/audit" },
+      { path: "system/providers" },
+      { path: "system/usage" },
+      { path: "system/workspace" },
+      { path: "system/settings" }
+    ]}
+  ];
+
+  function navBadge(r) {
+    if (r.badge === "tasks" && App.taskRunning() > 0) return '<span class="ni-badge hot">' + App.taskRunning() + "</span>";
+    if (r.badge) return '<span class="ni-badge">' + UI.esc(r.badge) + "</span>";
+    return "";
   }
 
-  function navItemHTML(r, activePath) {
+  function navItemHTML(r, activePath, level) {
     var active = r.path === activePath || r.navParent === activePath;
-    var badge = "";
-    if (r.badge === "tasks" && App.taskRunning() > 0) badge = '<span class="ni-badge hot">' + App.taskRunning() + "</span>";
-    else if (r.badge) badge = '<span class="ni-badge">' + UI.esc(r.badge) + "</span>";
-    return '<a class="nav-item' + (active ? " active" : "") + '" href="' + App.link(r.path) + '">' +
-      '<span class="ni-icon">' + UI.icon(r.icon, 15) + "</span><span>" + UI.esc(r.title.split(" · ")[0]) + "</span>" + badge + "</a>";
+    var cls = "nav-item" + (active ? " active" : "") + (level === 2 ? " nav-sub-item" : "");
+    return '<a class="' + cls + '" href="' + App.link(r.path) + '">' +
+      '<span class="ni-icon">' + UI.icon(r.icon, 15) + "</span><span>" + UI.esc(r.title.split(" · ")[0]) + "</span>" + navBadge(r) + "</a>";
   }
 
-  function groupHTML(m, activePath, hasProject) {
-    var visible = visibleRoutes(m, hasProject);
-    if (!visible.length) return "";
-    var items = visible.map(function (r) { return navItemHTML(r, activePath); }).join("");
-    return '<div class="nav-group"><div class="nav">' + items + "</div></div>";
+  function parentItemHTML(entry, activePath, hasProject) {
+    var r = routeMap[entry.path];
+    var kids = (entry.children || []).filter(function (p) { return navVisible(p, hasProject); });
+    var selfActive = r.path === activePath || r.navParent === activePath;
+    var childActive = kids.indexOf(activePath) > -1;
+    var open = childActive || collapsedParents[entry.path] === true;
+    var kidsHTML = kids.map(function (p) { return navItemHTML(routeMap[p], activePath, 2); }).join("");
+    var caret = kids.length
+      ? '<button class="ni-caret" data-app="toggle-parent" data-path="' + entry.path + '" aria-expanded="' + open + '">' + UI.icon("down", 13) + "</button>"
+      : "";
+    return '<div class="nav-parent' + ((selfActive || childActive) ? " active" : "") + (open ? " open" : "") + '">' +
+      '<a class="nav-item' + (selfActive || childActive ? " active" : "") + '" href="' + App.link(r.path) + '">' +
+        '<span class="ni-icon">' + UI.icon(r.icon, 15) + "</span><span>" + UI.esc(r.title.split(" · ")[0]) + "</span>" + caret + "</a>" +
+      (kids.length ? '<div class="nav nav--sub">' + kidsHTML + "</div>" : "") + "</div>";
   }
 
-  function systemGroupHTML(m, activePath, hasProject) {
-    var visible = visibleRoutes(m, hasProject);
-    if (!visible.length) return "";
-    var activeInGroup = visible.some(function (r) { return r.path === activePath || r.navParent === activePath; });
-    var open = activeInGroup || !collapsedGroups[m.group];
-    var items = visible.map(function (r) { return navItemHTML(r, activePath); }).join("");
-    return '<div class="nav-group nav-group--sub' + (open ? " open" : "") + '" data-sub="' + m.group + '">' +
-      '<button class="nav-label--toggle" data-app="toggle-group" data-group="' + m.group + '" aria-expanded="' + open + '">' +
-      '<span class="ni-icon">' + UI.icon(m.icon || "sliders", 16) + '</span><span class="nt-label">' + UI.esc(m.label) + '</span><span class="chev">' + UI.icon("down", 13) + "</span></button>" +
-      '<div class="nav nav--sub">' + items + "</div></div>";
+  function groupHTML(group, activePath, hasProject) {
+    var visibleItems = group.items.filter(function (it) { return navVisible(it.path, hasProject); });
+    if (!visibleItems.length) return "";
+    var itemsHTML = visibleItems.map(function (it) {
+      var kids = (it.children || []).filter(function (p) { return navVisible(p, hasProject); });
+      if (kids.length) return parentItemHTML(it, activePath, hasProject);
+      var r = routeMap[it.path];
+      return navItemHTML(r, activePath, 1);
+    }).join("");
+
+    if (group.system) {
+      var activeInGroup = visibleItems.some(function (it) { return it.path === activePath; });
+      var open = activeInGroup || !collapsedGroups[group.id];
+      return '<div class="nav-group nav-group--sub' + (open ? " open" : "") + '" data-sub="' + group.id + '">' +
+        '<button class="nav-label--toggle" data-app="toggle-group" data-group="' + group.id + '" aria-expanded="' + open + '">' +
+        '<span class="ni-icon">' + UI.icon("sliders", 16) + '</span><span class="nt-label">' + UI.esc(group.label) + '</span><span class="chev">' + UI.icon("down", 13) + "</span></button>" +
+        '<div class="nav nav--sub">' + itemsHTML + "</div></div>";
+    }
+
+    return '<div class="nav-group"><div class="nav-label">' + UI.esc(group.label) + '</div><div class="nav">' + itemsHTML + "</div></div>";
   }
 
   function railHTML(activePath) {
     var hasProject = App.visibleProjects().length > 0;
-    var groups = navGroups().map(function (m) {
-      return m.group === "system" ? systemGroupHTML(m, activePath, hasProject) : groupHTML(m, activePath, hasProject);
+    var groups = NAV_GROUPS.map(function (g) {
+      return groupHTML(g, activePath, hasProject);
     }).join("");
 
     var visibleProjects = App.visibleProjects();
@@ -436,6 +496,14 @@ window.App = (function () {
       if (act === "toggle-group") {
         var g = el.getAttribute("data-group");
         collapsedGroups[g] = !collapsedGroups[g];
+        App.refresh();
+        return;
+      }
+      if (act === "toggle-parent") {
+        e.preventDefault();
+        e.stopPropagation();
+        var p = el.getAttribute("data-path");
+        collapsedParents[p] = !collapsedParents[p];
         App.refresh();
         return;
       }

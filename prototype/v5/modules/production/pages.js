@@ -363,7 +363,7 @@
     var tabs = UI.tabs([{ key: "all", label: "全部", count: counts.all }, { key: "ready", label: "已就绪", count: counts.ready }, { key: "review", label: "待确认", count: counts.review }, { key: "generating", label: "生成中", count: counts.generating }, { key: "todo", label: "未开始", count: counts.todo }], shotFilter, "sfilter");
     return '<div class="page">' +
       UI.pageHead({ eyebrow: "Storyboard · EP01", title: "分镜台", desc: "12 个镜头，每个镜头都绑定 Shot Contract：景别、运镜、时长、色彩与参考资产。",
-        actions: '<div class="btn-group"><button class="' + (shotView === "grid" ? "active" : "") + '" data-act="view" data-view="grid">网格</button><button class="' + (shotView === "list" ? "active" : "") + '" data-act="view" data-view="list">列表</button></div>' + (App.hasPerm("board:write") ? '<button class="btn btn-primary" data-act="batch">' + UI.icon("spark") + "批量生成候选</button>" : "") }) +
+        actions: '<a class="btn" href="' + App.link("production/canvas") + '">画布视图</a><div class="btn-group"><button class="' + (shotView === "grid" ? "active" : "") + '" data-act="view" data-view="grid">网格</button><button class="' + (shotView === "list" ? "active" : "") + '" data-act="view" data-view="list">列表</button></div>' + (App.hasPerm("board:write") ? '<button class="btn btn-primary" data-act="batch">' + UI.icon("spark") + "批量生成候选</button>" : "") }) +
       '<div class="grid g4 mb-16">' + UI.stat({ label: "镜头总数", value: "12", delta: "EP01 · 8 场" }) +
       UI.stat({ label: "已就绪", value: String(counts.ready), delta: "可直接进入时间线" }) +
       UI.stat({ label: "待确认", value: String(counts.review), delta: "需导演确认" }) +
