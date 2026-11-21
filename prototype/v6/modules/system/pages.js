@@ -85,7 +85,7 @@
       UI.stat({ label: "项目成员授权", value: String(projectChips ? App.visibleProjects().length : 0), unit: "个", delta: "跨项目资源默认拒绝" }) + "</div>" +
       '<div class="grid g-2-1 mt-16"><div class="card"><div class="card-head"><div><h3>权限明细</h3><div class="ch-sub">系统 RBAC · 未授予项保留可见，便于申请</div></div><span class="tag">' + granted + " / " + total + "</span></div><div class=\"card-body\">" + groupHtml + "</div></div>" +
       '<div class="stack"><div class="card"><div class="card-head"><div><h3>项目成员授权</h3><div class="ch-sub">双层校验的第二层，独立于系统角色</div></div>' + scopeBadge(u.scope) + '</div><div class="card-body"><div class="kv"><div class="k">所属部门</div><div class="v">' + UI.esc(u.dept) + '</div><div class="k">系统角色范围</div><div class="v">' + App.scopeLabel(u.scope) + '</div><div class="k">可进入项目</div><div class="v">' + (projectChips || '<span class="muted">暂无项目授权</span>') + '</div><div class="k">临时授权</div><div class="v">' + temp + "</div></div>" +
-      '<div class="notice info mt-12">' + UI.icon("lock", 15) + "<span>组织与部门只用于人员管理，不代表租户；资产、剧本、镜头、任务与导出都必须校验 project_id 和项目成员关系。</span></div></div></div>" +
+      '<div class="notice info mt-12">' + UI.icon("lock", 15) + "<span>组织单元与租户是两层关系；项目、剧本、镜头、任务和导出需同时校验 tenant_id、project_id 与项目成员关系。</span></div></div></div>" +
       '<div class="card"><div class="card-head"><div><h3>可访问路由</h3><div class="ch-sub">侧栏、搜索与直达 URL 使用同一份权限表</div></div><span class="tag">' + routeAllowed + "</span></div><div class=\"card-body\">" + routeHtml + "</div></div></div></div></div>";
   }
 

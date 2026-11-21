@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PORT="${1:-4173}"
+PORT="${1:-4176}"
 URL="http://127.0.0.1:${PORT}/index.html"
 cd "$DIR"
 
@@ -18,7 +18,7 @@ else
 fi
 
 echo ""
-echo "  长夜制作台 · V5 静态原型"
+echo "  长夜影视 · V6 企业内部多租户静态原型"
 echo "  $URL"
 echo "  数据为纯内存态，刷新页面即恢复演示初始值。"
 echo "  Ctrl+C 停止服务。"

@@ -1,5 +1,5 @@
 /* ============================================================
-   长夜制作台 V5 · 应用层
+   长夜制作台 V6 · 应用层
    路由注册、导航装配、内存态、权限判定、搜索与反馈组件。
    依赖：DB -> UI -> App -> modules
    ============================================================ */
@@ -46,7 +46,7 @@ window.App = (function () {
   var App = {
     state: null,
     currentUser: null,
-    groupOrder: ["overview", "story", "production", "review", "delivery", "system"]
+    groupOrder: ["tenants", "overview", "story", "production", "review", "delivery", "system"]
   };
 
   /* ---------- 模块注册 ---------- */

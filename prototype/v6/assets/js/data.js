@@ -351,7 +351,7 @@ window.DB = (function () {
     ];
     var tenantProjectMap={nyjm:"tn-prod",whgx:"tn-prod",dlcr:"tn-lab",crgz:"tn-brand"};
     members.forEach(function(m){m.tenantIds=m.id==="u-owner"||m.id==="u-admin"?["tn-prod","tn-lab","tn-brand","tn-archive"]:(m.projects||[]).map(function(id){return tenantProjectMap[id];}).filter(function(id,i,a){return id&&a.indexOf(id)===i;});if(m.id==="m-tang")m.tenantIds=["tn-prod"];});
-    identities.forEach(function(u){var m=members.filter(function(x){return x.id===u.id;})[0];u.tenantIds=m?m.tenantIds.slice():[];});
+    identities.forEach(function(u){var m=members.filter(function(x){return x.id===u.id;})[0];u.tenantIds=m?m.tenantIds.slice():[];u.perms=u.perms||[];if(u.perms.indexOf("tenant:read")<0)u.perms.push("tenant:read");if(u.roleId==="r-owner"||u.roleId==="r-admin"){u.perms=u.perms.concat(["tenant:manage","tenant:member","tenant:policy","tenant:cross"]);}else if(u.roleId==="r-director"||u.roleId==="r-manager"){u.perms.push("tenant:member");}});
 
     var departments = [
       { id: "d-root", name: "长夜影视", parent: null, leadId: "u-owner", lead: "陈默", type: "root", desc: "企业根组织" },
@@ -588,7 +588,7 @@ window.DB = (function () {
       workspace: workspace,
       departments: departments,
       project: {
-        id: "nyjm", name: "长夜将明", code: "NYJM-26", genre: "悬疑 / 都市 / 温情", episodes: 12, ratio: "9:16", fps: 30,
+        id: "nyjm", tenantId: "tn-prod", name: "长夜将明", code: "NYJM-26", genre: "悬疑 / 都市 / 温情", episodes: 12, ratio: "9:16", fps: 30,
         tagline: "一间只在雨夜营业的旧书店，一本提前写好名字的账簿。",
         synopsis: "周砚在暴雨夜收到一本没有署名的黑皮账簿，第一页写着他自己的名字和死期。十二个夜晚，十二个名字，他必须在天亮之前决定：谁被写进最后一页。",
         stage: "资产与分镜", progress: 42, due: "2026-12-12", budget: 12000, spend: 6842,
@@ -597,10 +597,10 @@ window.DB = (function () {
         updated: "今天 00:12"
       },
       projects: [
-        { id: "nyjm", name: "长夜将明", code: "NYJM-26", genre: "悬疑", episodes: 12, ratio: "9:16", progress: 42, stage: "资产与分镜", status: "制作中", updated: "今天 00:12", tweaks: "current", ownerId: "u-owner", memberIds: ["u-owner", "u-director", "u-writer", "u-art", "u-editor", "u-reviewer", "u-manager", "u-guest", "m-zhao"] },
-        { id: "whgx", name: "雾港来信", code: "WHGX-11", genre: "都市情感", episodes: 8, ratio: "9:16", progress: 76, stage: "配音与字幕", status: "制作中", updated: "昨天 19:40", ownerId: "u-manager", memberIds: ["u-owner", "u-manager", "u-writer", "u-editor", "m-he", "m-luo"] },
-        { id: "dlcr", name: "第六次日落", code: "DLCR-08", genre: "科幻", episodes: 6, ratio: "16:9", progress: 18, stage: "剧本与分集", status: "制作中", updated: "昨天 11:02", ownerId: "u-art", memberIds: ["u-owner", "u-art", "u-manager", "m-zhao"] },
-        { id: "crgz", name: "春日故障", code: "CRGZ-03", genre: "轻喜剧", episodes: 10, ratio: "9:16", progress: 100, stage: "已交付", status: "已归档", updated: "11-08", ownerId: "u-owner", memberIds: ["u-owner", "u-director"] }
+        { id: "nyjm", tenantId: "tn-prod", name: "长夜将明", code: "NYJM-26", genre: "悬疑", episodes: 12, ratio: "9:16", progress: 42, stage: "资产与分镜", status: "制作中", updated: "今天 00:12", tweaks: "current", ownerId: "u-owner", memberIds: ["u-owner", "u-director", "u-writer", "u-art", "u-editor", "u-reviewer", "u-manager", "u-guest", "m-zhao"] },
+        { id: "whgx", tenantId: "tn-prod", name: "雾港来信", code: "WHGX-11", genre: "都市情感", episodes: 8, ratio: "9:16", progress: 76, stage: "配音与字幕", status: "制作中", updated: "昨天 19:40", ownerId: "u-manager", memberIds: ["u-owner", "u-manager", "u-writer", "u-editor", "m-he", "m-luo"] },
+        { id: "dlcr", tenantId: "tn-lab", name: "第六次日落", code: "DLCR-08", genre: "科幻", episodes: 6, ratio: "16:9", progress: 18, stage: "剧本与分集", status: "制作中", updated: "昨天 11:02", ownerId: "u-art", memberIds: ["u-owner", "u-art", "u-manager", "m-zhao"] },
+        { id: "crgz", tenantId: "tn-brand", name: "春日故障", code: "CRGZ-03", genre: "轻喜剧", episodes: 10, ratio: "9:16", progress: 100, stage: "已交付", status: "已归档", updated: "11-08", ownerId: "u-owner", memberIds: ["u-owner", "u-director"] }
       ],
       pipeline: { story: "done", episodes: "done", assets: "active", board: "active", generate: "todo", qa: "todo", timeline: "locked", export: "locked" },
       chapters: chapters.map(function (c, i) {

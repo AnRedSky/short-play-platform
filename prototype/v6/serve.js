@@ -1,11 +1,11 @@
-/* 本地静态服务器：仅用于把 prototype/v5 以 HTTP 方式打开。
+/* 本地静态服务器：仅用于把 prototype/v6 以 HTTP 方式打开。
    不参与原型运行时，也不引入任何第三方依赖。 */
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
 const ROOT = __dirname;
-const PORT = Number(process.argv[2] || 4173);
+const PORT = Number(process.argv[2] || 4176);
 const HOST = "127.0.0.1";
 
 const MIME = {
@@ -52,6 +52,6 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log("V5 prototype: http://" + HOST + ":" + PORT + "/index.html");
+  console.log("V6 internal multi-tenant prototype: http://" + HOST + ":" + PORT + "/index.html");
   console.log("Press Ctrl+C to stop.");
 });

@@ -1,5 +1,5 @@
 param(
-  [int]$Port = 4173,
+  [int]$Port = 4176,
   [switch]$NoBrowser
 )
 
@@ -23,7 +23,7 @@ if ($python) {
 }
 
 Write-Host ""
-Write-Host "  长夜制作台 · V5 静态原型" -ForegroundColor Green
+Write-Host "  长夜影视 · V6 企业内部多租户静态原型" -ForegroundColor Green
 Write-Host "  $url" -ForegroundColor Cyan
 Write-Host "  数据为纯内存态，刷新页面即恢复演示初始值。" -ForegroundColor DarkGray
 Write-Host "  Ctrl+C 停止服务。" -ForegroundColor DarkGray
