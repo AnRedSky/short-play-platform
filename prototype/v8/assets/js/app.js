@@ -22,15 +22,15 @@ window.App=(function(){
   if(action==="new-provider"){modal("添加个人供应商配置",'<div class="notice warn">API 凭据仅属于当前演示员工。原型不保存真实密钥；真实系统需服务端加密保存并脱敏展示。</div>'+UI.field("供应商名称","name","供应商 / 兼容接口")+UI.field("API Endpoint","endpoint","https://api.example.com")+UI.field("API Key（演示）","key","sk-…")+UI.select("能力类型","capability",["文本 / 推理","图像生成","视频生成","语音 / ASR","音乐 / 音效","视频处理"]),"provider-create");return;}
   if(action==="project-open"){const p=DB.projects.find(x=>x.id===el.dataset.id);if(p){modal("项目档案 · "+p.name,'<div class="list-row"><span>负责人</span><b>'+p.owner+'</b></div><div class="list-row"><span>项目状态</span>'+UI.tag(p.status)+'</div><div class="list-row"><span>进度</span><b>'+p.done+'/'+p.episodes+' 集</b></div><div class="list-row"><span>实际费用（演示）</span><b>¥'+p.actual+'</b></div><p class="small muted">项目归属企业；个人模型凭据不随项目共享或移交。</p><button class="btn primary" type="button" data-action="open-creation">进入制作工作台</button>',"noop");}return;}
   if(action==="open-creation"){close();go("creation/brief");return;}
-  if(action==="task-retry"){toast("已创建新的演示重试记录；原失败成本保留。");return;}
-  if(action==="task-pause"){toast("演示任务已暂停派发，运行中供应商任务需以回执确认。");return;}
-  if(action==="asset-version"){toast("已创建新资产版本；旧版本保留。");return;}
-  if(action==="generate"){toast("演示：已创建创意生成任务。未调用真实模型 API。");return;}
-  if(action==="approve-script"){toast("演示审核通过：剧本版本已锁定，进入导演规划。");return;}
-  if(action==="return-script"){toast("已退回剧本并记录修改意见。");return;}
-  if(action==="final-approve"){toast("演示审核通过：可以创建正式交付记录。");return;}
+  if(action==="task-retry"){const old=DB.tasks.find(t=>t.status==="待人工处理"||t.status==="失败");if(old){DB.tasks.unshift({...old,id:"T-RETRY-"+Date.now(),status:"排队中",cost:0,name:old.name+" · 重试"});toast("已创建新重试任务；原任务费用保留。");}else toast("当前没有可重试的失败任务。");render();return;}
+  if(action==="task-pause"){let count=0;DB.tasks.forEach(t=>{if(t.status==="执行中"||t.status==="排队中"){t.status="已暂停";count++;}});toast("已暂停 "+count+" 项演示任务；真实运行任务须以供应商取消回执确认。");render();return;}
+  if(action==="asset-version"){const a=DB.assets[0];if(a){const n=Number(String(a.version).replace(/[^0-9]/g,""))||1;a.version="v"+(n+1);toast("已为 "+a.name+" 创建 "+a.version+"（演示）。");render();}return;}
+  if(action==="generate"){DB.tasks.unshift({id:"T-DEMO-"+Date.now(),project:"SP-26031",name:"创意方案生成（演示）",type:"文本生成",status:"排队中",model:"个人文本模型",cost:0,executor:"林知远"});toast("已创建演示任务；未调用真实模型 API。");render();return;}
+  if(action==="approve-script"){const p=DB.projects.find(x=>x.id==="SP-26028");if(p)p.status="生产准备中";DB.audits.unshift({time:"刚刚",actor:"当前员工",action:"剧本审核通过并锁定",target:"SP-26028 / V3",result:"成功"});toast("演示审核通过：剧本版本已锁定。");render();return;}
+  if(action==="return-script"){const p=DB.projects.find(x=>x.id==="SP-26028");if(p)p.status="创作中";DB.audits.unshift({time:"刚刚",actor:"当前员工",action:"退回剧本修改",target:"SP-26028 / V3",result:"成功"});toast("已退回剧本并记录修改意见。");render();return;}
+  if(action==="final-approve"){const p=DB.projects.find(x=>x.id==="SP-26019");if(p){p.status="已交付";p.done=p.episodes;}DB.audits.unshift({time:"刚刚",actor:"当前员工",action:"最终成片审核通过",target:"SP-26019",result:"成功"});toast("演示审核通过：已更新交付状态。");render();return;}
   if(action==="export"){toast("演示导出：当前为样例数据，不含真实业务账单。");return;}
-  if(action==="verify-provider"){toast("连通性测试为演示反馈，未向供应商发送请求。");return;}
+  if(action==="verify-provider"){const p=DB.providers.find(x=>x.ownerId==="u1"&&x.status!=="已验证");if(p){p.status="已验证";p.updated="刚刚";}toast("演示连通性测试完成；未向供应商发送请求。");render();return;}
   if(action==="new-shot"){toast("已追加一个待规划镜头单元（演示内存态）。");return;}
   if(action==="noop"){toast("已保存演示操作。");return;}
  }
@@ -39,7 +39,7 @@ window.App=(function(){
   else if(action==="employee-create"){if(!data.name||!data.email){toast("请填写姓名和邮箱");return;}DB.users.unshift({id:"u"+Date.now(),name:data.name,email:data.email,department:data.department,role:"普通员工",status:"邀请中",projects:0,delivered:0});close();toast("员工已加入演示列表");render();}
   else if(action==="provider-create"){if(!data.name||!data.endpoint){toast("请填写供应商名称和 Endpoint");return;}DB.providers.unshift({id:"p"+Date.now(),ownerId:"u1",name:data.name,kind:data.capability,models:data.capability,masked:"••••••••（已脱敏）",status:"待验证",updated:"刚刚"});close();toast("个人配置已添加到演示列表");go("models/providers");}
  }
- function start(){document.addEventListener("click",e=>{const el=e.target.closest("[data-action]");if(el)act(el.dataset.action,el);});document.addEventListener("submit",e=>{if(e.target.matches("#dialog-form")){e.preventDefault();submit(e.target);}});document.addEventListener("change",e=>{if(e.target.id==="identity-switch"){A.identity=e.target.value;shell();}});window.addEventListener("hashchange",()=>{A.menuOpen=false;shell();});if(!location.hash)location.hash="#/projects/workbench";else shell();}
+ function start(){document.addEventListener("click",e=>{const el=e.target.closest("[data-action]");if(el)act(el.dataset.action,el);});document.addEventListener("submit",e=>{if(e.target.matches("#dialog-form")){e.preventDefault();submit(e.target);}});document.addEventListener("change",e=>{if(e.target.id==="identity-switch"){A.identity=e.target.value;shell();}});document.addEventListener("input",e=>{if(e.target.matches(".search")){const q=e.target.value.toLowerCase();document.querySelectorAll("#view tbody tr").forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(q)?"":"none";});}});window.addEventListener("hashchange",()=>{A.menuOpen=false;shell();});if(!location.hash)location.hash="#/projects/workbench";else shell();}
  return {register:route,start,go,toast,modal,tableProjects,can,act,render,getRoutes(){return A.routes.slice();},setIdentity(id){A.identity=id;}};
 })();
 window.AppModule={register(cfg){cfg.routes.forEach(r=>App.register(r.path,r.title,r.permission,r.render));}};
