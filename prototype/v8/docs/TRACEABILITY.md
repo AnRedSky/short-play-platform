@@ -15,7 +15,7 @@
 | 个人供应商和模型配置 | models/providers | 员工个人配置、脱敏、连通性反馈 | 基础覆盖 |
 | 个人调用与费用追溯 | models/usage | 调用、执行人、配置人、用量和费用状态 | 结构覆盖 |
 | 数字资产与版本 | assets/library | 资产列表、版本、来源和授权说明 | 基础覆盖 |
-| 企业与员工经营统计 | analytics/enterprise、analytics/employee | 交付、集数、任务成功率、费用归属 | 口径展示 |
+| 企业与员工经营统计 | analytics/enterprise、analytics/employee、analytics/me | 交付、集数、任务成功率、费用归属 | 口径展示 |
 | 内容合规和审计 | compliance/audit | 授权范围、凭据安全、审计事件 | 基础覆盖 |
 | 项目移交 | people/members、README | 业务规则说明；未实现完整移交交互 | 待深化 |
 | 个人模型路由策略 | models/providers、README | 能力和个人配置边界；未实现完整路由编辑 | 待深化 |
