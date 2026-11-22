@@ -30,9 +30,9 @@ window.DB={
  providers:[
   {id:"p1",ownerId:"u1",name:"OpenAI Compatible",kind:"自定义兼容接口",models:"文本 / 推理",masked:"sk-••••••••7K2P",status:"已验证",updated:"11-20"},
   {id:"p2",ownerId:"u1",name:"Video Provider A",kind:"视频生成服务",models:"文生视频 / 图生视频",masked:"vp-••••••••1M8Q",status:"已验证",updated:"11-19"},
-  {id:"p3",ownerId:"u2",name:"Speech Provider",kind:"语音服务",models:"TTS / ASR",masked:"sp-••••••••3N5R",status:"待验证",updated:"11-18"}
+  {id:"p3",ownerId:"u2",name:"Speech Provider",kind:"语音服务",models:"TTS / ASR",masked:"sp-••••••••3N5R",status:"待验证",updated:"11-18"},\n  {id:"p4",ownerId:"u1",name:"Audio Provider C",kind:"音频生成服务",models:"音乐 / 音效",masked:"au-••••••••9B4T",status:"待验证",updated:"11-17"}
  ],
- tasks:[
+ shots:[\n  {id:"SH-017-04",episode:"第 17 集 / 03 场",description:"雨夜街口，人物回头停步",refs:"顾沉 v3 · 雨夜场景 v2",duration:"6 秒",status:"待生产"},\n  {id:"SH-017-05",episode:"第 17 集 / 03 场",description:"近景对白，情绪克制",refs:"顾沉 v3",duration:"8 秒",status:"待生产"},\n  {id:"SH-017-06",episode:"第 17 集 / 04 场",description:"远景，车辆驶离",refs:"旧城区 v2",duration:"5 秒",status:"已确认"}\n ],\n tasks:[
   {id:"T-8812",project:"SP-26031",name:"第 17 集镜头 04 视频生成",type:"视频生成",status:"执行中",model:"Video Model A",cost:38,executor:"林知远"},
   {id:"T-8811",project:"SP-26031",name:"第 17 集角色对白配音",type:"语音合成",status:"排队中",model:"Voice Model B",cost:12,executor:"林知远"},
   {id:"T-8803",project:"SP-26015",name:"第 9 集镜头 02 生成",type:"视频生成",status:"待人工处理",model:"Video Model A",cost:46,executor:"林知远"},
