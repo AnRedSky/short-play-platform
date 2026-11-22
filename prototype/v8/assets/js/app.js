@@ -40,6 +40,6 @@ window.App=(function(){
   else if(action==="provider-create"){if(!data.name||!data.endpoint){toast("请填写供应商名称和 Endpoint");return;}DB.providers.unshift({id:"p"+Date.now(),ownerId:"u1",name:data.name,kind:data.capability,models:data.capability,masked:"••••••••（已脱敏）",status:"待验证",updated:"刚刚"});close();toast("个人配置已添加到演示列表");go("models/providers");}
  }
  function start(){document.addEventListener("click",e=>{const el=e.target.closest("[data-action]");if(el)act(el.dataset.action,el);});document.addEventListener("submit",e=>{if(e.target.matches("#dialog-form")){e.preventDefault();submit(e.target);}});document.addEventListener("change",e=>{if(e.target.id==="identity-switch"){A.identity=e.target.value;shell();}});window.addEventListener("hashchange",()=>{A.menuOpen=false;shell();});if(!location.hash)location.hash="#/projects/workbench";else shell();}
- return {register:route,start,go,toast,modal,tableProjects,can,act,render};
+ return {register:route,start,go,toast,modal,tableProjects,can,act,render,getRoutes(){return A.routes.slice();}};
 })();
 window.AppModule={register(cfg){cfg.routes.forEach(r=>App.register(r.path,r.title,r.permission,r.render));}};
