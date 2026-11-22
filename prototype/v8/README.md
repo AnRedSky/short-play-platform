@@ -38,7 +38,7 @@ chmod +x start.sh
 | 后期与交付 | `production/delivery` | 时间线、质量检查、最终成片审核和交付 |
 | 个人 AI 资源 | `models/providers`、`models/usage` | 个人供应商配置、凭据脱敏、能力和调用记录 |
 | 数字资产 | `assets/library` | 资产检索、版本、来源、授权和复用 |
-| 经营分析 | `analytics/enterprise`、`analytics/employee` | 企业和员工的真实产出统计口径 |
+| 经营分析 | `analytics/enterprise`、`analytics/employee`、`analytics/me` | 企业和员工的真实产出统计口径 |
 | 合规与审计 | `compliance/audit` | 内容授权、个人凭据安全和审计追溯 |
 
 ## 演示身份与权限
