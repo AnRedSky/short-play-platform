@@ -6,7 +6,7 @@
         const body = '<div class="toolbar"><input class="search" placeholder="搜索项目名称或编号"><span class="pill">共 ' + DB.projects.length + ' 个演示项目</span></div>' +
           UI.table(["项目","负责人","题材","集数进度","状态","实际费用（演示）","操作"], App.tableProjects()) +
           '<p class="footer-note">费用示例仅用于原型布局；正式系统需按个人账户扣费、企业承担、报销和赠送额度分别统计。</p>';
-        return UI.head("项目管理","企业项目归属企业空间，负责人和执行人按实际操作记录。",UI.btn("＋ 新建项目","new-project","primary")) + UI.card("项目列表",body);
+        return UI.head("项目管理","企业项目归属企业空间，负责人和执行人按实际操作记录。",App.can("projects.manage")?UI.btn("＋ 新建项目","new-project","primary"):"") + UI.card("项目列表",body);
       }
     },
     {
