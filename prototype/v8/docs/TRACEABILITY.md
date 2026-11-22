@@ -17,8 +17,8 @@
 | 数字资产与版本 | assets/library | 资产列表、版本、来源和授权说明 | 基础覆盖 |
 | 企业与员工经营统计 | analytics/enterprise、analytics/employee、analytics/me | 交付、集数、任务成功率、费用归属 | 口径展示 |
 | 内容合规和审计 | compliance/audit | 授权范围、凭据安全、审计事件 | 基础覆盖 |
-| 项目移交 | people/members、README | 业务规则说明；未实现完整移交交互 | 待深化 |
-| 个人模型路由策略 | models/providers、README | 能力和个人配置边界；未实现完整路由编辑 | 待深化 |
+| 项目移交 | projects/list | 企业管理员移交负责人，记录原因与审计；个人凭据不转移 | 基础覆盖 |
+| 个人模型路由策略 | models/routing | 员工独立设置主模型与备用模型，校验配置不可相同 | 基础覆盖 |
 | 完整任务依赖图和真实回执 | production/generation、README | 静态示意；未接后端 | 非原型生产能力 |
 | 文件存储、质量算法、实际账单 | README | 明确列为未实现边界 | 不在静态原型范围 |
 
