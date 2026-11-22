@@ -11,8 +11,10 @@ window.DB={
  nav:[
   {label:"企业管理",items:[["企业总览","enterprise/overview","⌂","enterprise.read"],["组织与员工","people/members","♙","people.read"],["项目管理","projects/list","▦","projects.read"],["经营分析","analytics/enterprise","▤","analytics.read"],["我的产出","analytics/me","▥","analytics.own"],["合规与审计","compliance/audit","◈","audit.read"]]},
   {label:"AI 短剧制作",items:[["我的工作台","projects/workbench","⌘","projects.own"],["创意与剧本","creation/brief","✎","creation.write"],["导演与分镜","production/board","▧","production.write"],["视频与音频","production/generation","▶","production.write"],["后期与交付","production/delivery","⇧","delivery.write"],["数字资产","assets/library","▤","assets.write"]]},
-  {label:"个人 AI 资源",items:[["模型与供应商","models/providers","◇","models.own"],["调用记录","models/usage","◷","models.own"]]}
+  {label:"个人 AI 资源",items:[["模型与供应商","models/providers","◇","models.own"],["个人模型路由","models/routing","⇄","models.own"],["调用记录","models/usage","◷","models.own"]]}
  ],
+ routePolicy:{primary:"p1",backup:"p4",updated:"11-20"},
+ handovers:[],
  projects:[
   {id:"SP-26031",name:"雾城来信",genre:"悬疑 / 都市",owner:"林知远",ownerId:"u1",status:"生产中",episodes:24,done:16,budget:18000,actual:9260,quality:"良好",updated:"今天 10:42"},
   {id:"SP-26028",name:"逆光的约定",genre:"都市 / 情感",owner:"陈可心",ownerId:"u2",status:"待剧本审核",episodes:20,done:0,budget:12000,actual:680,quality:"待审核",updated:"今天 09:18"},
