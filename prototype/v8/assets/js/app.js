@@ -31,7 +31,7 @@ window.App=(function(){
   if(action==="final-approve"){const p=DB.projects.find(x=>x.id==="SP-26019");if(p){p.status="已交付";p.done=p.episodes;}DB.audits.unshift({time:"刚刚",actor:"当前员工",action:"最终成片审核通过",target:"SP-26019",result:"成功"});toast("演示审核通过：已更新交付状态。");render();return;}
   if(action==="export"){toast("演示导出：当前为样例数据，不含真实业务账单。");return;}
   if(action==="verify-provider"){const p=DB.providers.find(x=>x.ownerId==="u1"&&x.status!=="已验证");if(p){p.status="已验证";p.updated="刚刚";}toast("演示连通性测试完成；未向供应商发送请求。");render();return;}
-  if(action==="new-shot"){toast("已追加一个待规划镜头单元（演示内存态）。");return;}
+  if(action==="new-shot"){DB.shots.push({id:"SH-DEMO-"+String(DB.shots.length+1).padStart(2,"0"),episode:"第 17 集 / 新场",description:"待补充镜头描述",refs:"待绑定视觉资产",duration:"5 秒",status:"待规划"});toast("已追加待规划镜头单元。");render();return;}
   if(action==="noop"){toast("已保存演示操作。");return;}
  }
  function submit(form){const data=Object.fromEntries(new FormData(form).entries());const action=form.dataset.submit;
