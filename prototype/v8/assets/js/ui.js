@@ -2,7 +2,7 @@
 window.UI={
  esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));},
  tag(v){const s=String(v??"");let t=/成功|已交付|已验证|通过|已确认|正式/.test(s)?"green":/异常|失败|待人工|需处理|禁用/.test(s)?"red":/待审核|排队|执行中|待验证|处理中/.test(s)?"amber":"blue";return '<span class="pill '+t+'">'+this.esc(s||"—")+'</span>';},
- btn(label,action,kind=""){return '<button class="btn '+kind+'" data-action="'+this.esc(action)+'">'+this.esc(label)+'</button>';},
+ btn(label,action,kind=""){return '<button type="button" class="btn '+kind+'" data-action="'+this.esc(action)+'">'+this.esc(label)+'</button>';},
  card(title,body,extra=""){return '<section class="card"><h3 class="section-title">'+title+'</h3>'+body+extra+'</section>';},
  metric(label,value,foot,icon="↗"){return '<section class="card"><span class="metric-icon">'+icon+'</span><div class="metric-label">'+label+'</div><div class="metric-value">'+value+'</div><div class="metric-foot">'+foot+'</div></section>';},
  table(headers,rows){return '<div class="table-wrap"><table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join("")+'</tr></thead><tbody>'+rows+'</tbody></table></div>';},
