@@ -58,6 +58,7 @@
           const remaining = Math.max(0, project.episodes - (project.done || 0));
           const versions = DB.scriptVersions.filter(v => v.project === project.id);
           const latest = versions.sort((a, b) => b.version - a.version)[0];
+          const impact = (DB.impactAnalyses || []).find(a => a.project === project.id);
           return UI.page('HUMAN GATE / SCRIPT', '剧本审核台', '人工审核节点 A：确认当前项目的故事方向、分集结构、人物设定、逻辑与合规。', `<div class="head-actions">${UI.btn('下载剧本', 'script:download', 'btn', { id: project.id })}${UI.btn('历史版本', 'script:versions', 'btn', { id: project.id })}${UI.btn('打开创作助手', 'go:studio/brief?id=' + project.id, 'btn')}</div>`, `
     <div class="notice warn">剧本审核是正式生产前的人工决策门。未审核通过的当前项目不能启动导演分镜与后续生产。</div>
     <div class="grid grid-3 section-gap">${UI.metric('当前项目', project.title, '项目编号 ' + project.id, '▤')}${UI.metric('剧本版本', version, latest ? '最近生成 ' + latest.createdAt : '当前候选版本', '↗')}${UI.metric('审核状态', approved ? '已通过' : '待审核', approved ? '正式版本已锁定' : '等待人工决策', approved ? '✓' : '!')}</div>
@@ -67,10 +68,36 @@
     <div data-tab-panel="episodes" hidden>${UI.kpi('计划集数', project.episodes + ' 集')}${UI.kpi('已完成集数', (project.done || 0) + ' 集')}${UI.kpi('待制作集数', remaining + ' 集')}${UI.kpi('镜头生产单元', String(project.shotCount || project.episodes * 8))}${UI.kpi('平均单集字数', latest ? Math.round(latest.words / Math.max(1, project.episodes)).toLocaleString() + ' 字' : '—')}</div>
     <div data-tab-panel="risk" hidden>${RISKS.map(r => `<div class="kpi-line"><span>${UI.esc(r.key)}</span>${UI.tag(r.status, r.tone)}</div>`).join('')}<div class="notice warn section-gap">风险提示为演示状态，需人工结合实际内容确认，平台不伪造检测结论。</div></div>
     <div class="divider"></div><div class="small muted">审核记录绑定当前项目与版本；版本变更应形成新快照，不覆盖已确认版本。</div></div>
-    <div class="card"><div class="card-title">审核决策</div><div class="callout"><div class="callout-icon" aria-hidden="true">✓</div><div><strong>审核提示</strong><p>请结合当前项目创作需求、分集计划和风险提示作出人工判断。原型不伪造真实 AI 检测结果。</p></div></div><label class="field-wrap section-gap"><span class="field-label">审核意见</span><textarea class="field" data-project-field="scriptReviewNote" placeholder="填写通过意见或退回修改建议">${UI.esc(project.scriptReviewNote || '')}</textarea><span class="field-error" hidden></span></label><div class="grid grid-2 section-gap">${UI.btn('退回修改', 'script:return', 'btn')}${approved ? '<button type="button" class="btn btn-lime" disabled>已确认正式版本</button>' : UI.btn('通过并锁定 ' + version, 'script:approve', 'btn-lime')}</div><p class="tiny muted section-gap">通过后形成当前项目的正式版本状态，后续修改应创建新版本并触发影响分析。</p></div></div>`);
+    <div class="card"><div class="card-title">审核决策</div><div class="callout"><div class="callout-icon" aria-hidden="true">✓</div><div><strong>审核提示</strong><p>请结合当前项目创作需求、分集计划和风险提示作出人工判断。原型不伪造真实 AI 检测结果。</p></div></div><label class="field-wrap section-gap"><span class="field-label">审核意见</span><textarea class="field" data-project-field="scriptReviewNote" placeholder="填写通过意见或退回修改建议">${UI.esc(project.scriptReviewNote || '')}</textarea><span class="field-error" hidden></span></label><div class="grid grid-2 section-gap">${UI.btn('退回修改', 'script:return', 'btn')}${approved ? '<button type="button" class="btn btn-lime" disabled>已确认正式版本</button>' : UI.btn('通过并锁定 ' + version, 'script:approve', 'btn-lime')}</div><p class="tiny muted section-gap">通过后形成当前项目的正式版本状态，后续修改应创建新版本并触发影响分析。</p></div></div>
+    ${impact ? `<div class="card section-gap"><div class="card-head"><div><div class="card-title">剧本修改影响分析 · ${UI.esc(impact.version)}</div><div class="card-sub">基线 ${UI.esc(impact.baseVersion)} · ${UI.esc(impact.createdAt)} · 只重生产受影响对象</div></div>${UI.tag(impact.status, impact.status === '已确认' ? 'green' : 'orange')}</div><div class="grid grid-4 section-gap">${UI.kpi('受影响集次', UI.esc(impact.episodes))}${UI.kpi('场景', impact.scenes + ' 个')}${UI.kpi('人物 / 对白', impact.characters + ' / ' + impact.dialogues)}${UI.kpi('镜头 / 音频', impact.shots + ' / ' + impact.audio)}</div><p class="prose section-gap">${UI.esc(impact.note)}</p><div class="notice section-gap">关联任务：${UI.esc((impact.tasks || []).join('、'))} · 时间轴 ${impact.timeline} 条。未受影响集次不重做，避免整剧返工。</div><div class="section-gap">${impact.status === '已确认' ? UI.tag('受影响对象已进入重生产', 'green') : UI.btn('确认仅重生产受影响内容', 'impact:apply', 'btn-lime', { id: impact.id })}${UI.btn('查看生产任务', 'go:pipeline/tasks?id=' + project.id, 'btn-sm')}</div></div>` : ''}`);
         }
       }
     ]
+  });
+
+  App.onAction('impact:apply', trigger => {
+    const impact = (DB.impactAnalyses || []).find(a => a.id === trigger.dataset.id);
+    if (!impact) { App.toast('影响分析记录不存在', 'error'); return; }
+    const project = DB.projects.find(p => p.id === impact.project);
+    if (!project) { return; }
+    App.confirm('确认局部重生产', '仅重生成 ' + impact.episodes + ' 的 ' + impact.shots + ' 个镜头与 ' + impact.audio + ' 段音频，其他集次保持不变。', '确认重生产', () => {
+      impact.status = '已确认';
+      impact.confirmedAt = '刚刚';
+      const exists = (DB.productionTasks || []).some(t => t.project === project.id && t.stage === '剧本影响重生产');
+      if (!exists) {
+        DB.productionTasks.unshift({
+          id: 'PT-' + project.id.replace('SP-', '') + '-IA', project: project.id, tenant: project.tenant, stage: '剧本影响重生产',
+          episode: 7, scene: '第 7–8 集 / 反转铺垫', shot: impact.shots + ' 个受影响镜头', capability: '视频生成',
+          status: '待执行', model: 'Motion Forge 2', backup: 'Motion Forge 1', attempt: 0, maxAttempts: DB.enterprise.policies.retryLimit,
+          cost: 0, failedCost: 0, failure: '', dependsOn: impact.tasks || [], input: '正式剧本 ' + impact.version + ' / 影响分析 ' + impact.id,
+          output: '受影响镜头与音频重生成', startedAt: '', finishedAt: '', quality: 0
+        });
+      }
+      App.logAudit('确认剧本影响重生产', project.title + ' / ' + impact.version + ' / ' + impact.shots + ' 镜头', '成功', '生产');
+      App.save();
+      App.renderRoute();
+      App.toast('已确认局部重生产，仅处理受影响镜头与音频', 'success', '影响分析已确认');
+    }, { details: [{ key: '剧本版本', value: impact.version }, { key: '受影响集次', value: impact.episodes }, { key: '镜头 / 音频', value: impact.shots + ' / ' + impact.audio }], note: '不会整剧重做。' });
   });
 
   /* ---------- 创作操作 ---------- */
@@ -86,6 +113,7 @@
     }
     App.clearFieldError(brief);
     project.brief = brief.value;
+    if (project.status === '草稿') { project.status = '创作中'; project.stage = '创意策划'; }
     project.updated = '刚刚';
     App.save();
     App.logAudit('保存创作需求草稿', project.title + ' / ' + project.id);

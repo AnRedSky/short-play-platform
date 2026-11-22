@@ -87,6 +87,35 @@
         }
       },
       {
+        path: 'pipeline/tasks',
+        stage: 'shoot',
+        order: 3,
+        title: '生产任务台账',
+        icon: '⌗',
+        permission: 'pipeline',
+        badge: function () {
+          const project = App.project();
+          if (!project) return '';
+          const failed = (DB.productionTasks || []).filter(t => t.project === project.id && (t.status === '失败待重试' || t.status === '异常暂停')).length;
+          return failed ? String(failed) : '';
+        },
+        render(params) {
+          const project = App.resolveProject(params ? params.get('id') : '');
+          if (!project) {
+            return UI.page('AI ORCHESTRATION / TASKS', '尚未选择项目', '选择项目后查看 AI 生产任务、依赖、重试与实际成本。', '', `<div class="card">${UI.empty('没有可用项目', '当前身份没有可访问的项目。', UI.btn('返回项目中心', 'go:workspace/projects', 'btn-primary'))}</div>`);
+          }
+          const list = (DB.productionTasks || []).filter(t => t.project === project.id);
+          const summary = App.taskSummary(project);
+          const taskRows = list.map(t => `<tr data-row data-status="${UI.esc(t.status)}" data-search="${UI.esc(t.id)} ${UI.esc(t.stage)} ${UI.esc(t.capability)} ${UI.esc(t.model)} ${UI.esc(t.shot)}"><td class="mono">${UI.esc(t.id)}</td><td>第 ${t.episode} 集 · ${UI.esc(t.scene)}<div class="tiny muted mono">${UI.esc(t.shot)}</div></td><td>${UI.esc(t.stage)}<div class="tiny muted">${UI.esc(t.capability)}</div></td><td>${UI.esc(t.model)}<div class="tiny muted">备用 ${UI.esc(t.backup)}</div></td><td>${UI.tag(t.status, t.status === '已完成' ? 'green' : t.status === '执行中' ? 'lime' : t.status === '失败待重试' ? 'orange' : 'red')}</td><td class="mono">${t.attempt} / ${t.maxAttempts}</td><td class="mono">¥${(t.cost || 0).toLocaleString()}<div class="tiny muted">失败 ¥${(t.failedCost || 0).toLocaleString()}</div></td><td class="row-actions"><button type="button" class="btn btn-sm" data-action="task:view" data-id="${UI.esc(t.id)}">详情</button>${t.status === '失败待重试' || t.status === '异常暂停' ? `<button type="button" class="btn btn-sm btn-ghost" data-action="task:retry" data-id="${UI.esc(t.id)}">重试</button><button type="button" class="btn btn-sm btn-ghost" data-action="task:switch-model" data-id="${UI.esc(t.id)}">切备用</button>` : ''}${t.status === '执行中' ? `<button type="button" class="btn btn-sm btn-ghost" data-action="task:pause" data-id="${UI.esc(t.id)}">暂停</button>` : ''}</td></tr>`).join('');
+
+          return UI.page('AI ORCHESTRATION / TASK LEDGER', 'AI 生产任务台账', '每个任务记录输入、输出、依赖、模型、执行状态、重试次数、实际成本与质检结果，失败不可伪装为成功。', `<div class="head-actions">${UI.btn('生产调度', 'go:pipeline/board?id=' + project.id, 'btn')}${UI.btn('导出任务台账', 'task:export', 'btn', { id: project.id })}</div>`, `
+    <div class="notice">当前项目：${UI.esc(project.title)} / ${UI.esc(project.id)}。任务状态与成本为演示记录，用于验证调度与追溯交互，不代表真实模型调用。</div>
+    <div class="grid grid-4 section-gap">${UI.metric('任务总数', String(summary.total), '当前项目台账', '⌗')}${UI.metric('执行中 / 已完成', summary.running + ' / ' + summary.done, '含并行任务', '◌')}${UI.metric('失败 / 异常暂停', summary.failed + ' / ' + summary.blocked, '需人工决策', '!')}${UI.metric('实际成本', '¥' + summary.cost.toLocaleString(), '失败成本 ¥' + summary.failedCost.toLocaleString(), '￥')}</div>
+    <div class="card section-gap"><div class="card-head"><div><div class="card-title">任务清单 · ${UI.esc(project.title)}</div><div class="card-sub">累计自动重试 ${summary.retries} 次 · 重试上限 ${DB.enterprise.policies.retryLimit} 次</div></div>${UI.tag(project.status, project.status === '异常中' ? 'red' : 'orange')}</div><div class="toolbar"><div class="toolbar-left"><b class="small">执行台账</b></div><div class="toolbar-right"><select class="field toolbar-select" data-row-filter="status" aria-label="按任务状态筛选"><option value="all">全部状态</option><option value="执行中">执行中</option><option value="已完成">已完成</option><option value="失败待重试">失败待重试</option><option value="异常暂停">异常暂停</option><option value="待执行">待执行</option></select><input class="search" data-filter placeholder="搜索任务 / 能力 / 模型 / 镜头"></div></div>${UI.table(['任务', '集次 / 场景', '阶段 / 能力', '模型', '状态', '重试', '成本', '操作'], taskRows, '当前项目暂无生产任务记录', UI.btn('清除筛选', 'filter:clear', 'btn-sm'))}</div>
+    <div class="notice warn section-gap">失败任务会保留失败原因与失败成本；达到重试上限后必须转异常暂停并通知员工，不得自动无限重试。</div>`);
+        }
+      },
+      {
         path: 'pipeline/exceptions',
         stage: 'shoot',
         order: 3,
@@ -158,6 +187,34 @@
     <div class="grid grid-3">${UI.metric('排期条目', String(rowsAll.length), '当前项目已登记窗口', '▤')}${UI.metric('执行中', String(running), 'AI 单元正在生产', '◌')}${UI.metric('待开工 / 已暂停', waiting + ' / ' + paused, '依赖上游或等待处置', '!')}</div>
     <div class="notice section-gap">排期以“集次窗口”为单位，同一窗口内的镜头生产、音频与合成任务共享项目上下文；上游剧本或素材未就绪时，窗口状态保持待开工。</div>
     <div class="card section-gap"><div class="card-head"><div><div class="card-title">集次排期 · ${UI.esc(project.title)}</div><div class="card-sub mono">${UI.esc(project.id)} · 计划 ${project.episodes} 集 / 已完成 ${project.done || 0} 集</div></div>${UI.btn('镜头与分镜', 'go:pipeline/shots?id=' + project.id, 'btn-sm')}</div>${rowsAll.length ? UI.table(['排期编号', '集次', '生产环节', '计划窗口', '生产单元', '负责能力', '状态', '操作'], rows, '当前项目暂无排期') : UI.empty('当前项目尚未排期', '剧本通过后系统按集次自动生成生产窗口；也可手动新增排期。', UI.btn('新增排期窗口', 'schedule:new', 'btn-sm btn-primary', { id: project.id }))}</div>`);
+        }
+      },
+      {
+        path: 'pipeline/quality',
+        stage: 'post',
+        order: 2,
+        title: '质量检测中心',
+        icon: '✳',
+        permission: 'pipeline',
+        badge: function () {
+          const project = App.project();
+          if (!project) return '';
+          const q = App.qualitySummary(project);
+          return (q.fail + q.warn) ? String(q.fail + q.warn) : '';
+        },
+        render(params) {
+          const project = App.resolveProject(params ? params.get('id') : '');
+          if (!project) {
+            return UI.page('QUALITY / INDEPENDENT AUDIT', '尚未选择项目', '选择项目后查看十维质量检测记录。', '', `<div class="card">${UI.empty('没有可用项目', '当前身份没有可访问的项目。', UI.btn('返回项目中心', 'go:workspace/projects', 'btn-primary'))}</div>`);
+          }
+          const q = App.qualitySummary(project);
+          const rows = q.rows.map(item => `<tr data-row data-status="${UI.esc(item.status)}" data-search="${UI.esc(item.dimension)} ${UI.esc(item.note)} ${UI.esc(item.target)}"><td><b>${UI.esc(item.dimension)}</b></td><td>${UI.tag(item.status, item.status === '通过' ? 'green' : item.status === '警告' ? 'orange' : item.status === '不合格' ? 'red' : item.status === '返工中' ? 'orange' : '')}</td><td class="mono">${item.score ? item.score + ' / 100' : '—'}</td><td>${item.issues || 0}</td><td>${UI.esc(item.note)}</td><td class="mono">${UI.esc(item.target)}</td><td class="mono">${UI.esc(item.task)}</td><td class="row-actions">${item.status === '通过' ? '<span class="tiny muted">已通过</span>' : `<button type="button" class="btn btn-sm" data-action="quality:recheck" data-id="${UI.esc(item.id)}">复检</button>`}${item.status === '警告' || item.status === '不合格' || item.status === '返工中' ? `<button type="button" class="btn btn-sm btn-ghost" data-action="quality:rework" data-id="${UI.esc(item.id)}">返工</button>` : ''}</td></tr>`).join('');
+
+          return UI.page('QUALITY / INDEPENDENT AUDIT', '质量检测中心', '十维独立检查：剧本、合规、人物、场景、视频、表演、音频、字幕、剪辑与成片。质检不复用生成模型自评。', `<div class="head-actions">${UI.btn('生产任务台账', 'go:pipeline/tasks?id=' + project.id, 'btn')}${UI.btn('导出质量报告', 'quality:report', 'btn', { id: project.id })}</div>`, `
+    <div class="notice">当前项目：${UI.esc(project.title)} / ${UI.esc(project.id)}。测试数据用于验证检查记录与返工定位，不代表真实 AI 质检结论。</div>
+    <div class="grid grid-4 section-gap">${UI.metric('综合质量分', q.score ? q.score + ' / 100' : '待检测', '已检测维度平均分', '✳')}${UI.metric('通过维度', q.pass + ' / 10', '独立检查通过', '✓')}${UI.metric('警告 / 不合格', q.warn + ' / ' + q.fail, '需定位返工', '!')}${UI.metric('待检测', String(q.pending), '等待上游任务', '◌')}</div>
+    <div class="card section-gap"><div class="card-head"><div><div class="card-title">十维检查记录 · ${UI.esc(project.title)}</div><div class="card-sub">按镜头、对白、音频或制作任务定位问题，尽量只重生成受影响内容</div></div>${UI.tag(project.qualityState || '待检测', q.fail ? 'red' : q.warn ? 'orange' : q.pending ? '' : 'green')}</div><div class="toolbar"><div class="toolbar-left"><b class="small">检查项</b></div><div class="toolbar-right"><select class="field toolbar-select" data-row-filter="status" aria-label="按质检状态筛选"><option value="all">全部状态</option><option value="通过">通过</option><option value="警告">警告</option><option value="不合格">不合格</option><option value="待检测">待检测</option><option value="返工中">返工中</option></select><input class="search" data-filter placeholder="搜索维度 / 问题 / 定位对象"></div></div>${UI.table(['维度', '状态', '评分', '问题数', '检测结论', '定位对象', '关联任务', '操作'], rows, '没有符合条件的质量记录', UI.btn('清除筛选', 'filter:clear', 'btn-sm'))}</div>
+    <div class="grid grid-2 section-gap"><div class="card"><div class="card-title">质检原则</div><p class="prose">质量检查不能完全依赖生成该内容的同一模型自我评价。每个维度保留检查能力、评分、问题数量、定位对象与关联任务，不合格时只重生产受影响镜头、对白、音频或整集。</p><div class="notice warn section-gap">质量问题不会因人工终审通过而自动关闭；返工完成需重新复检并更新质量报告。</div></div><div class="card"><div class="card-title">质量报告构成</div>${UI.kpi('十维检查记录', '10 项')}${UI.kpi('综合评分', q.score ? q.score + ' / 100' : '待检测')}${UI.kpi('未关闭问题', String(q.warn + q.fail))}${UI.kpi('报告版本', 'QC-' + project.id.replace('SP-', '') + ' / V1')}<div class="tiny muted section-gap">导出报告包含维度、状态、评分、问题、定位对象与关联生产任务。</div></div></div>`);
         }
       },
       {
@@ -342,6 +399,182 @@
       App.renderRoute();
       App.toast('排期窗口已删除', 'success', '已删除');
     }, { details: [{ key: '排期编号', value: row.id }, { key: '集次', value: row.episodes }, { key: '状态', value: row.status }], danger: true });
+  });
+
+  /* ---------- 质量检测 ---------- */
+  function qualityOf(trigger) {
+    return (DB.qualityChecks || []).find(q => q.id === trigger.dataset.id);
+  }
+
+  App.onAction('quality:recheck', trigger => {
+    const item = qualityOf(trigger);
+    if (!item) { App.toast('质量检查记录不存在', 'error'); return; }
+    const project = DB.projects.find(p => p.id === item.project);
+    if (!project) { return; }
+    App.runAction(trigger, () => {
+      item.status = '通过';
+      item.score = 93;
+      item.issues = 0;
+      item.note = '独立检查能力复检通过，问题已关闭';
+      const q = App.qualitySummary(project);
+      project.quality = q.score;
+      project.qualityState = q.fail ? '待返工' : q.warn ? '部分待复检' : '已通过';
+      project.updated = '刚刚';
+      App.logAudit('执行质量复检', project.title + ' / ' + item.dimension + ' · ' + item.target, '成功', '生产');
+      App.save();
+      App.renderRoute();
+      App.toast(item.dimension + ' 复检通过', 'success', '质量已更新');
+    }, { loading: '执行独立复检…', delay: 800 });
+  });
+
+  App.onAction('quality:rework', trigger => {
+    const item = qualityOf(trigger);
+    if (!item) { App.toast('质量检查记录不存在', 'error'); return; }
+    const project = DB.projects.find(p => p.id === item.project);
+    if (!project) { return; }
+    App.confirm('发起局部返工 · ' + item.dimension, '仅重生产定位对象 ' + item.target + '，保留其他已合格内容；返工完成后需重新执行该维度复检。', '确认发起返工', () => {
+      const existing = (DB.productionTasks || []).find(t => t.project === project.id && t.quality === 0 && t.input && t.input.indexOf(item.target) > -1);
+      if (!existing) {
+        DB.productionTasks.unshift({
+          id: 'PT-' + project.id.replace('SP-', '') + '-R' + String((DB.productionTasks || []).length + 1),
+          project: project.id,
+          tenant: project.tenant,
+          stage: '局部返工',
+          episode: Number(String(item.target).replace(/[^\d]/g, '').slice(0, 2)) || 1,
+          scene: item.dimension + ' 问题返工',
+          shot: item.target,
+          capability: item.dimension === '音频质量' ? '语音生成' : item.dimension === '字幕质量' ? '语音识别' : '视频生成',
+          status: '待执行',
+          model: 'Motion Forge 2',
+          backup: 'Motion Forge 1',
+          attempt: 0,
+          maxAttempts: DB.enterprise.policies.retryLimit,
+          cost: 0,
+          failedCost: 0,
+          failure: '',
+          dependsOn: item.task && item.task !== '—' ? [item.task] : [],
+          input: item.target + ' / 已锁定参考资产',
+          output: '返工候选素材',
+          startedAt: '',
+          finishedAt: '',
+          quality: 0
+        });
+      }
+      item.status = '返工中';
+      item.note = '已发起局部返工，完成前保持未关闭';
+      project.qualityState = '待返工';
+      App.logAudit('发起局部返工', project.title + ' / ' + item.dimension + ' / ' + item.target, '待处置', '生产');
+      App.save();
+      App.renderRoute();
+      App.toast('已创建局部返工任务，仅处理 ' + item.target, 'success', '返工已发起');
+    }, { details: [{ key: '维度', value: item.dimension }, { key: '定位对象', value: item.target }, { key: '关联任务', value: item.task || '—' }], note: '不会整剧重做。' });
+  });
+
+  App.onAction('quality:report', trigger => {
+    const project = DB.projects.find(p => p.id === trigger.dataset.id) || App.project();
+    if (!project) { return; }
+    App.runAction(trigger, () => {
+      const q = App.qualitySummary(project);
+      const rows = q.rows.map(item => [item.dimension, item.status, item.score || 0, item.issues || 0, item.note, item.target, item.task]);
+      App.download(project.title + '_质量报告_QC-' + project.id.replace('SP-', '') + '.csv', App.toCSV(['维度', '状态', '评分', '问题数', '检测结论', '定位对象', '关联任务'], rows), 'text/csv;charset=utf-8');
+      App.logAudit('导出质量报告', project.title + ' / 综合分 ' + q.score, '成功', '生产');
+    }, { loading: '生成质量报告…', delay: 600 });
+  });
+
+  /* ---------- 生产任务台账 ---------- */
+  function taskOf(trigger) {
+    return (DB.productionTasks || []).find(t => t.id === trigger.dataset.id);
+  }
+
+  App.onAction('task:view', trigger => {
+    const task = taskOf(trigger);
+    if (!task) { App.toast('生产任务不存在', 'error'); return; }
+    const project = DB.projects.find(p => p.id === task.project);
+    App.drawer('生产任务 · ' + task.id, `<div class="grid grid-2">${UI.kpi('所属项目', UI.esc(project ? project.title : task.project))}${UI.kpi('集次 / 场景', '第 ' + task.episode + ' 集 · ' + UI.esc(task.scene))}${UI.kpi('镜头单元', UI.esc(task.shot))}${UI.kpi('阶段 / 能力', UI.esc(task.stage) + ' / ' + UI.esc(task.capability))}${UI.kpi('当前模型', UI.esc(task.model))}${UI.kpi('备用模型', UI.esc(task.backup))}${UI.kpi('执行状态', UI.tag(task.status, task.status === '已完成' ? 'green' : task.status === '执行中' ? 'lime' : task.status === '失败待重试' ? 'orange' : 'red'))}${UI.kpi('重试次数', task.attempt + ' / ' + task.maxAttempts)}${UI.kpi('实际成本', '¥' + (task.cost || 0).toLocaleString())}${UI.kpi('失败成本', '¥' + (task.failedCost || 0).toLocaleString())}${UI.kpi('质量结果', task.quality ? task.quality + ' / 100' : '未检测')}${UI.kpi('前置依赖', UI.esc((task.dependsOn || []).join('、') || '无'))}</div><div class="section-gap"><div class="card-title">输入与输出</div>${UI.kpi('输入资产', UI.esc(task.input || '—'))}${UI.kpi('输出资产', UI.esc(task.output || '—'))}${UI.kpi('开始 / 完成', UI.esc(task.startedAt || '—') + ' → ' + UI.esc(task.finishedAt || '执行中'))}</div>${task.failure ? `<div class="notice warn section-gap"><b>失败原因：</b>${UI.esc(task.failure)}。系统保留失败成本与尝试次数，重试前需确认模型与提示词策略。</div>` : ''}<div class="notice section-gap">任务记录用于追溯企业、员工、项目、镜头、模型、成本与质检结果；演示数据不代表真实模型调用。</div>`, { subtitle: task.project, footer: UI.btn('关闭', 'overlay:close', 'btn') });
+  });
+
+  App.onAction('task:retry', trigger => {
+    const task = taskOf(trigger);
+    if (!task) { App.toast('生产任务不存在', 'error'); return; }
+    if (task.status !== '失败待重试' && task.status !== '异常暂停') { App.toast('仅失败或异常暂停任务可以重试', 'info'); return; }
+    if ((task.attempt || 0) >= (task.maxAttempts || 3)) {
+      task.status = '异常暂停';
+      App.logAudit('任务达到重试上限', task.id + ' / ' + task.failure, '待处置', '生产');
+      App.save();
+      App.renderRoute();
+      App.toast('任务已达重试上限，转为异常暂停并等待人工决策', 'warning', '需要处置');
+      return;
+    }
+    App.runAction(trigger, () => {
+      task.attempt = (task.attempt || 0) + 1;
+      task.cost = (task.cost || 0) + 10;
+      task.status = '执行中';
+      task.startedAt = '刚刚';
+      App.logAudit('重试生产任务', task.id + ' 第 ' + task.attempt + ' 次', '待处置', '生产');
+      App.save();
+      App.renderRoute();
+      App.toast('任务 ' + task.id + ' 已重新提交（第 ' + task.attempt + ' 次）', 'info', '已提交');
+      window.setTimeout(() => {
+        task.status = '已完成';
+        task.quality = 90;
+        task.finishedAt = '刚刚';
+        task.failure = '';
+        App.save();
+        if (App.current && App.current.path === 'pipeline/tasks') App.renderRoute();
+        App.toast('任务 ' + task.id + ' 重试完成，质量检测通过', 'success', '已完成');
+      }, 1600);
+    }, { loading: '重新提交任务…', delay: 400 });
+  });
+
+  App.onAction('task:switch-model', trigger => {
+    const task = taskOf(trigger);
+    if (!task) { App.toast('生产任务不存在', 'error'); return; }
+    if (!task.backup || task.backup === '—') { App.toast('该任务没有可用备用模型', 'error', '无法切换'); return; }
+    App.confirm('切换备用模型 · ' + task.id, '切换到 ' + task.backup + ' 后重新执行当前任务，失败成本与历史尝试保留。', '确认切换', () => {
+      const old = task.model;
+      task.model = task.backup;
+      task.backup = '同类备用模型自动切换';
+      task.status = '执行中';
+      task.attempt = (task.attempt || 0) + 1;
+      task.cost = (task.cost || 0) + 8;
+      task.startedAt = '刚刚';
+      App.logAudit('切换备用模型', task.id + ' / ' + old + ' → ' + task.model, '待处置', '生产');
+      App.save();
+      App.renderRoute();
+      App.toast('任务已切换至 ' + task.model + ' 并重新执行', 'success', '模型已切换');
+      window.setTimeout(() => {
+        task.status = '已完成';
+        task.quality = 91;
+        task.finishedAt = '刚刚';
+        task.failure = '';
+        App.save();
+        if (App.current && App.current.path === 'pipeline/tasks') App.renderRoute();
+        App.toast('备用模型执行完成', 'success', '已完成');
+      }, 1800);
+    }, { details: [{ key: '任务', value: task.id }, { key: '原模型', value: task.model }, { key: '备用模型', value: task.backup }] });
+  });
+
+  App.onAction('task:pause', trigger => {
+    const task = taskOf(trigger);
+    if (!task) { return; }
+    App.confirm('暂停生产任务 · ' + task.id, '暂停后该任务停止消耗资源，已生成内容保留，可在任务台账中恢复。', '确认暂停', () => {
+      task.status = '异常暂停';
+      task.finishedAt = '刚刚';
+      App.logAudit('暂停生产任务', task.id + ' / ' + task.capability, '待处置', '生产');
+      App.save();
+      App.renderRoute();
+      App.toast('任务已暂停，等待人工决策', 'warning', '已暂停');
+    }, { danger: true });
+  });
+
+  App.onAction('task:export', trigger => {
+    const project = DB.projects.find(p => p.id === trigger.dataset.id) || App.project();
+    if (!project) { return; }
+    App.runAction(trigger, () => {
+      const rows = (DB.productionTasks || []).filter(t => t.project === project.id).map(t => [t.id, t.episode, t.scene, t.shot, t.stage, t.capability, t.model, t.backup, t.status, t.attempt + '/' + t.maxAttempts, t.cost, t.failedCost, t.failure || '—', t.quality || 0]);
+      App.download(project.title + '_生产任务台账.csv', App.toCSV(['任务', '集数', '场景', '镜头', '阶段', '能力', '模型', '备用', '状态', '重试', '实际成本', '失败成本', '失败原因', '质检分'], rows), 'text/csv;charset=utf-8');
+      App.logAudit('导出生产任务台账', project.title + ' / ' + rows.length + ' 条', '成功', '生产');
+    }, { loading: '生成任务台账…', delay: 600 });
   });
 
   /* ---------- 后期制作 ---------- */

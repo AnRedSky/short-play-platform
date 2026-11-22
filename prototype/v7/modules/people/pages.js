@@ -38,7 +38,7 @@
           const active = members.filter(m => m.status === '正常').length;
           const invited = members.filter(m => m.status === '待邀请').length;
           const roleLabel = m => DB.roleNames[m.role] || '未分配角色';
-          const rows = members.map(m => `<tr data-row data-status="${UI.esc(m.status)}" data-search="${UI.esc(m.name)} ${UI.esc(m.email)}"><td><div class="entity"><div class="entity-mark" aria-hidden="true">${UI.esc(m.name.slice(0, 1))}</div><div><div class="entity-name">${UI.esc(m.name)}</div><div class="entity-meta">${UI.esc(m.email)}</div></div></div></td><td>${UI.esc(roleLabel(m))}</td><td>${UI.tag(m.status, m.status === '正常' ? 'green' : m.status === '待邀请' ? 'orange' : '')}</td><td>${m.projects}</td><td>${m.delivered}</td><td class="mono">¥${m.cost.toLocaleString()}</td><td class="row-actions"><button type="button" class="btn btn-sm" data-action="member:view" data-id="${UI.esc(m.id)}">详情</button><button type="button" class="btn btn-sm" data-action="member:role" data-id="${UI.esc(m.id)}">改角色</button>${m.status === '待邀请' ? `<button type="button" class="btn btn-sm btn-ghost" data-action="member:resend" data-id="${UI.esc(m.id)}">重发邀请</button>` : m.status === '正常' ? `<button type="button" class="btn btn-sm btn-ghost" data-action="member:disable" data-id="${UI.esc(m.id)}">停用</button>` : `<button type="button" class="btn btn-sm btn-ghost" data-action="member:enable" data-id="${UI.esc(m.id)}">启用</button>`}<button type="button" class="btn btn-sm btn-danger" data-action="member:remove" data-id="${UI.esc(m.id)}">移除</button></td></tr>`).join('');
+          const rows = members.map(m => `<tr data-row data-status="${UI.esc(m.status)}" data-search="${UI.esc(m.name)} ${UI.esc(m.email)}"><td><div class="entity"><div class="entity-mark" aria-hidden="true">${UI.esc(m.name.slice(0, 1))}</div><div><div class="entity-name">${UI.esc(m.name)}</div><div class="entity-meta">${UI.esc(m.email)}</div></div></div></td><td>${UI.esc(roleLabel(m))}</td><td>${UI.tag(m.status, m.status === '正常' ? 'green' : m.status === '待邀请' ? 'orange' : '')}</td><td>${m.projects}</td><td>${m.delivered}</td><td class="mono">¥${m.cost.toLocaleString()}</td><td class="row-actions"><button type="button" class="btn btn-sm" data-action="member:view" data-id="${UI.esc(m.id)}">详情</button><button type="button" class="btn btn-sm" data-action="member:access" data-id="${UI.esc(m.id)}">项目授权</button><button type="button" class="btn btn-sm" data-action="member:role" data-id="${UI.esc(m.id)}">改角色</button>${m.status === '待邀请' ? `<button type="button" class="btn btn-sm btn-ghost" data-action="member:resend" data-id="${UI.esc(m.id)}">重发邀请</button>` : m.status === '正常' ? `<button type="button" class="btn btn-sm btn-ghost" data-action="member:disable" data-id="${UI.esc(m.id)}">停用</button>` : `<button type="button" class="btn btn-sm btn-ghost" data-action="member:enable" data-id="${UI.esc(m.id)}">启用</button>`}<button type="button" class="btn btn-sm btn-danger" data-action="member:remove" data-id="${UI.esc(m.id)}">移除</button></td></tr>`).join('');
 
           return UI.page('PEOPLE / MEMBERS', '成员与身份', '员工账号、租户成员关系及项目资产移交。', UI.btn('邀请员工', 'member:invite', 'btn-primary'), `
     <div class="grid grid-3">${UI.metric('当前租户成员', String(members.length), '展示当前租户的样本成员', '♙')}${UI.metric('正常账号', String(active), '可正常进入当前工作空间', '✓')}${UI.metric('待邀请', String(invited), '等待邀请确认', '＋')}</div>
@@ -67,10 +67,36 @@
     if (!member) { App.toast('成员不存在', 'error'); return; }
     App.memberEditingId = member.id;
     const perms = ROLE_PERMISSIONS[member.role] || ['按角色授权'];
-    App.drawer('成员详情 · ' + member.name, `${UI.kpi('邮箱', UI.esc(member.email))}${UI.kpi('角色', UI.esc(DB.roleNames[member.role] || member.role))}${UI.kpi('账号状态', UI.tag(member.status, member.status === '正常' ? 'green' : 'orange'))}${UI.kpi('加入时间', UI.esc(member.joined || '—'))}${UI.kpi('最近活跃', UI.esc(member.lastActive || '—'))}${UI.kpi('负责项目', String(member.projects))}${UI.kpi('已交付作品', String(member.delivered))}${UI.kpi('累计成本', '¥' + member.cost.toLocaleString())}<div class="section-gap"><div class="card-title">角色权限</div><div class="check-grid">${perms.map(p => `<label class="check-line"><input type="checkbox" checked disabled><span>${UI.esc(p)}</span></label>`).join('')}</div></div><div class="notice section-gap">停用或移除前需移交未完成项目与生产任务，历史交付与审计记录不可删除。</div>`, {
+    const accessIds = member.projectAccess || [];
+    const accessProjects = DB.projects.filter(p => accessIds.indexOf(p.id) > -1);
+    App.drawer('成员详情 · ' + member.name, `${UI.kpi('邮箱', UI.esc(member.email))}${UI.kpi('角色', UI.esc(DB.roleNames[member.role] || member.role))}${UI.kpi('账号状态', UI.tag(member.status, member.status === '正常' ? 'green' : 'orange'))}${UI.kpi('加入时间', UI.esc(member.joined || '—'))}${UI.kpi('最近活跃', UI.esc(member.lastActive || '—'))}${UI.kpi('负责项目', String(member.projects))}${UI.kpi('已交付作品', String(member.delivered))}${UI.kpi('累计成本', '¥' + member.cost.toLocaleString())}${UI.kpi('项目访问授权', accessProjects.length + ' 个项目')}<div class="section-gap"><div class="card-title">租户成员关系</div><div class="kpi-line"><span>${UI.esc((DB.tenants.find(t => t.id === member.tenant) || {}).name || member.tenant)}</span>${UI.tag(DB.roleNames[member.role] || member.role, 'blue')}</div>${(member.tenants || []).map(m => { const t = DB.tenants.find(x => x.id === m.tenant); return `<div class="kpi-line"><span>${UI.esc(t ? t.name : m.tenant)}</span>${UI.tag(DB.roleNames[m.role] || m.role, 'blue')}</div>`; }).join('')}</div><div class="section-gap"><div class="card-title">可访问项目</div>${accessProjects.length ? accessProjects.map(p => `<div class="kpi-line"><span>${UI.esc(p.title)} · ${UI.esc(p.id)}</span>${UI.tag(p.status, p.delivered ? 'green' : 'orange')}</div>`).join('') : `<p class="tiny muted">尚未授予项目访问权，仅可见本人项目。</p>`}</div><div class="section-gap"><div class="card-title">角色权限</div><div class="check-grid">${perms.map(p => `<label class="check-line"><input type="checkbox" checked disabled><span>${UI.esc(p)}</span></label>`).join('')}</div></div><div class="notice section-gap">停用或移除前需移交未完成项目与生产任务，历史交付与审计记录不可删除。</div>`, {
       subtitle: member.id + ' · ' + member.email,
-      footer: `<button type="button" class="btn" data-action="member:role" data-id="${UI.esc(member.id)}">调整角色</button>${UI.btn('关闭', 'overlay:close', 'btn')}`
+      footer: `<button type="button" class="btn" data-action="member:access" data-id="${UI.esc(member.id)}">项目授权</button><button type="button" class="btn" data-action="member:role" data-id="${UI.esc(member.id)}">调整角色</button>${UI.btn('关闭', 'overlay:close', 'btn')}`
     });
+  });
+
+  App.onAction('member:access', trigger => {
+    const member = memberOf(trigger.dataset.id);
+    if (!member) { App.toast('成员不存在', 'error'); return; }
+    App.memberEditingId = member.id;
+    const projects = DB.projects.filter(p => p.tenant === member.tenant);
+    const selected = member.projectAccess || [];
+    const projectChecks = projects.length ? projects.map(p => `<label class="check-line"><input type="checkbox" name="projects" value="${UI.esc(p.id)}"${selected.indexOf(p.id) > -1 ? ' checked' : ''}><span>${UI.esc(p.title)} · ${UI.esc(p.id)} <em class="tiny muted">${p.done || 0}/${p.episodes} 集 · ${UI.esc(p.status)}</em></span></label>`).join('') : '<p class="tiny muted">当前租户暂无项目。</p>';
+    App.modal('项目访问授权 · ' + member.name, `<div class="notice">项目访问权与租户成员关系分开授予。未勾选时成员仅能访问本人负责项目；授权记录写入审计，离职时随移交一并回收。</div><div class="section-gap"><div class="card-title">可授权项目</div><div class="check-grid">${projectChecks}</div></div>`, '保存授权', 'member:access-submit', { subtitle: member.email });
+  });
+
+  App.onSubmit('member:access-submit', form => {
+    const member = memberOf(String(App.memberEditingId));
+    if (!member) { App.toast('成员不存在，请刷新后重试', 'error'); return false; }
+    const ids = form.getAll('projects').map(String).filter(Boolean);
+    member.projectAccess = ids;
+    member.access = ids.length ? '本人项目 + ' + ids.length + ' 个授权项目' : '仅本人项目';
+    App.logAudit('调整成员项目授权', member.name + ' / ' + (ids.length ? ids.join('、') : '仅本人项目'), '成功', '授权');
+    App.save();
+    App.closeModal();
+    App.renderRoute();
+    App.toast(member.name + ' 的项目访问授权已更新', 'success', '已保存');
+    return true;
   });
 
   App.onAction('member:role', trigger => {

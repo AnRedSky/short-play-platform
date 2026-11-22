@@ -59,12 +59,20 @@ window.App = (function () {
         if (!saved || saved.v !== DB.meta.version || !saved.data) return;
         const seedProjects = DB.projects;
         const seedTenants = DB.tenants;
-        const lists = ['projects', 'tenants', 'users', 'assets', 'audits', 'crossAuthorizations', 'schedule', 'postJobs', 'channels', 'releases', 'models', 'deliveries', 'scriptVersions', 'shots'];
+        const seedUsers = DB.users;
+        const lists = ['projects', 'tenants', 'users', 'assets', 'audits', 'crossAuthorizations', 'schedule', 'postJobs', 'channels', 'releases', 'models', 'deliveries', 'scriptVersions', 'shots', 'productionTasks', 'qualityChecks', 'reviews', 'impactAnalyses', 'projectHandovers', 'analyticsSnapshots', 'compliance'];
         lists.forEach(key => {
           if (Array.isArray(saved.data[key])) DB[key] = saved.data[key];
         });
+        if (saved.data.enterprise) DB.enterprise = Object.assign({}, DB.enterprise, saved.data.enterprise);
+        if (saved.data.runtime) {
+          DB.runtime = Object.assign({}, DB.runtime, saved.data.runtime);
+          DB.runtime.config = Object.assign({}, DB.runtime.config, saved.data.runtime.config || {});
+        }
+        if (saved.data.reviews === undefined) DB.reviews = DB.reviews || [];
         /* 兼容早期演示存档：补齐新增字段，并把资产的项目引用从标题迁移为项目 ID */
         DB.projects = DB.projects.map(p => Object.assign({}, seedProjects.find(s => s.id === p.id) || {}, p));
+        DB.users = DB.users.map(u => Object.assign({}, seedUsers.find(s => s.id === u.id) || {}, u));
         DB.tenants = DB.tenants.map(t => Object.assign({}, seedTenants.find(s => s.id === t.id) || {}, t));
         DB.assets.forEach(asset => {
           const project = DB.projects.find(p => p.id === asset.project || p.title === asset.project) || seedProjects.find(p => p.id === asset.project || p.title === asset.project);
@@ -84,8 +92,8 @@ window.App = (function () {
     saveNow() {
       try {
         if (!window.localStorage) return;
-        const data = { state: DB.state };
-        ['projects', 'tenants', 'users', 'assets', 'audits', 'crossAuthorizations', 'schedule', 'postJobs', 'channels', 'releases', 'models', 'deliveries', 'scriptVersions', 'shots'].forEach(key => { data[key] = DB[key]; });
+        const data = { state: DB.state, enterprise: DB.enterprise, runtime: DB.runtime };
+        ['projects', 'tenants', 'users', 'assets', 'audits', 'crossAuthorizations', 'schedule', 'postJobs', 'channels', 'releases', 'models', 'deliveries', 'scriptVersions', 'shots', 'productionTasks', 'qualityChecks', 'reviews', 'impactAnalyses', 'projectHandovers', 'analyticsSnapshots', 'compliance'].forEach(key => { data[key] = DB[key]; });
         window.localStorage.setItem(this.storageKey, JSON.stringify({ v: DB.meta.version, data: data }));
       } catch (error) {
         if (!/opaque origins|SecurityError|localStorage/i.test(error && error.message || '')) console.warn('[proto] 本地状态保存失败', error && error.message);
@@ -680,7 +688,7 @@ window.App = (function () {
           const count = document.querySelector('[data-review-count]');
           const progress = document.querySelector('[data-review-progress]');
           const done = project.reviewChecks.length;
-          const total = document.querySelectorAll('[data-review-check]').length || 7;
+          const total = document.querySelectorAll('[data-review-check]').length || 9;
           if (count) count.innerHTML = UI.tag(done + ' / ' + total, done >= total ? 'green' : 'orange');
           if (progress) progress.textContent = done >= total ? '全部项目已确认' : '请逐项确认后再提交（已确认 ' + done + ' 项）';
         }
@@ -696,15 +704,22 @@ window.App = (function () {
       if (!['project', 'script', 'assets', 'shoot', 'post', 'deliver', 'release'].includes(route.stage)) return false;
       if (targetId) {
         const target = DB.projects.find(p => p.id === targetId);
-        if (target && !target.archived && target.status !== '已归档') return false;
+        if (target && !target.archived && target.status !== '已归档' && !target.terminated && target.status !== '已终止') return false;
       }
       const project = this.project();
-      return !!project && (!!project.archived || project.status === '已归档');
+      return !!project && (!!project.archived || project.status === '已归档' || !!project.terminated || project.status === '已终止');
+    },
+
+    projectFrozenMessage() {
+      const project = this.project();
+      return project && (project.terminated || project.status === '已终止')
+        ? '项目已终止，仅支持查看与导出，不能继续生产或交付'
+        : '项目已归档，仅支持查看与导出，请先恢复项目';
     },
 
     archivedActionAllowed(action) {
       if (['project:restore', 'project:new', 'project:create', 'project:export', 'confirm:run', 'tab', 'filter:clear', 'modal:close', 'overlay:close', 'toast:close', 'nav:toggle', 'nav:close', 'modal:backdrop', 'drawer:backdrop'].includes(action)) return true;
-      return /^(script:download|script:versions|asset:view|asset:download|shot:view|post:view|review:preview|review:export|delivery:manifest|overview:refresh|analytics:)/.test(action);
+      return /^(script:download|script:versions|asset:view|asset:download|shot:view|post:view|review:preview|review:export|delivery:manifest|delivery:report|task:view|task:export|quality:report|overview:refresh|analytics:)/.test(action);
     },
 
     handleClick(event) {
@@ -724,7 +739,7 @@ window.App = (function () {
       }
 
       if (this.isArchivedProjectContext(trigger.dataset.id) && !this.archivedActionAllowed(action)) {
-        this.toast('项目已归档，仅支持查看与导出，请先恢复项目', 'warning', '只读归档');
+        this.toast(this.projectFrozenMessage(), 'warning', '只读项目');
         return;
       }
 
@@ -785,7 +800,7 @@ window.App = (function () {
       const submit = event.submitter;
       if (action !== 'confirm:run' && this.isArchivedProjectContext(action === 'project:update' ? this.editingProjectId : null) && !this.archivedActionAllowed(action)) {
         this.closeModal();
-        this.toast('项目已归档，仅支持查看与导出，请先恢复项目', 'warning', '只读归档');
+        this.toast(this.projectFrozenMessage(), 'warning', '只读项目');
         return;
       }
       if (submit) {
@@ -834,7 +849,7 @@ window.App = (function () {
           this.toast('请填写项目名称', 'error');
           return false;
         }
-        const episodes = Math.max(1, Number(form.get('episodes') || 12));
+        const episodes = Math.max(1, Number(form.get('episodes') || DB.runtime.config.defaultEpisodes || 12));
         const project = {
           id: 'SP-2604' + String(DB.projects.length + 1),
           title: title,
@@ -843,11 +858,14 @@ window.App = (function () {
           tenant: DB.state.tenant,
           episodes: episodes,
           done: 0,
-          status: '创意待启动',
+          status: '草稿',
           updated: '刚刚',
           stage: '创意策划',
+          projectType: '自制短剧',
           cost: 0,
           quality: 0,
+          qualityState: '待检测',
+          deliveredEpisodes: 0,
           shotCount: episodes * 8,
           coverAssets: 0,
           scriptVersion: 1,
@@ -885,10 +903,14 @@ window.App = (function () {
           name: name,
           code: 'NEW-' + String(DB.tenants.length + 1).padStart(2, '0'),
           owner: String(form.get('owner') || '待指定'),
+          admin: String(form.get('owner') || '待指定'),
+          unit: String(form.get('unit') || '待分配组织单元'),
           members: 0,
           projects: 0,
           budget: Number(form.get('budget') || 0),
           used: 0,
+          quotaConcurrency: 3,
+          quotaStorage: 240,
           status: '运行中'
         });
         const identity = this.identity();
@@ -916,9 +938,13 @@ window.App = (function () {
           email: email,
           role: String(form.get('role') || 'employee'),
           tenant: DB.state.tenant,
+          tenants: [{ tenant: DB.state.tenant, role: String(form.get('role') || 'employee') }],
           status: '待邀请',
           projects: 0,
           delivered: 0,
+          episodes: 0,
+          completed: 0,
+          access: '待邀请确认',
           cost: 0,
           joined: '—',
           lastActive: '—'
@@ -930,6 +956,78 @@ window.App = (function () {
         this.renderRoute();
         return true;
       }
+    },
+
+    /* ---------- 质量检查：十维独立检查对象，缺省时按项目生成 ---------- */
+    ensureQualityChecks(project) {
+      if (!Array.isArray(DB.qualityChecks)) DB.qualityChecks = [];
+      const dims = ['剧本质量', '内容合规', '人物一致性', '场景一致性', '视频质量', '表演质量', '音频质量', '字幕质量', '剪辑质量', '成片质量'];
+      let rows = DB.qualityChecks.filter(q => q.project === project.id);
+      if (!rows.length) {
+        rows = dims.map((dimension, index) => ({
+          id: 'QC-' + project.id.replace('SP-', '') + '-' + String(index + 1).padStart(2, '0'),
+          project: project.id,
+          tenant: project.tenant,
+          dimension: dimension,
+          status: project.qualityState === '已通过' ? '通过' : '待检测',
+          score: project.quality || 0,
+          issues: 0,
+          note: project.qualityState === '已通过' ? '历史质量记录已通过，未保留逐维明细' : '尚未执行该维度检查',
+          target: '待定位',
+          task: '—'
+        }));
+        DB.qualityChecks = DB.qualityChecks.concat(rows);
+        this.save();
+      }
+      return dims.map(name => rows.find(row => row.dimension === name)).filter(Boolean);
+    },
+
+    qualitySummary(project) {
+      const rows = this.ensureQualityChecks(project);
+      const scored = rows.filter(row => row.score > 0);
+      const pass = rows.filter(row => row.status === '通过').length;
+      const warn = rows.filter(row => row.status === '警告').length;
+      const fail = rows.filter(row => row.status === '不合格' || row.status === '返工中').length;
+      const pending = rows.filter(row => row.status === '待检测').length;
+      return {
+        rows: rows,
+        pass: pass, warn: warn, fail: fail, pending: pending,
+        score: scored.length ? Math.round(scored.reduce((sum, row) => sum + row.score, 0) / scored.length) : 0
+      };
+    },
+
+    recordReview(project, type, result, note, followup) {
+      if (!Array.isArray(DB.reviews)) DB.reviews = [];
+      const stamp = new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-');
+      const version = type === '剧本审核' ? 'V' + (project.scriptVersion || 1) : 'V' + (project.scriptVersion || 1) + ' 成片';
+      DB.reviews.unshift({
+        id: 'RV-' + String(project.id).replace('SP-', '') + '-' + Date.now().toString().slice(-4),
+        project: project.id,
+        tenant: project.tenant,
+        type: type,
+        subject: project.title,
+        version: version,
+        reviewer: this.identity().user,
+        time: stamp,
+        result: result,
+        note: note || '未填写',
+        tasks: (DB.productionTasks || []).filter(t => t.project === project.id && t.status !== '已完成').map(t => t.id).join('、') || '—',
+        followup: followup || '—'
+      });
+    },
+
+    taskSummary(project) {
+      const list = (DB.productionTasks || []).filter(t => t.project === project.id);
+      return {
+        total: list.length,
+        running: list.filter(t => t.status === '执行中').length,
+        failed: list.filter(t => t.status === '失败待重试').length,
+        blocked: list.filter(t => t.status === '异常暂停').length,
+        done: list.filter(t => t.status === '已完成').length,
+        cost: list.reduce((sum, t) => sum + (t.cost || 0), 0),
+        failedCost: list.reduce((sum, t) => sum + (t.failedCost || 0), 0),
+        retries: list.reduce((sum, t) => sum + Math.max(0, (t.attempt || 0) - 1), 0)
+      };
     },
 
     /* ---------- 镜头生产单元：按项目派生并在本地保留状态 ---------- */
@@ -960,7 +1058,7 @@ window.App = (function () {
     newProject() {
       const tenant = this.tenantName();
       const genreOptions = [{ value: '', label: '请选择题材' }, { value: '都市 / 情感', label: '都市 / 情感' }, { value: '悬疑 / 反转', label: '悬疑 / 反转' }, { value: '古装 / 爱情', label: '古装 / 爱情' }, { value: '现实 / 成长', label: '现实 / 成长' }];
-      this.modal('创建短剧项目', `<div class="form-grid">${UI.fField('项目名称', 'title', { required: true, placeholder: '填写暂定片名，后续可修改', minlength: 2, maxlength: 30, msg: '项目名称需 2–30 个字符' })}${UI.fSelect('题材方向', 'genre', genreOptions, { required: true, msg: '请选择题材方向' })}${UI.fField('计划集数', 'episodes', { value: '12', type: 'number', min: 1, max: 100, required: true, hint: '1–100 集，可在项目档案中调整' })}${UI.fField('单集时长（分钟）', 'duration', { value: '2', type: 'number', min: 1, max: 15, required: true })}${UI.fField('项目归属', 'tenantName', { value: tenant, readonly: true })}${UI.fField('计划预算（元）', 'budget', { value: '30000', type: 'number', min: 1000, step: 1000 })}<label class="field-wrap full"><span class="field-label">创作目标<i class="req" aria-hidden="true">*</i></span><textarea class="field" name="brief" rows="4" required minlength="20" maxlength="500" data-msg="创作目标至少 20 个字符，便于后续生成剧本" placeholder="题材、核心冲突、受众、风格等"></textarea><span class="field-error" hidden></span><span class="field-hint">至少 20 字；提交后将进入创作需求页面。</span></label></div>`, '创建项目', 'project:create', { subtitle: '项目归属当前租户，创建后自动切换上下文' });
+      this.modal('创建短剧项目', `<div class="form-grid">${UI.fField('项目名称', 'title', { required: true, placeholder: '填写暂定片名，后续可修改', minlength: 2, maxlength: 30, msg: '项目名称需 2–30 个字符' })}${UI.fSelect('题材方向', 'genre', genreOptions, { required: true, msg: '请选择题材方向' })}${UI.fField('计划集数', 'episodes', { value: String(DB.runtime.config.defaultEpisodes || 12), type: 'number', min: 1, max: 100, required: true, hint: '1–100 集，可在项目档案中调整' })}${UI.fField('单集时长（分钟）', 'duration', { value: '2', type: 'number', min: 1, max: 15, required: true })}${UI.fField('项目归属', 'tenantName', { value: tenant, readonly: true })}${UI.fField('计划预算（元）', 'budget', { value: String(DB.runtime.config.defaultProjectBudget || 30000), type: 'number', min: 1000, step: 1000 })}<label class="field-wrap full"><span class="field-label">创作目标<i class="req" aria-hidden="true">*</i></span><textarea class="field" name="brief" rows="4" required minlength="20" maxlength="500" data-msg="创作目标至少 20 个字符，便于后续生成剧本" placeholder="题材、核心冲突、受众、风格等"></textarea><span class="field-error" hidden></span><span class="field-hint">至少 20 字；提交后将进入创作需求页面。</span></label></div>`, '创建项目', 'project:create', { subtitle: '项目归属当前租户，创建后自动切换上下文' });
     },
 
     newTenant() {
@@ -976,7 +1074,7 @@ window.App = (function () {
       const project = this.project();
       if (!project) { this.toast('请先创建或选择一个项目', 'error'); return; }
       if (project.scriptApproved) { this.toast('当前剧本已通过审核并锁定，如需修改请先退回', 'error'); return; }
-      if (project.status === '剧本待审核') { this.toast('当前项目剧本已在待审核队列中', 'error'); return; }
+      if (project.status === '待剧本审核') { this.toast('当前项目剧本已在待审核队列中', 'error'); return; }
       const briefField = document.querySelector('[data-project-field="brief"]');
       if (briefField) project.brief = briefField.value;
       if (String(project.brief || '').trim().length < 20) {
@@ -987,7 +1085,7 @@ window.App = (function () {
       if (!project.audience) { this.toast('请选择目标受众', 'error', '无法生成剧本'); const el = document.querySelector('[name="audience"]'); if (el) el.focus(); return; }
       if (!project.visualStyle) { this.toast('请选择视觉风格', 'error', '无法生成剧本'); const el = document.querySelector('[name="visualStyle"]'); if (el) el.focus(); return; }
       const nextVersion = (project.scriptVersion || 1) + 1;
-      project.status = '剧本待审核';
+      project.status = '待剧本审核';
       project.stage = '剧本审核';
       project.scriptVersion = nextVersion;
       project.updated = '刚刚';
@@ -1003,6 +1101,7 @@ window.App = (function () {
         note: '按当前创作需求生成的新候选版本'
       });
       this.logAudit('触发 AI 剧本生成', project.title + ' / V' + nextVersion, '待处置', '项目');
+      this.recordReview(project, '剧本审核', '待审核', 'V' + nextVersion + ' 已生成，等待人工确认', '待人工决策');
       this.toast('「' + project.title + '」V' + nextVersion + ' 剧本已生成，进入待审核', 'success', '生成完成');
       this.renderRoute();
     },
@@ -1013,10 +1112,11 @@ window.App = (function () {
       if (project.scriptApproved) { this.toast('当前剧本版本已确认，无需重复审核', 'error'); return; }
       const version = DB.scriptVersions.find(v => v.project === project.id && v.version === (project.scriptVersion || 1));
       if (version) version.status = '已通过';
-      project.status = '制作准备中';
+      project.status = '生产准备中';
       project.stage = '导演分镜';
       project.scriptApproved = true;
       project.updated = '刚刚';
+      this.recordReview(project, '剧本审核', '通过', project.scriptReviewNote || '确认故事方向、分集结构、人物设定与合规风险', '进入导演分镜与视觉规划');
       this.logAudit('确认正式剧本版本', project.title + ' / V' + (project.scriptVersion || 1));
       this.toast('「' + project.title + '」剧本 V' + (project.scriptVersion || 1) + ' 已锁定，流程进入视觉规划', 'success', '审核通过');
       this.renderRoute();
@@ -1027,10 +1127,11 @@ window.App = (function () {
       if (!project) { this.toast('没有可退回的当前项目', 'error'); return; }
       const version = DB.scriptVersions.find(v => v.project === project.id && v.version === (project.scriptVersion || 1));
       if (version) { version.status = '退回修改'; version.note = reason || version.note; }
-      project.status = '剧本修改中';
+      project.status = '创作中';
       project.stage = '剧本修改';
       project.scriptApproved = false;
       project.updated = '刚刚';
+      this.recordReview(project, '剧本审核', '退回修改', reason || '剧本退回修改', '生成修订版本后重新提交审核');
       this.logAudit('退回剧本修改', project.title + ' / V' + (project.scriptVersion || 1), '待处置');
       this.toast('「' + project.title + '」剧本已退回修改', 'warning', '已退回');
       this.renderRoute();
@@ -1042,7 +1143,7 @@ window.App = (function () {
       if (!project.scriptApproved) { this.toast('请先完成当前项目的剧本审核', 'error'); return; }
       if (project.productionStarted) { this.toast('当前项目的生产计划已在运行', 'error'); return; }
       project.productionStarted = true;
-      project.status = '制作中';
+      project.status = '生产中';
       project.stage = '视频生产';
       this.logAudit('启动生产计划', project.title + ' / ' + project.id);
       this.toast('「' + project.title + '」生产计划已启动（演示状态），任务依赖已展开');
@@ -1053,7 +1154,7 @@ window.App = (function () {
       const project = this.project();
       if (!project || String(project.status).indexOf('异常') === -1) { this.toast('当前项目没有待处置的生产异常', 'error'); return; }
       project.exceptionResolved = true;
-      project.status = '制作中';
+      project.status = '生产中';
       project.stage = '音频合成';
       project.updated = '刚刚';
       DB.postJobs.filter(j => j.project === project.id && j.status === '异常暂停').forEach(j => { j.status = '执行中'; j.updated = '刚刚'; });
@@ -1069,11 +1170,13 @@ window.App = (function () {
       if (project.delivered) { this.toast('当前项目已完成交付归档', 'error'); return; }
       if (project.finalApproved) { this.toast('当前项目最终审核已通过', 'error'); return; }
       if ((project.done || 0) < project.episodes) { this.toast('当前项目尚有 ' + (project.episodes - (project.done || 0)) + ' 集未完成，不能进入最终审核', 'error'); return; }
-      if (!Array.isArray(project.reviewChecks) || project.reviewChecks.length < 7) { this.toast('请先逐项确认最终审核清单', 'error', '清单未完成'); return; }
+      if (!Array.isArray(project.reviewChecks) || project.reviewChecks.length < 9) { this.toast('请先逐项确认最终审核清单', 'error', '清单未完成'); return; }
       project.finalApproved = true;
-      project.status = '待交付';
+      project.status = '已完成';
       project.stage = '交付准备';
+      project.qualityState = '已通过';
       project.updated = '刚刚';
+      this.recordReview(project, '成片审核', '通过', project.finalReviewNote || '确认剧情、人物、画面、音频、字幕、集数与合规', '生成交付包并归档');
       this.logAudit('通过最终成片审核', project.title + ' / 全 ' + project.episodes + ' 集', '成功', '交付');
       this.save();
       this.toast('「' + project.title + '」最终成片审核通过，允许创建交付包', 'success', '审核通过');
@@ -1086,14 +1189,15 @@ window.App = (function () {
       if (!project.finalApproved) { this.toast('请先完成当前项目的最终成片审核', 'error'); return; }
       if (project.delivered) { this.toast('当前项目已完成交付归档', 'error'); return; }
       project.delivered = true;
-      project.status = '已交付';
+      project.deliveredEpisodes = project.episodes;
+      project.status = '已完成';
       project.stage = '已归档';
       project.done = project.episodes;
       project.updated = '刚刚';
       const serial = 'DL-' + String(26030 + DB.deliveries.length + 1).slice(-5);
       DB.deliveries.unshift({
         id: serial, project: project.id, tenant: project.tenant,
-        manifest: serial + '_交付包_V1', files: project.episodes + 3, size: '17.4 GB',
+        manifest: serial + '_交付包_V1', files: project.episodes + 9, size: '17.4 GB',
         status: '已归档', createdAt: new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-'), operator: this.identity().user
       });
       this.logAudit('完成作品交付归档', project.title + ' / ' + serial, '成功', '交付');
@@ -1117,3 +1221,4 @@ window.App = (function () {
 })();
 
 window.AppModule = { register: definition => window.App.register(definition) };
+
