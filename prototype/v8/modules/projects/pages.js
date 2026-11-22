@@ -10,7 +10,7 @@
       }
     },
     {
-      path: "projects/workbench", title: "我的工作台", permission: "overview.read",
+      path: "projects/workbench", title: "我的工作台", permission: "projects.own",
       render() {
         const mine = DB.projects.filter(p => p.ownerId === "u1");
         const projectRows = mine.map(p => '<div class="list-row"><div><b>' + p.name + '</b><div class="small muted">' + p.id + ' · ' + p.done + '/' + p.episodes + ' 集</div></div>' + UI.tag(p.status) + '</div>').join("");
