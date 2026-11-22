@@ -1,7 +1,7 @@
 /* App：路由、导航、内存态、权限、交互动作与统一反馈。刷新重置演示状态为预期行为。 */
 window.App=(function(){
  const A={routes:[],identity:DB.currentIdentity,menuOpen:false};
- function can(permission){const me=DB.identities.find(x=>x.id===A.identity);return !!me&&(me.permissions.includes("*")||me.permissions.includes(permission)||permission==="overview.read");}
+ function can(permission){const me=DB.identities.find(x=>x.id===A.identity);return !!me&&(me.permissions.includes("*")||me.permissions.includes(permission));}
  function route(path,title,permission,render){A.routes.push({path,title,permission,render});}
  function current(){const key=location.hash.startsWith("#/")?location.hash.slice(2):location.hash.slice(1);return A.routes.find(r=>r.path===key)||null;}
  function go(path){location.hash="#/"+path;}
