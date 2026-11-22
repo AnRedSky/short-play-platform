@@ -3,14 +3,14 @@ window.DB={
  meta:{name:"FRAME",version:"V8.0.1",notice:"静态交互原型 / 演示数据"},
  identities:[
   {id:"enterprise-admin",name:"企业管理员",role:"企业管理员",permissions:["*"]},
-  {id:"manager",name:"企业经营管理",role:"企业管理人员",permissions:["overview.read","projects.read","analytics.read","people.read","audit.read"]},
+  {id:"manager",name:"企业经营管理",role:"企业管理人员",permissions:["enterprise.read","overview.read","projects.read","analytics.read","people.read","audit.read"]},
   {id:"employee",name:"制作员工",role:"普通员工",permissions:["overview.read","projects.own","creation.write","production.write","assets.write","models.own","delivery.write","analytics.own"]},
-  {id:"auditor",name:"审计人员",role:"审计人员",permissions:["overview.read","projects.read","analytics.read","audit.read"]}
+  {id:"auditor",name:"审计人员",role:"审计人员",permissions:["enterprise.read","overview.read","projects.read","analytics.read","audit.read"]}
  ],
  currentIdentity:"enterprise-admin",
  nav:[
-  {label:"企业管理",items:[["企业总览","enterprise/overview","⌂","overview.read"],["组织与员工","people/members","♙","people.read"],["项目管理","projects/list","▦","projects.read"],["经营分析","analytics/enterprise","▤","analytics.read"],["合规与审计","compliance/audit","◈","audit.read"]]},
-  {label:"AI 短剧制作",items:[["我的工作台","projects/workbench","⌘","overview.read"],["创意与剧本","creation/brief","✎","creation.write"],["导演与分镜","production/board","▧","production.write"],["视频与音频","production/generation","▶","production.write"],["后期与交付","production/delivery","⇧","delivery.write"],["数字资产","assets/library","▤","assets.write"]]},
+  {label:"企业管理",items:[["企业总览","enterprise/overview","⌂","enterprise.read"],["组织与员工","people/members","♙","people.read"],["项目管理","projects/list","▦","projects.read"],["经营分析","analytics/enterprise","▤","analytics.read"],["我的产出","analytics/me","▥","analytics.own"],["合规与审计","compliance/audit","◈","audit.read"]]},
+  {label:"AI 短剧制作",items:[["我的工作台","projects/workbench","⌘","projects.own"],["创意与剧本","creation/brief","✎","creation.write"],["导演与分镜","production/board","▧","production.write"],["视频与音频","production/generation","▶","production.write"],["后期与交付","production/delivery","⇧","delivery.write"],["数字资产","assets/library","▤","assets.write"]]},
   {label:"个人 AI 资源",items:[["模型与供应商","models/providers","◇","models.own"],["调用记录","models/usage","◷","models.own"]]}
  ],
  projects:[
