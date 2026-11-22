@@ -13,7 +13,7 @@ window.DB={
   {label:"AI 短剧制作",items:[["我的工作台","projects/workbench","⌘","projects.own"],["创意与剧本","creation/brief","✎","creation.write"],["导演与分镜","production/board","▧","production.write"],["视频与音频","production/generation","▶","production.write"],["后期与交付","production/delivery","⇧","delivery.write"],["数字资产","assets/library","▤","assets.write"]]},
   {label:"个人 AI 资源",items:[["模型与供应商","models/providers","◇","models.own"],["个人模型路由","models/routing","⇄","models.own"],["调用记录","models/usage","◷","models.own"]]}
  ],
- routePolicy:{primary:"p1",backup:"p4",updated:"11-20"},
+ routePolicy:{primary:"p1",backup:"p2",updated:"11-20"},
  handovers:[],
  projects:[
   {id:"SP-26031",name:"雾城来信",genre:"悬疑 / 都市",owner:"林知远",ownerId:"u1",status:"生产中",episodes:24,done:16,budget:18000,actual:9260,quality:"良好",updated:"今天 10:42"},
