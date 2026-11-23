@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>E2E</title>
+<style>body{font:13px/1.6 monospace;margin:16px}iframe{width:1280px;height:760px;border:1px solid #ccc}</style>
+</head>
+<body>
+<pre id="out">running…</pre>
+<iframe id="f" src="/index.html?v=9.5.0"></iframe>
+<script>
+const out = [];
+const flush = () => { document.getElementById("out").textContent = out.join("\n") || "running…"; };
+const log = (ok, msg) => { out.push((ok ? "PASS " : "FAIL ") + msg); flush(); };
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const f = document.getElementById("f");
+
+function W() { return f.contentWindow; }
+function D() { return W().document; }
+function toasts() { return [...D().querySelectorAll("#toast-root .toast")].map((t) => t.textContent.trim()); }
+function lastToast() { const a = toasts(); return a.length ? a[a.length - 1] : ""; }
+function modalError() { const b = D().querySelector("#app-form .form-error"); return b && !b.hidden ? b.textContent.trim() : ""; }
+function fieldError() { const b = D().querySelector("#app-form .field-error:not([hidden])"); return b ? b.textContent.trim() : ""; }
+function pageError() { const b = D().querySelector("#view .form-error:not([hidden])"); return b ? b.textContent.trim() : ""; }
+function pageFieldError() { const b = D().querySelector("#view .field-error:not([hidden])"); return b ? b.textContent.trim() : ""; }
+function setPageFields(values) {
+  const view = D().querySelector("#view");
+  for (const [k, v] of Object.entries(values || {})) {
+    const el = view.querySelector('[name="' + k + '"]');
+    if (!el) continue;
+    if (el.type === "checkbox") el.checked = !!v; else el.value = v;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+}
+function hasModal() { return !!D().getElementById("app-form"); }
+function hasDrawer() { return !!D().querySelector(".drawer"); }
+
+async function until(fn, ms) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < (ms || 3000)) {
+    try { if (fn()) return true; } catch (e) { /* retry */ }
+    await wait(150);
+  }
+  return false;
+}
+async function go(hash) {
+  W().location.hash = "#/" + hash;
+  await until(() => W().location.hash.indexOf(hash) >= 0 && D().querySelector("#view") && D().querySelector("#view").textContent.length > 30, 4000);
+  await wait(300);
+}
+async function reload() {
+  const fr = document.getElementById("f");
+  fr.src = "/index.html?v=9.5.0&r=" + Date.now();
+  await until(() => { try { return !!(W().App && W().Store && D().querySelector("#view")); } catch (e) { return false; } }, 9000);
+  await wait(600);
+}
+async function asIdentity(id) {
+  const sel = D().getElementById("identity-switch");
+  if (!sel) return false;
+  sel.value = id;
+  sel.dispatchEvent(new Event("change", { bubbles: true }));
+  await wait(700);
+  return true;
+}
+async function click(action, extra) {
+  const sel = '[data-action="' + action + '"]' + (extra || "");
+  if (!(await until(() => D().querySelector(sel), 3000))) return false;
+  D().querySelector(sel).click();
+  await wait(450);
+  return true;
+}
+async function submitModal(values, ms) {
+  if (!(await until(() => D().getElementById("app-form"), 3000))) return "no-form";
+  const form = D().getElementById("app-form");
+  for (const [k, v] of Object.entries(values || {})) {
+    const el = form.querySelector('[name="' + k + '"]');
+    if (!el) continue;
+    if (el.type === "checkbox") el.checked = !!v; else el.value = v;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  form.requestSubmit();
+  await wait(ms || 3200);
+  return "ok";
+}
+
+window.addEventListener("error", (e) => { out.push("ERROR " + e.message + " @" + (e.filename || "") + ":" + (e.lineno || "")); flush(); });
+
+(async () => {
+  await until(() => W().DB && W().Store, 6000);
+  if (!W().DB || !W().Store) { document.getElementById("out").textContent = "FAIL iframe not ready（Store/DB 未加载）"; return; }
+  W().Store.reset();
+  await reload();
+  W().addEventListener("error", (e) => { out.push("IFRAME-ERROR " + e.message + " @" + (e.filename || "") + ":" + (e.lineno || "")); flush(); });
+
+  /* 1. 新建项目：页表单是唯一入口，不再二次弹窗收字段 */
+  await go("projects/new");
+  const countBefore = W().DB.projects.length;
+  await click("projects.create");
+  log(!hasModal(), "立项页直接提交，不弹二次表单");
+  setPageFields({ name: "" });
+  await click("projects.create");
+  await wait(500);
+  log(!!(pageError() || pageFieldError()) && W().DB.projects.length === countBefore, "空名称被拦截（" + (pageError() || pageFieldError() || "无错误提示") + "）");
+  setPageFields({ name: "E2E 测试项目", episodes: "18", duration: "80 秒", budget: "15000", audience: "18–24 岁学生", brief: "失忆的调音师在旧磁带里听见自己的声音，追查后发现是替身留下的线索" });
+  await click("projects.create");
+  await until(() => W().DB.projects.some((p) => p.name === "E2E 测试项目"), 6000);
+  const created = W().DB.projects.find((p) => p.name === "E2E 测试项目");
+  const bud = created ? W().DB.budgets.find((b) => b.name.indexOf(created.id) === 0) : null;
+  log(!!created && !!bud, "创建项目成功 → " + (created ? created.id + " / 预算台账 " + (bud ? "¥" + bud.total : "缺失") : "未创建 · " + lastToast()));
+  log(W().location.hash.indexOf("projects/workflow") >= 0, "创建成功进入项目流水线（下一步填写创意） → " + W().location.hash);
+
+  /* 2. 视频：依赖未完成的任务无法执行 */
+  await go("video/production?id=SP-26031");
+  const t8843 = W().DB.tasks.find((t) => t.id === "T-8843");
+  const st = t8843.status, att = t8843.attempt || 0;
+  log(await click("video.runTask", '[data-id="T-8843"]'), "点击执行 T-8843");
+  await wait(3000);
+  log(t8843.status === st && (t8843.attempt || 0) === att && /前置|依赖|未完成|正在/.test(lastToast()), "T-8843 前置未完成被拦截（" + st + " · " + lastToast() + "）");
+
+  /* 3. 终审：项目不在「待最终审核」时页面不暴露通过动作，动作落回流水线 */
+  await go("post/review?id=SP-26031");
+  const p31 = W().DB.projects.find((p) => p.id === "SP-26031");
+  log(p31.status === "生产中" && !D().querySelector('[data-action="post.pass"]'), "生产中项目不暴露终审通过动作");
+  log(!!D().querySelector('[data-action="projects.wfOpen"]'), "终审动作改为进入制作流水线 · " + p31.status);
+
+  /* 4. 交付：门禁未满足时不暴露生成交付包，只引导回流水线 */
+  await go("post/delivery?id=SP-26031");
+  const dpBefore = W().DB.deliveries.length;
+  log(!D().querySelector('[data-action="post.newDelivery"]'), "门禁未满足时不暴露生成交付包");
+  log(!!D().querySelector('[data-action="projects.wfOpen"]'), "交付页按项目状态引导回流水线");
+
+  /* 5. 质量：空理由被拦，填写后写回报告 */
+  await go("quality/reports?id=SP-26031");
+  log(await click("quality.reportDetail", '[data-id="QR-26031-E17-03"]') && hasDrawer(), "打开质量报告抽屉");
+  log(await click("quality.judge", '[data-decide="accept"]') && hasModal(), "打开接受现状弹窗");
+  const issue0 = W().DB.qualityIssues.find((i) => i.report === "QR-26031-E17-03");
+  await submitModal({ note: "" }, 800);
+  log(!!(fieldError() || modalError()) && !issue0.decision, "空理由被拦截（" + (fieldError() || modalError() || "无") + "）");
+  await submitModal({ note: "该镜头为 3 秒过场，眉疤不可见且不影响叙事" }, 3200);
+  const issue = W().DB.qualityIssues.find((i) => i.report === "QR-26031-E17-03" && i.decision);
+  log(!!issue, "裁决已写入报告 → " + (issue ? issue.decision : "无 · " + lastToast()));
+
+  /* 6. 通知闭环 */
+  await go("notify/inbox");
+  log(await click("notify.handle") && hasDrawer(), "打开通知抽屉");
+  log(await click("notify.close") && hasModal(), "打开记录结论弹窗");
+  await submitModal({ kind: "已在业务页处理完成", note: "太短" }, 800);
+  log(!!(fieldError() || modalError()), "结论文案不足被拦截");
+  await submitModal({ kind: "已在业务页处理完成", note: "SH-05 已局部重生成并复检通过" }, 3200);
+  const done = W().DB.notifications.filter((x) => x.state === "已处理").length;
+  log(done > 0, "通知闭环写回状态 → 已处理 " + done + " 条");
+
+  /* 7. 项目暂停：原因必填 → 状态切换 */
+  await reload();
+  await go("projects/detail?id=SP-26031");
+  const p31b = W().DB.projects.find((p) => p.id === "SP-26031");
+  log(await click("projects.pause") && hasModal(), "打开暂停项目弹窗");
+  await submitModal({ reason: "预算接近阈值，等待追加审批" }, 3200);
+  log(p31b.status === "已暂停", "项目暂停生效 → " + p31b.status);
+
+  /* 8. 预算调整：低于已用必须拒绝（企业管理员具备 cost.manage） */
+  await reload();
+  log(await asIdentity("i-admin"), "切换到企业管理员");
+  await go("cost/budget");
+  const bgRow = W().DB.budgets.find((b) => b.scope === "项目" && b.name.indexOf("SP-26031") === 0);
+  const total0 = bgRow.total;
+  const adjustBtn = [...D().querySelectorAll('[data-action="cost.adjustBudget"]')].find((b) => (b.dataset.name || "").indexOf("SP-26031") === 0);
+  if (adjustBtn) adjustBtn.click();
+  await wait(450);
+  log(hasModal(), "打开调整预算弹窗（SP-26031）");
+  await submitModal({ total: "5000", note: "压缩预算，等待审批人确认" }, 3200);
+  log(bgRow.total === total0 && /已用|低于|不足/.test(modalError() || lastToast()), "低于已用被拦截（¥" + bgRow.used + " · " + (modalError() || lastToast()) + "）");
+
+  /* 9. 模型连通性：停用且鉴权失效的供应商必须失败 */
+  await reload();
+  await asIdentity("i-admin");
+  await go("models/providers");
+  await click("models.test", '[data-id="PRV-07"]');
+  await wait(3000);
+  log(/失败|鉴权|停用/.test(lastToast()) && !/测试通过/.test(lastToast()), "PRV-07 连通性测试失败 → " + lastToast());
+
+  /* 10. 合规类返工禁止自动重跑 */
+  await reload();
+  await go("quality/rework?id=SP-26015");
+  const comp = W().DB.reworkLedger.find((r) => r.type === "合规风险" && r.status !== "已修复");
+  log(!!comp && await click("quality.rerun", '[data-id="' + (comp ? comp.id : "none") + '"]'), "点击合规类返工重跑（" + (comp ? comp.id : "无") + "）");
+  await wait(600);
+  log(/合规类返工不允许自动重跑/.test(lastToast()), "合规类重跑被拦截 → " + lastToast());
+
+  /* 11. 新增成员：邮箱唯一性由业务层拦截并回填字段 */
+  await reload();
+  await asIdentity("i-admin");
+  await go("orgs/members");
+  const existEmail = W().DB.users[0].email;
+  log(await click("orgs.newMember") && hasModal(), "打开邀请员工弹窗");
+  await submitModal({ name: "新成员", email: existEmail }, 3200);
+  log(/邮箱/.test(fieldError() || modalError()), "重复邮箱被拦截 → " + (fieldError() || modalError()));
+
+  document.getElementById("out").textContent = out.join("\n") + "\n\nDONE";
+  document.title = "E2E " + (out.filter((x) => x.startsWith("FAIL") || x.startsWith("ERROR") || x.startsWith("IFRAME")).length ? "FAIL" : "OK");
+})().catch((e) => { out.push("FATAL " + e.message + "\n" + e.stack); document.getElementById("out").textContent = out.join("\n"); });
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+

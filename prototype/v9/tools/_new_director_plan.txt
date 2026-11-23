@@ -1,0 +1,53 @@
+        render(query) {
+          const pid = (query && query.id) || "SP-26031";
+          const p = D.projects.find(x => x.id === pid);
+          if (!p) return U.page("导演规划 / 镜头生产计划", "镜头生产计划", "未找到项目。", U.btn("返回项目", "projects.list"), U.empty("项目不存在", "请从项目列表进入。"));
+          const eps = D.episodes.filter(e => e.project === pid).sort((a, b) => a.no - b.no);
+          const shots = D.shots.filter(s => s.project === pid);
+          const script = D.scripts.find(s => s.project === pid && (s.status === "已锁定" || s.locked)) || D.scripts.find(s => s.project === pid);
+          const plan = D.plans.find(x => x.project === pid && x.status !== "已固化") || D.plans.find(x => x.project === pid);
+          const chars = D.characters.filter(c => c.project === pid);
+          const locs = D.locations.filter(l => l.project === pid);
+          const props = D.props.filter(o => o.project === pid);
+          const assets = chars.concat(locs, props);
+          const readyAssets = assets.filter(a => a.status === "已确认" || a.status === "抽检通过" || a.consistency === "3 处出场外观一致" || a.consistency === "5 处出场一致");
+          const contract = shots.filter(s => s.scene && s.desc && s.duration && s.chars);
+          const totalScenes = eps.reduce((n, e) => n + (Number(e.scenes) || 0), 0);
+          const gate = Store.gate(pid, "生产");
+          const pendingAssets = assets.filter(a => readyAssets.indexOf(a) < 0);
+          const chain = U.chain([
+            { label: "剧本锁定", meta: script ? script.id : "未锁定", state: script && (script.locked || script.status === "已锁定") ? "done" : "now" },
+            { label: "人物 / 场景 / 道具", meta: readyAssets.length + " / " + assets.length + " 就绪", state: readyAssets.length === assets.length ? "done" : "now" },
+            { label: "场次与镜头", meta: totalScenes + " 场 / " + shots.length + " 镜", state: eps.length ? "done" : "" },
+            { label: "镜头契约固化", meta: contract.length + " / " + shots.length + " 字段完整", state: contract.length === shots.length ? "done" : "now" },
+            { label: "进入视频生产", meta: gate.ok ? "门禁通过" : "门禁未满足", state: gate.ok ? "done" : "" }
+          ]);
+          const rows = eps.map(e => {
+            const es = shots.filter(s => s.ep === e.no);
+            const pass = es.filter(s => s.status === "已通过").length;
+            return '<tr><td class="num">E' + e.no + '</td><td class="cell-wrap">' + U.esc(e.title) + '</td><td class="num">' + e.scenes + '</td><td class="num">' + es.length + '</td><td class="num">' + pass + '</td><td>' + U.pill(e.status) + '</td><td>' + U.btn("查看镜头", "director.sceneShots", "sm", { id: "E" + e.no }) + "</td></tr>";
+          }).join("");
+          return U.page("导演规划 / 镜头生产计划", "镜头生产计划 · " + p.name, "计划只固化可执行的镜头契约；参考资产未就绪、剧本未锁定的场次不进入生产队列。",
+            U.btn("重新规划", "director.replan", "", { id: pid }) + U.btn("固化生产计划", "director.freezePlan", "primary", { id: pid }) + U.btn("进入分镜板", "director.toStoryboard", "", { id: pid }) + U.btn("去视频生产", "director.toVideo", "", { id: pid }),
+            U.card("规划链路", chain, "规划阶段不产生视频成本") +
+            '<div class="grid grid-4 mt-4">' +
+              U.metric("镜头总数", String(shots.length), "契约完整 " + contract.length + " · 待补 " + (shots.length - contract.length), "▤") +
+              U.metric("场次数", String(totalScenes), "已拆解 " + eps.length + " 集", "▦") +
+              U.metric("参考资产就绪", readyAssets.length + " / " + assets.length, pendingAssets.length ? pendingAssets.length + " 项待处理" : "全部就绪", "◇") +
+              U.metric("契约固化率", (shots.length ? Math.round(contract.length / shots.length * 100) : 0) + "%", gate.ok ? "生产门禁已通过" : "生产门禁未通过", "✓") +
+            "</div>" +
+            '<div class="split mt-4"><div class="stack">' +
+              U.card("场次规划 · " + p.name, U.table(["集", "标题", "场", "镜头", "通过", "状态", "操作"], rows), "按集次顺序固化，未就绪场次保留在计划中") +
+              U.card("并行分组与门禁", U.listRows([
+                ["并行分组", "同一场景内可并行的镜头归入一组，跨场景不并行抢占配额"],
+                ["前置门禁", "参考资产就绪 + 契约固化 + 预算未触发"],
+                ["依赖", "后镜头依赖前镜头衔接时按顺序排队，不并行提交"],
+                ["失败处理", "失败只影响本镜头与下游依赖，不整场重跑"]
+              ]), "分组不改变集次结构", U.btn("查看队列", "director.toQueue", "sm", { id: pid })) +
+            '</div><div class="stack">' +
+              U.card("镜头契约必填字段", U.listRows([["景别 / 机位 / 运镜", "决定画面语言"], ["时长 / 画幅", "决定成本与输出规格"], ["人物与造型版本", "引用 CH 版本号"], ["场景 / 道具版本", "引用 LC / PR 版本号"], ["对白与情绪", "口型与表演依据"], ["质量要求", "进入检测项，不写空话"]]) , "字段缺失不允许提交生产") +
+              U.card("规划待处理", pendingAssets.length ? U.table(["事项", "对象", "阻塞"], pendingAssets.slice(0, 6).map(a => ["<span class=\"cell-wrap\">" + U.esc(a.name) + " · " + U.esc(a.status || a.consistency || "待确认") + "</span>", U.code(a.id), "相关引用镜头不可固化"]).map(r => "<tr><td>" + r[0] + "</td><td>" + r[1] + '</td><td class="muted">' + r[2] + "</td></tr>").join("")) : U.empty("参考资产全部就绪", "角色、场景与道具均已确认"), "待处理项不进入队列") +
+              U.card("规划口径", U.notice("镜头是唯一生产单元：任何「重做一集」的需求都拆成具体镜头；不允许用整集重跑替代局部返工。", "info")) +
+            "</div></div>"
+          );
+        }

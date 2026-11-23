@@ -1,0 +1,71 @@
+          const epNo = Number((query && query.ep) || 17);
+          const ep = D.episodes.find(e => e.project === project && e.no === epNo);
+          const epShots = D.shots.filter(s => s.project === project && s.ep === epNo);
+          const sceneOrder = [];
+          const sceneMap = {};
+          epShots.forEach(s => {
+            const key = String(s.scene || "01").padStart(2, "0");
+            if (!sceneMap[key]) { sceneMap[key] = []; sceneOrder.push(key); }
+            sceneMap[key].push(s);
+          });
+          const sceneTitles = { "01": "邮局门口", "02": "雨夜街口", "03": "对峙", "04": "信件架", "05": "未寄出的信", "06": "雨的尽头" };
+          const sceneLocs = { "01": "旧城区 · 邮局门口 · 夜 / 外", "02": "旧城区 · 窄街 · 夜 / 外", "03": "旧城区 · 雨夜街口 · 夜 / 外", "04": "邮局旧址 · 夜 / 内", "05": "邮局旧址 · 夜 / 内", "06": "邮局旧址 · 夜 / 内" };
+          const scenes = sceneOrder.map(no => {
+            const list = sceneMap[no];
+            const pass = list.filter(s => s.status === "已通过").length;
+            const active = list.some(s => s.status !== "待生成" && s.status !== "已通过");
+            return {
+              no: "S" + no,
+              title: sceneTitles[no] || (list[0].desc || "第 " + no + " 场").slice(0, 12),
+              loc: sceneLocs[no] || (list[0].refs || "—"),
+              meta: U.esc(list.reduce((n, s) => n + (parseFloat(s.duration) || 0), 0).toFixed(1)) + " 秒 · " + list.length + " 镜",
+              state: pass === list.length ? "已拍" : (pass > 0 || active ? "制作中" : "待拍")
+            };
+          });
+          const curScene = scenes.some(s => s.no === App.get(SCOPE, "scriptScene", "S03")) ? App.get(SCOPE, "scriptScene", "S03") : (scenes[0] ? scenes[0].no : "S01");
+          const sceneBodies = {
+            S01: '<p class="sp-action">雨水沿着邮局铁皮檐口落下。顾沉站在关了一半的窗口前，手里捏着一封没有寄件人的信。</p><p class="sp-char">顾沉</p><p class="sp-paren">（低声，像在确认）</p><p class="sp-dialog">「第三封了。」</p><p class="sp-action">窗口里的人没有抬头，只把一枚旧邮戳推出来。</p>',
+            S02: '<p class="sp-action">窄街积水，霓虹被雨打散。苏眠从对街走过，伞沿压得很低，经过顾沉时停了半步。</p><p class="sp-char">苏眠</p><p class="sp-paren">（没有回头）</p><p class="sp-dialog">「别跟着我。」</p><p class="sp-action">顾沉没有动，直到她的伞消失在街角。</p>',
+            S03: '<p class="sp-action">雨更密了。顾沉回头停步，信封从他指间滑出，落在积水里。苏眠站在两步之外，没有去捡。</p><p class="sp-char">顾沉</p><p class="sp-paren">（压着呼吸）</p><p class="sp-dialog">「这封信，不该在你手上。」</p><p class="sp-char">苏眠</p><p class="sp-paren">（退半步，声音很轻）</p><p class="sp-dialog">「你认错人了。」</p><p class="sp-action">远处邮筒的投信口发出一声轻响。两个人都没有回头。</p><p class="sp-trans">〔雨声压过对白，切 S04〕</p>',
+            S04: '<p class="sp-action">邮局旧址内，灯只开了一盏。顾沉独自站在信件架前，手指沿着年份标签一格一格划过。</p><p class="sp-char">顾沉</p><p class="sp-paren">（旁白）</p><p class="sp-dialog">「信里的字迹，他认得。」</p><p class="sp-action">他抽出一封没有编号的信，封口已经被人拆过。</p>',
+            S05: '<p class="sp-action">苏眠坐在窗边，把拆开的信重新折好。她没有读第二遍，只把台灯往信纸上挪近了一点。</p><p class="sp-char">苏眠</p><p class="sp-paren">（很轻）</p><p class="sp-dialog">「这次，换我写。」</p><p class="sp-action">镜头停在她握笔的手上，纸面洇开一小块雨痕。</p>'
+          };
+          const curSceneItem = scenes.find(s => s.no === curScene) || scenes[0] || { no: "S01", loc: "—" };
+          const passCount = epShots.filter(s => s.status === "已通过").length;
+          const charRows = D.characters.filter(c => c.project === project && epShots.some(s => String(s.refs).indexOf(c.id) >= 0)).map(c => [c.name, c.look + " · 本集 " + epShots.filter(s => String(s.refs).indexOf(c.id) >= 0).length + " 镜"]);
+          return U.page("创意与剧本 / 剧本工作台", "剧本工作台 · " + (D.projects.find(x => x.id === project) || {}).name, "左边是这一集的场次，中间是可以直接读的稿纸，右边是人物、连续性与版本；改稿产生新版本，不覆盖已锁定版本。",
+            U.btn("生成候选剧本", "creation.generateScript", "primary", { id: project }) + (App.can("script.review") && cur.status === "待审核" ? U.btn("提交审核", "creation.submitReview", "", { id: cur.id }) : "") + U.btn("导出剧本", "common.export"),
+            '<div class="script-studio">' +
+              '<aside class="scene-rail">' +
+                '<div class="rail-head"><span class="kicker">E' + epNo + ' · ' + U.esc(ep ? ep.title : "未命名") + '</span><b>' + scenes.length + ' 场 · ' + epShots.length + ' 镜</b><small>' + U.esc(ep ? ep.duration : "—") + ' · 竖屏 9:16</small></div>' +
+                '<div class="rail-list">' + scenes.map(s =>
+                  '<button type="button" class="scene-item' + (s.no === curScene ? " is-cur" : "") + '" data-action="creation.scriptScene" data-id="' + s.no + '">' +
+                    '<span class="si-no">' + s.no + '</span><span class="si-body"><b>' + U.esc(s.title) + '</b><small>' + U.esc(s.loc) + '</small><em>' + s.meta + '</em></span>' +
+                    '<span class="si-state tone-' + (s.state === "制作中" ? "accent" : s.state === "已拍" ? "ok" : "muted") + '">' + U.esc(s.state) + '</span>' +
+                  '</button>').join("") + '</div>' +
+                '<div class="rail-foot"><span>E' + Math.max(1, epNo - 1) + ' / E' + epNo + ' / E' + Math.min(24, epNo + 1) + '</span><span>仅展开 E' + epNo + '</span></div>' +
+              '</aside>' +
+              '<section class="script-main">' +
+                '<div class="script-toolbar"><span class="pill ' + (cur.status === "已锁定" || cur.locked ? "ok" : "warn") + '">' + U.esc(cur.id) + " · " + U.esc(cur.status) + '</span><span class="faint small">第 ' + epNo + ' 集 · 第 ' + (scenes.findIndex(s => s.no === curScene) + 1) + ' / ' + scenes.length + ' 场</span><span style="flex:1"></span>' +
+                  U.btn("与正式版比对", "creation.diff", "sm") + '</div>' +
+                '<article class="screenplay">' +
+                  '<div class="sp-page-mark">FRAME · 剧本稿纸 / 第 ' + epNo + ' 集</div>' +
+                  '<h2 class="sp-heading">' + U.esc(curSceneItem.loc.split(" · ").slice(-1)[0] || "—") + ' · ' + U.esc(curSceneItem.loc) + '</h2>' +
+                  '<p class="sp-action">第 ' + epNo + ' 集《' + U.esc(ep ? ep.title : "未命名") + '》 · 场 ' + curScene + ' · ' + epShots.filter(s => "S" + String(s.scene).padStart(2, "0") === curScene).length + ' 镜</p>' +
+                  '<div class="sp-body">' + (sceneBodies[curScene] || '<p class="sp-action">本场正文尚未载入；当前只登记镜头契约，正文以锁定版本为准。</p>') + '</div>' +
+                  '<div class="sp-page-foot"><span>第 ' + (scenes.findIndex(s => s.no === curScene) + 1) + ' 场 / 共 ' + scenes.length + ' 场</span><span>' + U.esc(cur.version) + ' · ' + U.esc(cur.by) + ' · ' + U.esc(cur.at) + '</span></div>' +
+                '</article>' +
+                '<div class="script-main-foot">' + U.btn("编辑本场", "creation.editScript", "primary", { id: cur.id }) + U.btn("查看拆解结果", "creation.toBreakdown", "sm", { id: project }) + (App.can("script.review") && cur.status !== "已锁定" ? U.btn("锁定正式版本", "creation.lock", "sm", { id: cur.id }) : "") + '</div>' +
+              '</section>' +
+              '<aside class="script-side">' +
+                U.card("本集概览", U.desc([["集号 / 标题", "E" + epNo + "《" + (ep ? ep.title : "未命名") + "》"], ["场次 / 镜头", scenes.length + " 场 · " + epShots.length + " 镜"], ["时长", ep ? ep.duration : "—"], ["当前阶段", "视频生产 · " + passCount + " / " + epShots.length + " 镜通过"], ["审核基准", cur.id + "（" + cur.status + "）"]]), "改稿不覆盖锁定版本") +
+                U.card("人物在场", charRows.length ? U.listRows(charRows) : U.empty("本集未登记人物", "镜头契约未引用任何人物档案"), "人物造型以档案版本为准") +
+                U.card("连续性检查", '<ul class="check-list"><li class="ok">场次顺序按 S' + sceneOrder.join(" / S") + ' 排列，未跨日</li><li class="ok">本集镜头引用数为 ' + epShots.filter(s => s.refs).length + " / " + epShots.length + '</li><li class="warn">正文样本只覆盖 E17 前五场；第六场以镜头契约为准</li><li class="ok">改稿从当前稿派生，不覆盖锁定版本</li></ul>', "进入分镜前必须清零") +
+                U.card("版本摘要", U.listRows([["版本数量", list.length + " 个"], ["最新版本", list[0] ? list[0].id : "—"], ["锁定版本", (list.find(s => s.locked) || {}).id || "无"], ["本集镜头", passCount + " / " + epShots.length + " 通过"]]), "按版本对版本计算") +
+                U.card("审核状态", U.notice((list.find(s => s.locked) || {}).id ? "锁定版本是下游唯一基准；任何修改都从当前稿派生新版本。" : "当前版本尚未锁定，下游拆解不可启动。", (list.find(s => s.locked) ? "info" : "warn")), "", U.btn("去剧本审核", "creation.toReview", "sm", { id: project })) +
+              '</aside>' +
+            '</div>' +
+            '<div class="mt-4">' + U.card("版本台账", U.table(["版本", "状态", "集 / 场 / 镜头 / 对白", "操作者", "时间", "备注"], list.map(s =>
+              '<tr><td>' + U.code(s.id) + '</td><td>' + U.pill(s.status) + (s.locked ? " " + U.pill("已锁定", "accent") : "") + '</td><td class="num cell-wrap">' + s.episodes + " / " + s.scenes + " / " + s.shots + " / " + s.lines + "</td><td>" + U.esc(s.by) + '</td><td class="idx">' + U.esc(s.at) + '</td><td class="cell-wrap muted">' + U.esc(s.note) + "</td><td>" +
+              U.btn("查看", "creation.openScript", "sm", { id: s.id }) + "</td></tr>").join("")), "共 " + list.length + " 个版本；锁定版本不可覆盖") + '</div>'
+          );

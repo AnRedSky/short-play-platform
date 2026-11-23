@@ -1,0 +1,11 @@
+import fs from "node:fs";
+import vm from "node:vm";
+const sandbox = { console };
+sandbox.window = sandbox;
+vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync("assets/js/data.js", "utf8"), sandbox);
+const DB = sandbox.window.DB;
+console.log("TASKS");
+for (const t of DB.tasks) console.log(t.id, t.status, "deps=" + JSON.stringify(t.deps), "shot=" + t.shot, "att=" + t.attempt + "/" + t.maxAttempts);
+console.log("SHOTS SP-26031");
+for (const s of DB.shots.filter((x) => x.project === "SP-26031")) console.log(s.id, s.status, s.refs);

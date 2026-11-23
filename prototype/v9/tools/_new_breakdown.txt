@@ -1,0 +1,50 @@
+        render(query) {
+          const pid = (query && query.id) || "SP-26031";
+          const p = D.projects.find(x => x.id === pid);
+          if (!p) return U.page("创意与剧本 / 剧本拆解", "剧本拆解", "未找到项目。", U.btn("返回剧本", "creation.toScript"), U.empty("项目不存在", "请从项目列表进入。"));
+          const eps = D.episodes.filter(e => e.project === pid).sort((a, b) => a.no - b.no);
+          const shots = D.shots.filter(s => s.project === pid);
+          const chars = D.characters.filter(c => c.project === pid);
+          const locs = D.locations.filter(l => l.project === pid);
+          const props = D.props.filter(o => o.project === pid);
+          const script = D.scripts.find(s => s.project === pid && (s.status === "已锁定" || s.locked)) || D.scripts.find(s => s.project === pid);
+          const totalScenes = eps.reduce((n, e) => n + (Number(e.scenes) || 0), 0);
+          const stale = D.timelines.filter(tl => tl.project === pid && (tl.stale || 0) > 0);
+          const uncovered = eps.filter(e => (Number(e.shots) || 0) !== shots.filter(s => s.ep === e.no).length);
+          const assetRows = []
+            .concat(chars.filter(c => c.status !== "已确认").map(c => [c.name, "角色", c.status, shots.filter(s => String(s.refs).indexOf(c.id) >= 0).length]))
+            .concat(locs.filter(l => l.status !== "已确认").map(l => [l.name, "场景", l.status, shots.filter(s => String(s.refs).indexOf(l.id) >= 0).length]))
+            .concat(props.filter(o => String(o.consistency).indexOf("一致") < 0 || o.consistency === "待抽检").map(o => [o.name, "道具", o.consistency, shots.filter(s => String(s.refs).indexOf(o.id) >= 0).length]));
+          const pendingRows = assetRows.map(r => [r[0] + " · " + r[1] + "未确认", "全项目", "影响 " + r[3] + " 个镜头；未确认前不得固化"])
+            .concat(uncovered.map(e => ["E" + String(e.no).padStart(2, "0") + " 镜头契约不齐", "E" + String(e.no).padStart(2, "0"), "计划 " + e.shots + " 镜，实际 " + shots.filter(s => s.ep === e.no).length + " 镜"]))
+            .concat(stale.map(tl => ["时间线标脏 " + (tl.id || tl.version), "E" + String(tl.ep).padStart(2, "0"), "标脏 " + tl.stale + " 处；后期前必须重出"]));
+          const selfCheck = [
+            ["完整性", eps.length === 24 && totalScenes > 0 && shots.length > 0, "24 集预期；实际 " + eps.length + " 集 / " + totalScenes + " 场 / " + shots.length + " 镜"],
+            ["分集覆盖", uncovered.length === 0, uncovered.length ? uncovered.length + " 集镜头数与契约不符" : "每集镜头数与计划一致"],
+            ["引用完整", shots.length > 0 && shots.every(s => s.refs), shots.filter(s => !s.refs).length + " 个镜头缺引用"],
+            ["时长", eps.every(e => { const sum = shots.filter(s => s.ep === e.no).reduce((n, s) => n + (parseFloat(s.duration) || 0), 0); return Math.abs(sum - (parseFloat(e.duration) || 0)) <= 5; }), "单集镜头时长合计与目标偏差 ≤ 5 秒"],
+            ["对象唯一", new Set(shots.map(s => s.id)).size === shots.length, "重复镜头 ID：" + (shots.length - new Set(shots.map(s => s.id)).size)]
+          ];
+          const firstEp = eps.find(e => shots.some(s => s.ep === e.no));
+          const firstShots = firstEp ? shots.filter(s => s.ep === firstEp.no).slice(0, 2) : [];
+          return U.page("创意与剧本 / 剧本拆解", "剧本拆解 · " + p.name, "拆解不是切分文本：每个对象都有独立 ID、版本与引用，镜头契约从这里生成。",
+            U.btn("重新拆解", "creation.rerunBreakdown", "", { id: pid }) + U.btn("进入导演规划", "creation.toDirector", "primary", { id: pid }),
+            U.card("拆解结果 · " + (script ? script.id : "尚无锁定剧本"), '<div class="kv-grid">' + U.kv("集", eps.length) + U.kv("场", totalScenes) + U.kv("人物", chars.length) + U.kv("场景", locs.length) + U.kv("道具", props.length) + U.kv("镜头", shots.length) + "</div>", "引用对象版本，不引用自由文本；数据来自当前项目 " + pid) +
+            '<div class="split mt-4"><div class="stack">' +
+              U.card("集 / 场", U.table(["集", "标题", "场", "镜头", "时长", "状态"], eps.map(e =>
+                '<tr><td class="num">E' + e.no + '</td><td>' + U.esc(e.title) + '</td><td class="num">' + e.scenes + '</td><td class="num">' + e.shots + '</td><td class="num">' + U.esc(e.duration) + "</td><td>" + U.pill(e.status) + "</td></tr>").join("")), "集状态由生产进度回写") +
+              U.card("人物", U.table(["人物", "造型关键", "禁用项", "引用镜头", "版本", "状态"], chars.map(c =>
+                '<tr><td>' + U.entity(c.name, c.id, c.name.slice(0, 1)) + '</td><td class="cell-wrap muted">' + U.esc(c.look) + '</td><td class="cell-wrap">' + U.esc(c.forbid) + '</td><td class="num">' + shots.filter(s => String(s.refs).indexOf(c.id) >= 0).length + "</td><td>" + U.code(c.version) + "</td><td>" + U.pill(c.status) + "</td></tr>").join("")), "禁用项会进入提示词负面约束") +
+              U.card("场景 / 道具", U.table(["对象", "类型", "布局 / 外观", "引用镜头", "版本", "状态"], locs.concat(props).map(o =>
+                '<tr><td>' + U.entity(o.name, o.id, "景") + '</td><td>' + U.esc(o.type) + '</td><td class="cell-wrap muted">' + U.esc(o.layout || o.look) + '</td><td class="num">' + shots.filter(s => String(s.refs).indexOf(o.id) >= 0).length + "</td><td>" + U.code(o.version) + "</td><td>" + U.pill(o.status || o.consistency) + "</td></tr>").join("")), "道具状态变化需标注在集次") +
+            '</div><div class="stack">' +
+              U.card("引用关系", (script && firstEp && firstShots.length ? U.chain([
+                { label: script.id, meta: "锁定剧本", state: "done" },
+                { label: "E" + firstEp.no + " " + (firstShots[0].scene ? "S" + firstShots[0].scene : "场"), meta: firstEp.title, state: "done" },
+                { label: firstShots.map(s => s.no).join(" · "), meta: "镜头 " + firstShots.length + " 个", state: "now" },
+                { label: firstShots[0].refs, meta: "对象引用", state: "" }
+              ]) : U.empty("尚无拆解对象", "锁定剧本并拆解后显示引用链")) + U.notice("修改任一被引用对象版本，系统需列出受影响镜头与已生成资产，交由人决定是否重生成。", "info"), "影响分析而非自动重跑") +
+              U.card("拆解待处理", pendingRows.length ? U.table(["事项", "位置", "影响"], pendingRows.map(r => "<tr><td class=\"cell-wrap\">" + U.esc(r[0]) + '</td><td class="idx">' + U.esc(r[1]) + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("")) : U.empty("暂无待处理项", "资产确认、镜头契约与时间线均无未决项"), "待处理项必须能定位到对象") +
+              U.card("拆解质量自检", U.table(["检查", "结论", "依据"], selfCheck.map(r => "<tr><td>" + U.esc(r[0]) + "</td><td>" + (r[1] ? U.pill("通过") : U.pill("不通过")) + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("")), "自检不通过不进入镜头契约固化") +
+            "</div></div>"
+          );

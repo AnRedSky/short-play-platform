@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>Smoke</title>
+<style>body{font:12px/1.5 monospace;margin:12px}iframe{width:1280px;height:760px;border:1px solid #ccc}pre{white-space:pre-wrap}</style>
+</head>
+<body>
+<pre id="out">running…</pre>
+<iframe id="f" src="/index.html?v=9.5.0"></iframe>
+<script>
+const out = [];
+const errors = [];
+const f = document.getElementById("f");
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const W = () => f.contentWindow;
+const D = () => f.contentWindow.document;
+const put = (t) => { document.getElementById("out").textContent = t; };
+
+(async () => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < 8000 && !(W().DB && W().Store && W().App)) await wait(200);
+  if (!W().App) { put("FAIL app not ready"); return; }
+  W().addEventListener("error", (e) => errors.push("JS " + e.message + " @" + (e.filename || "").split("/").pop() + ":" + e.lineno));
+  W().addEventListener("unhandledrejection", (e) => errors.push("REJECT " + (e.reason && e.reason.message ? e.reason.message : e.reason)));
+
+  const routes = W().App.routes().map((r) => r.path);
+  const bad = [];
+  for (const p of routes) {
+    const n0 = errors.length;
+    W().location.hash = "#/" + p;
+    await wait(400);
+    const view = D().querySelector("#view");
+    const text = view ? view.textContent : "";
+    const flags = [];
+    if (!view || text.trim().length < 20) flags.push("EMPTY");
+    if (/undefined|NaN|\[object Object\]/.test(text)) flags.push("BADTEXT");
+    if (errors.length > n0) flags.push("JSERR");
+    if (flags.length) bad.push(p + " → " + flags.join(",") + (errors.length > n0 ? " | " + errors.slice(n0).join(" ; ") : ""));
+  }
+
+  /* 角色遍历：staff 打开需要写权限的路由应出现 403 提示而非空白 */
+  const roleBad = [];
+  for (const id of ["i-staff", "i-auditor", "i-admin"]) {
+    const sel = D().getElementById("identity-switch");
+    sel.value = id; sel.dispatchEvent(new Event("change", { bubbles: true }));
+    await wait(300);
+    for (const p of ["projects/new", "video/production", "cost/budget", "orgs/members"]) {
+      W().location.hash = "#/" + p;
+      await wait(350);
+      const text = (D().querySelector("#view") || {}).textContent || "";
+      const hasGuard = /无权|权限|403/.test(text);
+      const empty = text.trim().length < 20;
+      if (empty && !hasGuard) roleBad.push(id + " " + p + " 空白且无权限提示");
+    }
+  }
+
+  put("routes=" + routes.length + "\n" + (bad.length ? "ROUTE ISSUES:\n" + bad.join("\n") : "所有路由渲染正常，无 JS 错误、无 undefined/NaN") +
+    "\n" + (roleBad.length ? "ROLE ISSUES:\n" + roleBad.join("\n") : "角色切换后权限拦截均有提示") +
+    "\n" + (errors.length ? "ERRORS:\n" + errors.join("\n") : "无全局 JS 错误") + "\n\nDONE");
+  document.title = "Smoke " + (bad.length || roleBad.length ? "FAIL" : "OK");
+})().catch((e) => put("FATAL " + e.message + "\n" + e.stack));
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
