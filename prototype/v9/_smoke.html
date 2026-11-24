@@ -5,7 +5,7 @@
 </head>
 <body>
 <pre id="out">running…</pre>
-<iframe id="f" src="/index.html?v=9.5.0"></iframe>
+<iframe id="f" src="/index.html?v=9.6.0"></iframe>
 <script>
 const out = [];
 const errors = [];
@@ -17,7 +17,7 @@ const put = (t) => { document.getElementById("out").textContent = t; };
 
 (async () => {
   const t0 = Date.now();
-  while (Date.now() - t0 < 8000 && !(W().DB && W().Store && W().App)) await wait(200);
+  while (Date.now() - t0 < 8000 && !(W().DB && W().DB.state && W().App)) await wait(200);
   if (!W().App) { put("FAIL app not ready"); return; }
   W().addEventListener("error", (e) => errors.push("JS " + e.message + " @" + (e.filename || "").split("/").pop() + ":" + e.lineno));
   W().addEventListener("unhandledrejection", (e) => errors.push("REJECT " + (e.reason && e.reason.message ? e.reason.message : e.reason)));

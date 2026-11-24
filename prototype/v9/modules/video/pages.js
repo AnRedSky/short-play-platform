@@ -22,7 +22,7 @@
           }
           const eps = D.episodes.filter(e => e.project === pid).sort((a, b) => a.no - b.no);
           const shots = D.shots.filter(s => s.project === pid);
-          const bg = Store.budgetOf(pid);
+          const bg = DB.state.budgetOf(pid);
           const paused = App.get(SCOPE, "queuePaused:" + pid, false);
           const pageActions = U.btn("新建生成批次", "video.newBatch", "primary", { pid: pid }) + U.btn(paused ? "恢复本项目队列" : "暂停本项目队列", "video.pauseQueue", "", { pid: pid }) + U.btn("查看任务中心", "video.toTasks", "", { pid: pid });
           if (!list.length) {
@@ -79,12 +79,16 @@
                 '<div class="queue-list">' + list.map(t => {
                   const sh = shotOf(t);
                   const img = (sh && U.storyFrame(sh)) || "assets/img/covers/shot-post.jpg";
+                  const st = t.steps || { vendor: "未开始", download: "未开始", persist: "未开始", qc: "未开始" };
                   return '<div class="take-card' + (cur && t.id === cur.id ? " is-cur" : "") + '" data-action="video.selectTask" data-id="' + t.id + '">' +
                     '<span class="tc-thumb"><img src="' + U.esc(img) + '" alt=""><em>' + U.esc(t.shot) + '</em></span>' +
                     '<div class="tc-body"><div class="tc-top"><b>' + U.esc(t.kind) + ' · ' + U.esc(t.shot) + '</b><span class="tc-pill ' + toneOf(t) + '">' + U.esc(t.status) + '</span></div>' +
                       '<small>' + U.esc(t.model) + " · " + U.esc(t.config) + " · " + U.esc(t.output) + '</small>' +
+                      /* 四状态分离：供应商任务 / 文件下载 / 资产持久化 / 质量检测，各自独立（业务方案 §8.2） */
+                      '<div class="thread">' + U.pill("供应商 " + st.vendor) + U.pill("下载 " + st.download) + U.pill("持久化 " + st.persist) + U.pill("质检 " + st.qc) + '</div>' +
                       '<div class="tc-progress"><span style="width:' + progOf(t) + '%"></span></div>' +
                       '<div class="tc-foot"><span>E' + t.ep + " / S" + t.scene + '</span><span>' + t.attempt + "/" + t.maxAttempts + ' 次</span><span>¥' + t.est + "</span>" +
+                        (t.failType && t.failType !== "—" ? '<span class="tc-fail">' + U.esc(t.failType) + "</span>" : "") +
                         (["排队中", "待执行", "待人工处理"].indexOf(t.status) >= 0 ? '<button type="button" class="tc-act" data-action="video.runTask" data-id="' + t.id + '">' + (t.status === "待人工处理" ? "处理" : "执行") + "</button>" : "") + '</div></div>' +
                   '</div>';
                 }).join("") + '</div>' +
@@ -112,7 +116,7 @@
                 U.hbar("本项目执行中", active, Math.max(list.length, 1), " / " + list.length + " 个任务"),
                 (qOps ? "平台视频队列 " + qOps.concurrency + " · " + qOps.note : "未读取到平台视频队列") + "；并发与配额共同限制吞吐",
                 (App.can("models.own") || App.can("models.manage")) ? U.btn("去资源配置", "video.toModels", "sm") : "") +
-              U.card("成本提示", U.notice("当前项目任务预计 ¥" + Store.money(est) + "，实际已入账 ¥" + Store.money(cost) + (bg ? "；项目预算 ¥" + Store.money(bg.used) + " / ¥" + Store.money(bg.total) : "；尚未建立项目预算") + "。", "info")) +
+              U.card("成本提示", U.notice("当前项目任务预计 ¥" + DB.state.money(est) + "，实际已入账 ¥" + DB.state.money(cost) + (bg ? "；项目预算 ¥" + DB.state.money(bg.used) + " / ¥" + DB.state.money(bg.total) : "；尚未建立项目预算") + "。", "info")) +
             "</div></div>"
           );
         }
@@ -273,9 +277,9 @@
 
   function runOne(t) {
     normalize(t);
-    const a = Store.ops.runTask(t.id);
+    const a = DB.state.runTask(t.id);
     if (!a.ok) return a;
-    const q = Store.ops.qcShot(t.shot);
+    const q = DB.state.qcShot(t.shot);
     if (!q.ok) return { ok: true, msg: a.msg + "；" + q.msg };
     return { ok: true, msg: a.msg + "；" + q.msg };
   }
@@ -286,7 +290,7 @@
     if (!t) return;
     normalize(t);
     if (t.status === "待质检") {
-      App.job({ title: "镜头级质量检测", steps: ["读取契约检测项", "比对参考资产", "写入质量报告"], run() { return Store.ops.qcShot(t.shot); } });
+      App.job({ title: "镜头级质量检测", steps: ["读取契约检测项", "比对参考资产", "写入质量报告"], run() { return DB.state.qcShot(t.shot); } });
       return;
     }
     App.job({
@@ -322,24 +326,24 @@
             let okShot = 0, review = 0, blocked = [], cost = 0;
             const queue = [];
             shots.forEach(s => {
-              if (s.status === "待质检") { const q = Store.ops.qcShot(s.id); if (q.ok) okShot += 1; else review += 1; return; }
+              if (s.status === "待质检") { const q = DB.state.qcShot(s.id); if (q.ok) okShot += 1; else review += 1; return; }
               const queued = D.tasks.find(t => t.shot === s.id && (t.status === "排队中" || t.status === "待执行"));
               if (queued) {
                 queue.push(queued.id);
                 return;
               }
-              const sub = Store.ops.submitTask({ project: p.id, shot: s.id, model: s.model && s.model !== "待选择" ? s.model : "视频模型 A", priority: "高" });
+              const sub = DB.state.submitTask({ project: p.id, shot: s.id, model: s.model && s.model !== "待选择" ? s.model : "视频模型 A", priority: "高" });
               if (!sub.ok) { blocked.push(s.id + "（" + sub.msg + "）"); return; }
-              const run = Store.ops.runTask(sub.data.id);
+              const run = DB.state.runTask(sub.data.id);
               cost += sub.data.actual || 0;
               if (!run.ok) { review += 1; return; }
-              const q = Store.ops.qcShot(s.id);
+              const q = DB.state.qcShot(s.id);
               if (q.ok) okShot += 1; else review += 1;
             });
-            Store.log("项目 " + p.id, "执行 E" + ep + " 生产批次：" + d.note, okShot ? "成功" : "阻断", "batch-E" + ep);
+            DB.state.log("项目 " + p.id, "执行 E" + ep + " 生产批次：" + d.note, okShot ? "成功" : "阻断", "batch-E" + ep);
             return {
               ok: okShot > 0 || review > 0,
-              msg: "E" + ep + " 批次完成：通过 " + okShot + " 个 · 待判断 " + review + " 个 · 已排队待执行 " + queue.length + " 个 · 拦截 " + blocked.length + " 个" + (blocked.length ? "（" + blocked[0] + "）" : "") + "，实际扣费 ¥" + Store.money(cost)
+              msg: "E" + ep + " 批次完成：通过 " + okShot + " 个 · 待判断 " + review + " 个 · 已排队待执行 " + queue.length + " 个 · 拦截 " + blocked.length + " 个" + (blocked.length ? "（" + blocked[0] + "）" : "") + "，实际扣费 ¥" + DB.state.money(cost)
             };
           }
         });
@@ -359,7 +363,7 @@
         App.set("video", key, false);
         const n = tasks().filter(t => t.status === "已暂停").length;
         tasks().filter(t => t.status === "已暂停").forEach(t => { t.status = "排队中"; });
-        Store.log("生产队列", pid + " 恢复队列（" + n + " 个任务）", "成功", "queue");
+        DB.state.log("生产队列", pid + " 恢复队列（" + n + " 个任务）", "成功", "queue");
         App.toast("已恢复 " + n + " 个视频任务"); App.refresh();
       }, "恢复队列");
       return;
@@ -368,7 +372,7 @@
       App.set("video", key, true);
       const n = tasks().filter(t => t.status === "排队中").length;
       tasks().filter(t => t.status === "排队中").forEach(t => { t.status = "已暂停"; });
-      Store.log("生产队列", pid + " 暂停队列（影响 " + n + " 个视频任务）", "成功", "queue");
+      DB.state.log("生产队列", pid + " 暂停队列（影响 " + n + " 个视频任务）", "成功", "queue");
       App.toast("本项目队列已暂停，受影响任务 " + n + " 个"); App.refresh();
     }, "暂停队列");
   });
@@ -394,7 +398,7 @@
       body: U.fSelect("取消原因", "reason", ["素材错误", "需求变更", "预算收回", "重复提交", "其他"], { required: true }) +
         U.fTextarea("补充说明", "note", { required: true, minlen: 8, rows: 3 }),
       submitText: "确认取消",
-      onSubmit(d) { return App.job({ title: "取消任务", steps: ["校验任务状态", "写入取消原因", "结算已发生费用"], run() { return Store.ops.cancelTask(t.id, d.reason + "：" + d.note); } }); }
+      onSubmit(d) { return App.job({ title: "取消任务", steps: ["校验任务状态", "写入取消原因", "结算已发生费用"], run() { return DB.state.cancelTask(t.id, d.reason + "：" + d.note); } }); }
     });
   });
 
@@ -416,20 +420,20 @@
           title: "处理失败任务", steps: ["校验处理方式", "写入处理记录", "更新任务状态"],
           run() {
             if (d.way === ways[2]) {
-              const r = Store.ops.switchModel(t.id, "视频模型 B（备用）");
+              const r = DB.state.switchModel(t.id, "视频模型 B（备用）");
               if (!r.ok) return r;
               return { ok: true, msg: r.msg };
             }
-            if (d.way === ways[4]) return Store.ops.cancelTask(t.id, "人工取消：" + d.note);
+            if (d.way === ways[4]) return DB.state.cancelTask(t.id, "人工取消：" + d.note);
             if (d.way === ways[3]) {
               t.status = "成功"; t.qc = "REVIEW_REQUIRED"; t.failReason = d.note;
               const s = D.shots.find(x => x.id === t.shot);
               if (s) { s.status = "已通过"; s.qc = "REVIEW_REQUIRED"; }
-              Store.log("任务 " + t.id, "接受当前结果并记录理由：" + d.note, "成功", t.id);
+              DB.state.log("任务 " + t.id, "接受当前结果并记录理由：" + d.note, "成功", t.id);
               return { ok: true, msg: "已接受当前结果，理由已写入质量与审计记录" };
             }
-            const r = Store.ops.retryTask(t.id);
-            if (r.ok) Store.log("任务 " + t.id, "按处理方式重试：" + d.way + " · " + d.note, "成功", t.id);
+            const r = DB.state.retryTask(t.id);
+            if (r.ok) DB.state.log("任务 " + t.id, "按处理方式重试：" + d.way + " · " + d.note, "成功", t.id);
             return r;
           }
         });
@@ -450,7 +454,7 @@
           title: "设置采用版本", steps: ["校验版本状态", "写入采用关系", "更新镜头与资产引用"],
           run() {
             if (s) { s.version = (el.dataset.v || "v1") + " 采用"; s.status = "已通过"; }
-            Store.log("镜头 " + (s ? s.id : "—"), "采用版本 " + (el.dataset.v || "v1") + "：" + d.note, "成功", s ? s.id : "—");
+            DB.state.log("镜头 " + (s ? s.id : "—"), "采用版本 " + (el.dataset.v || "v1") + "：" + d.note, "成功", s ? s.id : "—");
             return { ok: true, msg: "已设为采用版本" };
           }
         });
@@ -474,8 +478,8 @@
           title: "接受并记录理由", steps: ["校验理由完整性", "写入质量报告", "更新镜头状态"],
           run() {
             s.status = "已通过"; s.qc = "REVIEW_REQUIRED";
-            D.qualityIssues.unshift({ report: "ACCEPT-" + s.id, dim: d.item, where: s.id, level: "低", action: "接受现状（已记录理由）", auto: "否", decision: "accept", note: d.note, by: Store.actor(), at: Store.at() });
-            Store.log("镜头 " + s.id, "接受缺陷：" + d.item + " · " + d.note, "成功", s.id);
+            D.qualityIssues.unshift({ report: "ACCEPT-" + s.id, dim: d.item, where: s.id, level: "低", action: "接受现状（已记录理由）", auto: "否", decision: "accept", note: d.note, by: DB.state.actor(), at: DB.state.at() });
+            DB.state.log("镜头 " + s.id, "接受缺陷：" + d.item + " · " + d.note, "成功", s.id);
             return { ok: true, msg: "已接受并写入质量报告与审计" };
           }
         });
@@ -489,15 +493,22 @@
     if (!s) return;
     if (frozenPid(s.project)) { App.toast("项目已交付，镜头只读；变更需新建版本链", "bad"); return; }
     App.modal({
-      title: "局部重生成 · " + s.id, sub: "按当前契约新建尝试，原结果保留；单独计费",
-      body: U.fTextarea("调整说明", "note", { required: true, minlen: 8, rows: 3 }),
+      title: "局部重生成 · " + s.id, sub: "按当前契约新建尝试，原结果与费用保留；单独计费",
+      body: U.fSelect("问题类型", "type", ["画面异常", "人物不一致", "动作不符", "时长不符", "合规风险"], { required: true }) +
+        U.fTextarea("调整说明", "note", { required: true, minlen: 8, rows: 3 }) +
+        U.notice("返工必须指定问题镜头与问题类型（业务方案 §8.3）；不得因单个镜头问题无条件重做整集或整剧。", "warn"),
       submitText: "创建重生成",
       onSubmit(d) {
         return App.job({
-          title: "创建重生成任务", steps: ["校验镜头状态", "创建任务并排队"],
+          title: "创建重生成任务", steps: ["校验镜头状态", "创建任务并排队", "登记返工台账"],
           run() {
-            const r = Store.ops.submitTask({ project: s.project, shot: s.id, model: s.model && s.model !== "待选择" ? s.model : "视频模型 A", priority: "高" });
-            if (r.ok) Store.log("镜头 " + s.id, "局部重生成：" + d.note, "成功", r.data.id);
+            const r = DB.state.submitTask({ project: s.project, shot: s.id, model: s.model && s.model !== "待选择" ? s.model : "视频模型 A", priority: "高" });
+            if (r.ok) {
+              DB.state.log("镜头 " + s.id, "局部重生成（" + d.type + "）：" + d.note, "成功", r.data.id);
+              /* 返工台账登记问题类型；返工量计入返工率，不计入新增生成量（业务方案 §11.5） */
+              const n = D.reworkLedger.length + 1;
+              D.reworkLedger.unshift({ id: "RW-SHOT-" + (100 + n), project: s.project, target: s.id, type: d.type, round: 1, cost: r.data.est || 0, old: "旧版本与费用保留", status: "进行中", at: DB.state.at() });
+            }
             return r;
           }
         });

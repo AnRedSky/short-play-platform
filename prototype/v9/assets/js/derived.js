@@ -1,8 +1,17 @@
-/* 派生数据层：所有跨页指标只在这里计算，页面不得再用系数或对象 ID 编造事实。 */
-window.Derived = (function () {
+/* derived.js：派生数据层（数据层扩展，挂在 DB 命名空间下）。
+   所有跨页指标只在这里计算，页面不得再用系数或对象 ID 编造事实。
+   运行时身份由应用层注入（App.start → DB.derived.bind），本层不反向依赖应用层。 */
+DB.derived = (function () {
   const D = DB;
 
-  function actor(me) { return me || App.identity(); }
+  const fallbackIdentity = function () {
+    return (D.identities && D.identities[0]) || { id: "u-01", name: "系统", role: "owner", userId: "u-01" };
+  };
+  let ctx = { identity: fallbackIdentity };
+  function bind(context) { if (context && context.identity) ctx = { identity: context.identity }; }
+  function currentIdentity() { return ctx.identity() || fallbackIdentity(); }
+
+  function actor(me) { return me || currentIdentity(); }
 
   function actorUser(me) {
     const a = actor(me);
@@ -158,10 +167,10 @@ window.Derived = (function () {
     const passEps = eps.filter(e => e.qc === "PASS");
     const total = p.episodes || 0;
     const pct = total ? Math.round(passEps.length / total * 100) : 0;
-    const bg = Store.budgetOf(p.id);
+    const bg = DB.state.budgetOf(p.id);
     const bgPct = bg && bg.total ? Math.round(bg.used / bg.total * 100) : 0;
-    const gProd = Store.gate(p.id, "生产");
-    const gDel = Store.gate(p.id, "交付");
+    const gProd = DB.state.gate(p.id, "生产");
+    const gDel = DB.state.gate(p.id, "交付");
     const stat = p.status;
 
     const stages = [
@@ -228,6 +237,7 @@ window.Derived = (function () {
   }
 
   return {
+    bind: bind, identity: currentIdentity,
     actorUser, visibleProjects, canViewProject, visibleMembers, visibleCosts, visibleBudgets, scopeLabel,
     myProjects, home, projectIdOfReport, qualityOf, reviewsOf, deliveriesOf, risksOf, money, projectSummary, workflow
   };

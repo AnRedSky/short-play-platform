@@ -16,7 +16,7 @@ const map=[
 ['可填写 brief 的项目','可填写创意设定的项目'],
 ['"brief 已确认："','"创意设定已确认："'],
 ['可派生的 brief','可派生的创意设定'],
-['Store.log("brief "','Store.log("创意设定 "'],
+['DB.state.log("brief "','DB.state.log("创意设定 "'],
 ['读取已确认 brief','读取已确认创意设定'],
 ['未提交 brief 前','未提交创意设定前'],
 ['不可提交 brief','不可提交创意设定'],

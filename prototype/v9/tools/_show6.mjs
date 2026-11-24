@@ -9,4 +9,4 @@ for (const k of ["ops.adapterRegister", "ops.scaleRequest", "ops.restoreDrill", 
 }
 const d = fs.readFileSync("assets/js/data.js", "utf8");
 const idx = d.indexOf("ops: {");
-console.log("\n=== DB.ops\n" + d.slice(idx, idx + 500));
+console.log("\n=== DB.state\n" + d.slice(idx, idx + 500));

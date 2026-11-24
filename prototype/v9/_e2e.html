@@ -5,7 +5,7 @@
 </head>
 <body>
 <pre id="out">running…</pre>
-<iframe id="f" src="/index.html?v=9.5.0"></iframe>
+<iframe id="f" src="/index.html?v=9.6.0"></iframe>
 <script>
 const out = [];
 const flush = () => { document.getElementById("out").textContent = out.join("\n") || "running…"; };
@@ -49,8 +49,8 @@ async function go(hash) {
 }
 async function reload() {
   const fr = document.getElementById("f");
-  fr.src = "/index.html?v=9.5.0&r=" + Date.now();
-  await until(() => { try { return !!(W().App && W().Store && D().querySelector("#view")); } catch (e) { return false; } }, 9000);
+  fr.src = "/index.html?v=9.6.0&r=" + Date.now();
+  await until(() => { try { return !!(W().App && W().DB.state && D().querySelector("#view")); } catch (e) { return false; } }, 9000);
   await wait(600);
 }
 async function asIdentity(id) {
@@ -86,9 +86,9 @@ async function submitModal(values, ms) {
 window.addEventListener("error", (e) => { out.push("ERROR " + e.message + " @" + (e.filename || "") + ":" + (e.lineno || "")); flush(); });
 
 (async () => {
-  await until(() => W().DB && W().Store, 6000);
-  if (!W().DB || !W().Store) { document.getElementById("out").textContent = "FAIL iframe not ready（Store/DB 未加载）"; return; }
-  W().Store.reset();
+  await until(() => W().DB && W().DB.state, 6000);
+  if (!W().DB || !W().DB.state) { document.getElementById("out").textContent = "FAIL iframe not ready（DB.state 未加载）"; return; }
+  W().DB.state.reset();
   await reload();
   W().addEventListener("error", (e) => { out.push("IFRAME-ERROR " + e.message + " @" + (e.filename || "") + ":" + (e.lineno || "")); flush(); });
 

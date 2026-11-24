@@ -29,16 +29,18 @@ sandbox.window.App = {
     const qid = q && q.id;
     if (qid) {
       const p = db.projects.find(x => x.id === qid);
-      return p && sandbox.window.Derived.canViewProject(p) ? p : null;
+      return p && sandbox.window.DB.derived.canViewProject(p) ? p : null;
     }
-    return sandbox.window.Derived.visibleProjects()[0] || null;
+    return sandbox.window.DB.derived.visibleProjects()[0] || null;
   },
   routes() { return []; }, groups() { return []; }
 };
-sandbox.window.Store = {
-  FLOW: {}, canMove() { return { ok: true, msg: "" }; }, money(n) { return String(n); },
-  gate() { return { ok: true, items: [] }; }, budgetOf() { return null; }
-};
+/* 载入真实状态层与派生层，保证链接检查基于真实枚举与门禁 */
+vm.runInContext(read("assets/js/store.js"), sandbox, { filename: "store.js" });
+sandbox.window.DB.state.bind({
+  identity: () => sandbox.window.DB.identities.find(i => i.id === "i-owner"),
+  role: () => sandbox.window.DB.roles.find(r => r.code === "owner")
+});
 vm.runInContext(read("assets/js/derived.js"), sandbox, { filename: "derived.js" });
 for (const m of fs.readdirSync(path.join(root, "modules")).filter(d => fs.statSync(path.join(root, "modules", d)).isDirectory())) {
   vm.runInContext(read(`modules/${m}/pages.js`), sandbox, { filename: `${m}/pages.js` });

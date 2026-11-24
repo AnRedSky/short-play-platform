@@ -1,13 +1,30 @@
-/* store.js：业务状态层（应用层与模块层共用）。
+/* store.js：业务状态层（数据层扩展，挂在 DB 命名空间下）。
    职责：唯一允许改写业务状态的地方。所有写操作 = 状态机校验 → 数据变更 → 副作用（审计 / 通知 / 成本 / 资产）。
-   页面只读 DB 与 Store 投影；动作只调用 Store.ops，不直接改字典。刷新后回到初始演示数据（内存态）。 */
-window.Store = (function () {
+   分层口径：规范 §四「全局只暴露 DB / UI / App 三个核心对象」——本层并入数据层，导出为 DB.state；
+   本层不反向依赖应用层，运行时身份与角色由 App.start() 通过 bind() 注入。
+   页面只读 DB 与 DB.state 投影；动作只调用 DB.state.*，不直接改字典。 */
+DB.state = (function () {
   const D = DB;
   const CLOCK = { day: "2026-11-22", minute: 11 * 60 + 2 };
   const INITIAL = JSON.parse(JSON.stringify(D));
   const INITIAL_CLOCK = { day: CLOCK.day, minute: CLOCK.minute };
   const STATE_KEY = "shortplay.workbench.v937";
   let seq = 0;
+
+  /* ---------- 运行时上下文（由应用层注入，避免状态层反向依赖应用层） ---------- */
+  const fallbackIdentity = function () {
+    return (D.identities && D.identities[0]) || { id: "u-01", name: "系统", role: "owner", userId: "u-01" };
+  };
+  const fallbackRole = function () {
+    return (D.roles && D.roles[0]) || { code: "system", name: "系统", perms: [] };
+  };
+  let ctx = { identity: fallbackIdentity, role: fallbackRole };
+  function bind(context) {
+    if (!context) return;
+    ctx = { identity: context.identity || fallbackIdentity, role: context.role || fallbackRole };
+  }
+  function currentIdentity() { return ctx.identity() || fallbackIdentity(); }
+  function currentRole() { return ctx.role() || fallbackRole(); }
 
   /* ---------- 本地持久化：真实操作可以跨刷新继续 ---------- */
   function persist() {
@@ -58,7 +75,7 @@ window.Store = (function () {
   function time() { const s = at(); return s.slice(11); }
   function nid(prefix) { seq += 1; return prefix + "-" + String(700 + seq); }
   function actor() {
-    const me = App.identity ? App.identity() : null;
+    const me = currentIdentity();
     return me ? String(me.name).split(" · ")[0] : "系统";
   }
 
@@ -68,10 +85,14 @@ window.Store = (function () {
     return D.audits[0];
   }
   function notify(spec) {
+    /* 通知要素（业务方案 §17.2）：每条通知必须指向具体项目、任务或资产，
+       并包含触发原因、影响范围、当前状态、建议动作、可执行入口与责任对象；
+       不允许只推送「有异常发生」这类无定位信息。 */
+    const s = typeof spec === "string" ? { type: "系统通知", title: spec, reason: spec } : (spec || {});
     const row = {
-      id: nid("N"), type: spec.type, project: spec.project || "—", title: spec.title,
-      reason: spec.reason || "—", impact: spec.impact || "—", state: spec.state || "待处理",
-      action: spec.action || "—", owner: spec.owner || actor(), link: spec.link || "", unread: true, at: at()
+      id: nid("N"), type: s.type || "系统通知", project: s.project || "—", title: s.title || s.reason || "—",
+      reason: s.reason || s.title || "—", impact: s.impact || "—", state: s.state || "待处理",
+      action: s.action || "查看详情并处理", owner: s.owner || actor(), link: s.link || "", unread: true, at: at()
     };
     D.notifications.unshift(row);
     return row;
@@ -89,7 +110,10 @@ window.Store = (function () {
     const bg = budgetOf(projectId);
     if (bg) {
       bg.used = money(bg.used + amount);
-      bg.state = bg.used >= bg.total * 0.85 ? "接近阈值" : "正常";
+      /* 预算状态五态：未设置 / 正常 / 接近阈值 / 已超限 / 已冻结（业务方案 §15.5） */
+      if (bg.state !== "已冻结") {
+        bg.state = bg.used >= bg.total ? "已超限" : bg.used >= bg.total * 0.85 ? "接近阈值" : "正常";
+      }
       p.budgetState = bg.state;
     }
     const dept = D.budgets.find(b => b.scope === "部门" && b.name === p.dept);
@@ -100,7 +124,10 @@ window.Store = (function () {
       id: nid("CR"), project: projectId, ep: m.ep || "—", shot: m.shot || "—", task: m.task || "—",
       cap: m.cap || "视频生成", est: money(m.est || amount), actual: money(m.actual || 0), failed: money(m.failed || 0),
       bearer: m.bearer || "企业承担", source: m.source || "企业托管额度", provider: m.provider || "—",
-      status: m.status || "已确认", bill: m.bill || "—"
+      status: m.status || "已确认", bill: m.bill || "—",
+      /* 费用归属七维（业务方案 §15.2）：资源配置人 / 实际执行人 / 部门归属分别记录 */
+      resourceOwner: m.resourceOwner || "—", executor: m.executor || actor(), dept: p.dept || "—",
+      adjustment: m.adjustment || "—"
     };
     D.costs.unshift(row);
     D.usage.unshift({ id: nid("US"), project: projectId, task: m.task || "—", cap: row.cap, unit: m.unit || "次", vendorQty: m.qty || "1", platformQty: m.qty || "1", src: row.provider, status: "已计量", at: at() });
@@ -117,12 +144,12 @@ window.Store = (function () {
     "草稿": ["创意策划中", "已终止"],
     "创意策划中": ["剧本创作中", "已暂停", "已终止"],
     "剧本创作中": ["待剧本审核", "已暂停", "已终止"],
-    "待剧本审核": ["生产准备中", "剧本创作中", "已暂停"],
+    "待剧本审核": ["生产准备中", "剧本创作中", "已暂停", "已终止"],
     "生产准备中": ["生产中", "已暂停"],
     "生产中": ["后期制作中", "异常中", "已暂停"],
     "后期制作中": ["质量检测中", "已暂停"],
     "质量检测中": ["待最终审核", "后期制作中"],
-    "待最终审核": ["已完成", "后期制作中"],
+    "待最终审核": ["已完成", "后期制作中", "已终止"],
     "已完成": ["已交付", "后期制作中"],
     "已交付": ["已归档"],
     "已归档": [],
@@ -153,6 +180,27 @@ window.Store = (function () {
     p.updated = at();
     p.history = (p.history || []).concat([{ from: from, to: to, at: p.updated, by: actor(), note: note || "—" }]);
     return { ok: true };
+  }
+
+  /* 集数完整性核对（业务方案 §10.5）：计划集数 / 已生产 / 已通过 / 已交付，
+     缺集、错序、重复集必须在交付前拦截。 */
+  function episodeIntegrity(projectId) {
+    const p = prj(projectId);
+    const eps = D.episodes.filter(e => e.project === projectId).sort((a, b) => a.no - b.no);
+    const planned = p ? (p.episodes || 0) : 0;
+    const produced = eps.filter(e => e.status !== "待生产").length;
+    const passed = eps.filter(e => e.qc === "PASS").length;
+    const delivered = eps.filter(e => e.status === "已通过质检" || e.qc === "PASS").length;
+    const nos = eps.map(e => e.no);
+    const dup = nos.filter((n, i) => nos.indexOf(n) !== i);
+    const missing = [];
+    for (let i = 1; i <= planned; i++) if (nos.indexOf(i) < 0) missing.push(i);
+    const outOfOrder = eps.some((e, i) => i > 0 && e.no <= eps[i - 1].no);
+    return {
+      planned: planned, produced: produced, passed: passed, delivered: delivered, total: eps.length,
+      missing: missing, duplicated: dup, outOfOrder: outOfOrder,
+      ok: planned > 0 && eps.length === planned && missing.length === 0 && dup.length === 0 && !outOfOrder && passed === planned
+    };
   }
 
   /* ---------- 门禁 ---------- */
@@ -186,7 +234,11 @@ window.Store = (function () {
     } else {
       items.push({ key: "shots", label: "全部镜头质量 PASS", ok: shots.length > 0 && badShots.length === 0, note: shots.length ? badShots.length + " 个镜头未通过" : "无镜头契约" });
       items.push({ key: "time", label: "时间线无标脏片段", ok: tls.length > 0 && stale === 0, note: tls.length ? stale + " 处标脏" : "无时间线" });
-      items.push({ key: "ep", label: "全部分集质检通过", ok: eps.length > 0 && passedEp.length === eps.length && eps.length >= (p.episodes || 0), note: passedEp.length + " / " + Math.max(eps.length, p.episodes || 0) + " 集" });
+      const integ = episodeIntegrity(projectId);
+      const integNote = integ.missing.length ? "缺集 E" + integ.missing.join("、E")
+        : integ.duplicated.length ? "重复集 E" + integ.duplicated.join("、E")
+          : integ.outOfOrder ? "集号错序" : "计划 " + integ.planned + " 集 / 已生产 " + integ.produced + " / 已通过 " + integ.passed;
+      items.push({ key: "ep", label: "集数完整且全部通过质检", ok: integ.ok, note: integNote });
       items.push({ key: "rights", label: "授权齐备", ok: rightsBad.length === 0, note: rightsBad.join(" / ") || "—" });
       items.push({ key: "budget", label: "预算未冻结", ok: !bg || bg.state !== "已冻结", note: bg ? bg.state : "—" });
     }
@@ -203,7 +255,7 @@ window.Store = (function () {
     const no = Number(String(d.episodes || "20").replace(/[^\d]/g, "")) || 20;
     if (no < 4 || no > 60) return { ok: false, msg: "集数不在企业策略范围", fields: { episodes: "集数需为 4–60 的整数" } };
     const budget = Number(String(d.budget || "12000").replace(/[^\d.]/g, "")) || 12000;
-    const me = App.identity();
+    const me = currentIdentity();
     const u = (D.users || []).find(x => x.id === me.userId) || {};
     const dept = String(d.dept || me.dept || "内容创新部");
     const need = budget;
@@ -269,11 +321,15 @@ window.Store = (function () {
     if (!p) return { ok: false, msg: "项目不存在" };
     const brief = D.briefs.find(b => b.project === projectId && b.status === "已确认");
     if (!brief) return { ok: false, msg: "无已确认创意设定，不能生成方案" };
+    /* 启动生成前校验个人可用模型配置（业务方案 §5.2 / §13.7）：
+       未配置可用能力时明确报错并引导配置，不静默回退。 */
+    const capChk = usableConfig("文本生成");
+    if (!capChk.ok) return { ok: false, msg: capChk.msg, link: capChk.link, data: { needConfig: true } };
     const base = D.creativePlans.find(x => x.project === projectId);
     const n = D.creativePlans.filter(x => x.project === projectId).length + 1;
     const plan = { id: "CP-" + projectId.slice(3) + "-" + String.fromCharCode(64 + n), project: projectId, title: p.name + " · 方案 " + n, selling: "由创意设定生成的可比较方案", theme: brief.note.slice(0, 24), hook: "开场 3 秒建立冲突", risk: "需人工判断与现有方向的差异", score: 80 + (n % 4), chosen: false };
     D.creativePlans.push(plan);
-    spend(projectId, 6, { cap: "文本生成", task: "—", qty: "约 24k tokens", provider: "推理供应商" });
+    spend(projectId, 6, { cap: "文本生成", task: "—", qty: "约 24k tokens", provider: capChk.provider.name });
     log("项目 " + projectId, "生成创意方案（" + plan.id + "）", "成功", plan.id);
     return { ok: true, msg: "已生成新方案：" + plan.id, data: plan };
   }
@@ -309,6 +365,44 @@ window.Store = (function () {
     return { ok: true, msg: "候选剧本已生成：" + id, data: script };
   }
 
+  /* 剧本变更影响分析（业务方案 §6.4）：
+     必须输出到镜头级清单，不能只给汇总计数；覆盖人物、场景、对白、镜头、音频、时间线、任务与统计口径八个维度。 */
+  function impactAnalysis(projectId, newScriptId) {
+    const p = prj(projectId);
+    if (!p) return { ok: false, msg: "项目不存在" };
+    const shots = D.shots.filter(s => s.project === projectId);
+    const eps = D.episodes.filter(e => e.project === projectId);
+    const chars = D.characters.filter(c => c.project === projectId);
+    const locs = D.locations.filter(l => l.project === projectId);
+    const tls = D.timelines.filter(t => t.project === projectId);
+    const dialogs = D.dialogues.filter(d => d.project === projectId);
+    /* 受影响镜头：引用旧剧本版本，或已生成但未通过的镜头 */
+    const affected = shots.filter(s => (newScriptId && s.scriptVersion && s.scriptVersion !== newScriptId) || s.status === "需复核");
+    const affectedEps = [...new Set(affected.map(s => s.ep))].sort((a, b) => a - b);
+    const affectedChars = chars.filter(c => affected.some(s => String(s.chars || "").indexOf(c.name) >= 0));
+    const affectedLocs = locs.filter(l => affected.some(s => String(s.refs || "").indexOf(l.name) >= 0));
+    const affectedLines = dialogs.filter(d => affectedEps.indexOf(Number(d.ep)) >= 0);
+    const dims = [
+      { key: "characters", label: "人物", count: affectedChars.length, items: affectedChars.map(c => c.name + " · " + c.id + " · 视觉档案 v" + (c.version || "v1")), note: affectedChars.length ? "需评估是否重建视觉档案" : "无受影响人物" },
+      { key: "locations", label: "场景", count: affectedLocs.length, items: affectedLocs.map(l => l.name + " · " + l.id + " · 场景资产 v" + (l.version || "v1")), note: affectedLocs.length ? "需评估是否重建场景资产" : "无受影响场景" },
+      { key: "dialogues", label: "对白", count: affectedLines.length, items: affectedLines.map(d => d.id + " · " + (d.text || d.line || "对白条目")), note: affectedLines.length ? "需重配或重做口型" : "无受影响对白" },
+      { key: "shots", label: "镜头", count: affected.length, items: affected.map(s => s.id + " · E" + s.ep + " / " + s.scene + " / " + s.no + " · 当前 " + s.status), note: affected.length ? "需按镜头级清单重新生产" : "无受影响镜头" },
+      { key: "audio", label: "音频", count: affectedEps.length, items: affectedEps.map(e => "E" + e + " · 需重配 / 重混 / 重做口型"), note: affectedEps.length ? "按集重做音频链路" : "无受影响音频" },
+      { key: "timelines", label: "时间线", count: tls.length, items: tls.map(t => t.version + " · E" + t.ep + " · 标脏 " + (t.stale || 0) + " 处"), note: tls.length ? "片段引用旧版本，标记待确认" : "无时间线" },
+      { key: "tasks", label: "任务", count: D.tasks.filter(t => t.project === projectId && ["成功", "排队中", "执行中"].indexOf(t.status) >= 0).length, items: D.tasks.filter(t => t.project === projectId && ["成功", "排队中", "执行中"].indexOf(t.status) >= 0).map(t => t.id + " · " + t.kind + " · " + t.status), note: "仅创建受影响的重生产任务，未受影响的已验证资产保留" },
+      { key: "metrics", label: "统计口径", count: affected.length, items: ["返工量计入返工率，不计入新增生成量", "受影响镜头 " + affected.length + " 个，受影响集 " + affectedEps.length + " 集"], note: "统计口径不因版本变更而重写" }
+    ];
+    return {
+      ok: true,
+      project: projectId,
+      newScriptId: newScriptId || "—",
+      affectedEps: affectedEps,
+      dims: dims,
+      shotList: affected.map(s => ({ id: s.id, ep: s.ep, scene: s.scene, no: s.no, status: s.status, deps: s.refs || "—", action: s.status === "需复核" ? "复核后局部重生成" : "按新剧本重新拆解" })),
+      total: affected.length
+    };
+  }
+
   function approveScript(scriptId, input) {
     const s = D.scripts.find(x => x.id === scriptId);
     if (!s) return { ok: false, msg: "剧本版本不存在" };
@@ -319,13 +413,26 @@ window.Store = (function () {
     D.scripts.forEach(x => { if (x.project === s.project) { x.locked = false; if (x.status === "待审核") x.status = "已废弃"; } });
     s.status = "已通过 · 正式版本"; s.locked = true; s.note = d.note;
     p.scriptVersion = s.id + "（正式，已锁定）";
-    D.reviews.unshift({ id: nid("RV"), project: s.project, node: "剧本审核（节点 A）", object: s.id, version: s.version, auditor: actor(), role: App.role().name, at: at(), result: "通过", note: d.note, positions: d.positions || "全剧", tasks: "—", follow: "进入生产准备中" });
+    D.reviews.unshift({ id: nid("RV"), project: s.project, node: "剧本审核（节点 A）", object: s.id, version: s.version, auditor: actor(), role: currentRole().name, at: at(), result: "通过", note: d.note, positions: d.positions || "全剧", tasks: "—", follow: "进入生产准备中" });
     const mv = moveTo(p, "生产准备中", "剧本审核通过并锁定 " + s.id);
     if (!mv.ok) return mv;
     p.phase = "导演规划";
+    /* 新版本通过后执行影响分析：识别受影响集、场、镜头、对白、音频与时间线，
+       仅标记过期，不自动重做（业务方案 §3.3 / §6.4） */
+    const impact = impactAnalysis(s.project, s.id);
+    impact.shotList.forEach(row => {
+      const sh = D.shots.find(x => x.id === row.id);
+      if (sh && sh.status !== "已通过") { sh.status = "需复核"; sh.scriptVersion = s.id; }
+    });
+    D.timelines.filter(t => t.project === s.project).forEach(t => { if (t.stale === 0) t.stale = 1; });
+    s.impact = { at: at(), shots: impact.total, eps: impact.affectedEps.length };
     log("项目 " + s.project, "剧本审核通过并锁定 " + s.id, "成功", "RV-A");
+    log("项目 " + s.project, "变更影响分析：受影响镜头 " + impact.total + " 个 / 受影响集 " + impact.affectedEps.length + " 集（仅标记待复核，不自动重做）", "成功", s.id);
     notify({ type: "剧本通过", project: s.project, title: "《" + p.name + "》剧本已锁定", reason: s.id + " 通过审核", impact: "下游镜头契约可固化，生产任务可提交", state: "已完成", action: "进入导演规划", owner: p.owner, link: "director/plan" });
-    return { ok: true, msg: "剧本已锁定，项目进入生产准备中", data: s };
+    if (impact.total) {
+      notify({ type: "剧本变更影响", project: s.project, title: "《" + p.name + "》新剧本版本影响 " + impact.total + " 个镜头", reason: "正式剧本换版 " + s.id + "，下游镜头与时间线标记待复核", impact: "受影响集 " + impact.affectedEps.join("、E") + "；未受影响的已验证资产保留", state: "待处理", action: "复核受影响镜头并按需重新拆解", owner: p.owner, link: "creation/breakdown" });
+    }
+    return { ok: true, msg: "剧本已锁定，项目进入生产准备中" + (impact.total ? "；影响分析：受影响镜头 " + impact.total + " 个已标记待复核" : ""), data: s };
   }
 
   function rejectScript(scriptId, input) {
@@ -333,12 +440,15 @@ window.Store = (function () {
     if (!s) return { ok: false, msg: "剧本版本不存在" };
     const d = input || {};
     if (!d.positions || !d.note) return { ok: false, msg: "退回必须指明位置与修改建议", fields: { positions: !d.positions ? "必须填写具体位置" : "", note: !d.note ? "必须给出可执行建议" : "" } };
+    /* 退回必须定位到集 / 场 / 段（业务方案 §6.3） */
+    const posOk = /E\d+|第\s*\d+\s*集|S\d+|场\s*\d+|段\s*\d+/i.test(String(d.positions));
+    if (!posOk) return { ok: false, msg: "退回位置必须定位到集 / 场 / 段，例如「E12 / S03 / 段 2」", fields: { positions: "请按 E集号 / S场号 / 段号 格式填写" } };
     const p = prj(s.project);
     s.status = "退回"; s.note = "退回意见：" + d.note;
-    D.reviews.unshift({ id: nid("RV"), project: s.project, node: "剧本审核（节点 A）", object: s.id, version: s.version, auditor: actor(), role: App.role().name, at: at(), result: "退回修改", note: d.note, positions: d.positions, tasks: "生成修订任务", follow: "回到剧本创作中" });
+    D.reviews.unshift({ id: nid("RV"), project: s.project, node: "剧本审核（节点 A）", object: s.id, version: s.version, auditor: actor(), role: currentRole().name, at: at(), result: "退回修改", note: d.note, positions: d.positions, tasks: "生成修订任务", follow: "回到剧本创作中" });
     const mv = moveTo(p, "剧本创作中", "剧本 " + s.id + " 退回修改");
     if (!mv.ok) return mv;
-    const task = { id: nid("T"), project: s.project, ep: "—", scene: "—", shot: "—", kind: "剧本修订", stage: "创意与剧本", status: "待执行", priority: "高", deps: [], parallelGroup: "SCR", input: s.id + " · " + d.positions, output: "候选剧本 v" + (Number(s.version.slice(1)) + 1), model: "推理模型 R1", config: "PRV-05", executor: p.owner, resourceOwner: p.owner, attempt: 0, maxAttempts: 3, est: 8, actual: 0, failedCost: 0, submitAt: "—", failReason: "—", qc: "—" };
+    const task = { id: nid("T"), project: s.project, ep: "—", scene: "—", shot: "—", kind: "剧本修订", stage: "创意与剧本", status: "待执行", priority: "高", deps: [], parallelGroup: "SCR", input: s.id + " · " + d.positions, output: "候选剧本 v" + (Number(s.version.slice(1)) + 1), model: "文本模型 A", config: "PRV-08", executor: p.owner, resourceOwner: p.owner, attempt: 0, maxAttempts: 3, est: 8, actual: 0, failedCost: 0, submitAt: "—", failReason: "—", qc: "—" };
     D.tasks.unshift(task);
     log("项目 " + s.project, "退回剧本 " + s.id + "（" + d.positions + "）", "成功", task.id);
     notify({ type: "剧本退回", project: s.project, title: "《" + p.name + "》剧本退回修改", reason: d.note.slice(0, 40), impact: "修订完成并重新审核前，下游保持阻塞", action: "按意见修订并重新提交审核", owner: s.by, link: "creation/script" });
@@ -436,7 +546,8 @@ window.Store = (function () {
         line: i === 2 ? "「这封信不是给我的。」" : "—", voice: "环境声 + 雨声",
         duration: i === 8 || i === 16 ? "8 秒" : "5 秒",
         refs: [ch && ch.name, lc && lc.name].filter(Boolean).join(" · ") || "—",
-        model: "视频模型 A", quality: "人物一致性 / 画面异常 / 时长", status: "待生成", version: "—"
+        model: "视频模型 A", quality: "人物一致性 / 画面异常 / 时长", status: "待生成", version: "—",
+        scriptVersion: (D.scripts.find(x => x.project === projectId && x.locked) || {}).id || "—"
       };
       D.shots.push(shot); out.push(shot);
     }
@@ -524,6 +635,43 @@ window.Store = (function () {
 
   /* ---------- 任务 ---------- */
   function task(id) { return D.tasks.find(t => t.id === id); }
+
+  /* 任务状态枚举（业务方案 §12.2）：十一种状态，口径在全项目内一致。 */
+  const TASK_STATES = [
+    { key: "待执行", desc: "已创建，依赖未满足或未入队" },
+    { key: "排队中", desc: "依赖满足，等待执行资源" },
+    { key: "执行中", desc: "已提交或正在本地执行" },
+    { key: "成功", desc: "输出校验通过并已进入质量流程" },
+    { key: "失败", desc: "执行失败且未恢复" },
+    { key: "取消中", desc: "已发出取消请求，等待供应商确认" },
+    { key: "已取消", desc: "取消完成" },
+    { key: "暂停中", desc: "已发出暂停请求，等待运行中步骤收口" },
+    { key: "已暂停", desc: "暂停生效，不能再派发" },
+    { key: "重试中", desc: "因失败或质量不合格正在新建尝试" },
+    { key: "待人工处理", desc: "达重试上限或触发异常策略，等待决策" }
+  ];
+  /* 失败类型（业务方案 §12.5）：不同类型采取不同策略，不得统一盲重试。 */
+  const FAIL_TYPES = {
+    "可重试": { retryable: true, strategy: "退避后自动重试（超时 / 限流 / 临时不可用）" },
+    "不可重试": { retryable: false, strategy: "参数错误 / 内容违规 / 授权缺失，直接转人工" },
+    "供应商拒绝": { retryable: false, strategy: "供应商明确拒绝，切换兼容模型后再评估" },
+    "下载失败": { retryable: true, strategy: "重新下载结果文件，必要时切换备用模型" },
+    "文件损坏": { retryable: false, strategy: "标记损坏并回退历史版本后重新生成" },
+    "质量不合格": { retryable: true, strategy: "按问题类型局部重生成，达上限转人工" },
+    "授权缺失": { retryable: false, strategy: "阻断下游，补授权或替换素材" }
+  };
+  function failTypeOf(reason) {
+    const s = String(reason || "");
+    if (/合规|违规|授权/.test(s)) return "不可重试";
+    if (/供应商拒绝|拒绝请求/.test(s)) return "供应商拒绝";
+    if (/下载/.test(s)) return "下载失败";
+    if (/损坏/.test(s)) return "文件损坏";
+    if (/一致性|画质|时长|口型/.test(s)) return "质量不合格";
+    return "可重试";
+  }
+  function newSteps() { return { vendor: "未开始", download: "未开始", persist: "未开始", qc: "未开始" }; }
+
+  /* 任务可执行性判定（业务方案 §12.7 生产衔接门禁 + §15.5 预算冻结） */
   function eligibility(t) {
     if (!t) return { ok: false, reason: "任务不存在" };
     if (["成功", "已取消"].indexOf(t.status) >= 0) return { ok: false, reason: "任务已终态（" + t.status + "），不能重复执行" };
@@ -533,9 +681,40 @@ window.Store = (function () {
     const deps = (t.deps || []).map(d => String(d).match(/T-\d+/)).filter(Boolean).map(m => m[0]);
     const undone = deps.filter(id => { const x = task(id); return x && x.status !== "成功"; });
     if (undone.length) return { ok: false, reason: "前置任务未完成：" + undone.join("、") };
+    /* 门禁 1：上游对象处于有效版本且未被标记过期
+       视频生成任务的上游是正式剧本与人物 / 场景参考资产；时间线属于下游产物，不作为镜头生产的前置门禁。 */
+    const shot = taskShot(t);
+    if (shot && String(shot.status).indexOf("需复核") >= 0) return { ok: false, reason: "上游镜头 " + shot.id + " 因版本变更被标记过期，需先复核或重新拆解" };
+    const downstream = ["单集合成", "单集质检", "整剧质检", "字幕合成"].indexOf(t.kind) >= 0;
+    if (downstream) {
+      const tl = D.timelines.find(x => x.project === t.project && x.ep === Number(t.ep) && x.stale > 0);
+      if (tl) return { ok: false, reason: "上游时间线 " + tl.version + " 有 " + tl.stale + " 处标脏片段，需先重出" };
+    }
+    /* 门禁 2：上游质量结果为 PASS（或 REVIEW_REQUIRED 已经人工确认） */
+    if (downstream) {
+      const epRow = D.episodes.find(e => e.project === t.project && e.no === Number(t.ep));
+      if (epRow && epRow.qc && epRow.qc !== "PASS") return { ok: false, reason: "上游分集 " + epRow.no + " 质量结果为 " + epRow.qc + "，未放行" };
+    }
+    const pendingRef = D.characters.concat(D.locations).filter(x => x.project === t.project && x.status === "待确认");
+    if (pendingRef.length) return { ok: false, reason: "上游视觉资产未确认：" + pendingRef.map(x => x.name).join("、") };
+    /* 门禁 3：预算与配置可用；预算冻结时禁止派发新任务（§15.5） */
     const bg = budgetOf(t.project);
+    if (bg && bg.state === "已冻结") return { ok: false, reason: "项目预算已冻结，禁止派发新任务；已发生费用仍正常入账" };
     if (bg && bg.used + t.est > bg.total) return { ok: false, reason: "预算不足：剩余 ¥" + money(bg.total - bg.used) + "，本次预计 ¥" + t.est };
     return { ok: true };
+  }
+
+  /* 任务可用的模型配置校验（业务方案 §13.7）：
+     未配置可用能力时返回明确的「未配置」错误，不得静默回退到其他实现或他人凭据。 */
+  function usableConfig(taskKind) {
+    const cap = taskKind === "对白配音" ? "语音合成" : taskKind === "单集质检" || taskKind === "整剧质检" ? "视觉理解" : "视频生成";
+    const uid = currentIdentity().userId || currentIdentity().id;
+    const mine = D.providers.filter(p => p.ownerId === uid);
+    const own = mine.filter(p => p.status === "启用");
+    const capable = own.filter(p => String(p.capabilities || "").indexOf(cap) >= 0);
+    if (!own.length) return { ok: false, msg: "未配置可用能力：" + cap + "。请先在「模型与资源 / 资源配置」中配置并通过连通性测试。", link: "models/config" };
+    if (!capable.length) return { ok: false, msg: "未配置可用能力：" + cap + "。当前 " + own.length + " 项启用配置均未声明该能力。", link: "models/config" };
+    return { ok: true, provider: capable[0], cap: cap };
   }
 
   function submitTask(input) {
@@ -551,12 +730,23 @@ window.Store = (function () {
     if (!model || model === "待选择") return { ok: false, msg: "未选择模型，路由策略无法确定" };
     if (String(model).indexOf("备用") >= 0 && (shot.refs || "").split("·").length >= 3) return { ok: false, msg: "备用模型不支持 3 张以上参考图，需先降级为无参考镜头或更换供应商" };
     const kind = d.kind || "视频生成";
+    /* 资源可用性校验：不得使用他人个人凭据（业务方案 §13.7 / §4.7） */
+    const cfgChk = usableConfig(kind);
+    if (!cfgChk.ok) return { ok: false, msg: cfgChk.msg, link: cfgChk.link };
+    const configId = d.config || cfgChk.provider.id;
+    const cfg = D.providers.find(x => x.id === configId);
+    if (!cfg) return { ok: false, msg: "资源配置不存在：" + configId };
+    const uid = currentIdentity().userId || currentIdentity().id;
+    if (cfg.ownerId !== uid && cfg.mode !== "企业托管") {
+      return { ok: false, msg: "不可使用他人个人凭据：" + configId + " 属于 " + (cfg.owner || "其他员工") + "，请选择本人配置或企业托管资源" };
+    }
     const est = money(Number(d.durationHint ? d.durationHint : 6) * 6.3);
     const t = {
       id: nid("T"), project: d.project, ep: shot.ep, scene: shot.scene, shot: shot.id, kind: kind, stage: kind === "对白配音" ? "音频" : "视频生产",
       status: "排队中", priority: d.priority || "中", deps: [], parallelGroup: "E" + pad(shot.ep), input: shot.refs, output: "MP4 1080×1920 · " + (shot.duration || "6 秒"),
-      model: model, config: d.config || "PRV-01", executor: actor(), resourceOwner: actor(), attempt: 0, maxAttempts: 3,
-      est: est, actual: 0, failedCost: 0, submitAt: time(), failReason: "—", qc: "待检"
+      model: model, config: configId, executor: actor(), resourceOwner: cfg.owner || actor(), attempt: 0, maxAttempts: 3,
+      est: est, actual: 0, failedCost: 0, submitAt: time(), failReason: "—", failType: "—", qc: "待检", steps: newSteps(),
+      vendorTaskId: "—", requestSummary: shot.refs, createdAt: at(), updatedAt: at(), errorCode: "—", logRef: "—", conclusion: "—"
     };
     const chk = eligibility(t);
     if (!chk.ok) return { ok: false, msg: chk.reason };
@@ -580,39 +770,99 @@ window.Store = (function () {
     const attemptNo = (t.attempt || 0) + 1;
     t.attempt = attemptNo;
     t.status = "执行中"; t.submitAt = t.submitAt === "—" ? time() : t.submitAt;
+    t.steps = t.steps || newSteps();
+    t.steps.vendor = "未开始"; t.steps.download = "未开始"; t.steps.persist = "未开始"; t.steps.qc = "未开始";
+    t.updatedAt = at();
     const prov = D.providers.find(p => p.id === t.config);
-    const failReason = (function () {
-      if (String(t.model).indexOf("备用") >= 0 && t.model.indexOf("video-b") < 0 && /备用/.test(t.model)) return "备用模型输出分辨率 720×1280，低于交付要求";
+    const uid = currentIdentity().userId || currentIdentity().id;
+    const bearer = prov && prov.ownerId === uid ? "个人承担" : "企业承担";
+
+    /* 环节 1：提交供应商任务（业务方案 §8.2 步骤 5） */
+    const vendorFail = (function () {
       if (prov && prov.test && prov.test.indexOf("失效") >= 0) return "供应商鉴权失败（凭据失效）";
-      if (t.kind === "视频生成" && shot && shot.refs && shot.refs.split("·").length >= 4) return "生成结果人物一致性不足（参考图过载）";
+      const mp = D.modelProfiles.find(x => x.provider === t.config && String(t.model).indexOf("备用") >= 0);
+      if (mp && /≤ 8s/.test(mp.limits || "")) {
+        const dur = Number((String(shot && shot.duration || "").match(/(\d+)/) || [])[1] || 0);
+        if (dur > 8) return "模型时长上限校验未通过：" + mp.model + " 单次 ≤ 8s，本次需 " + dur + "s";
+      }
       return "";
     })();
-    const att = { id: "AT" + t.id.replace("T", "") + "-" + attemptNo, task: t.id, at: time(), status: failReason ? "失败" : "成功", model: t.model, reason: failReason || "—", cost: t.est };
-    D.attempts.unshift(att);
-    if (failReason) {
+    t.vendorTaskId = "vt_" + t.id.replace(/[^0-9]/g, "") + "_" + attemptNo;
+    t.requestSummary = (t.input || "—") + " · " + t.output;
+    t.steps.vendor = vendorFail ? "失败" : "成功";
+    if (vendorFail) {
+      t.failReason = vendorFail;
+      t.failType = failTypeOf(vendorFail);
+      t.errorCode = "SUPPLIER_REJECT";
+      t.steps.download = "未执行"; t.steps.persist = "未执行";
+      const att = { id: "AT" + t.id.replace("T", "") + "-" + attemptNo, task: t.id, at: time(), status: "失败", model: t.model, reason: vendorFail, cost: t.est, step: "供应商任务" };
+      D.attempts.unshift(att);
       t.failedCost = money((t.failedCost || 0) + t.est);
-      spend(t.project, t.est, { task: t.id, cap: t.kind, ep: t.ep, shot: t.shot, est: t.est, failed: t.est, actual: 0, provider: prov ? prov.name : "—", qty: t.output, bearer: prov && prov.ownerId === App.identity().id ? "个人承担" : "企业承担" });
-      if (attemptNo >= (t.maxAttempts || 3)) {
-        t.status = "待人工处理"; t.failReason = failReason;
-        const inc = { id: nid("IN"), project: t.project, type: "任务失败", first: at(), handled: attemptNo, last: at(), action: "按重试上限停止自动重试，转人工", decision: "等待人工决定：换模型 / 换素材 / 取消", result: "未闭环", next: "切换兼容模型或降低参考要求后重试", level: "项目负责人" };
+      spend(t.project, t.est, { task: t.id, cap: t.kind, ep: t.ep, shot: t.shot, est: t.est, failed: t.est, actual: 0, provider: prov ? prov.name : "—", qty: t.output, bearer: bearer });
+      if (attemptNo >= (t.maxAttempts || 3) || !FAIL_TYPES[t.failType].retryable) {
+        t.status = "待人工处理";
+        const inc = { id: nid("IN"), project: t.project, type: "任务失败", first: at(), handled: attemptNo, last: at(), action: "按失败类型「" + t.failType + "」停止自动重试，转人工", decision: "等待人工决定：换模型 / 换素材 / 取消", result: "未闭环", next: FAIL_TYPES[t.failType].strategy, level: "项目负责人" };
         D.incidents.unshift(inc);
-        notify({ type: "异常升级", project: t.project, title: "任务 " + t.id + " 重试达上限转人工", reason: failReason, impact: "该镜头及后续依赖任务暂停", action: "选择兼容模型或调整素材后重试", owner: actor(), link: "tasks/attempt" });
-        log("任务 " + t.id, "失败重试达上限转人工", "待人工处理", t.id);
+        notify({ type: "异常升级", project: t.project, title: "任务 " + t.id + " 转人工处理", reason: vendorFail + "（失败类型：" + t.failType + "）", impact: "该镜头及后续依赖任务暂停", action: FAIL_TYPES[t.failType].strategy, owner: actor(), link: "tasks/attempt" });
+        log("任务 " + t.id, "供应商环节失败并转人工（第 " + attemptNo + " 次）", "待人工处理", t.id);
         if (shot) shot.status = "待人工处理";
-        return { ok: false, msg: "第 " + attemptNo + " 次尝试失败：" + failReason + "；已达上限，转人工处理", data: t };
+        return { ok: false, msg: "第 " + attemptNo + " 次尝试在「供应商任务」环节失败：" + vendorFail + "；失败类型「" + t.failType + "」，已转人工处理", data: t };
       }
-      t.status = "失败"; t.failReason = failReason;
-      log("任务 " + t.id, "执行失败（第 " + attemptNo + " 次）", "失败", att.id);
-      return { ok: false, msg: "第 " + attemptNo + " 次尝试失败：" + failReason + "，可重试（新一次尝试）", data: t };
+      t.status = "失败";
+      log("任务 " + t.id, "供应商环节失败（第 " + attemptNo + " 次）", "失败", att.id);
+      return { ok: false, msg: "第 " + attemptNo + " 次尝试在「供应商任务」环节失败：" + vendorFail + "（" + t.failType + "），可重试", data: t };
     }
+
+    /* 环节 2：下载结果并做文件校验（业务方案 §8.2 步骤 6–7）
+       校验文件类型、大小、时长、分辨率、完整性与可播放性；任一项不通过即停留在本环节，
+       不进入资产持久化——供应商成功不等于文件合格。 */
+    const durSec = Number((String(shot && shot.duration || "").match(/(\d+)/) || [])[1] || 6);
+    const sizeMB = Math.round(durSec * 1.2 * 10) / 10;
+    const limitMB = 40;
+    const backupModel = /备用/.test(String(t.model));
+    const resolutionOk = backupModel ? "未通过（备用模型输出 720×1280，低于交付要求 1080×1920）" : "通过";
+    const playableOk = sizeMB > limitMB ? "未通过" : "通过";
+    const downloadFail = resolutionOk !== "通过" || playableOk !== "通过";
+    t.steps.download = downloadFail ? "失败" : "成功";
+    t.fileCheck = { format: "MP4", sizeMB: sizeMB, limitMB: limitMB, durationSec: durSec, resolution: backupModel ? "720×1280" : "1080×1920", resolutionCheck: resolutionOk, playable: playableOk, checksum: "sha256:" + (100000 + D.assets.length).toString(16) };
+    if (downloadFail) {
+      t.failReason = "结果文件下载后校验未通过：" + (resolutionOk !== "通过" ? resolutionOk + "；" : "") + (playableOk !== "通过" ? "文件 " + sizeMB + " MB 超过 " + limitMB + " MB 上限，可播放性未通过" : "");
+      t.failType = failTypeOf(t.failReason);
+      t.errorCode = "DOWNLOAD_VERIFY_FAILED";
+      t.steps.persist = "未执行";
+      const att = { id: "AT" + t.id.replace("T", "") + "-" + attemptNo, task: t.id, at: time(), status: "失败", model: t.model, reason: t.failReason, cost: t.est, step: "文件下载与校验" };
+      D.attempts.unshift(att);
+      t.failedCost = money((t.failedCost || 0) + t.est);
+      spend(t.project, t.est, { task: t.id, cap: t.kind, ep: t.ep, shot: t.shot, est: t.est, failed: t.est, actual: 0, provider: prov ? prov.name : "—", qty: t.output, bearer: bearer });
+      if (attemptNo >= (t.maxAttempts || 3)) {
+        t.status = "待人工处理";
+        const inc = { id: nid("IN"), project: t.project, type: "关键资产损坏", first: at(), handled: attemptNo, last: at(), action: "下载校验未通过，标记损坏并转人工", decision: "等待人工决定：回退历史版本 / 降低时长重生成", result: "未闭环", next: "标记损坏 → 使用历史版本 → 重生成", level: "项目负责人" };
+        D.incidents.unshift(inc);
+        notify({ type: "异常升级", project: t.project, title: "任务 " + t.id + " 文件校验失败转人工", reason: t.failReason, impact: "该镜头资产未持久化，下游保持阻塞", action: "标记损坏并回退历史版本后重生成", owner: actor(), link: "tasks/attempt" });
+        log("任务 " + t.id, "文件校验环节失败并转人工（第 " + attemptNo + " 次）", "待人工处理", t.id);
+        if (shot) shot.status = "待人工处理";
+        return { ok: false, msg: "第 " + attemptNo + " 次尝试在「文件下载与校验」环节失败：" + t.failReason + "；已达上限，转人工处理", data: t };
+      }
+      t.status = "失败";
+      log("任务 " + t.id, "文件校验环节失败（第 " + attemptNo + " 次）", "失败", att.id);
+      return { ok: false, msg: "第 " + attemptNo + " 次尝试在「文件下载与校验」环节失败：" + t.failReason + "，可重试", data: t };
+    }
+
+    /* 环节 3：资产持久化（业务方案 §8.2 步骤 8） */
     const actual = t.est;
-    t.status = "成功"; t.actual = actual; t.qc = "待检"; t.failReason = "—";
-    spend(t.project, actual, { task: t.id, cap: t.kind, ep: t.ep, shot: t.shot, est: t.est, actual: actual, provider: prov ? prov.name : "—", qty: t.output, bearer: prov && prov.ownerId === App.identity().id ? "个人承担" : "企业承担" });
-    if (shot) { shot.status = "待质检"; shot.version = "生成版本 v" + attemptNo + " 待检"; }
     const n = D.assets.filter(a => a.project === t.project).length + 1;
-    D.assets.unshift({ id: "A-" + (1200 + n), name: (shot ? shot.id : t.id) + " · 生成结果", cat: "分镜与镜头资产", project: t.project, type: "原始视频", version: "v" + attemptNo, versions: 1, origin: String(t.model) + " · 参数摘要 p-" + (9000 + n), creator: actor(), executor: actor(), size: "1080×1920 · " + (shot ? shot.duration : "6 秒") + " · MP4", checksum: "sha256:" + (100000 + n).toString(16) + "…d" + n, qc: "待检", rights: "AI 生成 · 无需授权", refs: 0, formal: false, at: at(), status: "待质检" });
-    log("任务 " + t.id, "执行成功并持久化结果", "成功", t.id);
-    return { ok: true, msg: "任务成功：" + t.id + "，已扣费 ¥" + actual + "，结果已持久化", data: t };
+    D.assets.unshift({ id: "A-" + (1200 + n), name: (shot ? shot.id : t.id) + " · 生成结果", cat: "分镜与镜头资产", project: t.project, type: "原始视频", version: "v" + attemptNo, versions: 1, origin: String(t.model) + " · 参数摘要 p-" + (9000 + n), creator: actor(), executor: actor(), storage: "企业媒体存储 / " + t.project, size: "1080×1920 · " + (shot ? shot.duration : "6 秒") + " · MP4", checksum: t.fileCheck.checksum, qc: "待检", rights: "AI 生成 · 无需授权", refs: 0, formal: false, at: at(), status: "待质检" });
+    t.steps.persist = "成功";
+    /* 环节 4：质量检测 —— 独立状态，不与前面三步合并（业务方案 §8.2 四状态分离原则） */
+    t.steps.qc = "待检";
+    const att = { id: "AT" + t.id.replace("T", "") + "-" + attemptNo, task: t.id, at: time(), status: "成功", model: t.model, reason: "供应商任务成功 → 文件下载成功 → 资产持久化成功；等待镜头级检测", cost: actual, step: "资产持久化" };
+    D.attempts.unshift(att);
+    t.status = "成功"; t.actual = actual; t.qc = "待检"; t.failReason = "—"; t.failType = "—"; t.errorCode = "—";
+    t.conclusion = "供应商任务成功 / 文件下载成功 / 资产持久化成功；质量检测待执行";
+    spend(t.project, actual, { task: t.id, cap: t.kind, ep: t.ep, shot: t.shot, est: t.est, actual: actual, provider: prov ? prov.name : "—", qty: t.output, bearer: bearer });
+    if (shot) { shot.status = "待质检"; shot.version = "生成版本 v" + attemptNo + " 待检"; }
+    log("任务 " + t.id, "执行成功并持久化结果（四状态分离）", "成功", t.id);
+    return { ok: true, msg: "任务成功：" + t.id + "，已扣费 ¥" + actual + "；供应商任务 / 文件下载 / 资产持久化均成功，质量检测待执行", data: t };
   }
 
   function qcShot(shotId) {
@@ -628,20 +878,42 @@ window.Store = (function () {
     s.status = result === "PASS" ? "已通过" : "待人工判断";
     const assets = D.assets.filter(a => a.project === s.project && a.name.indexOf(s.id) >= 0 && a.status === "待质检");
     assets.forEach(a => { a.qc = result; a.status = result === "PASS" ? "正式" : "待复核"; a.formal = result === "PASS"; });
+    /* 质量检测为四状态中的第四个独立状态（业务方案 §8.2 四状态分离原则） */
+    D.tasks.filter(t => t.shot === s.id || (t.project === s.project && t.ep === s.ep && t.shot === s.no)).forEach(t => {
+      t.steps = t.steps || newSteps();
+      t.steps.qc = result;
+      t.qc = result;
+      t.conclusion = "供应商任务成功 / 文件下载成功 / 资产持久化成功 / 质量检测" + (result === "PASS" ? "通过" : result === "FAIL" ? "未通过" : "需人工判断");
+      t.updatedAt = at();
+    });
     const rep = { id: "QR-" + s.project.slice(3) + "-" + s.no + "-" + (D.qualityReports.filter(r => r.object.indexOf(s.id) >= 0).length + 1), object: s.project + " / " + s.id, level: "镜头级", version: s.version, result: result, items: 12, issues: issues.length, review: issues.length, fail: 0, engine: "视觉模型 V2", at: at(), note: issues.length ? issues.length + " 项待人工判断" : "镜头级检测全部通过" };
     D.qualityReports.unshift(rep);
     issues.forEach(i => D.qualityIssues.unshift({ report: rep.id, dim: i.dim, where: i.where, level: i.level, action: i.action, auto: i.auto }));
     log("镜头 " + s.id, "镜头级质量检测（" + result + "）", result === "PASS" ? "成功" : "待处理", rep.id);
     return { ok: result === "PASS", msg: result === "PASS" ? s.id + " 镜头级检测通过，资产转正式" : s.id + " 检测完成，" + issues.length + " 项待人工判断", data: rep };
   }
+  /* 重试：按失败类型分流（业务方案 §12.5），不可重试的类型直接转人工，不做统一盲重试。 */
   function retryTask(id) {
     const t = task(id);
     if (!t) return { ok: false, msg: "任务不存在" };
     if (t.attempt >= t.maxAttempts) return { ok: false, msg: "已达重试上限（" + t.maxAttempts + " 次），需更换模型或调整素材后再提交" };
     if (t.status === "执行中") return { ok: false, msg: "任务正在执行，不能重试" };
-    t.status = "排队中"; t.failReason = "—";
-    log("任务 " + t.id, "重试（创建新一次尝试）", "成功", t.id);
-    return { ok: true, msg: "已重新排队，将创建第 " + (t.attempt + 1) + " 次尝试", data: t };
+    const ft = t.failType && FAIL_TYPES[t.failType] ? t.failType : failTypeOf(t.failReason);
+    if (!FAIL_TYPES[ft].retryable) {
+      t.status = "待人工处理";
+      t.failType = ft;
+      t.conclusion = "失败类型「" + ft + "」不可自动重试：" + FAIL_TYPES[ft].strategy;
+      log("任务 " + t.id, "失败类型「" + ft + "」不可自动重试，转人工", "待人工处理", t.id);
+      notify({ type: "异常升级", project: t.project, title: "任务 " + t.id + " 需人工决策", reason: t.failReason + "（失败类型：" + ft + "）", impact: "该任务及其后继保持阻塞", action: FAIL_TYPES[ft].strategy, owner: actor(), link: "tasks/attempt" });
+      return { ok: false, msg: "失败类型「" + ft + "」不可自动重试：" + FAIL_TYPES[ft].strategy, data: t };
+    }
+    t.status = "重试中";
+    t.failReason = "—";
+    t.steps = t.steps || newSteps();
+    t.steps.vendor = "未开始"; t.steps.download = "未开始"; t.steps.persist = "未开始"; t.steps.qc = "未开始";
+    t.updatedAt = at();
+    log("任务 " + t.id, "重试（创建新一次尝试 · 失败类型：" + ft + "）", "成功", t.id);
+    return { ok: true, msg: "已按失败类型「" + ft + "」重新排队，将创建第 " + (t.attempt + 1) + " 次尝试", data: t };
   }
 
   function switchModel(id, modelName) {
@@ -886,6 +1158,10 @@ window.Store = (function () {
     const issue = issues[index];
     if (!issue) return { ok: false, msg: "检测项不存在" };
     if (decision === "accept" && (!note || note.length < 8)) return { ok: false, msg: "接受现状必须记录理由（至少 8 字）", fields: { note: "需说明可接受的原因" } };
+    /* 高危 / 合规类检测项不允许「接受现状」（业务方案 §11.3 / §11.5：质量豁免通道 MVP 阶段不开放） */
+    if (decision === "accept" && (issue.level === "高" || String(issue.dim).indexOf("合规") >= 0)) {
+      return { ok: false, msg: "「" + issue.dim + "」为高等级 / 合规检测项，不得人工接受现状；请返工或终止项目", fields: { note: "合规与高危项必须返工" } };
+    }
     issue.auto = issue.auto; issue.decision = decision; issue.note = note || ""; issue.by = actor(); issue.at = at();
     report.open = (report.open || 0) - 1;
     if (decision === "rework") {
@@ -895,11 +1171,22 @@ window.Store = (function () {
       return { ok: true, msg: "已创建返工项：" + issue.where };
     }
     const remaining = issues.filter(i => !i.decision).length;
+    const reworkCount = issues.filter(i => i.decision === "rework").length;
     if (!remaining) {
-      report.result = "PASS"; report.note = "人工判断完成：" + issues.filter(i => i.decision === "accept").length + " 项接受并记录理由";
       const proj = report.object.split(" / ")[0];
       const epNo = Number((report.object.match(/第 (\d+) 集/) || [])[1]);
       const ep = D.episodes.find(e => e.project === proj && e.no === epNo);
+      /* 存在返工项时报告保持未通过：FAIL 不可进入下游（业务方案 §11.3 门禁） */
+      if (reworkCount) {
+        report.result = "FAIL";
+        report.note = "人工判断完成：" + reworkCount + " 项发起返工，报告保持未通过；返工并复检通过前不可进入终审";
+        if (ep) { ep.qc = "FAIL"; ep.status = "质检不通过"; }
+        log("质量报告 " + reportId, "人工判断完成，" + reworkCount + " 项返工，报告保持未通过", "待处理", reportId);
+        const ownerRow = prj(proj);
+        notify({ type: "质量不通过", project: proj, title: "第 " + epNo + " 集质检未通过（" + reworkCount + " 项返工）", reason: report.note, impact: "该集保持阻塞，不可进入终审与交付", state: "待处理", action: "完成返工并重新检测", owner: ownerRow ? ownerRow.owner : "项目负责人", link: "quality/rework" });
+        return { ok: true, msg: "已记录判断：" + reworkCount + " 项返工，报告保持未通过（不可进入终审）" };
+      }
+      report.result = "PASS"; report.note = "人工判断完成：" + issues.filter(i => i.decision === "accept").length + " 项接受并记录理由";
       if (ep) { ep.qc = "PASS"; ep.status = "已通过质检"; }
       maybeAutoReview(proj);
       log("质量报告 " + reportId, "人工判断完成，报告转 PASS", "成功", reportId);
@@ -908,26 +1195,59 @@ window.Store = (function () {
   }
 
   /* ---------- 终审 / 交付 / 归档 ---------- */
+  /* 终审（节点 B）：四种结论（业务方案 §16.3）
+     通过交付 / 指定镜头或片段返工 / 退回后期 / 终止交付。
+     审核意见必须关联具体版本与问题位置。 */
   function finalReview(projectId, input) {
     const p = prj(projectId), d = input || {};
     if (!p) return { ok: false, msg: "项目不存在" };
     if (p.status !== "待最终审核") return { ok: false, msg: "当前「" + p.status + "」，不处于待最终审核" };
-    if (d.decision === "pass") {
-      if (!d.note || d.note.length < 10) return { ok: false, msg: "终审依据至少 10 字", fields: { note: "需覆盖剧情、质量、合规、交付完整性" } };
+    const decision = d.decision || "";
+    if (["pass", "rework", "back", "terminate"].indexOf(decision) < 0) return { ok: false, msg: "终审结论无效", fields: { decision: "请选择一种终审结论" } };
+    if (decision !== "pass" && (!d.positions || !d.note)) {
+      return { ok: false, msg: "非通过结论必须指定位置与理由", fields: { positions: !d.positions ? "请指定镜头或集（含场次 / 时间点）" : "", note: !d.note ? "请说明处理理由" : "" } };
+    }
+    if (decision === "pass" && (!d.note || d.note.length < 10)) {
+      return { ok: false, msg: "终审依据至少 10 字", fields: { note: "需覆盖剧情、质量、合规、交付完整性" } };
+    }
+    /* 锁定被审版本：使用具体时间线版本与剧本版本，不使用「当前最新」浮动指针（业务方案 §3.3 / §16.4） */
+    const lockedVersion = (p.timelineVersion || "未输出") + " / 剧本 " + (p.scriptVersion || "未锁定");
+    if (decision === "pass") {
       const mv = moveTo(p, "已完成", "终审通过");
       if (!mv.ok) return mv;
-      D.reviews.unshift({ id: nid("RV"), project: projectId, node: "最终成片审核（节点 B）", object: p.timelineVersion + " / " + p.episodes + " 集", version: "v-current", auditor: actor(), role: App.role().name, at: at(), result: "通过", note: d.note, positions: "全 " + p.episodes + " 集", tasks: "—", follow: "可生成交付包" });
-      log("项目 " + projectId, "终审通过（节点 B）", "成功", "RV-B");
-      notify({ type: "终审通过", project: projectId, title: "《" + p.name + "》终审通过，可生成交付包", reason: "节点 B 审核通过", impact: "交付前仍需通过交付清单校验", action: "生成交付包并确认交付", owner: p.owner, link: "post/delivery" });
+      D.reviews.unshift({ id: nid("RV"), project: projectId, node: "最终成片审核（节点 B）", object: p.timelineVersion + " / " + p.episodes + " 集", version: lockedVersion, auditor: actor(), role: currentRole().name, at: at(), result: "通过交付", note: d.note, positions: d.positions || "全 " + p.episodes + " 集", tasks: "—", follow: "进入交付流程，生成交付包" });
+      log("项目 " + projectId, "终审通过（节点 B · 通过交付）", "成功", "RV-B");
+      notify({ type: "终审通过", project: projectId, title: "《" + p.name + "》终审通过，可生成交付包", reason: "节点 B 审核通过（" + lockedVersion + "）", impact: "交付前仍需通过交付清单校验", action: "生成交付包并确认交付", owner: p.owner, link: "post/delivery" });
       return { ok: true, msg: "终审通过，项目进入已完成（可交付）" };
     }
-    if (!d.positions || !d.note) return { ok: false, msg: "返工必须指定位置与理由", fields: { positions: !d.positions ? "请指定镜头或集" : "", note: !d.note ? "请说明返工理由" : "" } };
-    const mv = moveTo(p, "后期制作中", "终审指定范围返工");
+    if (decision === "rework") {
+      const mv = moveTo(p, "后期制作中", "终审指定范围返工");
+      if (!mv.ok) return mv;
+      D.reviews.unshift({ id: nid("RV"), project: projectId, node: "最终成片审核（节点 B）", object: p.timelineVersion, version: lockedVersion, auditor: actor(), role: currentRole().name, at: at(), result: "指定镜头/片段返工", note: d.note, positions: d.positions, tasks: "建立局部返工任务", follow: "回到后期制作中" });
+      D.qualityIssues.unshift({ report: "REVIEW-" + projectId, dim: "终审意见", where: d.positions, level: "中", action: "按终审意见局部返工", auto: "否" });
+      const n = D.reworkLedger.length + 1;
+      D.reworkLedger.unshift({ id: "RW-FINAL-" + (100 + n), project: projectId, target: d.positions, type: "终审指定返工", round: 1, cost: 0, old: "旧版本与费用保留", status: "进行中", at: at() });
+      log("项目 " + projectId, "终审指定返工 " + d.positions, "成功", "RV-B");
+      notify({ type: "质量不通过", project: projectId, title: "《" + p.name + "》终审要求局部返工", reason: d.note, impact: "仅重做指定内容，未受影响资产保留", state: "待处理", action: "按指定位置完成返工并重新检测", owner: p.owner, link: "quality/rework" });
+      return { ok: true, msg: "已记录返工范围（" + d.positions + "），项目回到后期制作中" };
+    }
+    if (decision === "back") {
+      const mv = moveTo(p, "后期制作中", "终审退回后期");
+      if (!mv.ok) return mv;
+      D.reviews.unshift({ id: nid("RV"), project: projectId, node: "最终成片审核（节点 B）", object: p.timelineVersion, version: lockedVersion, auditor: actor(), role: currentRole().name, at: at(), result: "退回后期", note: d.note, positions: d.positions, tasks: "重做时间线或合成", follow: "回到后期制作中" });
+      D.timelines.filter(t => t.project === projectId).forEach(t => { t.stale = (t.stale || 0) + 1; t.status = "标脏"; });
+      log("项目 " + projectId, "终审退回后期（" + d.positions + "）", "成功", "RV-B");
+      notify({ type: "质量不通过", project: projectId, title: "《" + p.name + "》终审退回后期", reason: d.note, impact: "时间线已标脏，需重做合成后重新检测", state: "待处理", action: "重出时间线并重新合成", owner: p.owner, link: "post/timeline" });
+      return { ok: true, msg: "已记录退回后期意见，项目回到后期制作中" };
+    }
+    /* 终止交付：记录原因、取消交付、保留全部记录（业务方案 §16.3） */
+    const mv = moveTo(p, "已终止", "终审终止交付：" + d.note);
     if (!mv.ok) return mv;
-    D.reviews.unshift({ id: nid("RV"), project: projectId, node: "最终成片审核（节点 B）", object: p.timelineVersion, version: "v-current", auditor: actor(), role: App.role().name, at: at(), result: "指定镜头返工", note: d.note, positions: d.positions, tasks: "建立局部返工任务", follow: "回到后期制作中" });
-    D.qualityIssues.unshift({ report: "REVIEW-" + projectId, dim: "终审意见", where: d.positions, level: "中", action: "按终审意见局部返工", auto: "否" });
-    log("项目 " + projectId, "终审指定返工 " + d.positions, "成功", "RV-B");
-    return { ok: true, msg: "已记录返工范围，项目回到后期制作中" };
+    D.reviews.unshift({ id: nid("RV"), project: projectId, node: "最终成片审核（节点 B）", object: p.timelineVersion, version: lockedVersion, auditor: actor(), role: currentRole().name, at: at(), result: "终止交付", note: d.note, positions: d.positions, tasks: "取消交付流程", follow: "项目已终止，记录全部保留" });
+    D.tasks.filter(t => t.project === projectId && ["排队中", "执行中", "待执行", "已暂停", "重试中"].indexOf(t.status) >= 0).forEach(t => { t.status = "已取消"; t.failReason = "终审终止交付"; });
+    log("项目 " + projectId, "终审终止交付：" + d.note, "成功", "RV-B");
+    notify({ type: "异常升级", project: projectId, title: "《" + p.name + "》终审终止交付", reason: d.note, impact: "交付已取消，已产生资产、记录与费用全部保留", state: "已决策", action: "如需继续生产，请复制为新版本重新立项", owner: p.owner, link: "projects/detail" });
+    return { ok: true, msg: "已终止交付，项目进入已终止状态，记录全部保留" };
   }
 
   function generateDelivery(projectId) {
@@ -1064,14 +1384,37 @@ window.Store = (function () {
     log("个人凭据 " + providerId, on ? "启用资源配置" : "停用资源配置", "成功", providerId);
     return { ok: true, msg: p.name + (on ? " 已启用" : " 已停用") };
   }
-  function removeAsset(assetId) {
+  /* 资产删除：区分逻辑删除与物理删除（业务方案 §14.5）。
+     已被引用、已进入交付或已归档的资产不得物理删除；归档数据仍参与历史统计与追溯。 */
+  function removeAsset(assetId, mode) {
     const a = D.assets.find(x => x.id === assetId);
     if (!a) return { ok: false, msg: "资产不存在" };
+    if (a.archived) return { ok: false, msg: "已归档资产不可删除，只能新建修复版本" };
     if (a.refs > 0) return { ok: false, msg: "引用检查未通过：" + a.refs + " 处下游引用，删除会破坏历史，已阻断" };
     if (a.formal) return { ok: false, msg: "正式资产不可删除，只能新版本替代" };
-    D.assets.splice(D.assets.indexOf(a), 1);
-    log("资产 " + assetId, "删除资产（无引用）", "成功", assetId);
-    return { ok: true, msg: "资产已删除：" + assetId };
+    if (mode === "physical") {
+      D.assets.splice(D.assets.indexOf(a), 1);
+      log("资产 " + assetId, "物理删除资产（无引用 · 非正式）", "成功", assetId);
+      return { ok: true, msg: "资产已物理删除：" + assetId };
+    }
+    a.deleted = true;
+    a.status = "已逻辑删除";
+    a.at = at();
+    log("资产 " + assetId, "逻辑删除资产（保留版本与追溯）", "成功", assetId);
+    return { ok: true, msg: "资产已逻辑删除：" + assetId + "（记录保留，可审计追溯）" };
+  }
+  /* 资产归档：转只读可查，仍参与历史统计与追溯（业务方案 §14.5 / §18.4） */
+  function archiveAsset(assetId, note) {
+    const a = D.assets.find(x => x.id === assetId);
+    if (!a) return { ok: false, msg: "资产不存在" };
+    if (a.archived) return { ok: false, msg: "资产已归档" };
+    if (!note || note.length < 8) return { ok: false, msg: "归档必须记录原因", fields: { note: "至少 8 字" } };
+    a.archived = true;
+    a.status = "已归档";
+    a.archiveNote = note;
+    a.at = at();
+    log("资产 " + assetId, "归档资产（只读可查 · 仍参与历史统计）", "成功", assetId);
+    return { ok: true, msg: "资产已归档：" + assetId + "（只读可查，不计入有效交付）" };
   }
   function adjustBudget(projectId, total, reason) {
     const bg = budgetOf(projectId);
@@ -1080,12 +1423,55 @@ window.Store = (function () {
     if (!n || n <= 0) return { ok: false, msg: "预算金额无效", fields: { total: "必须为正数" } };
     if (n < bg.used) return { ok: false, msg: "新预算低于已用金额（¥" + bg.used + "）", fields: { total: "不得低于已用 ¥" + bg.used } };
     if (!reason || reason.length < 8) return { ok: false, msg: "调整预算必须记录理由", fields: { reason: "至少 8 字" } };
-    bg.total = n; bg.state = bg.used >= n * 0.85 ? "接近阈值" : "正常";
+    bg.total = n;
+    bg.state = bg.used >= n ? "已超限" : bg.used >= n * 0.85 ? "接近阈值" : "正常";
     const p = prj(projectId);
     if (p) { p.budget = n; p.budgetState = bg.state; }
     log("预算 " + projectId, "调整项目预算至 ¥" + n + "（" + reason + "）", "成功", projectId);
-    return { ok: true, msg: "预算已调整为 ¥" + n };
+    return { ok: true, msg: "预算已调整为 ¥" + n + "，当前状态「" + bg.state + "」" };
   }
+  /* 预算冻结 / 解冻（业务方案 §15.5）：冻结时禁止派发新任务，已发生费用仍可入账。 */
+  function freezeBudget(projectId, on, reason) {
+    const bg = budgetOf(projectId);
+    if (!bg) return { ok: false, msg: "该项目未设置预算" };
+    if (!reason || reason.length < 8) return { ok: false, msg: "冻结 / 解冻必须记录理由", fields: { reason: "至少 8 字" } };
+    if (on) {
+      bg.state = "已冻结";
+      bg.frozenReason = reason;
+      const p = prj(projectId);
+      if (p) p.budgetState = "已冻结";
+      D.tasks.filter(t => t.project === projectId && ["排队中", "执行中", "待执行", "重试中"].indexOf(t.status) >= 0).forEach(t => { t.status = "已暂停"; t.failReason = "预算冻结：" + reason; });
+      log("预算 " + projectId, "冻结项目预算（" + reason + "），暂停未完成任务的派发", "成功", projectId);
+      notify({ type: "预算提醒", project: projectId, title: "《" + (prj(projectId) || {}).name + "》预算已冻结", reason: reason, impact: "禁止派发新任务；已发生费用仍正常入账", state: "待处理", action: "追加预算或缩减范围后解冻", owner: (prj(projectId) || {}).owner || "项目负责人", link: "cost/budget" });
+      return { ok: true, msg: "预算已冻结，未完成任务的派发已暂停" };
+    }
+    bg.state = bg.used >= bg.total ? "已超限" : bg.used >= bg.total * 0.85 ? "接近阈值" : "正常";
+    bg.frozenReason = "";
+    const p = prj(projectId);
+    if (p) p.budgetState = bg.state;
+    log("预算 " + projectId, "解冻项目预算（" + reason + "）", "成功", projectId);
+    return { ok: true, msg: "预算已解冻，当前状态「" + bg.state + "」" };
+  }
+  /* 费用调整：必须保留原值、调整人、原因与凭据（业务方案 §15.3） */
+  function adjustCost(costId, actual, reason, bill) {
+    const c = D.costs.find(x => x.id === costId);
+    if (!c) return { ok: false, msg: "成本记录不存在" };
+    const n = Number(actual);
+    if (!Number.isFinite(n) || n < 0) return { ok: false, msg: "调整后金额无效", fields: { actual: "必须为非负数" } };
+    if (!reason || reason.length < 8) return { ok: false, msg: "费用调整必须记录原因", fields: { reason: "至少 8 字" } };
+    const before = c.actual;
+    c.originActual = before;
+    c.actual = money(n);
+    c.adjustedBy = actor();
+    c.adjustReason = reason;
+    c.bill = bill || c.bill;
+    c.status = "已调整";
+    c.adjustment = "¥" + money(before) + " → ¥" + money(n) + "（" + reason + "）";
+    log("成本 " + costId, "费用调整：¥" + money(before) + " → ¥" + money(n) + "（" + reason + "）", "成功", costId);
+    notify({ type: "预算提醒", project: c.project, title: "成本 " + costId + " 金额已调整", reason: reason, impact: "调整后金额 ¥" + money(n) + "，原值 ¥" + money(before) + " 保留可查", state: "已完成", action: "核对账单依据", owner: c.bearer, link: "cost/ledger" });
+    return { ok: true, msg: "费用已调整：¥" + money(before) + " → ¥" + money(n) + "，原值与依据已留存" };
+  }
+
   function memberStatus(userId, action) {
     const u = D.users.find(x => x.id === userId);
     if (!u) return { ok: false, msg: "成员不存在" };
@@ -1140,7 +1526,7 @@ window.Store = (function () {
       id: nid("T"), project: p.id, ep: "—", scene: "—", shot: "—", kind: "小说改编", stage: "创意与剧本",
       status: "成功", priority: "高", deps: [], parallelGroup: "SCR",
       input: "《" + title + "》原文 " + text.length + " 字 / " + chapters + " 章",
-      output: script.id + "（" + p.episodes + " 集改编大纲）", model: "推理模型 R1", config: "PRV-05",
+      output: script.id + "（" + p.episodes + " 集改编大纲）", model: "文本模型 A", config: "PRV-08",
       executor: actor(), resourceOwner: actor(), attempt: 1, maxAttempts: 3, est: 12.0, actual: 11.4,
       failedCost: 0, submitAt: time(), failReason: "—", qc: "结构校验通过"
     };
@@ -1205,21 +1591,25 @@ window.Store = (function () {
     pause: pause, resume: resume, terminate: terminate,
     renewRights: renewRights, replaceRightsAsset: replaceRightsAsset, closeRisk: closeRisk,
     updateCredential: updateCredential, testProvider: testProvider, toggleProvider: toggleProvider,
-    removeAsset: removeAsset, adjustBudget: adjustBudget, memberStatus: memberStatus, importNovel: importNovel
+    removeAsset: removeAsset, archiveAsset: archiveAsset, adjustBudget: adjustBudget, freezeBudget: freezeBudget, adjustCost: adjustCost, memberStatus: memberStatus, importNovel: importNovel,
+    episodeIntegrity: episodeIntegrity, impactAnalysis: impactAnalysis, taskStates: function () { return TASK_STATES.slice(); }, failTypes: function () { return FAIL_TYPES; }
   };
-  const ops = {};
+
+  /* 业务操作直接挂在 DB.state 上（规范 §三「全局只暴露 DB / UI / App 三个核心对象」）。
+     每个写操作返回后自动落一次本地快照，保证刷新后业务现场连续。 */
+  const API = {
+    at: at, time: time, actor: actor, log: log, notify: notify, spend: spend, money: money,
+    prj: prj, canMove: canMove, moveTo: moveTo, gate: gate, budgetOf: budgetOf,
+    reset: reset, save: persist, bind: bind, identity: currentIdentity, role: currentRole
+  };
   Object.keys(RAW_OPS).forEach(function (k) {
-    ops[k] = function () {
+    API[k] = function () {
       const out = RAW_OPS[k].apply(null, arguments);
       persist();
       return out;
     };
   });
 
-  return {
-    at: at, time: time, actor: actor, log: log, notify: notify, spend: spend, money: money,
-    prj: prj, canMove: canMove, moveTo: moveTo, gate: gate, budgetOf: budgetOf,
-    reset: reset, save: persist, ops: ops
-  };
+  return API;
 })();
 

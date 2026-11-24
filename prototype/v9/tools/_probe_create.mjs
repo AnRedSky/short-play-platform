@@ -12,8 +12,8 @@ sandbox.App = {
 };
 vm.createContext(sandbox);
 vm.runInContext(read("assets/js/data.js"), sandbox, { filename: "data.js" });
-vm.runInContext(read("assets/js/store.js"), sandbox, { filename: "store.js" });
-const Store = sandbox.window.Store;
-const r = Store.ops.createProject({ name: "E2E 直调", genre: "悬疑推理", episodes: "18", duration: "80", budget: "15000", audience: "18–30 岁都市女性" });
+vm.runInContext(read("assets/js/store.js"), sandbox, { filename: "DB.state.js" });
+const OPS = sandbox.window.DB.state;
+const r = DB.state.createProject({ name: "E2E 直调", genre: "悬疑推理", episodes: "18", duration: "80", budget: "15000", audience: "18–30 岁都市女性" });
 console.log(JSON.stringify(r).slice(0, 400));
 console.log(sandbox.window.DB.projects[0].id, sandbox.window.DB.projects[0].name);

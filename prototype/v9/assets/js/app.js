@@ -7,7 +7,6 @@ window.App = (function () {
     identityId: DB.currentIdentity,
     memory: {},
     menuOpen: false,
-    navOpen: null,
     modalSubmit: null,
     modalValidate: null,
     jobActive: false,
@@ -23,6 +22,9 @@ window.App = (function () {
   function can(code) {
     if (!code) return true;
     if (Array.isArray(code)) return code.some(c => can(c));
+    /* 平台级身份：自动放行平台域路由与动作（规范 §九.3）；
+       业务域权限码仍按角色授予范围判定——运维身份默认不具备业务内容访问权（业务方案 §4.6.1 / §4.4）。 */
+    if (identity().platform && String(code).indexOf("platform.") === 0) return true;
     return perms().indexOf(code) >= 0;
   }
   function guard(code, message) {
@@ -109,29 +111,20 @@ window.App = (function () {
   function set(scope, key, value) { mem(scope)[key] = value; }
 
   /* ---------- 组件：外壳 ---------- */
-  function navHtml() {
-    const cur = current().path;
-    const activeKey = current().route ? current().route.group : "";
-    const openKey = S.navOpen === null ? activeKey : S.navOpen;
-    return '<div class="nav-groups">' + S.groups
-      .slice()
-      .sort((a, b) => a.order - b.order)
-      .map(g => {
-        const visible = g.routes.filter(r => r.menu !== false && can(r.permission)).slice().sort((a, b) => a.menuOrder - b.menuOrder);
-        if (!visible.length) return "";
-        const isActive = g.key === activeKey;
-        const isOpen = g.key === openKey;
-        return '<section class="nav-group-wrap' + (isOpen ? " is-open" : "") + (isActive ? " is-active" : "") + '" data-group="' + esc(g.key) + '">' +
-          '<button type="button" class="nav-group-head" data-action="common.navGroup" data-key="' + esc(g.key) + '" aria-expanded="' + (isOpen ? "true" : "false") + '" aria-controls="nav-g-' + esc(g.key) + '">' +
-            '<span class="nav-group-name">' + esc(g.label) + '</span><span class="nav-group-count">' + visible.length + '</span><span class="nav-chev" aria-hidden="true">›</span>' +
-          '</button>' +
-          '<div class="nav-links" id="nav-g-' + esc(g.key) + '" aria-hidden="' + (isOpen ? "false" : "true") + '">' + visible.map(r => {
-            const active = r.path === cur;
-            return '<a class="nav-link' + (active ? " active" : "") + '" href="#/' + esc(r.path) + '">' + icon(r.icon) + "<span>" + esc(r.title) + "</span>" + (r.badge ? '<span class="pill ' + esc(UI.toneOf(r.badge)) + '" style="margin-left:auto">' + esc(r.badge) + "</span>" : "") + "</a>";
-          }).join("") + "</div></section>";
-      }).join("") + "</div>";
+  /* 菜单栏由 Menu 组件负责渲染与状态管理（assets/js/menu.js）：
+     左侧一级菜单垂直排列、二级菜单折叠展开、三级子菜单在工作区顶部横向呈现。
+     应用层只负责注入菜单数据、权限判定与选中回调，并按路由反向同步状态。 */
+  let menuReady = false;
+  function ensureMenu() {
+    if (menuReady || !window.Menu) return;
+    menuReady = true;
+    Menu.init({
+      tree: DB.menu,
+      can: can,
+      iconOf: (name, size) => UI.ico(name, size),
+      onSelect: (path) => { go(path); }
+    });
   }
-  function icon(name) { return '<span class="nav-ico">' + UI.ico(name, 15) + "</span>"; }
 
   function projectContext(proj, query) {
     const delivered = ["已交付", "已归档"].indexOf(proj.status) >= 0;
@@ -157,7 +150,7 @@ window.App = (function () {
     const app = document.getElementById("app");
     const qid = cur.query && cur.query.id;
     const qProject = qid ? DB.projects.find(p => p.id === qid) : null;
-    const canSeeQ = qProject && Derived.canViewProject(qProject);
+    const canSeeQ = qProject && DB.derived.canViewProject(qProject);
     if (canSeeQ) set("projects", "wfCurrent", qid);
     const inProjectModule = cur.route && (["creation", "director", "video", "audio", "post", "delivery", "quality"].indexOf(cur.route.group) >= 0 || cur.route.projectScoped);
     const activeProject = qid ? (canSeeQ ? DB.projects.find(p => p.id === qid) : null) : (inProjectModule ? currentProject({}) : null);
@@ -168,8 +161,8 @@ window.App = (function () {
     app.innerHTML =
       '<div class="shell">' +
         '<aside class="sidebar' + (S.menuOpen ? " open" : "") + '" id="sidebar">' +
-          '<div class="sidebar-brand"><span class="mark">FR</span><div><b>FRAME 短剧工场</b><small>AI 短剧创作工作台 · 第 9.5.0 版</small></div></div>' +
-          '<nav class="nav" aria-label="主导航">' + navHtml() + "</nav>" +
+          '<div class="sidebar-brand"><span class="mark">FR</span><div><b>FRAME 短剧工场</b><small>AI 短剧创作工作台 · 第 9.6.0 版</small></div></div>' +
+          '<nav class="nav" id="menu-root" aria-label="主导航"></nav>' +
           '<div class="sidebar-foot">一人一部戏 · 从创意到交付<br>静态原型 · 全部数据为虚构演示</div>' +
         "</aside>" +
         '<main class="main">' +
@@ -184,13 +177,20 @@ window.App = (function () {
             '<select class="filter" id="identity-switch" aria-label="评审模式：切换身份查看不同角色视角">' + DB.identities.map(i => '<option value="' + esc(i.id) + '"' + (i.id === me.id ? " selected" : "") + ">" + esc(i.name) + "</option>").join("") + "</select>" +
             '<span class="avatar" title="' + esc(role().name) + '">' + esc(me.avatar) + "</span></div>" +
           "</header>" +
+          /* 子菜单条位于内容区导航栏（顶栏）下方，随页面内容一起滚动 */
+          '<div class="submenu-wrap" id="submenu-root"></div>' +
+          '<div id="menu-status" class="sr-only" role="status" aria-live="polite"></div>' +
           '<div class="demo-strip">' + UI.ico("alert", 13) + "<span><b>本地已落库</b> · 项目、任务、成本与质检结果保存在本机，刷新后继续上次进度；右上角可恢复初始演示数据。</span></div>" +
           '<div class="content" id="view"></div>' +
         "</main>" +
       "</div>" +
       '<div id="overlay-root"></div><div id="toast-root" class="toast-root" aria-live="polite"></div>' +
       '<div id="drawer-root"></div>';
+    ensureMenu();
+    if (menuReady) Menu.build();
     renderView();
+    /* 路由 → 菜单反向同步：保证侧栏高亮、横向子菜单条与当前页面一致 */
+    if (window.Menu) Menu._sync(cur.path);
   }
 
   function renderView() {
@@ -218,7 +218,7 @@ window.App = (function () {
         view.innerHTML = UI.page("项目不存在", "项目不存在", "该链接指向的项目已不存在或已被清理。", UI.btn("返回项目列表", "projects.listLink", "primary"), UI.empty("没有可展示的业务数据", "请从项目列表重新进入；不存在项目不会被其他项目内容替代。"));
         return;
       }
-      if (!Derived.canViewProject(target)) {
+      if (!DB.derived.canViewProject(target)) {
         view.innerHTML = UI.page("项目不在可见范围", "无权查看该项目", "当前身份「" + role().name + "」不是该项目负责人或项目成员，项目内的剧本、任务、成本与授权均不展示。", UI.btn("返回项目列表", "projects.listLink", "primary") + UI.btn("切换身份查看", "common.focusIdentity"), UI.empty("项目不在可见范围", "如需查看，请由该项目的负责人或管理员把当前账号加入项目成员，或切换到具备权限的身份。"));
         return;
       }
@@ -249,7 +249,7 @@ window.App = (function () {
     if (!view) return;
     const qs = view.querySelectorAll("[data-filter]");
     const query = {};
-    qs.forEach(el => { if (el.value) query[el.dataset.filter] = el.value.toLowerCase(); });
+    qs.forEach(el => { if (el.dataset.filterMode === "state") return; if (el.value) query[el.dataset.filter] = el.value.toLowerCase(); });
     const keys = Object.keys(query);
     if (!keys.length) return;
     view.querySelectorAll("tbody tr:not(.table-empty-row)").forEach(row => {
@@ -453,7 +453,7 @@ window.App = (function () {
   on("common.home", () => { go(home()); });
   on("common.projects", () => { go("projects/list"); });
   on("common.switchProject", () => {
-    const list = Derived.visibleProjects();
+    const list = DB.derived.visibleProjects();
     if (!list.length) { toast("当前身份没有可进入的可见项目", "bad"); return; }
     drawer("切换项目", '<div class="ctx-list">' + list.map(p => '<div class="ctx-row"><div><b>' + esc(p.name) + '</b><small>' + esc(p.id) + " · " + esc(p.status) + " · " + esc(p.owner) + '</small></div><span class="ctx-row-side">' + UI.pill(p.status) + '<button type="button" class="btn sm primary" data-action="common.useProject" data-pid="' + esc(p.id) + '">进入</button></span></div>').join("") + "</div>", "按当前身份可见范围列出；切换后保持当前菜单页面");
   });
@@ -465,33 +465,16 @@ window.App = (function () {
     go(path, { id: pid });
   });
   on("common.reset", () => {
-    if (!window.Store || !Store.reset) return;
+    if (!window.DB || !DB.state || !DB.state.reset) return;
     job({
       title: "恢复初始演示数据",
       sub: "清除本机保存的项目、任务、成本与质检记录",
       steps: ["确认操作范围", "写入初始数据", "重建页面上下文"],
-      run() { return Store.reset(); },
+      run() { return DB.state.reset(); },
       after() { S.identityId = DB.currentIdentity; S.memory = {}; shell(); go(home()); }
     });
   });
   on("common.menu", () => { S.menuOpen = !S.menuOpen; const sb = document.getElementById("sidebar"); if (sb) sb.classList.toggle("open", S.menuOpen); });
-  on("common.navGroup", (el) => {
-    const key = el && el.dataset && el.dataset.key;
-    if (!key) return;
-    const activeKey = current().route ? current().route.group : "";
-    const openKey = S.navOpen === null ? activeKey : S.navOpen;
-    S.navOpen = key === openKey ? "" : key;
-    const nav = document.querySelector(".nav");
-    if (!nav) return;
-    nav.querySelectorAll(".nav-group-wrap").forEach(w => {
-      const open = w.dataset.group === S.navOpen;
-      w.classList.toggle("is-open", open);
-      const head = w.querySelector(".nav-group-head");
-      if (head) head.setAttribute("aria-expanded", open ? "true" : "false");
-      const links = w.querySelector(".nav-links");
-      if (links) links.setAttribute("aria-hidden", open ? "false" : "true");
-    });
-  });
   on("common.closeModal", () => { closeModal(); });
   on("common.closeDrawer", () => { closeDrawer(); });
   on("common.backdrop", (el, e) => { if (e.target.classList.contains("modal-backdrop")) closeModal(); });
@@ -579,6 +562,7 @@ window.App = (function () {
         const route = current().route;
         if (route && !can(route.permission)) { shell(); go(home()); return; }
         shell();
+        if (window.Menu) Menu.build();
         return;
       }
       const grid = el.closest ? el.closest(".radio-grid") : null;
@@ -597,23 +581,27 @@ window.App = (function () {
         closeModal();
       }
     });
-    window.addEventListener("hashchange", () => { S.menuOpen = false; S.navOpen = null; closeDrawer(); shell(); });
+    window.addEventListener("hashchange", () => { S.menuOpen = false; closeDrawer(); shell(); });
   }
 
   function currentProject(query) {
     const qid = query && query.id;
     if (qid) {
       const hit = DB.projects.find(p => p.id === qid);
-      return hit && Derived.canViewProject(hit) ? hit : null;
+      return hit && DB.derived.canViewProject(hit) ? hit : null;
     }
     const storedId = get("projects", "wfCurrent", "");
     const stored = DB.projects.find(p => p.id === storedId);
-    if (stored && Derived.canViewProject(stored)) return stored;
-    return Derived.myProjects()[0] || Derived.visibleProjects()[0] || null;
+    if (stored && DB.derived.canViewProject(stored)) return stored;
+    return DB.derived.myProjects()[0] || DB.derived.visibleProjects()[0] || null;
   }
 
   function start() {
     bind();
+    /* 向数据层扩展（DB.state / DB.derived）注入运行时身份与角色，
+       使状态层与派生层保持单向依赖，不反向调用应用层（规范 §四 依赖方向：数据层 → 组件层 → 应用层 → 模块层）。 */
+    if (window.DB && DB.state && DB.state.bind) DB.state.bind({ identity: identity, role: role });
+    if (window.DB && DB.derived && DB.derived.bind) DB.derived.bind({ identity: identity });
     if (!location.hash || location.hash === "#") location.hash = "#/" + home();
     else shell();
   }

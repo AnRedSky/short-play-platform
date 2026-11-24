@@ -61,7 +61,7 @@ window.DB = {
 
   /* ---------- 当前身份（切换仅用于演示菜单与路由权限差异） ---------- */
   identities: [
-    { id: "i-ops", role: "ops", userId: "u-07", name: "周砚 · 系统运维", dept: "技术支持部", avatar: "运" },
+    { id: "i-ops", role: "ops", userId: "u-07", name: "周砚 · 系统运维", dept: "技术支持部", avatar: "运", platform: true },
     { id: "i-admin", role: "admin", userId: "u-06", name: "沈牧 · 企业管理员", dept: "企业管理部", avatar: "管" },
     { id: "i-dept", role: "dept", userId: "u-05", name: "韩清 · 内容创新部", dept: "内容创新部", avatar: "部" },
     { id: "i-owner", role: "owner", userId: "u-01", name: "林知远 · 项目负责人", dept: "内容创新部", avatar: "林" },
@@ -491,13 +491,14 @@ window.DB = {
 
   /* ---------- 个人模型资源 ---------- */
   providers: [
-    { id: "PRV-01", ownerId: "u-01", owner: "林知远", name: "视频供应商 A", kind: "内置适配器 · 视频生成", endpoint: "https://video.example.local/v2", auth: "Bearer Token", region: "境内", masked: "vp-••••••••7K2P", capabilities: "视频生成 / 视频编辑", quota: "个人额度 · 已用 62%", test: "已验证 · 2026-11-20 09:12", status: "启用", defaultFor: "视频生成" },
-    { id: "PRV-02", ownerId: "u-01", owner: "林知远", name: "视觉供应商", kind: "内置适配器 · 视觉理解", endpoint: "https://vision.example.local/v1", auth: "API Key", region: "境内", masked: "vi-••••••••3N5R", capabilities: "视觉理解 / 内容审核", quota: "个人额度 · 已用 34%", test: "已验证 · 2026-11-19 15:40", status: "启用", defaultFor: "视觉理解" },
-    { id: "PRV-03", ownerId: "u-01", owner: "林知远", name: "语音供应商", kind: "内置适配器 · 语音", endpoint: "https://speech.example.local/tts", auth: "API Key", region: "境内", masked: "sp-••••••••1M8Q", capabilities: "语音合成 / 语音识别", quota: "个人额度 · 已用 21%", test: "已验证 · 2026-11-18 11:02", status: "启用", defaultFor: "语音合成" },
-    { id: "PRV-04", ownerId: "u-01", owner: "林知远", name: "转码供应商", kind: "内置适配器 · 转码", endpoint: "https://media.example.local/transcode", auth: "签名密钥", region: "境内", masked: "tc-••••••••9B4T", capabilities: "媒体转码 / 视频处理", quota: "企业配额 · 部门分配", test: "已验证 · 2026-11-17 17:21", status: "启用", defaultFor: "媒体转码" },
-    { id: "PRV-05", ownerId: "u-02", owner: "陈可心", name: "推理供应商", kind: "兼容接口 · 文本推理", endpoint: "https://llm.example.local/v1", auth: "Bearer Token", region: "境内", masked: "rs-••••••••6Y3L", capabilities: "文本生成 / 推理", quota: "个人额度 · 已用 47%", test: "已验证 · 2026-11-22 08:30", status: "启用", defaultFor: "文本生成" },
-    { id: "PRV-06", ownerId: "u-03", owner: "王亦宁", name: "QC Provider（企业托管）", kind: "企业托管 · 质量检测", endpoint: "https://qc.enterprise.local/v1", auth: "企业托管密钥", region: "境内", masked: "••••（企业托管，员工仅见脱敏）", capabilities: "视觉理解 / 内容审核", quota: "企业配额 · 制作中心 18%", test: "已验证 · 2026-11-16 10:00", status: "启用", defaultFor: "质量检测" },
-    { id: "PRV-07", ownerId: "u-04", owner: "赵一宁", name: "图像供应商 B", kind: "内置适配器 · 图像", endpoint: "https://image.example.local/v1", auth: "API Key", region: "境内", masked: "im-••••••••2Q7Z", capabilities: "图像生成 / 图像编辑", quota: "个人额度 · 已用 12%", test: "失效 · 鉴权失败 2026-11-21", status: "停用", defaultFor: "—" }
+    { id: "PRV-01", ownerId: "u-01", owner: "林知远", mode: "个人自持", name: "视频供应商 A", kind: "内置适配器 · 视频生成", endpoint: "https://video.example.local/v2", auth: "Bearer Token", region: "境内", masked: "vp-••••••••7K2P", capabilities: "视频生成 / 视频编辑", quota: "个人额度 · 已用 62%", test: "已验证 · 2026-11-20 09:12", status: "启用", defaultFor: "视频生成" },
+    { id: "PRV-02", ownerId: "u-01", owner: "林知远", mode: "个人自持", name: "视觉供应商", kind: "内置适配器 · 视觉理解", endpoint: "https://vision.example.local/v1", auth: "API Key", region: "境内", masked: "vi-••••••••3N5R", capabilities: "视觉理解 / 内容审核", quota: "个人额度 · 已用 34%", test: "已验证 · 2026-11-19 15:40", status: "启用", defaultFor: "视觉理解" },
+    { id: "PRV-03", ownerId: "u-01", owner: "林知远", mode: "个人自持", name: "语音供应商", kind: "内置适配器 · 语音", endpoint: "https://speech.example.local/tts", auth: "API Key", region: "境内", masked: "sp-••••••••1M8Q", capabilities: "语音合成 / 语音识别", quota: "个人额度 · 已用 21%", test: "已验证 · 2026-11-18 11:02", status: "启用", defaultFor: "语音合成" },
+    { id: "PRV-04", ownerId: "u-01", owner: "林知远", mode: "个人自持", name: "转码供应商", kind: "内置适配器 · 转码", endpoint: "https://media.example.local/transcode", auth: "签名密钥", region: "境内", masked: "tc-••••••••9B4T", capabilities: "媒体转码 / 视频处理", quota: "企业配额 · 部门分配", test: "已验证 · 2026-11-17 17:21", status: "启用", defaultFor: "媒体转码" },
+    { id: "PRV-05", ownerId: "u-02", owner: "陈可心", mode: "个人自持", name: "推理供应商", kind: "兼容接口 · 文本推理", endpoint: "https://llm.example.local/v1", auth: "Bearer Token", region: "境内", masked: "rs-••••••••6Y3L", capabilities: "文本生成 / 推理", quota: "个人额度 · 已用 47%", test: "已验证 · 2026-11-22 08:30", status: "启用", defaultFor: "文本生成" },
+    { id: "PRV-06", ownerId: "u-03", owner: "王亦宁", mode: "企业托管", name: "QC Provider（企业托管）", kind: "企业托管 · 质量检测", endpoint: "https://qc.enterprise.local/v1", auth: "企业托管密钥", region: "境内", masked: "••••（企业托管，员工仅见脱敏）", capabilities: "视觉理解 / 内容审核", quota: "企业配额 · 制作中心 18%", test: "已验证 · 2026-11-16 10:00", status: "启用", defaultFor: "质量检测" },
+    { id: "PRV-07", ownerId: "u-04", owner: "赵一宁", mode: "个人自持", name: "图像供应商 B", kind: "内置适配器 · 图像", endpoint: "https://image.example.local/v1", auth: "API Key", region: "境内", masked: "im-••••••••2Q7Z", capabilities: "图像生成 / 图像编辑", quota: "个人额度 · 已用 12%", test: "失效 · 鉴权失败 2026-11-21", status: "停用", defaultFor: "—" },
+    { id: "PRV-08", ownerId: "u-01", owner: "林知远", mode: "个人自持", name: "文本供应商 A", kind: "内置适配器 · 文本生成", endpoint: "https://text.example.local/v1", auth: "Bearer Token", region: "境内", masked: "tx-••••••••5H8Q", capabilities: "文本生成 / 推理", quota: "个人额度 · 已用 28%", test: "已验证 · 2026-11-21 14:05", status: "启用", defaultFor: "文本生成" }
   ],
   modelProfiles: [
     { id: "MP-01", provider: "PRV-01", model: "video-a-2.1", cap: "视频生成", io: "文/图/参考视频 → MP4", limits: "≤ 12s · ≤ 1080×1920 · 参考图 ≤ 4", price: "¥6.3 / 秒", license: "商用可用 · 条款已留档" },
@@ -505,7 +506,8 @@ window.DB = {
     { id: "MP-03", provider: "PRV-02", model: "vision-v2", cap: "视觉理解", io: "图像/视频帧 → 结构化结果", limits: "单次 ≤ 48 帧", price: "¥0.42 / 帧", license: "商用可用" },
     { id: "MP-04", provider: "PRV-03", model: "tts-b-3", cap: "语音合成", io: "文本 + 音色 → WAV", limits: "单次 ≤ 600 字", price: "¥0.9 / 百字", license: "商用可用 · 克隆需授权" },
     { id: "MP-05", provider: "PRV-05", model: "reason-r1", cap: "推理", io: "文本 → 结构化文本", limits: "上下文 128k", price: "¥0.11 / 千 tokens", license: "商用可用" },
-    { id: "MP-06", provider: "PRV-06", model: "qc-q1", cap: "内容审核", io: "图像/视频 → 检测项", limits: "单次 ≤ 3 分钟素材", price: "企业内结算", license: "企业托管" }
+    { id: "MP-06", provider: "PRV-06", model: "qc-q1", cap: "内容审核", io: "图像/视频 → 检测项", limits: "单次 ≤ 3 分钟素材", price: "企业内结算", license: "企业托管" },
+    { id: "MP-07", provider: "PRV-08", model: "text-a-1", cap: "文本生成", io: "文本 → 结构化文本", limits: "上下文 128k · 单次 ≤ 32k tokens", price: "¥0.09 / 千 tokens", license: "商用可用 · 条款已留档" }
   ],
   routePolicy: {
     project: "SP-26031", capability: "视频生成", version: "RP-26031-04",
@@ -658,8 +660,153 @@ window.DB = {
     { id: "IN-0079", project: "SP-26031", type: "预算接近阈值", first: "2026-11-21 09:40", handled: 1, last: "2026-11-21 10:10", action: "提醒负责人，未自动暂停", decision: "林知远 · 降低非关键镜头质量档", result: "已闭环", next: "按预算规则继续观察", level: "项目负责人" }
   ],
 
+  /* ---------- 菜单结构（通用静态原型开发规范 §五 / §六）----------
+     一级菜单 = 顶层导航域；二级菜单 = 流程节点；三级（子）菜单 = 具体操作，对应一条路由。
+     短剧制作整体流程收在一个一级菜单下，其二级菜单即生产流程节点（立项 → 创意剧本 → 导演视觉 →
+     视频 → 音频字幕 → 后期交付 → 质量返工），三级为各节点下的具体操作。
+     菜单与路由注册表的一致性由 tools/regress.mjs 交叉校验，避免两处口径漂移。 */
+  menu: [
+    {
+      id: "workspace", label: "创作工作台", icon: "home",
+      children: [
+      { id: "workspace-desk", label: "工作台", items: [
+        { id: "w-home", label: "工作台首页", path: "workspace/home", perm: "analytics.own" },
+        { id: "w-assistant", label: "指令式生产助手", path: "workspace/assistant", perm: "creation.write" },
+        { id: "w-projects", label: "我的项目", path: "workspace/projects", perm: "project.read" }
+      ] },
+      { id: "workspace-notify", label: "通知与异常", items: [
+        { id: "w-inbox", label: "待办与通知", path: "notify/inbox", perm: "notify.handle" },
+        { id: "w-incidents", label: "异常中心", path: "notify/incidents", perm: "notify.handle" }
+      ] }
+      ]
+    },
+    {
+      id: "production", label: "短剧制作", icon: "film",
+      children: [
+      { id: "prod-project", label: "立项与项目", items: [
+        { id: "p-list", label: "项目列表", path: "projects/list", perm: "project.read" },
+        { id: "p-new", label: "新建项目", path: "projects/new", perm: "project.create" },
+        { id: "p-workflow", label: "制作流水线", path: "projects/workflow", perm: "project.read" },
+        { id: "p-detail", label: "项目详情", path: "projects/detail", perm: "project.read", hidden: true },
+        { id: "p-lifecycle", label: "生命周期与状态机", path: "projects/lifecycle", perm: "project.manage" }
+      ] },
+      { id: "prod-creation", label: "创意与剧本", items: [
+        { id: "c-brief", label: "创意设定", path: "creation/brief", perm: "creation.write" },
+        { id: "c-plan", label: "创意方案", path: "creation/plan", perm: "creation.write" },
+        { id: "c-script", label: "剧本版本", path: "creation/script", perm: "creation.write" },
+        { id: "c-review", label: "剧本审核", path: "creation/review", perm: "script.review" },
+        { id: "c-breakdown", label: "剧本拆解", path: "creation/breakdown", perm: "creation.write" }
+      ] },
+      { id: "prod-director", label: "导演与视觉", items: [
+        { id: "d-plan", label: "镜头生产计划", path: "director/plan", perm: "director.write" },
+        { id: "d-cast", label: "人物视觉档案", path: "director/cast", perm: "director.write" },
+        { id: "d-world", label: "场景与道具", path: "director/world", perm: "director.write" },
+        { id: "d-shots", label: "镜头契约", path: "director/shots", perm: "director.write" },
+        { id: "d-storyboard", label: "分镜板", path: "director/storyboard", perm: "director.write" }
+      ] },
+      { id: "prod-video", label: "视频生产", items: [
+        { id: "v-queue", label: "视频生产队列", path: "video/production", perm: "production.write" },
+        { id: "v-results", label: "生成结果", path: "video/results", perm: "production.write" },
+        { id: "v-preview", label: "预览与校验", path: "video/preview", perm: "production.write" }
+      ] },
+      { id: "prod-audio", label: "音频与字幕", items: [
+        { id: "a-dialogue", label: "对白配音", path: "audio/dialogue", perm: "production.write" },
+        { id: "a-voice", label: "声音档案", path: "audio/voice", perm: "production.write" },
+        { id: "a-bgm", label: "配乐与音效", path: "audio/bgm", perm: "production.write" },
+        { id: "a-subtitle", label: "字幕与口型", path: "audio/subtitle", perm: "production.write" }
+      ] },
+      { id: "prod-post", label: "后期与交付", items: [
+        { id: "o-timeline", label: "时间线与剪辑", path: "post/timeline", perm: "post.write" },
+        { id: "o-episodes", label: "分集成片", path: "post/episodes", perm: "post.write" },
+        { id: "o-review", label: "最终成片审核", path: "post/review", perm: "final.review" },
+        { id: "o-delivery", label: "交付包", path: "post/delivery", perm: "delivery.execute" },
+        { id: "o-works", label: "作品库", path: "post/works", perm: "delivery.execute" },
+        { id: "o-versions", label: "版本链", path: "post/versions", perm: "post.write" }
+      ] },
+      { id: "prod-quality", label: "质量与返工", items: [
+        { id: "q-gates", label: "质量门禁", path: "quality/gates", perm: "quality.read" },
+        { id: "q-reports", label: "质量报告", path: "quality/reports", perm: "quality.read" },
+        { id: "q-rework", label: "返工与返工台账", path: "quality/rework", perm: "quality.operate" }
+      ] }
+      ]
+    },
+    {
+      id: "resource", label: "资源与治理", icon: "cube",
+      children: [
+      { id: "res-models", label: "模型资源", items: [
+        { id: "m-config", label: "资源配置", path: "models/config", perm: "models.own" },
+        { id: "m-providers", label: "供应商与模型", path: "models/providers", perm: "models.manage" },
+        { id: "m-routing", label: "能力与路由", path: "models/routing", perm: "models.manage" }
+      ] },
+      { id: "res-tasks", label: "生产任务", items: [
+        { id: "k-list", label: "生产任务", path: "tasks/list", perm: ["task.operate", "audit.read"] },
+        { id: "k-queue", label: "资源池与队列", path: "tasks/queue", perm: ["task.operate", "audit.read"] },
+        { id: "k-attempt", label: "尝试与调用记录", path: "tasks/attempt", perm: ["task.operate", "audit.read"] }
+      ] },
+      { id: "res-assets", label: "数字资产", items: [
+        { id: "s-library", label: "资产库", path: "assets/library", perm: "asset.read" },
+        { id: "s-usage", label: "引用与使用关系", path: "assets/usage", perm: "asset.read" }
+      ] },
+      { id: "res-cost", label: "成本与预算", items: [
+        { id: "t-ledger", label: "成本台账", path: "cost/ledger", perm: "cost.read" },
+        { id: "t-budget", label: "预算与阈值", path: "cost/budget", perm: "cost.read" },
+        { id: "t-usage", label: "用量与计量", path: "cost/usage", perm: "cost.read" }
+      ] }
+      ]
+    },
+    {
+      id: "analysis", label: "经营分析", icon: "chart",
+      children: [
+      { id: "ana-enterprise", label: "企业经营", items: [
+        { id: "n-enterprise", label: "企业整体数据", path: "analytics/enterprise", perm: "analytics.read" },
+        { id: "n-departments", label: "部门对比", path: "analytics/departments", perm: "analytics.read" },
+        { id: "n-employees", label: "员工对比", path: "analytics/employees", perm: "analytics.read" },
+        { id: "n-me", label: "我的数据", path: "analytics/me", perm: ["analytics.own", "analytics.read"] }
+      ] }
+      ]
+    },
+    {
+      id: "enterprise", label: "企业与合规", icon: "shield",
+      children: [
+      { id: "ent-org", label: "组织与权限", items: [
+        { id: "g-enterprise", label: "企业主体", path: "orgs/enterprise", perm: "enterprise.read" },
+        { id: "g-departments", label: "部门与组织单元", path: "orgs/departments", perm: "org.read" },
+        { id: "g-members", label: "员工账号", path: "orgs/members", perm: "org.read" },
+        { id: "g-member", label: "员工档案", path: "orgs/member", perm: "org.read", hidden: true },
+        { id: "g-roles", label: "角色与权限", path: "orgs/roles", perm: "org.read" },
+        { id: "g-grants", label: "项目成员授权", path: "orgs/grants", perm: "grant.manage" },
+        { id: "g-handover", label: "离职与移交", path: "orgs/handover", perm: "grant.manage" }
+      ] },
+      { id: "ent-compliance", label: "合规与审计", items: [
+        { id: "y-rights", label: "权利与授权台账", path: "compliance/rights", perm: "compliance.read" },
+        { id: "y-risks", label: "风险与异常", path: "compliance/risks", perm: "compliance.read" },
+        { id: "y-audit", label: "审计日志", path: "compliance/audit", perm: "compliance.read" }
+      ] }
+      ]
+    },
+    {
+      id: "platform", label: "平台运维", icon: "server",
+      children: [
+      { id: "plat-ops", label: "平台管理", items: [
+        { id: "o-overview", label: "平台总览", path: "ops/overview", perm: "platform.read" },
+        { id: "o-capabilities", label: "能力字典与适配器", path: "ops/capabilities", perm: "platform.read" },
+        { id: "o-queue", label: "队列、存储与备份", path: "ops/queue", perm: "platform.read" },
+        { id: "o-logs", label: "系统日志", path: "ops/logs", perm: "platform.read" },
+        { id: "o-config", label: "平台业务配置", path: "ops/config", perm: "platform.config" }
+      ] }
+      ]
+    }
+  ],
   /* ---------- 平台管理与系统 ---------- */
   ops: {
+    logs: [
+      { at: "2026-11-22 10:51", level: "WARN", source: "调度服务", message: "镜头 SH-26031-E17-05 重试达上限，已转人工处理" },
+      { at: "2026-11-22 10:35", level: "INFO", source: "供应商回执", message: "视频供应商 A 受理任务 va_9f21c7（请求摘要已脱敏）" },
+      { at: "2026-11-22 09:20", level: "ERROR", source: "媒体存储", message: "对象校验失败 1 个，已标记重取并保留占位" },
+      { at: "2026-11-22 08:12", level: "INFO", source: "任务队列", message: "视频队列并发 3/3，新增任务转排队" },
+      { at: "2026-11-21 23:40", level: "WARN", source: "备份任务", message: "媒体存储增量备份延迟 12 分钟，已在窗口内完成" },
+      { at: "2026-11-21 21:12", level: "ERROR", source: "供应商回执", message: "QC Provider 鉴权失败，已暂停引用该配置的质检任务" }
+    ],
     services: [
       { name: "业务 API", kind: "服务", status: "健康", latency: "42 ms", load: "23%", note: "P95 82ms · 错误率 0.04%" },
       { name: "任务调度器", kind: "服务", status: "健康", latency: "12 ms", load: "18%", note: "worker × 3 · 队列积压 4" },

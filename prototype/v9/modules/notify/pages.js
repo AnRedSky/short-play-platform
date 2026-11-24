@@ -10,9 +10,9 @@
         desc: "通知必须说明「为什么通知我、阻塞了什么、下一步做什么」。静默失败与无归属通知都视为缺陷。",
         render() {
           const tab = App.get(SCOPE, "tab", "all");
-          const visPids = Derived.visibleProjects().map(p => p.id);
+          const visPids = DB.derived.visibleProjects().map(p => p.id);
           const notes = D.notifications.filter(n => visPids.indexOf(n.project) >= 0);
-          const meName = (Derived.actorUser(App.identity()) || {}).name || "";
+          const meName = (DB.derived.actorUser(App.identity()) || {}).name || "";
           const isMine = (n) => n.owner === meName;
           const myTodo = notes.filter(n => isMine(n) && (n.state === "待处理" || n.state === "处理中"));
           const list = notes.filter(n => tab === "all" ? true : tab === "unread" ? n.unread : tab === "todo" ? myTodo.indexOf(n) >= 0 : n.state === "已升级");
@@ -67,7 +67,7 @@
         path: "notify/incidents", title: "异常中心", icon: "alert", permission: "notify.handle",
         desc: "异常按影响范围局部暂停，不整项目静默全停；处理必须留下决策、责任人与下一步。",
         render() {
-          const visPids = Derived.visibleProjects().map(p => p.id);
+          const visPids = DB.derived.visibleProjects().map(p => p.id);
           const inc = D.incidents.filter(i => visPids.indexOf(i.project) >= 0);
           const open = inc.filter(i => i.result !== "已闭环");
           const escalatedInc = inc.filter(i => String(i.level).indexOf("升级") >= 0);
@@ -80,9 +80,11 @@
               U.metric("已升级", String(escalatedInc.length), "超出项目内处置范围", "↑") +
               U.metric("涉及项目", String(incProjects.length), "非成员项目异常不展示", "▤") +
             "</div>" +
-            U.card("异常台账", U.table(["异常", "项目", "类型", "首次 / 最近", "处置动作", "决策与责任人", "下一步", "结果", "级别"], inc.map(i =>
-              '<tr><td>' + U.code(i.id) + "</td><td>" + U.esc(i.project) + '</td><td class="cell-wrap">' + U.esc(i.type) + '</td><td class="idx">' + U.esc(i.first) + "<br>" + U.esc(i.last) + '</td><td class="cell-wrap">' + U.esc(i.action) + '</td><td class="cell-wrap muted">' + U.esc(i.decision) + "</td><td class=\"cell-wrap\">" + U.esc(i.next) + "</td><td>" + U.pill(i.result) + "</td><td>" + U.pill(i.level, i.level.indexOf("企业") >= 0 ? "bad" : "info") + "</td><td>" +
-              U.btn("处置", "notify.incidentAction", "sm", { id: i.id }) + "</td></tr>").join("")), "异常关闭需回写结果与验证方式") +
+            U.card("异常台账", U.table(["异常", "项目", "类型", "首次 / 最近", "处理次数", "处置动作", "决策与责任人", "下一步", "结果", "最终状态", "级别"], inc.map(i => {
+              const pj = D.projects.find(x => x.id === i.project);
+              return '<tr><td>' + U.code(i.id) + "</td><td>" + U.esc(i.project) + '</td><td class="cell-wrap">' + U.esc(i.type) + '</td><td class="idx">' + U.esc(i.first) + "<br>" + U.esc(i.last) + '</td><td class="idx">' + U.esc(String(i.handled || 0)) + ' 次</td><td class="cell-wrap">' + U.esc(i.action) + '</td><td class="cell-wrap muted">' + U.esc(i.decision) + "</td><td class=\"cell-wrap\">" + U.esc(i.next) + "</td><td>" + U.pill(i.result) + "</td><td>" + U.pill(pj ? pj.status : "待确认") + "</td><td>" + U.pill(i.level, i.level.indexOf("企业") >= 0 ? "bad" : "info") + "</td><td>" +
+                U.btn("处置", "notify.incidentAction", "sm", { id: i.id }) + "</td></tr>";
+            }).join("")), "异常关闭需回写结果与验证方式") +
             '<div class="grid grid-2 mt-4">' +
               U.card("处置原则", U.listRows([
                 ["局部优先", "仅暂停受影响镜头 / 任务链路，其余镜头继续生产"],
@@ -110,7 +112,7 @@
   App.on("notify.toTasks", () => App.go("tasks/list"));
   const canSeeProject = (pid) => {
     const p = D.projects.find(x => x.id === pid);
-    return !!p && Derived.canViewProject(p);
+    return !!p && DB.derived.canViewProject(p);
   };
   App.on("notify.readAll", () => {
     const notes = D.notifications.filter(n => canSeeProject(n.project));
@@ -125,7 +127,7 @@
   App.on("notify.jump", (el) => {
     const n = D.notifications.find(x => x.id === el.dataset.id);
     if (!n || !canSeeProject(n.project)) { App.toast("该项目通知不在当前可见范围", "bad"); return; }
-    const meName = (Derived.actorUser(App.identity()) || {}).name || "";
+    const meName = (DB.derived.actorUser(App.identity()) || {}).name || "";
     if (/^models\/providers/.test(n.link || "") && !App.can("models.manage") && n.owner !== meName) {
       App.toast("该配置归属「" + n.owner + "」，请转待办给归属人或升级处理", "bad");
       return;
@@ -149,7 +151,7 @@
           run() {
             const next = { in: !!d.in, mail: !!d.mail, sms: !!d.sms, call: !!d.call };
             App.set(SCOPE, "prefs", next);
-            Store.log("通知偏好", "站内 " + (next.in ? "开" : "关") + " · 邮件 " + (next.mail ? "开" : "关") + " · 短信 " + (next.sms ? "开" : "关") + " · 电话 " + (next.call ? "开" : "关"), "成功", "notify");
+            DB.state.log("通知偏好", "站内 " + (next.in ? "开" : "关") + " · 邮件 " + (next.mail ? "开" : "关") + " · 短信 " + (next.sms ? "开" : "关") + " · 电话 " + (next.call ? "开" : "关"), "成功", "notify");
             return { ok: true, msg: "通知偏好已保存并生效" };
           }
         });
@@ -163,7 +165,7 @@
   const U = UI, D = DB;
   const canSeeProject = (pid) => {
     const p = D.projects.find(x => x.id === pid);
-    return !!p && Derived.canViewProject(p);
+    return !!p && DB.derived.canViewProject(p);
   };
   const noteById = (id) => {
     const n = D.notifications.find(x => x.id === id);
@@ -180,7 +182,7 @@
   App.on("notify.handle", (el) => {
     const n = noteById(el.dataset.id);
     if (!n) { App.toast("该通知不在当前可见范围", "bad"); return; }
-    const meName = (Derived.actorUser(App.identity()) || {}).name || "";
+    const meName = (DB.derived.actorUser(App.identity()) || {}).name || "";
     const to = (n.link || "workspace/home");
     const techLink = /^models\/providers/.test(to);
     const canJump = !techLink || App.can("models.manage") || n.owner === meName;
@@ -195,7 +197,7 @@
   App.on("notify.close", (el) => {
     const n = noteById(el.dataset.id);
     if (!n) { App.toast("该通知不在当前可见范围", "bad"); return; }
-    const meName = (Derived.actorUser(App.identity()) || {}).name || "";
+    const meName = (DB.derived.actorUser(App.identity()) || {}).name || "";
     if (/^models\/providers/.test(n.link || "") && !App.can("models.manage") && n.owner !== meName) {
       App.toast("你不能代替「" + n.owner + "」关闭资源配置通知；请转待办或升级", "bad");
       return;
@@ -211,7 +213,7 @@
           title: "关闭通知", steps: ["校验结论完整性", "更新通知状态", "写审计"],
           run() {
             n.state = "已处理"; n.unread = false; n.decision = d.kind + "：" + d.note;
-            Store.log("通知 " + n.id, d.kind + " · " + d.note, "成功", n.id);
+            DB.state.log("通知 " + n.id, d.kind + " · " + d.note, "成功", n.id);
             return { ok: true, msg: "通知 " + n.id + " 已处理并留痕" };
           }
         });
@@ -238,10 +240,10 @@
           title: "创建待办", steps: ["校验负责人与截止时间", "写入任务清单", "回写通知状态"],
           run() {
             const id = nextTaskId();
-            D.tasks.unshift({ id: id, project: n.project, ep: "—", scene: "—", shot: "—", kind: "待办", stage: "待办", status: "待执行", priority: d.prio, deps: [], parallelGroup: "—", input: n.title, output: "处理结论", model: "—", config: "—", executor: d.owner.split("（")[0], resourceOwner: "企业", attempt: 0, maxAttempts: 1, est: 0, actual: 0, failedCost: 0, submitAt: Store.time(), failReason: "—", qc: "—", due: d.due });
+            D.tasks.unshift({ id: id, project: n.project, ep: "—", scene: "—", shot: "—", kind: "待办", stage: "待办", status: "待执行", priority: d.prio, deps: [], parallelGroup: "—", input: n.title, output: "处理结论", model: "—", config: "—", executor: d.owner.split("（")[0], resourceOwner: "企业", attempt: 0, maxAttempts: 1, est: 0, actual: 0, failedCost: 0, submitAt: DB.state.time(), failReason: "—", qc: "—", due: d.due });
             n.state = "已转待办"; n.unread = false; n.task = id;
-            Store.notify("待办 " + id + " 已指派：" + d.owner);
-            Store.log("通知 " + n.id, "转待办 " + id + "（截止 " + d.due + "）", "成功", id);
+            DB.state.notify({ type: "待办指派", project: n.project, title: "待办 " + id + " 已指派：" + d.owner, reason: "通知 " + n.id + " 已转为待办事项", impact: "责任对象需在截止时间前给出处理结论", state: "待处理", action: "打开待办并填写处理结论", owner: d.owner, link: "notify/inbox" });
+            DB.state.log("通知 " + n.id, "转待办 " + id + "（截止 " + d.due + "）", "成功", id);
             return { ok: true, msg: "已创建待办 " + id + "，负责人 " + d.owner + "，截止 " + d.due };
           }
         });
@@ -263,11 +265,11 @@
           title: "升级通知", steps: ["校验升级理由", "写入异常台账", "通知上级"],
           run() {
             n.state = "已升级"; n.unread = false; n.escalatedTo = d.to;
-            n.escalatedAt = Store.at();
+            n.escalatedAt = DB.state.at();
             const id = "IN-" + String(D.incidents.length + 1).padStart(4, "0");
-            D.incidents.unshift({ id: id, project: n.project, type: n.type, first: Store.at(), handled: 1, last: Store.at(), action: "由通知升级进入异常台账", decision: String(D.identities.find(i => i.id === D.currentIdentity).name) + " · " + d.reason, result: "未闭环", next: n.action, level: d.to });
-            Store.notify("通知 " + n.id + " 已升级至" + d.to);
-            Store.log("通知 " + n.id, "升级至" + d.to + "：" + d.reason, "成功", id);
+            D.incidents.unshift({ id: id, project: n.project, type: n.type, first: DB.state.at(), handled: 1, last: DB.state.at(), action: "由通知升级进入异常台账", decision: String(D.identities.find(i => i.id === D.currentIdentity).name) + " · " + d.reason, result: "未闭环", next: n.action, level: d.to });
+            DB.state.notify({ type: "异常升级", project: n.project, title: "通知 " + n.id + " 已升级至" + d.to, reason: d.reason, impact: "超时未处理的异常升级至" + d.to + "，相关链路保持暂停", state: "待处理", action: "由" + d.to + "确认处理策略", owner: d.to, link: "notify/incidents" });
+            DB.state.log("通知 " + n.id, "升级至" + d.to + "：" + d.reason, "成功", id);
             return { ok: true, msg: "已升级至" + d.to + "，异常台账 " + id + " 已建立" };
           }
         });
@@ -294,16 +296,16 @@
           run() {
             if (i.type.indexOf("合规") >= 0 && d.way === "局部暂停并重生成") return { ok: false, msg: "合规类异常不接受纯自动重跑，需人工决策或替换素材", fields: { way: "合规需人工" } };
             i.action = d.way; i.decision = String(D.identities.find(x => x.id === D.currentIdentity).name) + " · " + d.note;
-            i.next = d.verify; i.last = Store.at(); i.handled = (i.handled || 0) + 1;
+            i.next = d.verify; i.last = DB.state.at(); i.handled = (i.handled || 0) + 1;
             if (d.way === "接受并记录理由") i.result = "已闭环（接受）";
             else if (d.way === "指派他人处理") i.result = "处理中";
             else if (d.way === "升级企业管理员") { i.result = "未闭环"; i.level = "升级至企业管理员"; }
             else i.result = "处理中";
             if (d.way === "局部暂停并重生成" || d.way === "替换素材后重跑") {
               const s = D.shots.find(x => x.project === i.project && x.status !== "已通过") || D.shots.find(x => x.project === i.project);
-              if (s) { s.status = "需返工"; Store.log("镜头 " + s.id, "异常处置联动返工：" + d.way, "成功", i.id); }
+              if (s) { s.status = "需返工"; DB.state.log("镜头 " + s.id, "异常处置联动返工：" + d.way, "成功", i.id); }
             }
-            Store.log("异常 " + i.id, d.way + " · " + d.note + " · 验证：" + d.verify, "成功", i.id);
+            DB.state.log("异常 " + i.id, d.way + " · " + d.note + " · 验证：" + d.verify, "成功", i.id);
             return { ok: true, msg: "异常 " + i.id + " 已处置（" + i.result + "），验证要求：" + d.verify };
           }
         });

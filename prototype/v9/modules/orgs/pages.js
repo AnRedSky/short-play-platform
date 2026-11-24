@@ -58,7 +58,7 @@
           return U.page("组织与权限 / 部门与组织", "部门与组织单元", "部门用于人员组织与统计维度；部门之间默认不可互相检索与引用项目资产，跨部门查看须授权并留审计。",
             App.can("org.manage") ? U.btn("新建部门", "orgs.newDept", "primary") : "",
             U.card("部门列表", U.table(["部门", "编码", "上级", "负责人", "成员", "项目", "预算使用", "状态", "操作"], rows), "当前可见范围内没有部门") +
-              '<div class="table-foot"><span data-filter-count>共 ' + list.length + " 个组织单元</span><span>可见范围：" + Derived.scopeLabel() + "</span></div>" +
+              '<div class="table-foot"><span data-filter-count>共 ' + list.length + " 个组织单元</span><span>可见范围：" + DB.derived.scopeLabel() + "</span></div>" +
               '<div class="grid grid-2 mt-4">' +
               U.card("组织边界规则", U.listRows([
                 ["归属要求", "项目、任务、资产、成本与交付必须归属企业；建议同时记录所属部门"],
@@ -79,7 +79,7 @@
         render() {
           const dept = App.get(SCOPE, "memberDept", "");
           const status = App.get(SCOPE, "memberStatus", "");
-          const visible = Derived.visibleMembers();
+          const visible = DB.derived.visibleMembers();
           const depts = D.departments.filter(d => visible.some(u => u.dept === d.name));
           const list = visible.filter(u => (!dept || u.dept === dept) && (!status || u.status === status));
           const active = visible.filter(u => u.status === "在职").length;
@@ -92,12 +92,12 @@
               U.fSelect("状态", "status", [{ value: "", label: "全部状态" }, "在职", "停用"], { value: status }) +
               '<span class="faint small" data-filter-count></span></div>' +
               U.table(["员工", "部门", "角色", "状态", "项目", "交付作品", "操作"], memberRows(list), "当前可见范围内没有符合条件的员工。"),
-              "当前显示 " + list.length + " 人 · 可见范围：" + Derived.scopeLabel(), U.btn("角色与权限对照", "orgs.toRoles", "sm")) +
-            U.tableFoot("可见成员 " + visible.length + " 人（企业共 " + D.users.length + " 人）", "数据范围：" + Derived.scopeLabel() + "；跨部门查看须授权并留审计") +
+              "当前显示 " + list.length + " 人 · 可见范围：" + DB.derived.scopeLabel(), U.btn("角色与权限对照", "orgs.toRoles", "sm")) +
+            U.tableFoot("可见成员 " + visible.length + " 人（企业共 " + D.users.length + " 人）", "数据范围：" + DB.derived.scopeLabel() + "；跨部门查看须授权并留审计") +
             '<div class="grid grid-3 mt-4">' +
               U.metric("在职（可见）", String(active), "停用 " + (visible.length - active) + " 人 · 待移交", "♙") +
               U.metric("个人自持配置", String(owned) + " 项", "凭据仅存密文，界面脱敏", "◇") +
-              U.metric("覆盖项目", String(Derived.visibleProjects().length) + " 个", "负责人或成员身份", "▤") +
+              U.metric("覆盖项目", String(DB.derived.visibleProjects().length) + " 个", "负责人或成员身份", "▤") +
             "</div>"
           );
         }
@@ -111,13 +111,13 @@
           if (!u) {
             return U.page("组织与权限 / 员工档案", "员工不存在", "该链接指向的员工档案不存在或已清理。", U.btn("返回名录", "orgs.toMembers", "primary"), U.empty("无法读取员工档案", "请从员工名录重新进入，不存在账号不会回退显示其他员工。"));
           }
-          const inScope = Derived.visibleMembers().some(x => x.id === u.id);
+          const inScope = DB.derived.visibleMembers().some(x => x.id === u.id);
           if (!inScope) {
-            return U.page("组织与权限 / 员工档案（无权限）", "员工档案不在可见范围", "当前身份「" + App.identity().name + "」只能查看 " + Derived.scopeLabel() + " 的成员档案。",
+            return U.page("组织与权限 / 员工档案（无权限）", "员工档案不在可见范围", "当前身份「" + App.identity().name + "」只能查看 " + DB.derived.scopeLabel() + " 的成员档案。",
               U.btn("返回名录", "orgs.toMembers", "primary"),
               U.empty("无访问权限", "跨部门成员档案须由企业管理员授权后查看；授权动作会写入审计。"));
           }
-          const visible = Derived.visibleProjects();
+          const visible = DB.derived.visibleProjects();
           const projects = visible.filter(p => p.ownerId === u.id);
           const grants = visible.filter(p => (p.members || []).some(m => m.userId === u.id) && p.ownerId !== u.id);
           return U.page("组织与权限 / 员工账号 / " + u.id, u.name + " · 员工档案", "档案、授权、执行记录与产出统计分开记录；历史贡献不因负责人变更被覆盖。",
@@ -168,7 +168,7 @@
             return hit ? hit.time : "—";
           };
           return U.page("组织与权限 / 项目授权", "项目成员授权", "项目授权不授予企业级数据范围；成员不得通过项目授权获得他人个人凭据。",
-            U.btn("新增授权", "orgs.grantNew", "primary") + U.btn("导出授权台账", "common.export"),
+            (App.can("grant.manage") ? U.btn("新增授权", "orgs.grantNew", "primary") : "") + U.btn("导出授权台账", "common.export"),
             U.card("项目 × 成员授权矩阵", U.table(["项目", "成员", "项目角色", "授权范围", "最近变更", "操作"], D.projects.flatMap(p =>
               (p.members || []).map(m => {
                 const u = D.users.find(x => x.id === m.userId) || { name: m.userId, dept: "—" };
@@ -193,10 +193,12 @@
         path: "orgs/handover", title: "离职与移交", icon: "archive", permission: "grant.manage",
         desc: "员工离职先完成或挂起进行中任务，再移交项目与授权；不得使用原负责人个人配置发起新调用。",
         render() {
-          const candidates = D.projects.filter(p => p.ownerId === "u-09" || p.status === "异常中");
-          const activeTask = (pid) => D.tasks.filter(t => t.project === pid && ["排队中", "执行中", "待执行", "待质检", "待人工处理", "失败", "失败（可重试）", "已暂停"].indexOf(t.status) >= 0).length;
+          /* 待移交项目 = 负责人账号已停用 / 离职的项目，或处于异常中需要先闭环的项目（不写死成员编号） */
+          const offboarded = D.users.filter(u => ["停用", "已停用", "离职"].indexOf(u.status) >= 0).map(u => u.id);
+          const candidates = D.projects.filter(p => (p.ownerId && offboarded.indexOf(p.ownerId) >= 0) || p.status === "异常中");
+          const activeTask = (pid) => D.tasks.filter(t => t.project === pid && ["排队中", "执行中", "待执行", "待质检", "待人工处理", "失败", "重试中", "已暂停"].indexOf(t.status) >= 0).length;
           const hp = candidates[0] || null;
-          const hpTasks = hp ? D.tasks.filter(t => t.project === hp.id && ["排队中", "执行中", "待执行", "待质检", "待人工处理", "失败", "失败（可重试）", "已暂停"].indexOf(t.status) >= 0) : [];
+          const hpTasks = hp ? D.tasks.filter(t => t.project === hp.id && ["排队中", "执行中", "待执行", "待质检", "待人工处理", "失败", "重试中", "已暂停"].indexOf(t.status) >= 0) : [];
           const hpAssets = hp ? D.assets.filter(a => a.project === hp.id) : [];
           const hpOpenRisk = hp ? D.risks.filter(r => r.project === hp.id && String(r.status).indexOf("已") < 0).length : 0;
           const hpBlockRight = hp ? D.rights.filter(r => r.project === hp.id && String(r.status).indexOf("阻断") >= 0).length : 0;
@@ -298,7 +300,7 @@
         p.members = p.members || [];
         const exist = p.members.find(m => m.userId === u.id);
         if (exist) exist.role = d.role; else p.members.push({ userId: u.id, role: d.role });
-        Store.log("项目成员 " + u.id, "授予 " + p.id + " " + d.role + " 权限：" + d.reason, "成功", p.id);
+        DB.state.log("项目成员 " + u.id, "授予 " + p.id + " " + d.role + " 权限：" + d.reason, "成功", p.id);
         App.toast("已授予 " + u.name + " 在 " + p.name + " 的" + d.role + "权限"); App.refresh();
       }
     });
@@ -311,13 +313,13 @@
     App.modal({
       title: "调整项目角色", sub: p.name + " · " + m.userId,
       body: U.fSelect("项目角色", "role", ["查看", "编辑", "审核", "管理"], { value: m.role }),
-      onSubmit(d) { m.role = d.role; Store.log("项目授权 " + p.id, "成员 " + m.userId + " 角色调整为 " + d.role, "成功", p.id); App.toast("项目角色已更新为「" + d.role + "」"); App.refresh(); }
+      onSubmit(d) { m.role = d.role; DB.state.log("项目授权 " + p.id, "成员 " + m.userId + " 角色调整为 " + d.role, "成功", p.id); App.toast("项目角色已更新为「" + d.role + "」"); App.refresh(); }
     });
   });
   App.on("orgs.preview", (el) => {
     const p = D.projects.find(x => x.id === el.dataset.id);
     if (!p) return;
-    const activeStatuses = ["排队中", "执行中", "待执行", "待质检", "待人工处理", "失败", "失败（可重试）", "已暂停"];
+    const activeStatuses = ["排队中", "执行中", "待执行", "待质检", "待人工处理", "失败", "重试中", "已暂停"];
     const tasks = D.tasks.filter(t => t.project === p.id && activeStatuses.indexOf(t.status) >= 0);
     const assets = D.assets.filter(a => a.project === p.id);
     App.drawer("移交预览 · " + p.name, U.desc([["项目编号", p.id], ["当前负责人", p.owner], ["阶段", p.phase], ["进行中任务", tasks.length + " 项"], ["待审 / 异常", p.status], ["预算余额", "¥" + (p.budget - p.actual).toLocaleString()], ["资产", assets.length + " 项"]]));
@@ -351,14 +353,14 @@
         return App.job({
           title: off ? "停用账号" : "恢复账号", steps: ["校验账号状态", "更新会话与任务", "写审计"],
           run() {
-            const r = Store.ops.memberStatus(u.id, off ? "disable" : "enable");
+            const r = DB.state.memberStatus(u.id, off ? "disable" : "enable");
             if (!r.ok) return r;
             if (off && d.hold) {
               const own = D.tasks.filter(t => t.executor === u.name && ["排队中", "执行中", "待执行"].indexOf(t.status) >= 0);
               own.forEach(t => { t.status = "待移交"; });
-              if (own.length) Store.notify(u.name + " 的 " + own.length + " 个任务已挂起待移交");
+              if (own.length) DB.state.notify({ type: "离职移交", project: own.map(x => x.id).join("、"), title: u.name + " 的 " + own.length + " 个任务已挂起待移交", reason: "账号停用，进行中任务按策略暂停", impact: "未完成任务不再派发，已发生费用归属不变", state: "待处理", action: "指定接手人并完成项目移交", owner: u.dept || "企业管理员", link: "orgs/handover" });
             }
-            Store.log("员工 " + u.id, (off ? "停用账号：" : "恢复账号：") + d.note, "成功", u.id);
+            DB.state.log("员工 " + u.id, (off ? "停用账号：" : "恢复账号：") + d.note, "成功", u.id);
             return { ok: true, msg: r.msg + (off && d.hold ? "；进行中任务已挂起" : "") };
           }
         });
@@ -386,11 +388,20 @@
             if (!to) return { ok: false, msg: "接手员工不存在", fields: { user: "请选择接手人" } };
             const own = D.tasks.filter(t => t.executor === u.name && ["排队中", "执行中", "待执行"].indexOf(t.status) >= 0);
             if (d.pause) own.forEach(t => { t.status = "待移交"; t.transferTo = to.name; });
+            /* 项目负责人变更：离职人不得继续担任负责人（业务方案 §4.8 员工离职） */
+            const ownedProjects = D.projects.filter(p => p.ownerId === u.id);
+            ownedProjects.forEach(p => {
+              p.historyOwners = (p.historyOwners || []).concat([{ owner: p.owner, ownerId: p.ownerId, at: DB.state.at(), reason: "离职移交给 " + to.name }]);
+              p.owner = to.name; p.ownerId = to.id;
+              p.members = p.members || [];
+              if (!p.members.some(m => m.userId === to.id)) p.members.push({ userId: to.id, role: "管理" });
+            });
             if (d.revoke) D.projects.forEach(p => { if (p.members) p.members = p.members.filter(m => m.userId !== u.id); });
-            const r = Store.ops.memberStatus(u.id, "disable");
+            const r = DB.state.memberStatus(u.id, "disable");
             if (!r.ok) return r;
-            Store.log("员工 " + u.id, "离职移交至 " + to.name + "：" + d.note, "成功", u.id);
-            return { ok: true, msg: u.name + " 已移交：" + own.length + " 个任务挂起 → " + to.name + "；授权已回收，账号已停用" };
+            DB.state.log("员工 " + u.id, "离职移交至 " + to.name + "：" + d.note + "；变更负责人项目 " + ownedProjects.length + " 个", "成功", u.id);
+            DB.state.notify({ type: "离职移交", project: ownedProjects.map(p => p.id).join("、") || "—", title: u.name + " 已离职并完成移交", reason: d.note, impact: own.length + " 个任务挂起待接手；" + ownedProjects.length + " 个项目负责人变更为 " + to.name + "；历史数据与费用归属不变", state: "已完成", action: "接手人确认预算预检与资源可用性后恢复任务", owner: to.name, link: "orgs/handover" });
+            return { ok: true, msg: u.name + " 已移交：" + own.length + " 个任务挂起 → " + to.name + "；" + ownedProjects.length + " 个项目负责人已变更；授权已回收，账号已停用" };
           }
         });
       }
@@ -412,9 +423,9 @@
             if (D.users.some(x => x.email === d.email)) return { ok: false, msg: "该邮箱已存在账号", fields: { email: "邮箱已占用" } };
             const roleMap = { "普通员工": "staff", "项目负责人": "owner", "部门管理员": "dept" };
             const id = "u-" + String(D.users.length + 1).padStart(2, "0");
-            D.users.push({ id: id, name: d.name, email: d.email, dept: d.dept, role: d.role, roles: [roleMap[d.role]], status: "邀请中", session: "未激活", joined: Store.time(), projects: 0, delivered: 0, episodes: 0, cost: 0, quality: 0, resources: "待配置" });
+            D.users.push({ id: id, name: d.name, email: d.email, dept: d.dept, role: d.role, roles: [roleMap[d.role]], status: "邀请中", session: "未激活", joined: DB.state.time(), projects: 0, delivered: 0, episodes: 0, cost: 0, quality: 0, resources: "待配置" });
             if (D.enterprise) D.enterprise.members = (D.enterprise.members || 0) + 1;
-            Store.log("员工 " + id, "邀请加入：" + d.name + "（" + d.dept + " · " + d.role + "）", "成功", id);
+            DB.state.log("员工 " + id, "邀请加入：" + d.name + "（" + d.dept + " · " + d.role + "）", "成功", id);
             return { ok: true, msg: "邀请已发送给 " + d.name + "，账号 " + id + " 处于「邀请中」" };
           }
         });
@@ -422,32 +433,59 @@
     });
   });
 
-  App.on("orgs.transfer", () => {
+  App.on("orgs.transfer", (el) => {
     if (!App.guard("grant.manage")) return;
-    const p = D.projects.find(x => x.status === "异常中") || D.projects[0];
+    const requested = (el && el.dataset && el.dataset.pid) || "";
+    /* 候选项目 = 当前身份可见范围内由他人负责且未终结的项目（不再固定取第一条） */
+    const candidates = D.projects.filter(x => x.status !== "已归档" && x.status !== "已终止" && (!requested || x.id === requested));
+    if (!candidates.length) { App.toast("当前没有可移交的项目", "bad"); return; }
+    const p = candidates[0];
     App.modal({
       title: "发起项目移交", sub: "移交不转移个人凭据与个人资源，不改变历史执行人与费用归属",
-      body: U.fSelect("待移交项目", "project", D.projects.map(x => ({ value: x.id, label: x.id + " · " + x.name + "（" + x.status + "）" })), { required: true, value: p.id }) +
+      body: U.fSelect("待移交项目", "project", candidates.map(x => ({ value: x.id, label: x.id + " · " + x.name + "（" + x.status + "）" })), { required: true, value: p.id }) +
         U.fSelect("接手员工", "user", D.users.filter(u => u.status === "在职" && u.id !== p.ownerId).map(u => ({ value: u.id, label: u.name + "（" + u.dept + "）" })), { required: true }) +
         U.fTextarea("移交原因", "reason", { required: true, minlen: 8, rows: 3 }) +
-        U.notice("接手人须使用本人模型配置，并重新执行预算预检与资源可用性检查。", "warn"),
+        U.notice("接手人须使用本人模型配置，并重新执行预算预检与资源可用性检查；未完成任务按策略暂停，不得使用原负责人的个人配置发起新调用。", "warn"),
       submitText: "确认移交",
       onSubmit(d) {
         return App.job({
-          title: "项目移交", steps: ["校验接手人资源", "变更负责人", "写审计与通知"],
+          title: "项目移交", steps: ["生成移交预览", "暂停未完成任务", "变更负责人并重做预算与资源预检", "写审计与通知"],
           run() {
             const proj = D.projects.find(x => x.id === d.project);
             const to = D.users.find(x => x.id === d.user);
             if (!proj || !to) return { ok: false, msg: "项目或接手人不存在" };
-            if (to.status !== "在职") return { ok: false, msg: "接手人账号状态为「" + to.status + "」，不能接管项目" };
-            if (to.resources === "待配置") return { ok: false, msg: "接手人尚无可用模型配置，需先完成配置与连通性测试", fields: { user: "接手人无可用配置" } };
+            if (to.status !== "在职") return { ok: false, msg: "接手人账号状态为「" + to.status + "」，不能接管项目", fields: { user: "接手人账号非在职状态" } };
+            /* 移交预览：进行中任务 / 待审核事项 / 资产清单 / 交付状态 / 预算余额 / 风险项 */
+            const running = D.tasks.filter(t => t.project === proj.id && ["排队中", "执行中", "待执行", "重试中"].indexOf(t.status) >= 0);
+            const pendingReview = D.reviews.filter(r => r.project === proj.id && r.result !== "通过").length;
+            const assetCount = D.assets.filter(a => a.project === proj.id).length;
+            const delivery = D.deliveries.filter(dl => dl.project === proj.id && dl.status !== "未生成（集数未齐）").length;
+            const bg = DB.state.budgetOf(proj.id);
+            const riskCount = D.risks.filter(r => r.project === proj.id && r.status !== "已闭环").length;
+            /* 校验接手人个人资源配置状态（业务方案 §5.7 步骤 2） */
+            const own = D.providers.filter(pv => pv.ownerId === to.id && pv.status === "启用");
+            if (!own.length) return { ok: false, msg: "接手人 " + to.name + " 没有启用的个人模型配置，无法接管项目", fields: { user: "接手人无可用配置" } };
             const from = proj.owner;
-            proj.owner = to.name; proj.ownerId = to.id;
+            /* 保留原负责人为项目成员并记录历史负责人（业务方案 §5.7 步骤 7） */
             proj.members = proj.members || [];
+            if (!proj.members.some(m => m.userId === proj.ownerId)) proj.members.push({ userId: proj.ownerId, role: "查看" });
+            proj.historyOwners = (proj.historyOwners || []).concat([{ owner: from, ownerId: proj.ownerId, at: DB.state.at(), reason: d.reason || "负责人变更" }]);
+            /* 未完成任务按策略暂停（业务方案 §5.7 步骤 5） */
+            running.forEach(t => { t.status = "已暂停"; t.failReason = "项目移交：等待接手人确认后恢复"; });
+            /* 不得使用原负责人的个人配置发起新调用（业务方案 §5.7 步骤 5） */
+            D.tasks.filter(t => t.project === proj.id && t.config && proj.ownerId).forEach(t => {
+              const cfg = D.providers.find(pv => pv.id === t.config);
+              if (cfg && cfg.ownerId === proj.ownerId) t.config = own[0].id;
+            });
+            proj.owner = to.name; proj.ownerId = to.id;
             if (!proj.members.some(m => m.userId === to.id)) proj.members.push({ userId: to.id, role: "管理" });
-            Store.notify(proj.id + " 负责人由 " + from + " 移交至 " + to.name);
-            Store.log("项目 " + proj.id, "负责人移交 " + from + " → " + to.name + "：" + d.reason, "成功", proj.id);
-            return { ok: true, msg: proj.id + " 已移交至 " + to.name + "，预算与任务需重新预检" };
+            /* 接手人重新做预算预检（业务方案 §5.7 步骤 6） */
+            const budgetChk = bg ? (bg.used <= bg.total ? "预算余额充足（剩余 ¥" + DB.state.money(bg.total - bg.used) + "）" : "预算已超限，需调整后恢复") : "该项目未建立预算";
+            const precheck = "预算预检：" + budgetChk + "；资源预检：接手人可用配置 " + own.length + " 项（" + own.map(c => c.id).join("、") + "）";
+            const preview = "移交预览：进行中任务 " + running.length + " 个、待审核 " + pendingReview + " 项、资产 " + assetCount + " 项、交付记录 " + delivery + " 条、预算余额 ¥" + (bg ? DB.state.money(Math.max(0, bg.total - bg.used)) : "0") + "、未闭环风险 " + riskCount + " 项";
+            DB.state.notify({ type: "项目移交", project: proj.id, title: "负责人由 " + from + " 移交至 " + to.name, reason: d.reason || "负责人变更", impact: preview + "；个人凭据不随项目转移，" + running.length + " 个未完成任务已暂停并改由接手人本人配置承接", state: "已完成", action: "接手人确认" + precheck + "后恢复任务", owner: to.name, link: "projects/detail" });
+            DB.state.log("项目 " + proj.id, "负责人移交 " + from + " → " + to.name + "：" + d.reason + "；" + preview + "；暂停未完成任务 " + running.length + " 个；" + precheck, "成功", proj.id);
+            return { ok: true, msg: proj.id + " 已移交至 " + to.name + "；未完成任务 " + running.length + " 个已暂停，" + precheck };
           }
         });
       }
@@ -471,7 +509,7 @@
             p.members = p.members || [];
             if (p.members.some(m => m.userId === u.id)) return { ok: false, msg: "该员工已是项目成员，请改用角色变更", fields: { user: "已是成员" } };
             p.members.push({ userId: u.id, role: d.role });
-            Store.log("项目 " + p.id, "新增成员 " + u.name + "（" + d.role + "）", "成功", p.id);
+            DB.state.log("项目 " + p.id, "新增成员 " + u.name + "（" + d.role + "）", "成功", p.id);
             return { ok: true, msg: u.name + " 已加入 " + p.id + "，角色 " + d.role };
           }
         });
@@ -495,7 +533,7 @@
           title: "回收授权", steps: ["校验成员角色", "移除成员关系", "写审计"],
           run() {
             p.members = p.members.filter(x => x.userId !== uid);
-            Store.log("项目 " + p.id, "回收成员授权：" + uid + " · " + d.note, "成功", p.id);
+            DB.state.log("项目 " + p.id, "回收成员授权：" + uid + " · " + d.note, "成功", p.id);
             return { ok: true, msg: "已回收 " + uid + " 在 " + p.id + " 的授权" };
           }
         });

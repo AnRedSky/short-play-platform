@@ -25,7 +25,12 @@ sandbox.window.App = {
   currentProject() { return null; },
   routes() { return []; }, groups() { return []; }
 };
-sandbox.window.Store = { FLOW: {}, canMove() { return { ok: true, msg: "" }; }, money(n) { return String(n); }, gate() { return { ok: true, items: [] }; }, budgetOf() { return null; } };
+/* 载入真实状态层与派生层，保证阻断检查基于真实可见范围计算 */
+vm.runInContext(read("assets/js/store.js"), sandbox, { filename: "store.js" });
+sandbox.window.DB.state.bind({
+  identity: () => sandbox.window.DB.identities.find(i => i.id === "i-owner"),
+  role: () => sandbox.window.DB.roles.find(r => r.code === "owner")
+});
 vm.runInContext(read("assets/js/derived.js"), sandbox, { filename: "derived.js" });
 for (const m of fs.readdirSync(path.join(root, "modules")).filter(d => fs.statSync(path.join(root, "modules", d)).isDirectory())) {
   vm.runInContext(read(`modules/${m}/pages.js`), sandbox, { filename: `${m}/pages.js` });

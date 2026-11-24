@@ -20,8 +20,11 @@
           }, 0) / selfP.length) : 0;
           const bars = selfP.slice(0, 4).map(p => ({ label: String(p.capabilities).split(" / ")[0], value: (String(p.quota).match(/(\d+)%/) || [0, "0"])[1] }));
           const rows = mine.map(p =>
-            '<tr><td>' + U.entity(p.name, p.id, "◉") + '</td><td class="cell-wrap">' + U.esc(p.kind) + '</td><td class="cell-wrap">' + U.esc(p.capabilities) + '</td><td class="cell-wrap muted">' + U.esc(p.endpoint) + '</td><td>' + U.esc(p.quota) + "</td><td>" + U.masked(p.masked) + "</td><td>" + U.pill(p.status) + "</td><td>" +
-            U.btn("测试", "models.test", "sm", { id: p.id }) + " " + U.btn("设为默认", "models.setDefault", "sm", { id: p.id }) + "</td></tr>").join("");
+            '<tr><td>' + U.entity(p.name, p.id, "◉") + '</td><td>' + U.pill(p.mode || "个人自持", p.mode === "企业托管" ? "info" : "accent") + '</td><td class="cell-wrap">' + U.esc(p.kind) + '</td><td class="cell-wrap">' + U.esc(p.capabilities) + '</td><td class="cell-wrap muted">' + U.esc(p.endpoint) + '</td><td>' + U.esc(p.quota) + "</td><td>" + U.masked(p.masked) + "</td><td>" + U.pill(p.status) + "</td><td>" +
+            U.btn("测试", "models.test", "sm", { id: p.id }) + " " + U.btn("设为默认", "models.setDefault", "sm", { id: p.id }) + " " +
+            U.btn("更新凭据", "models.updateCredential", "sm", { id: p.id }) + " " +
+            U.btn(p.status === "启用" ? "停用" : "启用", "models.toggle", "sm", { id: p.id }) + " " +
+            U.btn("删除", "models.remove", "sm", { id: p.id }) + "</td></tr>").join("");
           return U.page("模型与资源 / 资源配置", "资源配置", "每个任务执行时明确归属：使用谁的配置、谁的额度，避免「借用他人配置」这类不可审计的做法。",
             U.btn("新增资源", "models.newProvider", "primary") + (App.can("models.manage") ? U.btn("路由策略", "models.toRouting") : ""),
             '<div class="grid grid-4">' +
@@ -30,7 +33,7 @@
               U.metric("已用额度", usedPct + "%", "个人额度平均占用", "▮") +
               U.metric("异常资源", String(bad.length), bad.length ? bad.map(p => p.id + " " + p.status).join(" / ") : "当前无异常", "!") +
             "</div>" +
-            U.card("我的资源配置", U.table(["供应商", "类型", "能力", "端点", "额度", "凭据（脱敏）", "状态", "操作"], rows)) +
+            U.card("我的资源配置", U.table(["供应商", "供给模式", "类型", "能力", "端点", "额度", "凭据（脱敏）", "状态", "操作"], rows)) +
             '<div class="split mt-4"><div class="stack">' +
               U.card("资源归属与可见性", U.table(["归属", "凭据可见性", "额度归属", "适用角色"], [
                 ["个人自持", "仅本人可见脱敏值", "计入个人额度", "员工 / 负责人"],
@@ -121,11 +124,89 @@
     App.job({
       title: "连通性测试 · " + id, steps: ["读取脱敏凭据", "发起探测请求", "记录结果"],
       run() {
-        const r = Store.ops.testProvider(id);
+        const r = DB.state.testProvider(id);
         if (!r.ok) return r;
         return { ok: true, msg: r.msg };
       }
     });
+  });
+
+  /* 凭据更新（业务方案 §13.5 第 7 步）：只保存脱敏元数据，明文不可回显 */
+  App.on("models.updateCredential", (el) => {
+    if (!App.guard(["models.own", "models.manage"])) return;
+    const id = el.dataset.id;
+    const p = D.providers.find(x => x.id === id);
+    if (!p) return;
+    const actor = App.identity();
+    if (!App.can("models.manage") && p.ownerId !== actor.userId) { App.toast("只能更新本人自持的资源配置", "bad"); return; }
+    App.modal({
+      title: "更新凭据 · " + id, sub: "凭据在服务端加密保存，界面只显示脱敏值；审计只记录变更元数据",
+      body: U.fField("当前凭据（脱敏）", "cur", { value: p.masked, readonly: true }) +
+        U.fField("新 API Key / Token", "key", { required: true, minlen: 8, placeholder: "至少 8 位" }) +
+        U.notice("更新后新任务使用新版本；历史任务保留配置引用标识但不回显密钥。", "info"),
+      submitText: "更新凭据",
+      onSubmit(d) {
+        return App.job({
+          title: "更新凭据", steps: ["校验凭据格式", "加密写入并生成新版本", "写审计（仅元数据）"],
+          run() { return DB.state.updateCredential(id, d.key); }
+        });
+      }
+    });
+  });
+
+  /* 启用 / 停用资源配置（业务方案 §13.7：配置失效时暂停相关任务并通知配置人） */
+  App.on("models.toggle", (el) => {
+    if (!App.guard(["models.own", "models.manage"])) return;
+    const id = el.dataset.id;
+    const p = D.providers.find(x => x.id === id);
+    if (!p) return;
+    const actor = App.identity();
+    if (!App.can("models.manage") && p.ownerId !== actor.userId) { App.toast("只能调整本人自持的资源配置", "bad"); return; }
+    const on = p.status !== "启用";
+    App.confirm((on ? "启用" : "停用") + "资源配置 · " + id, on
+      ? "启用后该配置可被新任务选用；历史任务保留原引用标识。"
+      : "停用后引用该配置的任务将直接失败（不会静默改用他人凭据），并需通知配置人更新凭据。", () => {
+        App.job({
+          title: (on ? "启用" : "停用") + "资源配置", steps: ["校验归属与状态", "更新配置状态", "联动受影响任务"],
+          run() {
+            const r = DB.state.toggleProvider(id, on);
+            if (!r.ok) return r;
+            if (!on) {
+              const hit = D.tasks.filter(t => t.config === id && ["排队中", "执行中", "待执行", "重试中"].indexOf(t.status) >= 0);
+              hit.forEach(t => { t.status = "已暂停"; t.failReason = "资源配置已停用：" + id; });
+              if (hit.length) {
+                DB.state.notify({ type: "资源失效", project: hit[0].project, title: "资源配置 " + id + " 已停用，" + hit.length + " 个任务暂停", reason: "配置状态变更为停用", impact: "相关任务不再派发；不得静默改用其他员工凭据", state: "待处理", action: "更新凭据并重新做连通性测试后恢复任务", owner: p.owner || "配置人", link: "tasks/list" });
+              }
+              return { ok: true, msg: r.msg + "；已暂停引用该配置的 " + hit.length + " 个任务并通知配置人" };
+            }
+            return { ok: true, msg: r.msg };
+          }
+        });
+      }, on ? "确认启用" : "确认停用");
+  });
+
+  /* 删除资源配置：被任务引用的配置保留历史快照，禁止直接删除 */
+  App.on("models.remove", (el) => {
+    if (!App.guard(["models.own", "models.manage"])) return;
+    const id = el.dataset.id;
+    const p = D.providers.find(x => x.id === id);
+    if (!p) return;
+    const actor = App.identity();
+    if (!App.can("models.manage") && p.ownerId !== actor.userId) { App.toast("只能删除本人自持的资源配置", "bad"); return; }
+    const refs = D.tasks.filter(t => t.config === id);
+    if (refs.length) { App.toast("该配置已被 " + refs.length + " 个任务引用，删除会破坏历史追溯，已阻断；请改为停用", "bad"); return; }
+    App.confirm("删除资源配置 · " + id, "删除后不可恢复。被任务引用的配置会保留历史快照，不得删除。", () => {
+      App.job({
+        title: "删除资源配置", steps: ["校验引用关系", "移除配置", "写审计"],
+        run() {
+          const i = D.providers.indexOf(p);
+          if (i < 0) return { ok: false, msg: "配置不存在" };
+          D.providers.splice(i, 1);
+          DB.state.log("个人凭据 " + id, "删除资源配置（仅记录元数据）", "成功", id);
+          return { ok: true, msg: "资源配置已删除：" + id };
+        }
+      });
+    }, "确认删除");
   });
 
   App.on("models.setDefault", (el) => {
@@ -140,7 +221,7 @@
     App.confirm("设为默认模型", p.name + " 将成为新任务的默认模型；已提交任务不追溯。", () => {
       App.job({
         title: "设为默认", steps: ["校验启用与连通性", "写入默认模型"],
-        run() { D.providers.forEach(x => { x.isDefault = x.id === id; }); Store.log("配置 " + id, "设为默认模型", "成功", id); return { ok: true, msg: p.name + " 已设为默认模型" }; }
+        run() { D.providers.forEach(x => { x.isDefault = x.id === id; }); DB.state.log("配置 " + id, "设为默认模型", "成功", id); return { ok: true, msg: p.name + " 已设为默认模型" }; }
       });
     }, "设为默认");
   });
@@ -163,7 +244,7 @@
             const ids = D.providers.map(p => Number(String(p.id).replace(/[^\d]/g, "")) || 0);
             const id = "PRV-" + String((ids.length ? Math.max.apply(null, ids) : 0) + 1).padStart(2, "0");
             D.providers.unshift({ id: id, ownerId: actor.userId, owner: user.name, name: d.name, kind: "自定义 HTTP", capabilities: d.type, endpoint: d.url, auth: "Bearer Token", region: "境内", quota: "个人额度 · 已用 0%", masked: d.key.slice(0, 3) + "••••••••" + d.key.slice(-4), status: "待验证", test: "待验证", defaultFor: "—" });
-            Store.log("配置 " + id, "新增：" + d.name + " · " + user.name, "成功", id);
+            DB.state.log("配置 " + id, "新增：" + d.name + " · " + user.name, "成功", id);
             return { ok: true, msg: "配置 " + id + " 已创建，请执行连通性测试后再用于生产" };
           }
         });
@@ -189,7 +270,7 @@
               if (bad.length) return { ok: false, msg: "备用模型兼容校验未通过：" + bad.map(b => b.item).join("、"), fields: { backup: "兼容校验未通过" } };
             }
             D.routePolicy.video = d.video; D.routePolicy.backup = d.backup; D.routePolicy.retry = Number(d.retry);
-            Store.log("路由策略", d.video + " / " + d.backup + "：" + d.note, "成功", "route");
+            DB.state.log("路由策略", d.video + " / " + d.backup + "：" + d.note, "成功", "route");
             return { ok: true, msg: "路由已更新：" + d.video + "，备用 " + d.backup };
           }
         });

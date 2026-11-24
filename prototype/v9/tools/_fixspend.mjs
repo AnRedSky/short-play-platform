@@ -7,7 +7,7 @@ const out = lines.map((ln) => {
   if (!m) return ln;
   const cap = m[2] === "音频" ? "音频生成" : "字幕生成";
   const indent = ln.match(/^\s*/)[0];
-  return `${indent}Store.spend(${m[1]}, ${m[3]}, { cap: "${cap}", note: ${m[4]} });`;
+  return `${indent}DB.state.spend(${m[1]}, ${m[3]}, { cap: "${cap}", note: ${m[4]} });`;
 });
 fs.writeFileSync(f, out.join("\n"));
-console.log(out.filter((l) => l.includes("Store.spend(")).join("\n"));
+console.log(out.filter((l) => l.includes("DB.state.spend(")).join("\n"));

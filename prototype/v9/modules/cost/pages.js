@@ -10,21 +10,21 @@
         path: "cost/ledger", title: "成本台账", icon: "coin", permission: "cost.read",
         desc: "预计与实际分列、失败与重试必入账；每笔成本都能回指任务、镜头与账单。",
         render(query) {
-          const all = Derived.visibleCosts();
+          const all = DB.derived.visibleCosts();
           const projIds = ["全部"];
           all.forEach(c => { if (projIds.indexOf(c.project) < 0) projIds.push(c.project); });
           const requested = (query && query.id) || "";
           if (requested) {
             const rp = D.projects.find(x => x.id === requested);
-            if (!rp || !Derived.canViewProject(rp)) return U.page("成本与预算 / 成本台账", "项目成本不在可见范围", "只能查看自己负责、参与或经授权项目的成本；跨项目成本不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取成本台账", "项目不存在或当前身份不可见。"));
+            if (!rp || !DB.derived.canViewProject(rp)) return U.page("成本与预算 / 成本台账", "项目成本不在可见范围", "只能查看自己负责、参与或经授权项目的成本；跨项目成本不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取成本台账", "项目不存在或当前身份不可见。"));
           }
           const saved = App.get(SCOPE, "proj", "全部");
           const proj = requested || (projIds.indexOf(saved) >= 0 ? saved : "全部");
           const list = all.filter(c => proj === "全部" || c.project === proj);
           const rows = list.map(c =>
-            '<tr><td>' + U.code(c.id) + "</td><td>" + U.esc(c.project) + '</td><td class="num">E' + c.ep + "</td><td>" + U.esc(c.shot) + "</td><td>" + U.code(c.task) + "</td><td>" + U.esc(c.cap) + '</td><td class="num">¥' + c.est.toFixed(1) + '</td><td class="num">¥' + c.actual.toFixed(1) + '</td><td class="num">' + (c.failed ? '<span class="text-bad">¥' + c.failed.toFixed(1) + "</span>" : "—") + "</td><td>" + U.esc(c.bearer) + "</td><td>" + U.esc(c.source) + "</td><td>" + U.pill(c.status) + "</td><td>" + U.esc(c.bill) + "</td><td>" +
-            U.btn("核验", "cost.verify", "sm", { id: c.id }) + "</td></tr>").join("");
-          const toolbar = '<div class="toolbar"><span class="faint small">可见范围：' + U.esc(Derived.scopeLabel()) + " · " + (projIds.length - 1) + " 个项目</span><span class=\"grow\"></span>" + U.seg(projIds, proj, "cost.proj") + U.btn("导出明细", "common.export") + "</div>";
+            '<tr><td>' + U.code(c.id) + "</td><td>" + U.esc(c.project) + '</td><td class="num">E' + c.ep + "</td><td>" + U.esc(c.shot) + "</td><td>" + U.code(c.task) + "</td><td>" + U.esc(c.cap) + '</td><td class="num">¥' + c.est.toFixed(1) + '</td><td class="num">¥' + c.actual.toFixed(1) + '</td><td class="num">' + (c.failed ? '<span class="text-bad">¥' + c.failed.toFixed(1) + "</span>" : "—") + "</td><td>" + U.esc(c.bearer) + "</td><td>" + U.esc(c.source) + "</td><td>" + U.esc(c.resourceOwner || "—") + "</td><td>" + U.esc(c.executor || "—") + "</td><td>" + U.esc(c.dept || "—") + "</td><td>" + U.pill(c.status) + "</td><td>" + U.esc(c.bill) + "</td><td>" +
+            (App.can("cost.manage") ? U.btn("核验", "cost.verify", "sm", { id: c.id }) + " " + U.btn("费用调整", "cost.adjust", "sm", { id: c.id }) : U.btn("核验", "cost.verify", "sm", { id: c.id })) + "</td></tr>").join("");
+          const toolbar = '<div class="toolbar"><span class="faint small">可见范围：' + U.esc(DB.derived.scopeLabel()) + " · " + (projIds.length - 1) + " 个项目</span><span class=\"grow\"></span>" + U.seg(projIds, proj, "cost.proj") + U.btn("导出明细", "common.export") + "</div>";
           const est = list.reduce((s, c) => s + c.est, 0);
           const act = list.reduce((s, c) => s + c.actual, 0);
           const fail = list.reduce((s, c) => s + c.failed, 0);
@@ -38,8 +38,8 @@
               U.metric("失败成本", money(fail), "不摊入成功项", "×") +
               U.metric("个人承担", personal + " 笔", "员工个人账户扣费", "人") +
             "</div>" +
-            U.card("成本明细 · " + list.length + " 笔", toolbar + U.table(["成本号", "项目", "集", "镜头", "任务", "能力", "预计", "实际", "失败", "承担方", "额度来源", "状态", "账单", "操作"], rows), "按项目筛选；失败与重试单列显示") +
-            U.tableFoot("共 " + all.length + " 笔 · 当前筛选 " + list.length + " 笔", "可见范围：" + Derived.scopeLabel() + "；预计 / 实际 / 失败三列并列，不合并展示") +
+            U.card("成本明细 · " + list.length + " 笔", toolbar + U.table(["成本号", "项目", "集", "镜头", "任务", "能力", "预计", "实际", "失败", "费用承担方", "费用来源", "资源配置人", "实际执行人", "部门归属", "状态", "账单", "操作"], rows), "按项目筛选；失败与重试单列显示；归属七维分别记录（业务方案 §15.2）") +
+            U.tableFoot("共 " + all.length + " 笔 · 当前筛选 " + list.length + " 笔", "可见范围：" + DB.derived.scopeLabel() + "；预计 / 实际 / 失败三列并列，不合并展示") +
             '<div class="grid grid-2 mt-4">' +
               U.card("十维成本口径", '<div class="chip-row">' + D.costDimensions.map(x => '<span class="chip">' + U.esc(x) + "</span>").join("") + "</div>" + U.listRows([["项目 / 单集 / 单镜头", "按结构逐层汇总"], ["能力维度", "图像 / 视频 / 音频 / 后期"], ["失败与重试", "单列，不回填到成功项"], ["存储与转码", "按体积与时长计量"]]) , "统计按维度可下钻") +
               (failedOne
@@ -55,13 +55,15 @@
         render(query) {
           const pid = (query && query.id) || "";
           const p = pid ? (D.projects.find(x => x.id === pid) || null) : null;
-          if (pid && (!p || !Derived.canViewProject(p))) return U.page("成本与预算 / 预算与阈值", "项目预算不在可见范围", "只能查看自己负责、参与或经授权项目的预算；跨项目预算不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目预算", "项目不存在或当前身份不可见。"));
-          const visible = Derived.visibleBudgets();
+          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("成本与预算 / 预算与阈值", "项目预算不在可见范围", "只能查看自己负责、参与或经授权项目的预算；跨项目预算不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目预算", "项目不存在或当前身份不可见。"));
+          const visible = DB.derived.visibleBudgets();
           const budgets = pid ? visible.filter(b => String(b.name).indexOf(pid) === 0 || b.project === pid) : visible;
           const rows = budgets.map(b => {
             const usedPct = b.total ? Math.round(b.used / b.total * 100) : 0;
-            return "<tr><td>" + U.esc(b.scope) + '</td><td class="cell-strong">' + U.esc(b.name) + '</td><td class="num">' + money(b.total) + '</td><td class="num">' + money(b.used) + '</td><td class="num">' + money(b.reserve) + '</td><td class="cell-wide">' + U.progress(usedPct, usedPct + "%", usedPct >= 85 ? "bad" : usedPct >= 70 ? "warn" : "") + '</td><td>' + U.pill(b.state) + "</td><td>" + U.esc(b.owner) + "</td><td>" +
-              (App.can("cost.manage") ? U.btn("调整", "cost.adjustBudget", "sm", { name: b.name }) : '<span class="faint small">按权限只读</span>') + "</td></tr>";
+            const epBudget = b.scope === "项目" ? Math.round(b.total / Math.max(1, (D.projects.find(p => String(b.name).indexOf(p.id) === 0) || {}).episodes || 1)) : null;
+            return "<tr><td>" + U.esc(b.scope) + '</td><td class="cell-strong">' + U.esc(b.name) + '</td><td class="num">' + money(b.total) + '</td><td class="num">' + money(b.used) + '</td><td class="num">' + money(b.reserve) + '</td><td class="num">' + (epBudget === null ? "—" : money(epBudget)) + '</td><td class="cell-wide">' + U.progress(usedPct, usedPct + "%", usedPct >= 85 ? "bad" : usedPct >= 70 ? "warn" : "") + '</td><td>' + U.pill(b.state) + "</td><td>" + U.esc(b.owner) + "</td><td>" +
+              (App.can("cost.manage") ? U.btn("调整", "cost.adjustBudget", "sm", { name: b.name }) + " " +
+                (b.scope === "项目" ? U.btn(b.state === "已冻结" ? "解冻" : "冻结", "cost.freeze", "sm", { name: b.name }) : "") : '<span class="faint small">按权限只读</span>') + "</td></tr>";
           }).join("");
           const labels = budgets.map(b => b.scope === "项目" ? String(b.name).split(" ")[0] : b.scope === "部门" ? "部门 · " + b.name : "企业");
           const values = budgets.map(b => b.total ? Number((b.used / b.total * 100).toFixed(1)) : 0);
@@ -69,8 +71,8 @@
           const hotPct = hot ? Math.round(hot.used / hot.total * 100) : 0;
           return U.page("成本与预算 / 预算与阈值", "预算与阈值", "预算超限不是「提醒一下」：受影响任务必须暂停并给出阻塞原因，恢复需负责人确认。",
             U.btn("成本台账", "cost.toLedger", "", p ? { id: p.id } : {}) + (App.can("cost.manage") ? U.btn("调整阈值", "cost.setThreshold", "primary") : ""),
-            U.card("预算表 · " + (p ? U.esc(p.name) : "可见 " + budgets.length + " 项"), U.table(["层级", "名称", "总额", "已用", "预留", "使用率", "状态", "负责人", "操作"], rows, p ? "当前项目未建立独立预算" : "当前可见范围内没有预算记录"), p && !budgets.length ? "该项目未建立项目预算，成本只能按企业 / 部门额度归集" : "按项目、部门、企业三级展示") +
-            U.tableFoot("可见范围：" + Derived.scopeLabel(), "口径：总额 − 已用 − 预留 = 可用余额") +
+            U.card("预算表 · " + (p ? U.esc(p.name) : "可见 " + budgets.length + " 项"), U.table(["层级", "名称", "总额", "已用", "预留", "单集预算（总额 ÷ 集数）", "使用率", "状态", "负责人", "操作"], rows, p ? "当前项目未建立独立预算" : "当前可见范围内没有预算记录"), p && !budgets.length ? "该项目未建立项目预算，成本只能按企业 / 部门额度归集" : "按项目、部门、企业三级展示；预算状态五态：未设置 / 正常 / 接近阈值 / 已超限 / 已冻结") +
+            U.tableFoot("可见范围：" + DB.derived.scopeLabel(), "口径：总额 − 已用 − 预留 = 可用余额") +
             '<div class="split mt-4"><div class="stack">' +
               U.card("预算规则（6 条）", U.table(["规则", "执行方式"], D.budgetRules.map((r, i) => '<tr><td class="num">' + (i + 1) + '</td><td class="cell-wrap">' + U.esc(r) + "</td></tr>")), "规则由企业管理员配置") +
               U.card("预检与阻塞", U.notice("任务提交前先估算并做预算预检；超限任务保持「待执行」并写明阻塞原因（预算超限 / 单集超限 / 需负责人审批）。", "info")) +
@@ -91,8 +93,8 @@
         render(query) {
           const pid = (query && query.id) || "";
           const p = pid ? (D.projects.find(x => x.id === pid) || null) : null;
-          if (pid && (!p || !Derived.canViewProject(p))) return U.page("成本与预算 / 用量与计量", "项目用量不在可见范围", "只能查看自己负责、参与或经授权项目的用量；跨项目用量不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取用量", "项目不存在或当前身份不可见。"));
-          const visPids = Derived.visibleProjects().map(x => x.id);
+          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("成本与预算 / 用量与计量", "项目用量不在可见范围", "只能查看自己负责、参与或经授权项目的用量；跨项目用量不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取用量", "项目不存在或当前身份不可见。"));
+          const visPids = DB.derived.visibleProjects().map(x => x.id);
           const usage = pid ? D.usage.filter(u => u.project === pid) : D.usage.filter(u => visPids.indexOf(u.project) >= 0);
           const rows = usage.map(x =>
             '<tr><td>' + U.code(x.id) + "</td><td>" + U.esc(x.project) + "</td><td>" + U.code(x.task) + "</td><td>" + U.esc(x.cap) + "</td><td>" + U.esc(x.unit) + '</td><td class="cell-wrap">' + U.esc(x.vendorQty) + '</td><td class="cell-wrap">' + U.esc(x.platformQty) + "</td><td>" + U.esc(x.src) + "</td><td>" + U.pill(x.status) + "</td><td>" + U.esc(x.at) + "</td></tr>").join("");
@@ -132,7 +134,7 @@
   });
   App.on("cost.ledgerLink", (el) => {
     const id = (el && el.dataset && el.dataset.project) || "";
-    if (id && !Derived.canViewProject(D.projects.find(p => p.id === id))) {
+    if (id && !DB.derived.canViewProject(D.projects.find(p => p.id === id))) {
       App.toast("该项目成本不在当前可见范围：" + id, "bad");
       return;
     }
@@ -143,9 +145,31 @@
   App.on("cost.verify", (el) => {
     const c = D.costs.find(x => x.id === el.dataset.id);
     if (!c) return;
-    if (!Derived.visibleCosts().some(x => x.id === c.id)) { App.toast("该成本记录不在当前可见范围", "bad"); return; }
-    App.drawer("成本核验 · " + c.id, U.desc([["项目 / 集 / 镜头", c.project + " · E" + c.ep + " / " + c.shot], ["任务", c.task], ["能力", c.cap], ["预计", money(c.est)], ["实际", money(c.actual)], ["失败成本", money(c.failed)], ["承担方", c.bearer], ["额度来源", c.source], ["供应商", c.provider], ["状态", c.status], ["账单", c.bill]]) +
+    if (!DB.derived.visibleCosts().some(x => x.id === c.id)) { App.toast("该成本记录不在当前可见范围", "bad"); return; }
+    App.drawer("成本核验 · " + c.id, U.desc([["项目 / 集 / 镜头", c.project + " · E" + c.ep + " / " + c.shot], ["任务", c.task], ["能力", c.cap], ["预计", money(c.est)], ["实际", money(c.actual)], ["失败成本", money(c.failed)], ["费用承担方", c.bearer], ["费用来源", c.source], ["资源配置人", c.resourceOwner || "—"], ["实际执行人", c.executor || "—"], ["部门归属", c.dept || "—"], ["供应商", c.provider], ["状态", c.status], ["账单", c.bill], ["调整记录", c.adjustment || "无"]]) +
       U.notice(c.status === "待核实" ? "该笔尚未与账单核对，不得计入已确认成本。" : "已与供应商账单核对一致。", c.status === "待核实" ? "warn" : "ok"));
+  });
+
+  /* 费用调整：保留原值、调整人、原因与凭据（业务方案 §15.3） */
+  App.on("cost.adjust", (el) => {
+    if (!App.guard("cost.manage")) return;
+    const c = D.costs.find(x => x.id === el.dataset.id);
+    if (!c) { App.toast("成本记录不存在", "bad"); return; }
+    if (!DB.derived.visibleCosts().some(x => x.id === c.id)) { App.toast("该成本记录不在当前可见范围", "bad"); return; }
+    App.modal({
+      title: "费用调整 · " + c.id, sub: "调整必须保留原值、调整人、原因与账单凭据；不得直接覆盖原记录",
+      body: U.fField("当前实际金额", "cur", { value: String(c.actual), readonly: true }) +
+        U.fField("调整后金额", "actual", { required: true, type: "number", min: 0, value: String(c.actual) }) +
+        U.fTextarea("调整原因", "reason", { required: true, minlen: 8, rows: 3, placeholder: "例如：供应商账单与计量差异，按账单据实调整" }) +
+        U.fField("账单凭据", "bill", { required: true, minlen: 4, value: c.bill && c.bill !== "—" ? c.bill : "", placeholder: "例如：INV-2026-11-0231" }),
+      submitText: "提交调整",
+      onSubmit(d) {
+        return App.job({
+          title: "费用调整", steps: ["校验调整依据", "写入调整记录", "写审计"],
+          run() { return DB.state.adjustCost(c.id, d.actual, d.reason, d.bill); }
+        });
+      }
+    });
   });
 })();
 
@@ -154,6 +178,28 @@
   const U = UI, D = DB;
 
   function budgetByName(name) { return D.budgets.find(b => b.name && (b.name === name || name.indexOf(b.name) === 0)); }
+
+  /* 预算冻结 / 解冻（业务方案 §15.5）：冻结时禁止派发新任务，已发生费用仍可入账 */
+  App.on("cost.freeze", (el) => {
+    if (!App.guard("cost.manage")) return;
+    const bg = budgetByName(el && el.dataset && el.dataset.name ? el.dataset.name : "");
+    if (!bg) { App.toast("未找到预算行", "bad"); return; }
+    const pid = String(bg.name).split(" ")[0];
+    const on = bg.state !== "已冻结";
+    App.modal({
+      title: (on ? "冻结" : "解冻") + "预算 · " + bg.name,
+      sub: on ? "冻结后禁止派发新任务；已发生费用仍可入账" : "解冻后按当前使用率重新判定预算状态",
+      body: U.fTextarea(on ? "冻结原因" : "解冻原因", "reason", { required: true, minlen: 8, rows: 3, placeholder: "例如：合规复核期间暂停派发" }) +
+        U.notice(on ? "冻结会暂停该项目排队中、执行中、待执行与重试中的任务。" : "解冻不会自动恢复已暂停任务，需要另行恢复。", "warn"),
+      submitText: on ? "确认冻结" : "确认解冻",
+      onSubmit(d) {
+        return App.job({
+          title: on ? "冻结预算" : "解冻预算", steps: ["校验预算状态", "更新预算状态", "联动任务派发"],
+          run() { return DB.state.freezeBudget(pid, on, d.reason); }
+        });
+      }
+    });
+  });
 
   App.on("cost.adjustBudget", (el) => {
     if (!App.guard("cost.manage")) return;
@@ -174,18 +220,18 @@
           title: "调整预算", steps: ["校验金额下限", "更新预算台账", "写审计"],
           run() {
             if (next < bg.used) {
-              return { ok: false, msg: "新总额不得低于已用 ¥" + Store.money(bg.used), fields: { total: "不得低于已用 ¥" + Store.money(bg.used) } };
+              return { ok: false, msg: "新总额不得低于已用 ¥" + DB.state.money(bg.used), fields: { total: "不得低于已用 ¥" + DB.state.money(bg.used) } };
             }
             if (isProject) {
-              const r = Store.ops.adjustBudget(pid, next, d.note);
+              const r = DB.state.adjustBudget(pid, next, d.note);
               if (!r.ok) return r;
-              Store.log("预算 " + bg.name, "调整为 ¥" + next + "：" + d.note, "成功", pid);
+              DB.state.log("预算 " + bg.name, "调整为 ¥" + next + "：" + d.note, "成功", pid);
               return { ok: true, msg: r.msg };
             }
             bg.total = next;
             bg.state = bg.used >= next * 0.85 ? "接近阈值" : "正常";
-            Store.log("预算 " + bg.name, "总额调整为 ¥" + next + "：" + d.note, "成功", pid);
-            return { ok: true, msg: bg.name + " 总额已调整为 ¥" + Store.money(next) };
+            DB.state.log("预算 " + bg.name, "总额调整为 ¥" + next + "：" + d.note, "成功", pid);
+            return { ok: true, msg: bg.name + " 总额已调整为 ¥" + DB.state.money(next) };
           }
         });
       }
@@ -205,7 +251,7 @@
           title: "保存阈值", steps: ["校验阈值范围", "写入成本配置"],
           run() {
             App.set("cost", "threshold", { scope: d.scope, pct: Number(d.pct) });
-            Store.log("成本阈值", d.scope + " " + d.pct + "%：" + d.note, "成功", "cost");
+            DB.state.log("成本阈值", d.scope + " " + d.pct + "%：" + d.note, "成功", "cost");
             return { ok: true, msg: d.scope + " 阈值已设为 " + d.pct + "%" };
           }
         });
@@ -230,7 +276,7 @@
           run() {
             const pid = String(bg.name).split(" ")[0];
             const total = Number(bg.total) + Number(d.amount);
-            const r = Store.ops.adjustBudget(pid, total, "追加 " + d.amount + "（审批 " + d.by + "）：" + d.note);
+            const r = DB.state.adjustBudget(pid, total, "追加 " + d.amount + "（审批 " + d.by + "）：" + d.note);
             if (!r.ok) return r;
             return { ok: true, msg: "已追加 ¥" + d.amount + "，新总额 ¥" + total };
           }
@@ -242,7 +288,7 @@
   App.on("cost.resume", (el) => {
     if (!App.guard("cost.manage")) return;
     const qid = (App.current().query || {}).id || "";
-    const visPids = Derived.visibleProjects().map(p => p.id);
+    const visPids = DB.derived.visibleProjects().map(p => p.id);
     const fallbackTask = D.tasks.find(t => t.status === "已暂停" && visPids.indexOf(t.project) >= 0);
     const pid = qid || (fallbackTask && fallbackTask.project);
     if (!pid) { App.toast("没有可恢复任务的项目", "bad"); return; }
@@ -251,13 +297,13 @@
     if (!list.length) { App.toast("当前项目没有因预算暂停的任务", "bad"); return; }
     const bg = D.budgets.find(b => b.scope === "项目" && b.name.indexOf(pid) === 0);
     if (!bg) { App.toast("当前项目没有独立预算，无法校验恢复余额", "bad"); return; }
-    App.confirm("恢复受限任务 · " + pid, "当前项目已用 ¥" + Store.money(bg.used) + " / 总额 ¥" + Store.money(bg.total) + "；恢复后将重新计费，请确认余额充足。", () => {
+    App.confirm("恢复受限任务 · " + pid, "当前项目已用 ¥" + DB.state.money(bg.used) + " / 总额 ¥" + DB.state.money(bg.total) + "；恢复后将重新计费，请确认余额充足。", () => {
       App.job({
         title: "恢复受限任务", steps: ["校验预算余额", "任务重新排队"],
         run() {
           const ok = [];
           list.forEach(t => { t.status = "排队中"; ok.push(t.id); });
-          Store.log("预算恢复", "恢复任务 " + ok.join("、") + " · " + pid, "成功", pid);
+          DB.state.log("预算恢复", "恢复任务 " + ok.join("、") + " · " + pid, "成功", pid);
           return { ok: true, msg: "已恢复 " + ok.length + " 个任务（" + ok.slice(0, 4).join("、") + "）" };
         }
       });

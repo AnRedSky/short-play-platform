@@ -185,23 +185,38 @@ window.UI = (function () {
     return '<span class="mini-bar"><span class="track"><span style="width:' + pct + '%"></span></span></span>';
   }
   /* 折线图：内联 SVG 手绘，显式传入序列与标签 */
+  /* 折线图：内联 SVG 手绘，显式传入序列与标签。
+     量级差异大的序列使用双轴（规范 §六-4）：series[i].axis === "right" 走右轴刻度。 */
   function lineChart(labels, series, opts) {
     const o = opts || {};
     const w = 640, h = o.height || 168, pad = { l: 34, r: 12, t: 14, b: 24 };
-    const max = Math.max.apply(null, series.map(s => Math.max.apply(null, s.values)).concat([1]));
-    const stepX = (w - pad.l - pad.r) / Math.max(labels.length - 1, 1);
-    const y = v => pad.t + (h - pad.t - pad.b) * (1 - v / max);
+    const hasRight = series.some(s => s.axis === "right");
+    const padR = hasRight ? 44 : pad.r;
+    const maxOf = list => Math.max.apply(null, list.concat([1]));
+    const leftSeries = series.filter(s => s.axis !== "right");
+    const rightSeries = series.filter(s => s.axis === "right");
+    const maxL = maxOf(leftSeries.map(s => maxOf(s.values)));
+    const maxR = maxOf(rightSeries.map(s => maxOf(s.values)));
+    const stepX = (w - pad.l - padR) / Math.max(labels.length - 1, 1);
+    const yL = v => pad.t + (h - pad.t - pad.b) * (1 - v / maxL);
+    const yR = v => pad.t + (h - pad.t - pad.b) * (1 - v / maxR);
     const paths = series.map(s => {
+      const y = s.axis === "right" ? yR : yL;
       const pts = s.values.map((v, i) => (pad.l + stepX * i) + "," + y(v));
       const area = 'fill="' + esc(s.color) + '" opacity=".06"';
       return '<polyline points="' + pts.join(" ") + '" fill="none" stroke="' + esc(s.color) + '" stroke-width="1.8" stroke-linejoin="round"/>' +
         '<polygon ' + area + ' points="' + (pad.l + "," + (h - pad.b) + " " + pts.join(" ") + " " + (pad.l + stepX * (labels.length - 1)) + "," + (h - pad.b)) + '"/>' +
-        pts.map(p => { const x = p.split(",")[0]; return '<circle cx="' + x + '" cy="' + y(s.values[pts.indexOf(p)]) + '" r="2.4" fill="' + esc(s.color) + '"/>'; }).join("");
+        pts.map((pt, i) => { const x = pt.split(",")[0]; return '<circle cx="' + x + '" cy="' + y(s.values[i]) + '" r="2.4" fill="' + esc(s.color) + '"/>'; }).join("");
     }).join("");
-    const grid = [0, .5, 1].map(f => { const gy = Math.round(y(max * f)); return '<line x1="' + pad.l + '" y1="' + gy + '" x2="' + (w - pad.r) + '" y2="' + gy + '" stroke="var(--line)" stroke-width="1"/><text x="4" y="' + (gy + 3) + '" font-size="9" fill="var(--faint)">' + Math.round(max * f) + "</text>"; }).join("");
+    const grid = [0, .5, 1].map(f => {
+      const gy = Math.round(yL(maxL * f));
+      return '<line x1="' + pad.l + '" x2="' + (w - padR) + '" y1="' + gy + '" y2="' + gy + '" stroke="var(--line)" stroke-width="1"/>' +
+        '<text x="4" y="' + (gy + 3) + '" font-size="9" fill="var(--faint)">' + Math.round(maxL * f) + "</text>" +
+        (hasRight ? '<text x="' + (w - padR + 4) + '" y="' + (gy + 3) + '" font-size="9" fill="var(--faint)">' + Math.round(maxR * f) + "</text>" : "");
+    }).join("");
     const xlab = labels.map((l, i) => '<text x="' + (pad.l + stepX * i) + '" y="' + (h - 6) + '" font-size="9" fill="var(--faint)" text-anchor="middle">' + esc(l) + "</text>").join("");
     return '<svg class="chart" viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + esc(o.title || "趋势图") + '">' + grid + paths + xlab + "</svg>" +
-      '<div class="chart-legend">' + series.map(s => '<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:' + esc(s.color) + ';margin-right:5px"></i>' + esc(s.name) + "</span>").join("") + "</div>";
+      '<div class="chart-legend">' + series.map(s => "<span><i style=\"display:inline-block;width:9px;height:9px;border-radius:2px;background:" + esc(s.color) + ";margin-right:5px\"></i>" + esc(s.name) + (s.axis === "right" ? "（右轴）" : "") + "</span>").join("") + "</div>";
   }
   function donut(items, centerLabel, centerValue) {
     const total = items.reduce((sum, it) => sum + (Number(it.value) || 0), 0) || 1;

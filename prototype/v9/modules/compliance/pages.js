@@ -14,6 +14,27 @@
     return tokens;
   }
 
+/* 审计事件类型 → 匹配关键词（业务方案 §16.8 的 11 类事件类型按动作语义归类） */
+  const AUDIT_TYPE_KEYS = {
+    "登录与身份变化": ["登录", "身份", "会话", "账号"],
+    "角色与权限调整": ["角色", "权限", "授权"],
+    "项目创建 / 移交 / 归档 / 终止": ["创建项目", "移交", "归档", "终止"],
+    "个人凭据配置变更（仅元数据）": ["凭据", "资源配置", "连通性"],
+    "模型路由变化": ["模型", "路由", "切换"],
+    "任务提交 / 重试 / 取消 / 暂停": ["任务", "提交", "重试", "取消", "暂停"],
+    "预算与费用修正": ["预算", "费用", "成本"],
+    "资产下载 / 删除 / 导出": ["资产", "导出", "删除"],
+    "审核结论": ["审核", "通过", "退回", "终审"],
+    "交付执行": ["交付"],
+    "数据导出": ["导出"]
+  };
+  function matchAuditType(a, type) {
+    const keys = AUDIT_TYPE_KEYS[type];
+    if (!keys) return true;
+    const hay = String(a.action || "") + " " + String(a.object || "");
+    return keys.some(k => hay.indexOf(k) >= 0);
+  }
+
   AppModule.register({
     group: "compliance", label: "合规与审计", icon: "shield", order: 15, end: "workspace",
     routes: [
@@ -23,8 +44,8 @@
         render(query) {
           const pid = (query && query.id) || "";
           const p = pid ? (D.projects.find(x => x.id === pid) || null) : null;
-          if (pid && (!p || !Derived.canViewProject(p))) return U.page("合规与审计 / 权利与授权", "项目授权不在可见范围", "只能查看自己负责、参与或经授权项目的授权台账；跨项目授权不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取授权台账", "项目不存在或当前身份不可见。"));
-          const visPids = Derived.visibleProjects().map(x => x.id);
+          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("合规与审计 / 权利与授权", "项目授权不在可见范围", "只能查看自己负责、参与或经授权项目的授权台账；跨项目授权不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取授权台账", "项目不存在或当前身份不可见。"));
+          const visPids = DB.derived.visibleProjects().map(x => x.id);
           const scoped = pid ? D.rights.filter(r => r.project === pid || !r.project) : D.rights.filter(r => !r.project || visPids.indexOf(r.project) >= 0);
           const rows = scoped.map(r =>
             '<tr><td>' + U.code(r.id) + "</td><td>" + U.esc(r.project || "平台级") + '</td><td class="cell-strong">' + U.esc(r.subject) + '</td><td>' + U.esc(r.type) + '</td><td>' + U.esc(r.owner) + '</td><td class="cell-wrap muted">' + U.esc(r.proof) + '</td><td class="cell-wrap">' + U.esc(r.use) + "</td><td>" + U.esc(r.region) + "</td><td>" + U.esc(r.term) + '</td><td class="cell-wrap">' + U.esc(r.commercial) + "</td><td>" + U.pill(r.review) + "</td><td>" + U.pill(r.status) + "</td><td>" +
@@ -36,7 +57,7 @@
           const typeCounts = {};
           scoped.forEach(r => { typeCounts[r.type] = (typeCounts[r.type] || 0) + 1; });
           return U.page("合规与审计 / 权利与授权" + (p ? " · " + p.name : ""), "权利与授权台账", "授权复核有期限：到期前 30 天必须提醒并复核，过期未续即视为不可用。",
-            U.btn("新增授权记录", "compliance.newRight", "primary", p ? { id: p.id } : {}) + U.btn("风险视图", "compliance.toRisks", "", p ? { id: p.id } : {}) + U.btn("导出台账", "common.export"),
+            (App.can("compliance.write") ? U.btn("新增授权记录", "compliance.newRight", "primary", p ? { id: p.id } : {}) : "") + U.btn("风险视图", "compliance.toRisks", "", p ? { id: p.id } : {}) + U.btn("导出台账", "common.export"),
             '<div class="grid grid-4">' +
               U.metric("授权记录", String(scoped.length), p ? "当前项目 + 平台条款" : "内容 / 声音 / 音乐 / 字体 / 条款", "▤") +
               U.metric("有效", String(scoped.filter(r => r.status === "有效").length), "可直接使用", "✓") +
@@ -64,8 +85,8 @@
         render(query) {
           const pid = (query && query.id) || "";
           const p = pid ? (D.projects.find(x => x.id === pid) || null) : null;
-          if (pid && (!p || !Derived.canViewProject(p))) return U.page("合规与审计 / 风险与异常", "项目风险不在可见范围", "只能查看自己负责、参与或经授权项目的风险与异常；跨项目记录不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取风险记录", "项目不存在或当前身份不可见。"));
-          const visPids = Derived.visibleProjects().map(x => x.id);
+          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("合规与审计 / 风险与异常", "项目风险不在可见范围", "只能查看自己负责、参与或经授权项目的风险与异常；跨项目记录不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取风险记录", "项目不存在或当前身份不可见。"));
+          const visPids = DB.derived.visibleProjects().map(x => x.id);
           const risks = pid ? D.risks.filter(r => r.project === pid) : D.risks.filter(r => visPids.indexOf(r.project) >= 0);
           const incidents = pid ? D.incidents.filter(i => i.project === pid) : D.incidents.filter(i => visPids.indexOf(i.project) >= 0);
           const rows = risks.map(r =>
@@ -77,7 +98,7 @@
           const high = risks.filter(r => r.level === "高");
           const openInc = incidents.find(i => String(i.result).indexOf("已") < 0);
           return U.page("合规与审计 / 风险与异常" + (p ? " · " + p.name : ""), "风险与异常", "异常事件保留处理轮次与决策人；升级规则明确（4 小时未处理自动升级）。",
-            U.btn("登记风险", "compliance.newRisk", "primary", p ? { id: p.id } : {}) + U.btn("审计日志", "compliance.toAudit", "", p ? { id: p.id } : {}),
+            (App.can("compliance.write") ? U.btn("登记风险", "compliance.newRisk", "primary", p ? { id: p.id } : {}) : "") + U.btn("审计日志", "compliance.toAudit", "", p ? { id: p.id } : {}),
             '<div class="grid grid-4">' +
               U.metric("未闭环风险", String(openRisks.length), p ? "当前项目" : "全库", "!") +
               U.metric("高风险", String(high.length), high.length ? "阻断下游" : "当前没有高风险", "×") +
@@ -104,18 +125,36 @@
         render(query) {
           const pid = (query && query.id) || "";
           const p = pid ? (D.projects.find(x => x.id === pid) || null) : null;
-          if (pid && (!p || !Derived.canViewProject(p))) return U.page("合规与审计 / 审计日志", "项目日志不在可见范围", "只能查看自己负责、参与或经授权项目的审计日志；跨项目日志不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取审计日志", "项目不存在或当前身份不可见。"));
+          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("合规与审计 / 审计日志", "项目日志不在可见范围", "只能查看自己负责、参与或经授权项目的审计日志；跨项目日志不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取审计日志", "项目不存在或当前身份不可见。"));
           const allScope = App.can("audit.read");
-          const pids = pid ? [pid] : (allScope ? null : Derived.visibleProjects().map(x => x.id));
+          const pids = pid ? [pid] : (allScope ? null : DB.derived.visibleProjects().map(x => x.id));
           const tokens = pids ? auditTokens(pids) : null;
           const base = tokens
             ? D.audits.filter(a => tokens.some(t => (a.object + " " + a.action + " " + a.link).indexOf(t) >= 0))
             : D.audits;
           const kw = App.get(SCOPE, "kw", "");
-          const list = base.filter(a => !kw || (a.actor + a.object + a.action).indexOf(kw) >= 0);
+          /* 审计检索维度（业务方案 §16.8）：时间范围、事件类型、对象类型、员工 */
+          const from = App.get(SCOPE, "from", "");
+          const to = App.get(SCOPE, "to", "");
+          const etype = App.get(SCOPE, "etype", "全部");
+          const actorName = App.get(SCOPE, "actor", "");
+          const byType = base.filter(a => {
+            if (etype !== "全部" && !matchAuditType(a, etype)) return false;
+            if (actorName && a.actor.indexOf(actorName) < 0) return false;
+            const day = String(a.time || "").slice(0, 10);
+            if (from && day < from) return false;
+            if (to && day > to) return false;
+            return true;
+          });
+          const list = byType.filter(a => !kw || (a.actor + a.object + a.action).indexOf(kw) >= 0);
           const rows = list.map(a =>
             '<tr><td>' + U.esc(a.time) + "</td><td>" + U.entity(a.actor, a.result, a.actor.slice(0, 1)) + '</td><td class="cell-wrap">' + U.esc(a.object) + "</td><td>" + U.esc(a.action) + '</td><td>' + U.esc(a.src) + "</td><td>" + U.code(a.link) + "</td></tr>").join("");
-          const toolbar = '<div class="toolbar"><span class="field-wrap"><input class="field" data-filter="compliance.kw" name="kw" placeholder="搜索操作人 / 对象 / 动作" value="' + U.esc(kw) + '"></span><span class="grow"></span>' + U.btn("导出日志", "common.export", "primary") + "</div>";
+          const toolbar = '<div class="toolbar"><span class="field-wrap"><input class="field" data-filter="compliance.kw" name="kw" placeholder="搜索操作人 / 对象 / 动作" value="' + U.esc(kw) + '"></span>' +
+            '<span class="field-wrap"><input class="field" type="date" name="from" data-filter="compliance.from" data-filter-mode="state" value="' + U.esc(from) + '" title="起始日期"></span>' +
+            '<span class="field-wrap"><input class="field" type="date" name="to" data-filter="compliance.to" data-filter-mode="state" value="' + U.esc(to) + '" title="结束日期"></span>' +
+            '<span class="field-wrap"><input class="field" data-filter="compliance.actor" data-filter-mode="state" name="actor" placeholder="按操作人筛选" value="' + U.esc(actorName) + '"></span>' +
+            '<span class="grow"></span>' + U.seg(["全部"].concat(D.auditTypes), etype, "compliance.etype") +
+            (App.can("audit.export") ? U.btn("导出日志", "compliance.exportAudit", "primary") : U.btn("导出日志", "common.export", "primary")) + "</div>";
           return U.page("合规与审计 / 审计日志" + (p ? " · " + p.name : ""), "审计日志", "日志用于追溯而非考核；导出本身也是一次审计事件。",
             U.btn("授权台账", "compliance.toRights", "", p ? { id: p.id } : {}) + U.btn("风险视图", "compliance.toRisks", "", p ? { id: p.id } : {}),
             U.card("日志 · 当前 " + list.length + " 条" + (p ? " · " + U.esc(p.name) : (allScope ? " · 全企业" : " · 我负责的项目")), toolbar + U.table(["时间", "操作人", "对象", "动作", "来源", "关联"], rows, pid ? "当前项目没有匹配的审计日志" : (allScope ? "无匹配日志" : "当前可见项目没有匹配的审计日志")), "日志只增不改，操作即留痕") +
@@ -133,12 +172,23 @@
   App.on("compliance.toRights", (el) => { const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id; App.go("compliance/rights", pid ? { id: pid } : undefined); });
   App.on("compliance.toRisks", (el) => { const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id; App.go("compliance/risks", pid ? { id: pid } : undefined); });
   App.on("compliance.toAudit", (el) => { const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id; App.go("compliance/audit", pid ? { id: pid } : undefined); });
+  App.on("compliance.etype", (el) => { App.set(SCOPE, "etype", el.dataset.value); App.refresh(); });
+  /* 审计导出：导出行为本身也是审计事件（业务方案 §16.8） */
+  App.on("compliance.exportAudit", (el) => {
+    if (!App.guard("audit.export")) return;
+    const rows = D.audits.length;
+    App.confirm("导出审计日志", "将导出 " + rows + " 条审计记录（含时间、操作人、对象、动作、来源与关联 ID）。导出动作本身也会写入审计。", () => {
+      DB.state.log("审计日志", "导出审计日志（" + rows + " 条）", "成功", "AUDIT-EXPORT");
+      App.exportCsv("audit-log.csv");
+      App.refresh();
+    }, "确认导出");
+  });
   App.on("compliance.newRight", (el) => {
     if (!App.guard("compliance.write")) return;
     const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || "";
     App.modal({
       title: "新增授权记录", sub: "证明编号与使用范围必填；平台级条款仅企业管理员可登记",
-      body: U.fSelect("归属", "project", (App.can("org.manage") ? [{ value: "", label: "平台级条款（所有项目适用）" }] : []).concat(Derived.visibleProjects().map(x => ({ value: x.id, label: x.id + " · " + x.name }))), { value: pid || (Derived.visibleProjects()[0] || {}).id }) +
+      body: U.fSelect("归属", "project", (App.can("org.manage") ? [{ value: "", label: "平台级条款（所有项目适用）" }] : []).concat(DB.derived.visibleProjects().map(x => ({ value: x.id, label: x.id + " · " + x.name }))), { value: pid || (DB.derived.visibleProjects()[0] || {}).id }) +
         U.fField("授权对象", "subject", { required: true }) + U.fSelect("类型", "type", ["生成内容", "声音", "音乐", "字体", "模型条款", "第三方素材"], { required: true }) +
         U.fField("权利人", "owner", { required: true }) + U.fField("证明编号", "proof", { required: true }) +
         U.fField("使用范围", "use", { required: true }) + U.fSelect("区域", "region", ["中国大陆", "全球", "境内"]) +
@@ -148,11 +198,11 @@
         if (d.commercial === "不明确") { App.toast("商用性不明确不能登记为可用授权", "bad"); return false; }
         if (d.project) {
           const target = D.projects.find(x => x.id === d.project);
-          if (!target || !Derived.canViewProject(target)) { App.toast("归属项目不存在或不在当前身份可见范围", "bad"); return false; }
+          if (!target || !DB.derived.canViewProject(target)) { App.toast("归属项目不存在或不在当前身份可见范围", "bad"); return false; }
         }
         const n = D.rights.reduce((m, x) => { const hit = String(x.id).match(/^RT-(\d+)$/); return hit ? Math.max(m, Number(hit[1])) : m; }, 0) + 1;
         D.rights.push({ id: "RT-" + String(n).padStart(2, "0"), project: d.project || undefined, subject: d.subject, type: d.type, owner: d.owner, proof: d.proof, use: d.use, region: d.region, term: d.term || "长期", commercial: d.commercial, limit: "未登记", review: "待复核", status: "待复核" });
-        Store.log("授权 " + d.subject, "登记授权：" + (d.project || "平台级"), "成功", d.project || "平台级");
+        DB.state.log("授权 " + d.subject, "登记授权：" + (d.project || "平台级"), "成功", d.project || "平台级");
         App.toast("授权已登记：" + d.subject); App.refresh();
       }
     });
@@ -165,7 +215,7 @@
   const canSeeProject = (pid) => {
     if (!pid) return true;
     const p = D.projects.find(x => x.id === pid);
-    return !!p && Derived.canViewProject(p);
+    return !!p && DB.derived.canViewProject(p);
   };
   const rightById = (id) => {
     const r = D.rights.find(x => x.id === id);
@@ -198,10 +248,10 @@
         return App.job({
           title: "授权续期", steps: ["校验回执", "更新有效期", "写审计"],
           run() {
-            const res = Store.ops.renewRights(r.id, d.until);
+            const res = DB.state.renewRights(r.id, d.until);
             if (!res.ok) return res;
             r.proof = d.proof;
-            Store.log("授权 " + r.id, "续期至 " + d.until + "，回执 " + d.proof, "成功", r.id);
+            DB.state.log("授权 " + r.id, "续期至 " + d.until + "，回执 " + d.proof, "成功", r.id);
             return { ok: true, msg: res.msg + "；回执已登记" };
           }
         });
@@ -226,11 +276,11 @@
             const a = D.audioAssets.find(x => x.id === d.asset) || D.assets.find(x => x.id === d.asset);
             if (!a) return { ok: false, msg: "替换素材不存在：" + d.asset, fields: { asset: "素材不存在" } };
             if (r.project && a.project && a.project !== r.project) return { ok: false, msg: "替换素材属于 " + a.project + "，不能用于 " + r.project + " 的授权替换", fields: { asset: "项目不匹配" } };
-            const res = Store.ops.replaceRightsAsset(id);
+            const res = DB.state.replaceRightsAsset(id);
             if (!res.ok) return res;
             r.proof = "替换为 " + d.asset;
             D.timelines.filter(t => t.project === r.project).forEach(t => { t.stale = (t.stale || 0) + 1; });
-            Store.log("授权 " + id, "替换素材 " + d.asset + "：" + d.note, "成功", id);
+            DB.state.log("授权 " + id, "替换素材 " + d.asset + "：" + d.note, "成功", id);
             return { ok: true, msg: "已替换为 " + d.asset + "；下游时间线已标脏，需重混与复检" };
           }
         });
@@ -251,7 +301,7 @@
           title: "停用授权", steps: ["校验下游引用", "更新状态", "标记交付阻断"],
           run() {
             r.status = "停用"; r.review = "已停用";
-            Store.log("授权 " + r.id, "停用：" + d.note, "成功", r.id);
+            DB.state.log("授权 " + r.id, "停用：" + d.note, "成功", r.id);
             return { ok: true, msg: "授权 " + r.id + " 已停用，引用该素材的成片将阻断交付" };
           }
         });
@@ -281,7 +331,7 @@
         return App.job({
           title: "风险闭环", steps: ["校验结论与验证", "更新风险台账", "写审计"],
           run() {
-            const res = Store.ops.closeRisk(r.id, d.note + " · 验证：" + d.verify);
+            const res = DB.state.closeRisk(r.id, d.note + " · 验证：" + d.verify);
             if (!res.ok) return res;
             return { ok: true, msg: res.msg + "，验证方式已记录" };
           }
@@ -304,8 +354,8 @@
           title: "升级风险", steps: ["校验理由", "更新等级", "通知上级"],
           run() {
             r.level = d.to; r.status = "升级处理中";
-            Store.notify("风险 " + r.id + " 升级至" + d.to + "：" + d.reason);
-            Store.log("风险 " + r.id, "升级至" + d.to + "：" + d.reason, "成功", r.id);
+            DB.state.notify({ type: "异常升级", project: r.project, title: "风险 " + r.id + " 升级至" + d.to, reason: d.reason, impact: "该风险在处理前会阻断相关项目推进", state: "待处理", action: "按升级对象完成处置并回填结论", owner: d.to, link: "compliance/risks" });
+            DB.state.log("风险 " + r.id, "升级至" + d.to + "：" + d.reason, "成功", r.id);
             return { ok: true, msg: "风险 " + r.id + " 已升级至" + d.to };
           }
         });
@@ -318,7 +368,7 @@
     const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || ((App.currentProject() || {}).id || "");
     App.modal({
       title: "登记风险", sub: "风险必须可定位到项目、对象与责任人才可跟踪",
-      body: U.fSelect("项目", "project", Derived.visibleProjects().map(x => ({ value: x.id, label: x.id + " · " + x.name })), { required: true, value: pid }) +
+      body: U.fSelect("项目", "project", DB.derived.visibleProjects().map(x => ({ value: x.id, label: x.id + " · " + x.name })), { required: true, value: pid }) +
         U.fSelect("类型", "type", ["授权风险", "内容合规", "质量风险", "预算风险", "数据安全"]) +
         U.fField("对象", "object", { required: true, minlen: 4, placeholder: "例如 SH-26015-E09-02 / AU-26015-BGM-03" }) +
         U.fSelect("等级", "level", ["高", "中", "低"]) + U.fField("责任人", "owner", { required: true, value: (App.identity() && App.identity().name) || "负责人" }) +
@@ -330,11 +380,11 @@
           run() {
             const target = D.projects.find(x => x.id === d.project);
             if (!target) return { ok: false, msg: "项目不存在：" + d.project };
-            if (!Derived.canViewProject(target)) return { ok: false, msg: "项目不在当前身份可见范围：" + d.project };
+            if (!DB.derived.canViewProject(target)) return { ok: false, msg: "项目不在当前身份可见范围：" + d.project };
             const n = D.risks.reduce((m, x) => { const hit = String(x.id).match(/^RK-(\d+)$/); return hit ? Math.max(m, Number(hit[1])) : m; }, 0) + 1;
             const id = "RK-" + String(n).padStart(4, "0");
-            D.risks.unshift({ id: id, project: d.project, type: d.type, where: d.object, level: d.level, owner: d.owner, status: "待处理", at: Store.at(), action: d.note, decision: "未闭环" });
-            Store.log("风险 " + id, "登记：" + d.note + " · " + d.project, "成功", id);
+            D.risks.unshift({ id: id, project: d.project, type: d.type, where: d.object, level: d.level, owner: d.owner, status: "待处理", at: DB.state.at(), action: d.note, decision: "未闭环" });
+            DB.state.log("风险 " + id, "登记：" + d.note + " · " + d.project, "成功", id);
             return { ok: true, msg: "风险 " + id + " 已登记（" + target.name + " · " + d.level + " 级）" };
           }
         });

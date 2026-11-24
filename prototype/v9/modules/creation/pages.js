@@ -212,9 +212,16 @@
                 '<label class="check-line"><input type="checkbox"' + (i < 5 ? " checked" : "") + "><span>" + U.esc(it) + (i === 4 ? ' <span class="pill warn">待确认</span>' : "") + "</span></label>").join("") +
                 U.notice("未勾选的检查项必须在结论中说明原因；不允许只勾结论不填依据。", "warn"), "清单即审核口径") +
               U.card("审核结论", '<div class="btn-col">' + (target.status === "待审核"
-                ? U.btn("通过并锁定正式版本", "creation.approveScript", "primary", { id: target.id }) + U.btn("退回修改（指出位置）", "creation.rejectScript", "", { id: target.id }) + U.btn("指定位置局部修改", "creation.partialScript", "", { id: target.id })
+                ? U.btn("通过并锁定正式版本", "creation.approveScript", "primary", { id: target.id }) + U.btn("退回修改（指出位置）", "creation.rejectScript", "", { id: target.id }) + U.btn("指定位置局部修改", "creation.partialScript", "", { id: target.id }) + U.btn("终止项目", "creation.terminateScript", "", { id: target.id })
                 : U.btn("查看正式版本", "creation.openScript", "primary", { id: target.id }) + U.btn("发起局部修改", "creation.partialScript", "", { id: target.id })) + "</div>" +
-                U.notice(target.status === "待审核" ? "通过后必须记录审核人、角色、时间、结论与依据；锁定后下游才可启动。" : "已锁定版本只能派生新版本修改，不能覆盖。", "info"), "结论写入审核记录与项目生命周期") +
+                U.notice(target.status === "待审核" ? "通过后必须记录审核人、角色、时间、结论与依据；锁定后下游才可启动。审核结论共三种：通过 / 退回修改 / 终止项目。" : "已锁定版本只能派生新版本修改，不能覆盖。", "info"), "结论写入审核记录与项目生命周期") +
+              U.card("变更影响分析（业务方案 §6.4）", (function () {
+                const imp = DB.state.impactAnalysis(projectId, target.id);
+                if (!imp.ok) return U.empty("无法执行影响分析", "项目不存在。");
+                return U.table(["分析维度", "受影响数量", "明细", "处理口径"], imp.dims.map(d =>
+                  "<tr><td class=\"cell-strong\">" + U.esc(d.label) + '</td><td class="num">' + d.count + '</td><td class="cell-wrap muted">' + (d.items.length ? U.esc(d.items.slice(0, 3).join("；")) + (d.items.length > 3 ? " 等 " + d.items.length + " 项" : "") : "—") + '</td><td class="cell-wrap muted">' + U.esc(d.note) + "</td></tr>").join("")) +
+                  '<div class="btn-row-inline">' + U.btn("查看镜头级受影响清单", "creation.impact", "primary", { id: projectId }) + "</div>";
+              })(), "影响分析必须到镜头级清单，不能只给汇总计数") +
               U.card("历史审核", U.table(["记录", "对象", "结论", "审核人", "时间"], D.reviews.filter(r => String(r.node).indexOf("剧本") >= 0 && (!projectId || String(r.object).indexOf(projectId) >= 0)).map(r =>
                 '<tr><td>' + U.code(r.id) + "</td><td>" + U.esc(r.object) + "</td><td>" + U.pill(r.result) + "</td><td>" + U.esc(r.auditor) + '</td><td class="idx">' + U.esc(r.at) + "</td></tr>").join("")), "退回原因与指向位置一并留痕") +
             "</div></div>"
@@ -350,7 +357,7 @@
         return App.job({
           title: "小说改编", sub: "切分章节并生成分集改编稿，完成后自动进入剧本审核",
           steps: ["校验授权与原文", "按章节切分", "提炼主线与人物", "生成分集改编稿", "写入项目与预算台账"],
-          run: () => Store.ops.importNovel(d),
+          run: () => DB.state.importNovel(d),
           after(out) {
             if (out && out.ok) App.go("projects/detail", { id: out.data.project.id });
           }
@@ -380,16 +387,16 @@
   App.on("creation.openBrief", (el) => {
     const b = D.briefs.find(x => x.id === el.dataset.id);
     if (!b) return;
-    const bp = Store.prj(b.project);
-    if (!bp || !Derived.canViewProject(bp)) { App.toast("该创意设定所属项目不在当前可见范围", "bad"); return; }
+    const bp = DB.state.prj(b.project);
+    if (!bp || !DB.derived.canViewProject(bp)) { App.toast("该创意设定所属项目不在当前可见范围", "bad"); return; }
     App.drawer("创意设定 · " + b.id, U.desc([["项目", b.project], ["版本", b.version], ["输入方式", b.mode], ["状态", b.status], ["操作者", b.by], ["时间", b.at], ["摘要", b.note]]) +
       U.notice("创意设定更改会生成新版本，下游引用旧版本的剧本不会自动变化，需人工确认影响。", "info"));
   });
   App.on("creation.briefTrace", (el) => {
     const b = D.briefs.find(x => x.id === (el && el.dataset.id)) || D.briefs.find(x => x.project === ((App.currentProject() || {}).id || ""));
     if (!b) { App.toast("当前没有可追溯的创意设定", "bad"); return; }
-    const bp = Store.prj(b.project);
-    if (!bp || !Derived.canViewProject(bp)) { App.toast("该创意设定所属项目不在当前可见范围", "bad"); return; }
+    const bp = DB.state.prj(b.project);
+    if (!bp || !DB.derived.canViewProject(bp)) { App.toast("该创意设定所属项目不在当前可见范围", "bad"); return; }
     const plan = D.creativePlans.find(x => x.project === b.project && x.chosen);
     const script = D.scripts.find(x => x.project === b.project && (x.locked || x.status === "已锁定")) || D.scripts.find(x => x.project === b.project);
     const eps = D.episodes.filter(e => e.project === b.project);
@@ -419,8 +426,8 @@
   App.on("creation.openScript", (el) => {
     const s = D.scripts.find(x => x.id === el.dataset.id);
     if (!s) return;
-    const sp = Store.prj(s.project);
-    if (!sp || !Derived.canViewProject(sp)) { App.toast("该剧本所属项目不在当前可见范围", "bad"); return; }
+    const sp = DB.state.prj(s.project);
+    if (!sp || !DB.derived.canViewProject(sp)) { App.toast("该剧本所属项目不在当前可见范围", "bad"); return; }
     App.drawer("剧本 · " + s.id, U.desc([["项目", s.project], ["版本", s.version], ["状态", s.status], ["规模", s.episodes + " 集 / " + s.scenes + " 场 / " + s.shots + " 镜头"], ["对白", s.lines + " 行"], ["操作者", s.by], ["时间", s.at], ["锁定", s.locked ? "已锁定（下游基准）" : "未锁定"]]) +
       U.notice(s.note, s.locked ? "ok" : "info") +
       '<div class="mt-3">' + U.btn("与正式版本比对", "creation.diff", "sm", { id: s.id }) + "</div>");
@@ -456,9 +463,9 @@
   App.on("creation.newBrief", (el) => {
     if (!App.guard("creation.write")) return;
     const want = (el && (el.dataset.pid || el.dataset.id)) || ((App.currentProject() || {}).id || "");
-    const wantProject = want ? Store.prj(want) : null;
+    const wantProject = want ? DB.state.prj(want) : null;
     if (wantProject && ["草稿", "创意策划中"].indexOf(wantProject.status) < 0) { App.toast("《" + wantProject.name + "》当前为「" + wantProject.status + "」，创意设定已锁定；请走剧本变更或新建 V2", "bad"); return; }
-    const pool = D.projects.filter(p => ["草稿", "创意策划中"].indexOf(p.status) >= 0 && Derived.canViewProject(p));
+    const pool = D.projects.filter(p => ["草稿", "创意策划中"].indexOf(p.status) >= 0 && DB.derived.canViewProject(p));
     if (!pool.length) { App.toast("没有可填写创意设定的项目：请先在「新建项目」创建草稿项目", "bad"); return; }
     const preset = pool.some(p => p.id === want) ? want : pool[0].id;
     App.modal({
@@ -474,9 +481,9 @@
           title: "提交创意设定", sub: "文本预检 → 结构化解析 → 生成创意方案",
           steps: ["校验项目状态与权限", "执行敏感词与长度预检", "解析结构化创意设定", "生成可比较的创意方案"],
           run() {
-            const a = Store.ops.submitBrief(d.project, { text: d.content, mode: d.mode });
+            const a = DB.state.submitBrief(d.project, { text: d.content, mode: d.mode });
             if (!a.ok) return a;
-            const b = Store.ops.generatePlans(d.project);
+            const b = DB.state.generatePlans(d.project);
             return b.ok ? { ok: true, msg: "创意设定已确认：" + a.data.id + "；已生成方案 " + b.data.id } : b;
           },
           after(out) { if (out && out.ok) App.go("creation/plan", { id: d.project }); }
@@ -488,9 +495,9 @@
   App.on("creation.deriveBrief", (el) => {
     if (!App.guard("creation.write")) return;
     const pid = (el && (el.dataset.pid || el.dataset.id)) || ((App.currentProject() || {}).id || "");
-    const project = pid ? Store.prj(pid) : null;
+    const project = pid ? DB.state.prj(pid) : null;
     if (!project) { App.toast("当前项目不存在，无法派生创意设定", "bad"); return; }
-    if (!Derived.canViewProject(project)) { App.toast("项目不在当前可见范围，未派生创意设定", "bad"); return; }
+    if (!DB.derived.canViewProject(project)) { App.toast("项目不在当前可见范围，未派生创意设定", "bad"); return; }
     if (["草稿", "创意策划中"].indexOf(project.status) < 0) { App.toast("《" + project.name + "》当前为「" + project.status + "」，创意设定已锁定；请走剧本变更或新建 V2", "bad"); return; }
     const b = D.briefs.find(x => x.project === pid);
     if (!b) { App.toast("当前没有可派生的创意设定", "bad"); return; }
@@ -505,12 +512,12 @@
             const n = Number(String(b.version).replace(/[^\d]/g, "")) + 1;
             const prefix = String(b.id).replace(/-\d+$/, "");
             const seq = Number(String(b.id).match(/-(\d+)$/) ? String(b.id).match(/-(\d+)$/)[1] : 0) + 1;
-            const next = Object.assign({}, b, { id: prefix + "-" + String(seq).padStart(2, "0"), version: "v" + n, status: "已确认", note: d.note, by: String(App.identity().name).split(" · ")[0], at: Store.at() });
+            const next = Object.assign({}, b, { id: prefix + "-" + String(seq).padStart(2, "0"), version: "v" + n, status: "已确认", note: d.note, by: String(App.identity().name).split(" · ")[0], at: DB.state.at() });
             b.status = "已被替代";
             D.briefs.unshift(next);
-            const p = Store.prj(next.project);
+            const p = DB.state.prj(next.project);
             if (p) p.updated = next.at;
-            Store.log("创意设定 " + next.id, "派生 v" + n + " 并确认，旧版 " + b.id + " 保留", "成功", next.id);
+            DB.state.log("创意设定 " + next.id, "派生 v" + n + " 并确认，旧版 " + b.id + " 保留", "成功", next.id);
             D.shots.filter(s => s.project === next.project).forEach(s => { if (s.status === "已通过") s.status = "需复核"; });
             return { ok: true, msg: "已生成 " + next.id + " · v" + n + "，旧版本保留可回看；已生成镜头标记为需复核" };
           }
@@ -523,14 +530,14 @@
     if (!App.guard("creation.write")) return;
     const want = (el && (el.dataset.pid || el.dataset.id)) || ((App.currentProject() || {}).id || "");
     if (!want) { App.toast("缺少项目上下文，未执行；请从创意方案页进入", "bad"); return; }
-    const p = Store.prj(want);
+    const p = DB.state.prj(want);
     if (!p) { App.toast("当前项目不存在，无法生成方案", "bad"); return; }
-    if (!Derived.canViewProject(p)) { App.toast("项目不在当前可见范围，未生成方案", "bad"); return; }
+    if (!DB.derived.canViewProject(p)) { App.toast("项目不在当前可见范围，未生成方案", "bad"); return; }
     if (p.status !== "创意策划中") { App.toast(p.name + " 当前为「" + p.status + "」，不在创意策划阶段", "bad"); return; }
     App.job({
       title: "重新生成创意方案", sub: p.id + " · 旧方案保留，新方案追加到列表便于对比",
       steps: ["读取已确认创意设定", "提交文本模型", "解析为可比较方案", "写入方案列表"],
-      run() { return Store.ops.generatePlans(p.id); }
+      run() { return DB.state.generatePlans(p.id); }
     });
   });
 
@@ -539,9 +546,9 @@
     const plan = D.creativePlans.find(x => x.id === el.dataset.id);
     if (!plan) return;
     if (plan.chosen) { App.toast("该方案已选定"); return; }
-    const project = Store.prj(plan.project);
+    const project = DB.state.prj(plan.project);
     if (!project) { App.toast("方案所属项目不存在", "bad"); return; }
-    if (!Derived.canViewProject(project)) { App.toast("方案所属项目不在当前可见范围", "bad"); return; }
+    if (!DB.derived.canViewProject(project)) { App.toast("方案所属项目不在当前可见范围", "bad"); return; }
     if (project.status !== "创意策划中") { App.toast("《" + project.name + "》当前为「" + project.status + "」，不能重选方案", "bad"); return; }
     App.modal({
       title: "选定方案 · " + plan.title, sub: "选定后项目进入「剧本创作中」，其他方案保留但不再推进",
@@ -552,7 +559,7 @@
       onSubmit(d) {
         return App.job({
           title: "选定创意方案", steps: ["校验项目状态", "写入选定关系", "推进项目状态"],
-          run() { return Store.ops.choosePlan(plan.id); },
+          run() { return DB.state.choosePlan(plan.id); },
           after(out) { if (out && out.ok) App.go("creation/script", { id: plan.project }); }
         });
       }
@@ -563,14 +570,14 @@
     if (!App.guard("creation.write")) return;
     const want = (el && el.dataset.id) || ((App.currentProject() || {}).id || "");
     if (!want) { App.toast("缺少项目上下文，未生成剧本；请从项目流水线进入", "bad"); return; }
-    const p = Store.prj(want);
+    const p = DB.state.prj(want);
     if (!p) { App.toast("没有处于「剧本创作中」且已选定方案的项目", "bad"); return; }
-    if (!Derived.canViewProject(p)) { App.toast("项目不在当前可见范围，未生成剧本", "bad"); return; }
+    if (!DB.derived.canViewProject(p)) { App.toast("项目不在当前可见范围，未生成剧本", "bad"); return; }
     if (p.status !== "剧本创作中") { App.toast(p.name + " 当前为「" + p.status + "」，不在剧本创作阶段", "bad"); return; }
     App.job({
       title: "生成候选剧本", sub: p.id + " · 以选定方案与创意设定版本为输入；生成后进入待剧本审核",
       steps: ["校验方案与创意设定版本", "提交推理模型", "生成分集结构", "自检并写入候选版本", "推进到待剧本审核"],
-      run() { return Store.ops.generateScript(p.id); },
+      run() { return DB.state.generateScript(p.id); },
       after(out) { if (out && out.ok) App.go("creation/review", { id: p.id }); }
     });
   });
@@ -581,12 +588,12 @@
     const curPid = (App.currentProject() || {}).id || "";
     const s = sid ? D.scripts.find(x => x.id === sid) : D.scripts.find(x => x.project === curPid && x.status === "待审核");
     if (!s) { App.toast("当前项目没有待审核候选版本", "bad"); return; }
-    const sp = Store.prj(s.project);
-    if (!sp || !Derived.canViewProject(sp)) { App.toast("该剧本所属项目不在当前可见范围", "bad"); return; }
+    const sp = DB.state.prj(s.project);
+    if (!sp || !DB.derived.canViewProject(sp)) { App.toast("该剧本所属项目不在当前可见范围", "bad"); return; }
     App.confirm("提交剧本审核", "将 " + s.id + " 提交至项目负责人（节点 A）；审核期间下游保持阻塞。", () => {
-      const p = Store.prj(s.project);
-      if (p && p.status === "剧本创作中") Store.moveTo(p, "待剧本审核", "提交审核 " + s.id);
-      Store.log("剧本 " + s.id, "提交人工审核", "成功", s.id);
+      const p = DB.state.prj(s.project);
+      if (p && p.status === "剧本创作中") DB.state.moveTo(p, "待剧本审核", "提交审核 " + s.id);
+      DB.state.log("剧本 " + s.id, "提交人工审核", "成功", s.id);
       App.toast("已提交审核：" + s.id); App.go("creation/review", { id: s.project });
     }, "提交审核");
   });
@@ -597,10 +604,10 @@
     const curPid = (App.currentProject() || {}).id || "";
     const s = sid ? D.scripts.find(x => x.id === sid) : D.scripts.find(x => x.project === curPid && x.status === "待审核");
     if (!s) { App.toast("当前项目没有待审核版本，无法执行节点 A 审核", "bad"); return; }
-    const sp = Store.prj(s.project);
-    if (!sp || !Derived.canViewProject(sp)) { App.toast("该剧本所属项目不在当前可见范围", "bad"); return; }
+    const sp = DB.state.prj(s.project);
+    if (!sp || !DB.derived.canViewProject(sp)) { App.toast("该剧本所属项目不在当前可见范围", "bad"); return; }
     if (s.status !== "待审核") { App.toast(s.id + " 当前为「" + s.status + "」，不可重复审核；如需修改请派生新版本", "bad"); return; }
-    const p = Store.prj(s.project);
+    const p = DB.state.prj(s.project);
     if (!p || p.status !== "待剧本审核") { App.toast("项目当前为「" + (p ? p.status : "—") + "」，不在待剧本审核阶段", "bad"); return; }
     App.modal({
       title: "通过并锁定 · 剧本审核（节点 A）", sub: s.id + " 将成为下游唯一基准版本",
@@ -612,7 +619,7 @@
       onSubmit(d) {
         return App.job({
           title: "剧本审核 · 通过", steps: ["校验审核人权限", "写入审核结论", "锁定正式版本", "推进项目到生产准备中"],
-          run() { return Store.ops.approveScript(s.id, { version: d.version, note: d.note, positions: d.positions }); },
+          run() { return DB.state.approveScript(s.id, { version: d.version, note: d.note, positions: d.positions }); },
           after(out) { if (out && out.ok) App.go("projects/workflow", { id: s.project }); }
         });
       }
@@ -625,31 +632,78 @@
     const curPid = (App.currentProject() || {}).id || "";
     const s = sid ? D.scripts.find(x => x.id === sid) : D.scripts.find(x => x.project === curPid && x.status === "待审核");
     if (!s) { App.toast("当前项目没有待审核版本可退回", "bad"); return; }
-    const sp = Store.prj(s.project);
-    if (!sp || !Derived.canViewProject(sp)) { App.toast("该剧本所属项目不在当前可见范围", "bad"); return; }
+    const sp = DB.state.prj(s.project);
+    if (!sp || !DB.derived.canViewProject(sp)) { App.toast("该剧本所属项目不在当前可见范围", "bad"); return; }
     if (s.status !== "待审核") { App.toast(s.id + " 当前为「" + s.status + "」，不可退回", "bad"); return; }
     App.modal({
       title: "退回修改 · 剧本审核", sub: "必须指出位置与原因，否则视为无效审核",
-      body: U.fField("退回位置", "positions", { required: true, minlen: 3, placeholder: "例如：E14 / S02；E16 / S04" }) +
+      body: U.fField("退回位置", "positions", { required: true, minlen: 3, placeholder: "例如：E14 / S02 / 段 3（须定位到集 / 场 / 段）" }) +
         U.fSelect("退回原因类型", "reason", ["人物动机不足", "节奏问题", "逻辑漏洞", "对白质量", "内容合规", "其他"], { required: true }) +
         U.fTextarea("具体修改建议", "note", { required: true, minlen: 12, rows: 4, placeholder: "可执行的修改方向，不接受「再改改」" }) +
-        U.notice("退回后项目回到「剧本创作中」，并自动创建修订任务。", "warn"),
+        U.notice("退回位置必须定位到集 / 场 / 段（业务方案 §6.3）；退回后项目回到「剧本创作中」，并自动创建修订任务。", "warn"),
       submitText: "退回",
       onSubmit(d) {
         return App.job({
           title: "剧本审核 · 退回", steps: ["校验退回信息完整性", "写入审核记录", "创建修订任务", "回退项目状态"],
-          run() { return Store.ops.rejectScript(s.id, { positions: d.positions, reason: d.reason, note: d.note }); }
+          run() { return DB.state.rejectScript(s.id, { positions: d.positions, reason: d.reason, note: d.note }); }
         });
       }
     });
+  });
+
+  /* 终止项目（剧本审核结论之三，业务方案 §6.3 第 6 步） */
+  App.on("creation.terminateScript", (el) => {
+    if (!App.guard("script.review")) return;
+    const sid = el && el.dataset ? el.dataset.id : "";
+    const curPid = (App.currentProject() || {}).id || "";
+    const s = sid ? D.scripts.find(x => x.id === sid) : D.scripts.find(x => x.project === curPid && x.status === "待审核");
+    if (!s) { App.toast("当前项目没有待审核版本", "bad"); return; }
+    const sp = DB.state.prj(s.project);
+    if (!sp || !DB.derived.canViewProject(sp)) { App.toast("该剧本所属项目不在当前可见范围", "bad"); return; }
+    if (s.status !== "待审核") { App.toast(s.id + " 当前为「" + s.status + "」，不可终止", "bad"); return; }
+    App.modal({
+      title: "终止项目 · " + sp.name, sub: "记录终止原因与确认人；取消尚未执行的下游计划，已产生记录与费用保留",
+      body: U.fTextarea("终止原因", "reason", { required: true, minlen: 10, rows: 4, placeholder: "说明内容方向不可继续的原因" }) +
+        U.fField("确认人", "who", { required: true, minlen: 2, value: App.role().name }) +
+        U.notice("终止后项目进入「已终止」终态：不可回到进行中，只能复制为新项目重新立项。", "bad"),
+      submitText: "确认终止项目",
+      onSubmit(d) {
+        return App.job({
+          title: "剧本审核 · 终止项目", steps: ["记录终止原因与确认人", "写入审核记录", "取消未执行的下游计划"],
+          run() {
+            const r = DB.state.terminate(s.project, d.reason + "（确认人：" + d.who + "）");
+            if (!r.ok) return r;
+            D.reviews.unshift({ id: "RV-TERM-" + String(D.reviews.length + 1).padStart(4, "0"), project: s.project, node: "剧本审核（节点 A）", object: s.id, version: s.version, auditor: d.who, role: App.role().name, at: DB.state.at(), result: "终止项目", note: d.reason, positions: "全剧", tasks: "取消未执行的下游计划", follow: "项目已终止，记录保留" });
+            s.status = "已废弃";
+            return { ok: true, msg: "已终止项目并记录原因与确认人" };
+          }
+        });
+      }
+    });
+  });
+
+  /* 变更影响分析（业务方案 §6.4）：镜头级清单 */
+  App.on("creation.impact", (el) => {
+    const pid = (el && el.dataset && el.dataset.id) || (App.currentProject() || {}).id || "";
+    const sp = DB.state.prj(pid);
+    if (!sp || !DB.derived.canViewProject(sp)) { App.toast("项目不在可见范围", "bad"); return; }
+    const script = D.scripts.find(x => x.project === pid && x.locked) || D.scripts.find(x => x.project === pid);
+    const imp = DB.state.impactAnalysis(pid, script ? script.id : "");
+    App.drawer("变更影响分析 · " + sp.name,
+      U.desc([["目标版本", imp.newScriptId], ["受影响集", imp.affectedEps.length ? imp.affectedEps.map(e => "E" + e).join("、") : "无"], ["受影响镜头", imp.total + " 个"], ["处理原则", "仅创建受影响的重生产任务；未受影响的已验证资产保留"], ["统计口径", "返工量计入返工率，不计入新增生成量"]]) +
+      U.card("八维度影响汇总", U.table(["维度", "数量", "处理口径"], imp.dims.map(d =>
+        "<tr><td class=\"cell-strong\">" + U.esc(d.label) + '</td><td class="num">' + d.count + '</td><td class="cell-wrap muted">' + U.esc(d.note) + "</td></tr>").join("")), "影响分析必须覆盖人物 / 场景 / 对白 / 镜头 / 音频 / 时间线 / 任务 / 统计口径八个维度") +
+      U.card("镜头级受影响清单", U.table(["镜头", "集", "场", "镜号", "当前状态", "依赖资产", "建议动作"], imp.shotList.map(r =>
+        "<tr><td>" + U.code(r.id) + '</td><td class="num">E' + r.ep + '</td><td class="num">' + U.esc(r.scene) + '</td><td class="num">' + U.esc(r.no) + '</td><td>' + U.pill(r.status) + '</td><td class="cell-wrap muted">' + U.esc(r.deps) + '</td><td class="cell-wrap">' + U.esc(r.action) + "</td></tr>").join(""),
+        "当前没有受影响的镜头：正式剧本换版未改变既有拆解结果"), "清单必须到镜头级，不能只给汇总计数"));
   });
 
   App.on("creation.lock", (el) => {
     if (!App.guard("script.review")) return;
     const s = D.scripts.find(x => x.id === el.dataset.id);
     if (!s) return;
-    const sp = Store.prj(s.project);
-    if (!sp || !Derived.canViewProject(sp)) { App.toast("该剧本所属项目不在当前可见范围", "bad"); return; }
+    const sp = DB.state.prj(s.project);
+    if (!sp || !DB.derived.canViewProject(sp)) { App.toast("该剧本所属项目不在当前可见范围", "bad"); return; }
     if (s.locked) { App.toast(s.id + " 已是锁定正式版本"); return; }
     App.modal({
       title: "锁定正式版本 · " + s.id, sub: "锁定即成为下游唯一基准；后续修改必须新建版本并重新审核",
@@ -657,7 +711,7 @@
         U.notice("锁定后该版本状态变为「已通过 · 正式版本」，其他候选版本标记为已废弃。", "info"),
       submitText: "锁定",
       onSubmit(d) {
-        return App.job({ title: "锁定剧本版本", steps: ["校验版本状态", "写入锁定标记", "废弃其他候选", "写审计"], run() { return Store.ops.approveScript(s.id, { note: d.note, positions: "全剧" }); } });
+        return App.job({ title: "锁定剧本版本", steps: ["校验版本状态", "写入锁定标记", "废弃其他候选", "写审计"], run() { return DB.state.approveScript(s.id, { note: d.note, positions: "全剧" }); } });
       }
     });
   });
@@ -668,8 +722,8 @@
     if (!sid) { App.toast("缺少剧本版本标识，未进入编辑", "bad"); return; }
     const cur = D.scripts.find(x => x.id === sid);
     if (!cur) { App.toast("剧本版本不存在或已不可见", "bad"); return; }
-    const p0 = Store.prj(cur.project);
-    if (!p0 || !Derived.canViewProject(p0)) { App.toast("剧本所属项目不在当前可见范围", "bad"); return; }
+    const p0 = DB.state.prj(cur.project);
+    if (!p0 || !DB.derived.canViewProject(p0)) { App.toast("剧本所属项目不在当前可见范围", "bad"); return; }
     if (cur.locked && p0 && ["剧本创作中", "待剧本审核"].indexOf(p0.status) < 0) {
       App.toast("项目已进入「" + p0.status + "」，锁定版本不能直接派生；请从剧本审核页发起局部修改，走变更评估", "bad");
       return;
@@ -687,13 +741,13 @@
           run() {
             const n = Number(String(cur.version).replace("v", "")) + 1;
             const id = cur.id.replace(/-V\d+$/, "-V" + n);
-            const s = { id: id, project: cur.project, version: "v" + n, status: "待审核", episodes: cur.episodes, scenes: cur.scenes + (d.scope === "单场" ? 1 : 0), shots: cur.shots, lines: cur.lines + 4, by: Store.actor(), at: Store.at(), note: "编辑 " + d.locate + "：" + d.text.slice(0, 30), locked: false };
+            const s = { id: id, project: cur.project, version: "v" + n, status: "待审核", episodes: cur.episodes, scenes: cur.scenes + (d.scope === "单场" ? 1 : 0), shots: cur.shots, lines: cur.lines + 4, by: DB.state.actor(), at: DB.state.at(), note: "编辑 " + d.locate + "：" + d.text.slice(0, 30), locked: false };
             D.scripts.unshift(s);
-            const p = Store.prj(cur.project);
-            if (p && p.status === "剧本创作中") Store.moveTo(p, "待剧本审核", "编辑产生候选版本 " + id);
+            const p = DB.state.prj(cur.project);
+            if (p && p.status === "剧本创作中") DB.state.moveTo(p, "待剧本审核", "编辑产生候选版本 " + id);
             p.scriptVersion = id + "（候选）";
-            Store.log("剧本 " + id, "编辑并生成候选版本", "成功", id);
-            Store.notify({ type: "待剧本审核", project: cur.project, title: id + " 候选版本待审核", reason: d.why, impact: "审核通过前下游保持阻塞", action: "执行节点 A 审核", owner: p ? p.owner : Store.actor(), link: "creation/review" });
+            DB.state.log("剧本 " + id, "编辑并生成候选版本", "成功", id);
+            DB.state.notify({ type: "待剧本审核", project: cur.project, title: id + " 候选版本待审核", reason: d.why, impact: "审核通过前下游保持阻塞", action: "执行节点 A 审核", owner: p ? p.owner : DB.state.actor(), link: "creation/review" });
             return { ok: true, msg: "已生成候选版本 " + id + "，需重新审核" };
           },
           after(out) { if (out && out.ok) App.go("creation/review", { id: cur.project }); }
@@ -708,9 +762,9 @@
     const curPid = (App.currentProject() || {}).id || "";
     const cur = sid ? D.scripts.find(x => x.id === sid) : D.scripts.find(x => x.project === curPid && (x.locked || x.status === "已锁定"));
     if (!cur) { App.toast("当前项目没有可修改的正式剧本版本", "bad"); return; }
-    const p = Store.prj(cur.project);
+    const p = DB.state.prj(cur.project);
     if (!p) { App.toast("剧本所属项目不存在", "bad"); return; }
-    if (!Derived.canViewProject(p)) { App.toast("剧本所属项目不在当前可见范围", "bad"); return; }
+    if (!DB.derived.canViewProject(p)) { App.toast("剧本所属项目不在当前可见范围", "bad"); return; }
     if (["已交付", "已归档", "已终止"].indexOf(p.status) >= 0) {
       App.toast("项目已" + p.status + "，修改必须新建 V2，不能改动冻结版本", "bad");
       return;
@@ -735,13 +789,13 @@
             const affected = D.shots.filter(s => s.project === cur.project && s.ep === ep && s.status === "已通过");
             if (!affected.length) return { ok: false, msg: "第 " + ep + " 集当前没有已通过镜头需要标记复核；可直接派生新版本", fields: { range: "该集无已通过镜头" } };
             if (!d.keep) return { ok: false, msg: "当前版本下必须保留下游内容并标记复核，待修订稿审核通过后再重新生成", fields: { keep: "必须保留并标记复核" } };
-            const t = { id: "T-" + (8800 + D.tasks.length), project: cur.project, ep: ep, scene: "—", shot: "—", kind: "剧本局部修订", stage: "创意与剧本", status: "待执行", priority: "高", deps: [], parallelGroup: "SCR", input: d.range, output: "局部修订稿", model: "推理模型 R1", config: "PRV-05", executor: Store.actor(), resourceOwner: Store.actor(), attempt: 0, maxAttempts: 3, est: 3, actual: 0, failedCost: 0, submitAt: "—", failReason: "—", qc: "—" };
+            const t = { id: "T-" + (8800 + D.tasks.length), project: cur.project, ep: ep, scene: "—", shot: "—", kind: "剧本局部修订", stage: "创意与剧本", status: "待执行", priority: "高", deps: [], parallelGroup: "SCR", input: d.range, output: "局部修订稿", model: "推理模型 R1", config: "PRV-05", executor: DB.state.actor(), resourceOwner: DB.state.actor(), attempt: 0, maxAttempts: 3, est: 3, actual: 0, failedCost: 0, submitAt: "—", failReason: "—", qc: "—" };
             D.tasks.unshift(t);
             affected.forEach(s => { s.status = "需复核"; s.version = "上游剧本局部修改待复核"; });
             const e = D.episodes.find(x => x.project === cur.project && x.no === ep);
             if (e) { e.qc = "进行中"; e.status = "剧本修订待复核"; }
             D.timelines.filter(tl => tl.project === cur.project && tl.ep === ep).forEach(tl => { tl.stale = (tl.stale || 0) + 1; tl.status = "标脏"; });
-            Store.log("剧本 " + cur.id, "局部修改：" + d.range + "，受影响镜头 " + affected.length + " 个", "成功", t.id);
+            DB.state.log("剧本 " + cur.id, "局部修改：" + d.range + "，受影响镜头 " + affected.length + " 个", "成功", t.id);
             return { ok: true, msg: "已创建局部修改任务 " + t.id + "，标记 " + affected.length + " 个受影响镜头为需复核" };
           }
         });
@@ -751,15 +805,15 @@
 
   App.on("creation.rerunBreakdown", (el) => {
     if (!App.guard("creation.write")) return;
-    const picked = el && el.dataset.id ? Store.prj(el.dataset.id) : App.currentProject();
+    const picked = el && el.dataset.id ? DB.state.prj(el.dataset.id) : App.currentProject();
     const p = picked;
     if (!p) { App.toast("缺少项目上下文，未重新拆解；请从项目流水线进入", "bad"); return; }
-    if (!Derived.canViewProject(p)) { App.toast("项目不在当前可见范围，未重新拆解", "bad"); return; }
+    if (!DB.derived.canViewProject(p)) { App.toast("项目不在当前可见范围，未重新拆解", "bad"); return; }
     App.confirm("重新拆解 " + p.name, "将基于锁定版本重建对象；已生成的镜头与资产不会被删除，但会重新校验引用。", () => {
       App.job({
         title: "重新拆解剧本", sub: p.id + " · 基于锁定版本重建集 / 场 / 人物 / 场景 / 道具 / 镜头对象",
         steps: ["读取锁定剧本", "重建结构化对象", "校验引用完整性", "生成镜头契约草案"],
-        run() { return Store.ops.breakdown(p.id); },
+        run() { return DB.state.breakdown(p.id); },
         after(out) { if (out && out.ok) App.go("creation/breakdown", { id: p.id }); }
       });
     }, "重新拆解");

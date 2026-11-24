@@ -21,8 +21,8 @@
         desc: "项目是短剧制作的容器，也是资产、任务、成本与交付的唯一归属单元。列表展示真实状态字段，不由前端文案伪造。",
         render() {
           const st = App.get(SCOPE, "status", ""), dept = App.get(SCOPE, "dept", "");
-          const visible = Derived.visibleProjects();
-          const scope = Derived.scopeLabel();
+          const visible = DB.derived.visibleProjects();
+          const scope = DB.derived.scopeLabel();
           const list = visible.filter(p => (!st || p.status === st) && (!dept || p.dept === dept));
           const counts = {
             active: visible.filter(p => ["生产中", "后期制作中", "质量检测中", "待最终审核", "生产准备中"].indexOf(p.status) >= 0).length,
@@ -42,7 +42,7 @@
               '<span class="faint small" data-filter-count></span></div></div>' +
             '<div class="project-grid">' + list.map(p => {
               const cover = U.cover(p.id);
-              const wf = Derived.workflow(p);
+              const wf = DB.derived.workflow(p);
               return '<article class="project-card">' +
                 '<div class="project-cover">' + (cover ? '<img src="' + U.esc(cover) + '" alt="' + U.esc(p.name) + ' 主视觉">' : "") +
                   '<div class="pc-state">' + U.pill(p.status) + '</div><span class="pc-dur">' + p.episodes + " 集 · " + U.esc(p.duration) + "</span>" +
@@ -79,11 +79,11 @@
         desc: "把锁定剧本 → 拆解 → 资产确认 → 计划固化 → 连续生产 → 字幕合成 → 整集质检 → 终审 → 交付串成一条可操作链路，每步都写入同一项目状态。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p || !Derived.canViewProject(p)) {
+          if (!p || !DB.derived.canViewProject(p)) {
             return U.page("项目中心 / 制作流水线", "项目不在可见范围", "切换到有权限的身份，或由负责人授权后再进入。",
               U.btn("返回项目库", "projects.listLink", "primary"), U.empty("无访问权限", "跨项目访问不渲染任何业务内容。"));
           }
-          const wf = Derived.workflow(p);
+          const wf = DB.derived.workflow(p);
           const n = wf.next[0];
           const more = wf.next.slice(1, 4);
           const preProduction = ["草稿", "创意策划中", "剧本创作中", "待剧本审核", "生产准备中"].indexOf(p.status) >= 0;
@@ -97,7 +97,7 @@
           const stagePage = { script: "creation/script", breakdown: "creation/breakdown", plan: "director/plan", video: "video/production", post: "audio/subtitle", qc: "quality/reports", final: "post/review", delivery: "post/delivery" };
           return U.page("项目中心 / " + p.id + " / 制作流水线", p.name + " · 从剧本到交付", "不是功能目录，而是这部戏今天真实走到哪一步。每个按钮都落到项目状态、任务、成本与质检记录上。",
             U.btn("项目档案", "projects.detail", "", { id: p.id }) +
-            (App.can("project.manage") && Store.canMove(p, "已暂停").ok ? U.btn("暂停项目", "projects.pause", "", { id: p.id }) : "") +
+            (App.can("project.manage") && DB.state.canMove(p, "已暂停").ok ? U.btn("暂停项目", "projects.pause", "", { id: p.id }) : "") +
             U.btn("返回项目库", "projects.listLink"),
             '<section class="wf-hero">' +
               '<div class="wf-cover">' + (U.cover(p.id) ? '<img src="' + U.esc(U.cover(p.id)) + '" alt="">' : "") +
@@ -202,7 +202,7 @@
                 U.notice("仅复制题材、风格、规格与交付要求等非敏感配置；<b>不复制凭据与历史任务</b>。", "info"), "复制配置不复制执行痕迹") +
               U.card("预算与资源预检", (function () {
                 const me = App.identity();
-                const u = Derived.actorUser(me) || {};
+                const u = DB.derived.actorUser(me) || {};
                 const deptBg = D.budgets.find(b => b.scope === "部门" && b.name === u.dept);
                 const entBg = D.budgets.find(b => b.scope === "企业");
                 const mine = D.providers.filter(x => x.ownerId === u.id && x.status === "启用");
@@ -229,16 +229,16 @@
               U.btn("返回项目列表", "projects.listLink", "primary"),
               U.empty("项目不存在", "检查项目编号，或从项目列表进入。"));
           }
-          if (!Derived.canViewProject(p)) {
-            return U.page("项目中心 / 无权限", "项目不在可见范围", "当前身份「" + App.identity().name + "」的可见范围是：" + Derived.scopeLabel() + "。跨项目访问必须由项目负责人或企业管理员授权，未授权时不渲染任何项目内容。",
+          if (!DB.derived.canViewProject(p)) {
+            return U.page("项目中心 / 无权限", "项目不在可见范围", "当前身份「" + App.identity().name + "」的可见范围是：" + DB.derived.scopeLabel() + "。跨项目访问必须由项目负责人或企业管理员授权，未授权时不渲染任何项目内容。",
               U.btn("返回项目列表", "projects.listLink", "primary") + U.btn("查看角色权限", "projects.lifecycleLink"),
               U.empty("无访问权限", "如确需参与该项目，请由项目负责人授予项目角色后再访问；授权动作会写入审计。"));
           }
-          const sum = Derived.projectSummary(p);
+          const sum = DB.derived.projectSummary(p);
           const grantable = App.can("grant.manage");
           const actions = [];
           actions.push(U.btn("打开制作流水线", "projects.wfOpen", "primary", { pid: p.id }));
-          if (App.can("project.manage") && Store.canMove(p, "已暂停").ok) actions.push(U.btn("暂停项目", "projects.pause", "", { id: p.id }));
+          if (App.can("project.manage") && DB.state.canMove(p, "已暂停").ok) actions.push(U.btn("暂停项目", "projects.pause", "", { id: p.id }));
           if (grantable) actions.push(U.btn("移交", "orgs.transfer"));
           if (App.can("delivery.execute") && ["待最终审核", "已完成"].indexOf(p.status) >= 0) actions.push(U.btn("进入交付", "projects.deliveryLink", "primary", { id: p.id }));
           const members = (p.members || []).map(m => {
@@ -293,7 +293,7 @@
         path: "projects/lifecycle", title: "生命周期与状态机", icon: "clock", permission: "project.manage",
         desc: "12 个主流程状态 + 3 个干涉状态。状态迁移必须由真实业务动作或系统回执触发，禁止页面手工随意改状态。",
         render() {
-          const visible = Derived.visibleProjects();
+          const visible = DB.derived.visibleProjects();
           const paused = visible.filter(p => p.status === "已暂停").length;
           const abnormal = visible.filter(p => p.status === "异常中").length;
           const active = visible.filter(p => ["生产中", "生产准备中", "后期制作中", "质量检测中", "待最终审核"].indexOf(p.status) >= 0).length;
@@ -315,7 +315,7 @@
                 '<div class="mt-3">' + U.btn("查看异常中心", "projects.incidentsLink", "sm") + "</div>", "计数来自当前可见项目，不使用固定示例值") +
             "</div>" +
             U.card("项目当前状态", U.table(["项目", "当前状态", "阶段", "负责人", "更新时间", "下一步"], visible.map(p => {
-              const next = Derived.workflow(p).next[0];
+              const next = DB.derived.workflow(p).next[0];
               return '<tr><td>' + U.entity(p.name, p.id, "剧") + '</td><td>' + U.pill(p.status) + '</td><td class="cell-wrap">' + U.esc(p.phase) + '</td><td>' + U.esc(p.owner) + '</td><td class="idx">' + U.esc(p.updated) + '</td><td class="cell-wrap muted">' + U.esc(next ? next.title : "无待办") + "</td></tr>";
             }).join(""), "当前可见范围内没有项目"), "状态迁移由动作写入审计，本页只显示当前快照") +
             '<div class="mt-4">' + U.btn("查看审计流水", "compliance.toAudit") + "</div>"
@@ -366,9 +366,9 @@
       steps: ["校验名称唯一性与预算余额", "生成项目编号", "写入项目与预算台账"],
       refresh: false,
       run() {
-        const r = Store.ops.createProject(d);
+        const r = DB.state.createProject(d);
         if (!r.ok) return r;
-        Store.log("项目 " + r.data.id, (asDraft ? "保存草稿：" : "创建项目：") + d.name, "成功", r.data.id);
+        DB.state.log("项目 " + r.data.id, (asDraft ? "保存草稿：" : "创建项目：") + d.name, "成功", r.data.id);
         App.set("projects", "last", r.data.id);
         return { ok: true, msg: (asDraft ? "草稿已保存：" : "项目已创建：") + r.data.id + " · " + d.name, data: r.data };
       },
@@ -392,8 +392,8 @@
     const id = (el && el.dataset && el.dataset.id) || ((App.currentProject() || {}).id || "");
     if (!id) { App.toast("缺少项目上下文，未执行暂停；请从项目详情或流水线进入", "bad"); return; }
     const p = D.projects.find(x => x.id === id);
-    if (!p || !Derived.canViewProject(p)) { App.toast("项目不存在或不在可见范围，未执行暂停", "bad"); return; }
-    const gate = Store.canMove(p, "已暂停");
+    if (!p || !DB.derived.canViewProject(p)) { App.toast("项目不存在或不在可见范围，未执行暂停", "bad"); return; }
+    const gate = DB.state.canMove(p, "已暂停");
     if (!gate.ok) { App.toast(p.name + "：" + gate.msg, "bad"); return; }
     App.modal({
       title: "暂停项目 · " + p.name, sub: "暂停后停止派发新任务；运行中任务按供应商能力收口，已发生费用仍入账",
@@ -403,7 +403,7 @@
       onSubmit(d) {
         return App.job({
           title: "暂停项目", steps: ["校验项目状态", "停止任务派发", "写入生命周期记录"],
-          run() { return Store.ops.pause(p.id, d.reason); }
+          run() { return DB.state.pause(p.id, d.reason); }
         });
       }
     });
@@ -418,7 +418,7 @@
         title: "批量恢复", steps: ["校验预算", "恢复项目状态", "任务重新排队"],
         run() {
           const bad = [];
-          list.forEach(p => { const r = Store.ops.resume(p.id); if (!r.ok) bad.push(p.id + "：" + r.msg); });
+          list.forEach(p => { const r = DB.state.resume(p.id); if (!r.ok) bad.push(p.id + "：" + r.msg); });
           return { ok: bad.length < list.length, msg: "已恢复 " + (list.length - bad.length) + " 个项目" + (bad.length ? "；失败 " + bad.length + " 个（" + bad[0] + "）" : "") };
         }
       });
@@ -439,7 +439,7 @@
             if (!d.okn) return { ok: false, msg: "需先通知项目负责人并勾选确认", fields: { okn: "请勾选" } };
             const targets = D.projects.filter(p => d.scope === "生产中项目" ? p.status === "生产中" : d.scope === "异常中项目" ? p.status === "异常中" : ["生产中", "异常中", "生产准备中"].indexOf(p.status) >= 0);
             const ok = [];
-            targets.forEach(p => { const r = Store.ops.pause(p.id, d.reason); if (r.ok) { ok.push(p.id); Store.notify("项目 " + p.id + " 已暂停：" + d.reason); } });
+            targets.forEach(p => { const r = DB.state.pause(p.id, d.reason); if (r.ok) { ok.push(p.id); DB.state.notify({ type: "项目暂停", project: p.id, title: "项目 " + p.id + " 已暂停", reason: d.reason, impact: "该项目的排队与执行中任务已挂起，费用照常入账", state: "待处理", action: "恢复项目或终止并记录原因", owner: p.owner, link: "projects/workflow" }); } });
             return { ok: ok.length > 0, msg: "已暂停 " + ok.length + " 个项目" + (ok.length ? "（" + ok.join("、") + "）" : "") };
           }
         });
@@ -462,7 +462,7 @@
           title: "终止项目", steps: ["校验项目状态", "取消未执行任务", "写生命周期与审计"],
           run() {
             if (!d.oka) return { ok: false, msg: "需确认下游交付与合同影响", fields: { oka: "请勾选确认" } };
-            return Store.ops.terminate(d.project, d.reason);
+            return DB.state.terminate(d.project, d.reason);
           }
         });
       }
@@ -473,19 +473,17 @@
   function wfProject(el) {
     const id = (el && el.dataset ? el.dataset.pid : "") || ((App.currentProject() || {}).id || "");
     const p = id ? D.projects.find(x => x.id === id) : null;
-    return p && Derived.canViewProject(p) ? p : null;
+    return p && DB.derived.canViewProject(p) ? p : null;
   }
   function wfNeed(el) {
-    const p = wfNeed(el);
-    if (!p) return;
-    if (!p) App.toast("缺少当前项目上下文或项目不在可见范围，已阻断，请从项目中心重新进入", "bad");
+    const p = wfProject(el);
+    if (!p) { App.toast("缺少当前项目上下文或项目不在可见范围，已阻断，请从项目中心重新进入", "bad"); return null; }
     return p;
   }
 
   App.on("projects.wfOpen", (el) => {
     const p = wfNeed(el);
     if (!p) return;
-    if (!p) { App.toast("当前身份没有可进入的可见项目", "bad"); return; }
     App.set("projects", "wfCurrent", p.id);
     App.go("projects/workflow", { id: p.id });
   });
@@ -511,7 +509,7 @@
     App.job({
       title: "生成候选剧本", sub: "基于已选定方案生成完整分集稿，完成后进入待审核",
       steps: ["校验方案与项目状态", "调用推理模型生成", "写入候选版本与成本"],
-      run() { return Store.ops.generateScript(p.id); },
+      run() { return DB.state.generateScript(p.id); },
       after(out) { if (out && out.ok) App.go("projects/workflow", { id: p.id }); }
     });
   });
@@ -530,7 +528,7 @@
       onSubmit(d) {
         return App.job({
           title: "剧本审核 · 节点 A", steps: ["校验审核依据", "锁定正式版本", "启动生产准备"],
-          run() { return Store.ops.approveScript(s.id, { note: d.note, positions: "全 " + p.episodes + " 集" }); },
+          run() { return DB.state.approveScript(s.id, { note: d.note, positions: "全 " + p.episodes + " 集" }); },
           after(out) { if (out && out.ok) App.go("projects/workflow", { id: p.id }); }
         });
       }
@@ -545,7 +543,7 @@
       App.job({
         title: "拆解剧本", sub: "生成全部分集与镜头契约，同时建立角色 / 场景资产",
         steps: ["读取锁定剧本", "生成集 / 场 / 人物 / 场景", "写入镜头契约与生产计划"],
-        run() { return Store.ops.breakdown(p.id); },
+        run() { return DB.state.breakdown(p.id); },
         after(out) { if (out && out.ok) App.go("projects/workflow", { id: p.id }); }
       });
     }, "开始拆解");
@@ -555,7 +553,7 @@
     if (!App.guard("director.write")) return;
     const p = wfNeed(el);
     if (!p) return;
-    const wf = Derived.workflow(p);
+    const wf = DB.derived.workflow(p);
     if (!wf.pendingAssets.length) { App.toast("本项目没有待确认资产", "bad"); return; }
     App.modal({
       title: "确认视觉设定 · " + p.name, sub: "以下资产将作为全剧人物与场景的唯一参考，确认后固化版本",
@@ -569,7 +567,7 @@
             const bad = [];
             wf.pendingAssets.forEach(a => {
               const kind = D.characters.some(x => x.id === a.id) ? "character" : "location";
-              const r = Store.ops.confirmAsset(kind, a.id);
+              const r = DB.state.confirmAsset(kind, a.id);
               if (!r.ok) bad.push(a.name + "：" + r.msg);
             });
             return bad.length ? { ok: false, msg: bad[0] } : { ok: true, msg: "已确认 " + wf.pendingAssets.length + " 个资产" };
@@ -589,7 +587,7 @@
     App.confirm("固化生产计划", "固化后镜头契约、资产版本与预算即锁定；项目进入生产中，可按集提交生产任务。", () => {
       App.job({
         title: "固化生产计划", steps: ["校验生产门禁", "锁定镜头契约与资产", "项目进入生产中"],
-        run() { return Store.ops.freezePlan(plan.id); },
+        run() { return DB.state.freezePlan(plan.id); },
         after(out) { if (out && out.ok) App.go("projects/workflow", { id: p.id }); }
       });
     }, "固化并开始生产");
@@ -599,7 +597,7 @@
     if (!App.guard("production.write")) return;
     const p = wfNeed(el);
     if (!p) return;
-    const wf = Derived.workflow(p);
+    const wf = DB.derived.workflow(p);
     const first = (wf.eps.filter(e => e.qc !== "PASS")[0] || {}).no || 1;
     const remain = wf.eps.filter(e => e.qc !== "PASS").length;
     App.modal({
@@ -612,7 +610,7 @@
           title: "连续生产", sub: "逐镜头执行，完成后统一进入后期",
           steps: ["预算与待人工镜头预检", "逐镜提交并等待回执", "下载结果并跑镜头质检", "汇总分集与成本"],
           refresh: true,
-          run() { return Store.ops.batchProduce(p.id, Number(d.fromEp)); },
+          run() { return DB.state.batchProduce(p.id, Number(d.fromEp)); },
           after(out) {
             App.go("projects/workflow", { id: p.id });
             if (out && !out.ok) App.toast(out.msg, "bad");
@@ -635,7 +633,7 @@
       onSubmit(d) {
         return App.job({
           title: "重出时间线", steps: ["替换标脏片段", "重算片段时长", "输出新版本"],
-          run() { return Store.ops.resolveTimeline(p.id, tl.ep, d.note); },
+          run() { return DB.state.resolveTimeline(p.id, tl.ep, d.note); },
           after(out) { if (out && out.ok) App.go("projects/workflow", { id: p.id }); }
         });
       }
@@ -659,7 +657,7 @@
     App.confirm("完成字幕、混音与合成", "将为全部分集生成字幕、清点音轨并输出分集时间线；字幕未校对、镜头未通过或时间线标脏都会阻断。", () => {
       App.job({
         title: "字幕 · 混音 · 合成", steps: ["检查逐集镜头", "生成字幕草稿", "合成时间线", "项目进入质量检测"],
-        run() { return Store.ops.finishPost(p.id); },
+        run() { return DB.state.finishPost(p.id); },
         after(out) { App.go("projects/workflow", { id: p.id }); }
       });
     }, "开始后期");
@@ -669,11 +667,11 @@
     if (!App.guard("quality.operate")) return;
     const p = wfNeed(el);
     if (!p) return;
-    const wf = Derived.workflow(p);
+    const wf = DB.derived.workflow(p);
     App.confirm("整集质检", "将逐集检测剩余 " + (p.episodes - wf.passEps.length) + " 集；任一项阻断即停止，不把集数数量当通过率。", () => {
       App.job({
         title: "整集质检", steps: ["检查镜头与时间线", "逐集跑检测", "写入质量报告", "自动进入待终审"],
-        run() { return Store.ops.qcAll(p.id); },
+        run() { return DB.state.qcAll(p.id); },
         after(out) { App.go("projects/workflow", { id: p.id }); }
       });
     }, "开始质检");
@@ -684,15 +682,21 @@
     const p = wfNeed(el);
     if (!p) return;
     App.modal({
-      title: "最终成片审核 · 节点 B", sub: "终审结论决定能否生成交付包；返工必须指定集或镜头",
-      body: U.fSelect("结论", "decision", [{ value: "pass", label: "通过，进入交付" }, { value: "rework", label: "指定范围返工" }], { required: true }) +
+      title: "最终成片审核 · 节点 B", sub: "终审结论决定能否生成交付包；非通过结论必须指定集 / 场 / 镜头与时间点",
+      body: U.fSelect("结论", "decision", [
+        { value: "pass", label: "通过交付 · 进入交付流程" },
+        { value: "rework", label: "指定镜头 / 片段返工 · 仅重做指定内容" },
+        { value: "back", label: "退回后期 · 重做时间线或合成" },
+        { value: "terminate", label: "终止交付 · 记录原因并取消交付" }
+      ], { required: true }) +
         U.fTextarea("审核依据 / 返工说明", "note", { required: true, minlen: 10, rows: 4, value: "已抽检全剧开头、集中冲突与结尾钩子；人物一致、字幕同步、无合规阻断，交付规格符合 9:16 要求。" }) +
-        U.fField("返工位置（返工时必填）", "positions", { placeholder: "例如：E18 / S03 / SH-05" }),
+        U.fField("问题位置（非通过必填）", "positions", { placeholder: "例如：E18 / S03 / SH-05 / 00:12" }) +
+        U.notice("终审意见必须关联具体版本与问题位置（集、场、镜头、时间点），不允许只写整体评价。终止交付会取消交付流程并保留全部记录与费用。", "warn"),
       submitText: "提交终审",
       onSubmit(d) {
         return App.job({
           title: "终审 · 节点 B", steps: ["校验结论与依据", "写入审核记录", "推进或退回项目"],
-          run() { return Store.ops.finalReview(p.id, { decision: d.decision, note: d.note, positions: d.positions }); },
+          run() { return DB.state.finalReview(p.id, { decision: d.decision, note: d.note, positions: d.positions }); },
           after(out) { if (out && out.ok) App.go("projects/workflow", { id: p.id }); }
         });
       }
@@ -703,7 +707,7 @@
     if (!App.guard("delivery.execute")) return;
     const p = wfNeed(el);
     if (!p) return;
-    const wf = Derived.workflow(p);
+    const wf = DB.derived.workflow(p);
     if (!wf.gateDelivery.ok) {
       App.toast("交付门禁未通过，先处理 " + wf.gateDelivery.items.filter(i => !i.ok).map(i => i.label).join("、"), "bad");
       return;
@@ -713,7 +717,7 @@
       App.confirm("确认交付并冻结版本", pending.id + " 已生成，包含 " + pending.episodes + " 集；确认后交付 V1 冻结，历史不可覆盖。", () => {
         App.job({
           title: "确认交付", steps: ["复核交付清单", "冻结版本", "写入作品库"],
-          run() { return Store.ops.confirmDelivery(pending.id, "企业内容库"); },
+          run() { return DB.state.confirmDelivery(pending.id, "企业内容库"); },
           after(out) { if (out && out.ok) App.go("projects/workflow", { id: p.id }); }
         });
       }, "确认交付");
@@ -722,7 +726,7 @@
     App.confirm("生成交付包", "将通过交付门禁校验后生成 V1 交付包；生成后仍需二次确认才会冻结。", () => {
       App.job({
         title: "生成交付包", steps: ["校验交付门禁", "汇总视频 / 字幕 / 封面", "生成校验摘要"],
-        run() { return Store.ops.generateDelivery(p.id); },
+        run() { return DB.state.generateDelivery(p.id); },
         after(out) { App.go("projects/workflow", { id: p.id }); }
       });
     }, "生成交付包");
@@ -732,7 +736,7 @@
     if (!App.guard("project.manage")) return;
     const p = wfNeed(el);
     if (!p) return;
-    const wf = Derived.workflow(p);
+    const wf = DB.derived.workflow(p);
     const bad = wf.gateDelivery.items.filter(i => !i.ok);
     if (!bad.length) { App.toast("交付门禁已通过，可直接生成交付包", "good"); return; }
     const rights = D.rights.filter(r => r.project === p.id && (r.status === "阻断交付" || r.status === "未通过" || r.review === "未通过"));
@@ -755,8 +759,8 @@
         return App.job({
           title: "解除授权阻断", steps: ["锁定阻断素材", d.fix === "renew" ? "补签授权与到期日" : "替换为已授权素材", "重跑交付门禁"],
           run() {
-            if (d.fix === "renew") return Store.ops.renewRights(target.id, d.term);
-            return Store.ops.replaceRightsAsset(target.id);
+            if (d.fix === "renew") return DB.state.renewRights(target.id, d.term);
+            return DB.state.replaceRightsAsset(target.id);
           },
           after(out) { if (out && out.ok) App.go("projects/workflow", { id: p.id }); }
         });
@@ -771,7 +775,7 @@
     App.confirm("归档项目", "归档后项目与交付资产转只读；可查不可改。", () => {
       App.job({
         title: "归档项目", steps: ["校验交付状态", "冻结资产", "写入归档记录"],
-        run() { return Store.ops.archive(p.id); },
+        run() { return DB.state.archive(p.id); },
         after(out) { if (out && out.ok) App.go("projects/workflow", { id: p.id }); }
       });
     }, "归档");
@@ -781,7 +785,7 @@
     if (!App.guard("project.manage")) return;
     const p = wfNeed(el);
     if (!p) return;
-    const bg = Store.budgetOf(p.id);
+    const bg = DB.state.budgetOf(p.id);
     App.modal({
       title: "调整项目预算", sub: "当前已用 ¥" + (bg ? bg.used : p.actual) + "；追加后才能继续提交生产任务",
       body: U.fField("新预算总额", "total", { required: true, type: "number", value: String(Math.max(p.budget, Math.ceil(p.actual * 1.3))) }) +
@@ -790,7 +794,7 @@
       onSubmit(d) {
         return App.job({
           title: "调整预算", steps: ["校验已用金额", "更新项目与部门预算", "写入审计"],
-          run() { return Store.ops.adjustBudget(p.id, Number(d.total), d.reason); },
+          run() { return DB.state.adjustBudget(p.id, Number(d.total), d.reason); },
           after(out) { if (out && out.ok) App.go("projects/workflow", { id: p.id }); }
         });
       }
@@ -801,7 +805,7 @@
     if (!App.guard("project.manage")) return;
     const p = wfNeed(el);
     if (!p) return;
-    App.job({ title: "恢复项目", steps: ["校验暂停状态", "恢复排队任务", "写生命周期"], run() { return Store.ops.resume(p.id); } });
+    App.job({ title: "恢复项目", steps: ["校验暂停状态", "恢复排队任务", "写生命周期"], run() { return DB.state.resume(p.id); } });
   });
 
   App.on("projects.wfQuality", (el) => {

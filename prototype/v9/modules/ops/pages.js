@@ -105,9 +105,44 @@
             "</div>" +
             U.card("容量与成本趋势", U.lineChart(["6 月", "7 月", "8 月", "9 月", "10 月", "11 月"], [
               { name: "媒体存储（GB）", values: [680, 820, 1010, 1180, 1420, 1800], color: "#a5482a" },
-              { name: "任务量（百次）", values: [42, 58, 71, 96, 112, 128], color: "#3d5b85" }
-            ], { height: 170 }), "量级差异大的序列用双轴更适合读，原型以双色折线示意")
+              { name: "任务量（百次）", values: [42, 58, 71, 96, 112, 128], color: "#3d5b85", axis: "right" }
+            ], { height: 170 }), "存储走左轴、任务量走右轴：量级差异大的序列使用双轴（规范 §六-4）")
           );
+        }
+      },
+      {
+        path: "ops/logs", title: "系统日志", icon: "list", permission: "platform.read",
+        desc: "服务日志、调度日志与供应商回执日志；敏感字段脱敏展示，运维配置与个人凭据域隔离。",
+        render() {
+          const logs = D.ops.logs || [];
+          const svcLogs = logs.map(l =>
+            "<tr><td>" + U.esc(l.at) + '</td><td>' + U.pill(l.level, l.level === "ERROR" ? "bad" : l.level === "WARN" ? "warn" : "info") + '</td><td>' + U.esc(l.source) + '</td><td class="cell-wrap">' + U.esc(l.message) + "</td></tr>").join("");
+          const errors = logs.filter(l => l.level === "ERROR").length;
+          const warns = logs.filter(l => l.level === "WARN").length;
+          return U.page("平台管理 / 系统日志", "系统日志", "日志用于定位问题，不承担业务鉴权；凭据、密钥等敏感字段一律脱敏。",
+            U.btn("导出日志快照", "common.export"),
+            '<div class="grid grid-4">' +
+              U.metric("日志条数", String(logs.length), "服务 / 调度 / 供应商回执", "▤") +
+              U.metric("ERROR", String(errors), "需人工介入", "!") +
+              U.metric("WARN", String(warns), "可继续观察", "▲") +
+              U.metric("脱敏字段", "已开启", "凭据与密钥不落日志", "◆") +
+            "</div>" +
+            U.card("系统日志", U.table(["时间", "级别", "来源", "内容"], svcLogs, "当前没有日志记录")) +
+            '<div class="grid grid-2 mt-4">' +
+              U.card("日志边界", U.listRows([
+                ["系统运维配置", "不包含员工个人凭据，也不成为绕过企业权限的通道"],
+                ["业务内容", "运维身份默认不读取业务内容；必要访问须授权并留痕"],
+                ["凭据", "任何日志都不记录 API Key 明文"],
+                ["审计", "业务操作审计在「合规与审计 / 审计日志」，与系统日志分离"]
+              ]), "运维日志与业务审计分离") +
+              U.card("监控口径", U.listRows([
+                ["队列积压", D.ops.queue.map(q => q.name + " 待执行 " + q.pending).join("；")],
+                ["失败率", D.ops.queue.map(q => q.name + " 失败 " + q.failed).join("；")],
+                ["重试率", D.ops.queue.map(q => q.name + " 重试 " + q.retry).join("；")],
+                ["供应商延迟", D.ops.services.map(s => s.name + " " + s.latency).join("；")],
+                ["磁盘容量", D.ops.storage.total + " GB / 已用 " + D.ops.storage.used + " GB"]
+              ]), "业务方案 §21.2 要求的可观测指标") +
+            "</div>");
         }
       },
       {
@@ -173,7 +208,7 @@
             if (!d.okr) return { ok: false, msg: "需确认已阅读回滚步骤", fields: { okr: "请勾选" } };
             const old = row.value;
             row.value = d.value;
-            Store.log("平台参数 " + row.key, "变更 " + old + " → " + d.value + " · 复核 " + d.reviewer + " · " + d.reason, "成功", row.key);
+            DB.state.log("平台参数 " + row.key, "变更 " + old + " → " + d.value + " · 复核 " + d.reviewer + " · " + d.reason, "成功", row.key);
             return { ok: true, msg: row.key + " 已更新为 " + d.value + "（复核人 " + d.reviewer + "）" };
           }
         });
@@ -190,7 +225,7 @@
         run() {
           const bad = rows.filter(r => !String(r.value || "").trim());
           if (bad.length) return { ok: false, msg: "存在空值参数：" + bad.map(b => b.key).join("、") };
-          Store.log("平台配置", "保存 " + rows.length + " 项参数", "成功", "platform");
+          DB.state.log("平台配置", "保存 " + rows.length + " 项参数", "成功", "platform");
           return { ok: true, msg: rows.length + " 项参数已保存并登记审计" };
         }
       });
@@ -211,8 +246,8 @@
           run() {
             const id = "DR-" + (D.ops.drills ? D.ops.drills.length + 1 : 1);
             D.ops.drills = D.ops.drills || [];
-            D.ops.drills.unshift({ id: id, target: d.target, point: d.point, by: Store.actor(), at: Store.at(), note: d.note, result: "已排入维护窗口" });
-            Store.log("恢复演练 " + id, d.target + " · " + d.point + "：" + d.note, "成功", id);
+            D.ops.drills.unshift({ id: id, target: d.target, point: d.point, by: DB.state.actor(), at: DB.state.at(), note: d.note, result: "已排入维护窗口" });
+            DB.state.log("恢复演练 " + id, d.target + " · " + d.point + "：" + d.note, "成功", id);
             return { ok: true, msg: "恢复演练 " + id + " 已排入维护窗口（" + d.point + "）" };
           }
         });
@@ -232,9 +267,9 @@
           run() {
             const id = "CR-" + (D.ops.changes ? D.ops.changes.length + 1 : 1);
             D.ops.changes = D.ops.changes || [];
-            D.ops.changes.unshift({ id: id, type: "扩容", target: "质检队列", to: d.conc, by: Store.actor(), at: Store.at(), note: d.note, status: "待审批" });
-            Store.notify("扩容申请 " + id + " 待审批（质检队列 → " + d.conc + "）");
-            Store.log("变更 " + id, "扩容申请：" + d.note, "成功", id);
+            D.ops.changes.unshift({ id: id, type: "扩容", target: "质检队列", to: d.conc, by: DB.state.actor(), at: DB.state.at(), note: d.note, status: "待审批" });
+            DB.state.notify({ type: "资源扩容", project: "—", title: "扩容申请 " + id + " 待审批（质检队列 → " + d.conc + "）", reason: "质检队列并发不足，任务出现排队积压", impact: "未扩容前质检任务排队时间增加，不影响已有产物", state: "待处理", action: "审批并调整质检队列并发", owner: d.to || "平台管理员", link: "ops/queue" });
+            DB.state.log("变更 " + id, "扩容申请：" + d.note, "成功", id);
             return { ok: true, msg: "扩容申请 " + id + " 已提交，等待企业管理员审批" };
           }
         });

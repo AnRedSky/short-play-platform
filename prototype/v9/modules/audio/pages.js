@@ -36,7 +36,7 @@
               U.metric("对白总数", String(list.length), U.esc(p ? p.name : pid) + " · " + epText, "▤") +
               U.metric("已通过", String(passed), "ASR 回听一致", "✓") +
               U.metric("回听异常", String(bad.length), "ASR 与文本 / 音量不符", "!") +
-              U.metric("对白成本", "¥" + Store.money(cost), "按条计费 · 失败也入账", "¥") +
+              U.metric("对白成本", "¥" + DB.state.money(cost), "按条计费 · 失败也入账", "¥") +
             "</div>" +
             U.card("对白清单 · " + U.esc(p ? p.name : pid), U.table(["对白", "角色", "台词", "音色 / 情绪", "音频", "回听", "状态", "成本", "操作"], rows, "当前项目暂无可配音对白"), list.length ? "按对白对象逐条生成，改台词必须回剧本" : "当前项目暂无可配音对白") +
             '<div class="split mt-4"><div class="stack">' +
@@ -46,7 +46,7 @@
                 ["情绪", "按场次情绪标注", "情绪不符判 REVIEW_REQUIRED"],
                 ["回听", "ASR 与文本一致 + 音量达标", "重生成或调整语气后重试"]
               ].map(r => "<tr><td class=\"cell-strong\">" + r[0] + '</td><td class="cell-wrap">' + r[1] + '</td><td class="cell-wrap muted">' + r[2] + "</td></tr>").join("")), "不通过项必须重生成或明确接受") +
-              U.card("当前项目音频成本", U.listRows([["对白生成", "¥" + Store.money(cost)], ["口型对齐", "¥" + Store.money(lipCost)], ["合计", "¥" + Store.money(cost + lipCost)]]) , "只统计当前项目已入账记录") +
+              U.card("当前项目音频成本", U.listRows([["对白生成", "¥" + DB.state.money(cost)], ["口型对齐", "¥" + DB.state.money(lipCost)], ["合计", "¥" + DB.state.money(cost + lipCost)]]) , "只统计当前项目已入账记录") +
             '</div><div class="stack">' +
               U.card("对白状态分布", U.donut([
                 { label: "已通过", value: passed, color: "var(--ok)" },
@@ -210,11 +210,11 @@
             if (!v || v.status !== "启用") return { ok: false, msg: "音色档案不可用（" + (v ? v.status : "未匹配") + "），无法生成" };
             const ver = "v" + ((d.audio || "").match(/\d+/) ? Number((d.audio.match(/\d+/) || ["0"])[0]) + 1 : 1);
             d.audio = "已生成 " + ver; d.asr = "回听一致"; d.status = "已通过"; d.cost = 3.2;
-            Store.spend(d.project, 3.2, { cap: "音频生成", note: "重生成对白 " + d.id });
+            DB.state.spend(d.project, 3.2, { cap: "音频生成", note: "重生成对白 " + d.id });
             if (x.lip) {
               D.lipSync.filter(l => l.line === d.id).forEach(l => { l.status = "需重做"; l.match = "待重做"; });
             }
-            Store.log("对白 " + d.id, "重生成 " + ver + "：" + x.note, "成功", d.id);
+            DB.state.log("对白 " + d.id, "重生成 " + ver + "：" + x.note, "成功", d.id);
             return { ok: true, msg: "已生成 " + ver + "，ASR 回听一致；下游口型 " + (x.lip ? "已标记需重做" : "未标记") };
           }
         });
@@ -232,7 +232,7 @@
     if (!list.length) { App.toast("《" + p.name + "》还没有对白对象，需先锁定剧本并拆解出对白", "bad"); return; }
     if (!pend.length) { App.toast("《" + p.name + "》的对白已全部生成", "bad"); return; }
     const eps = [...new Set(pend.map(d => d.ep))].sort((a, b) => a - b);
-    App.confirm("批量生成对白 · " + p.name, "E" + eps.join(" / E") + " 共 " + pend.length + " 条待生成，预计 ¥" + Store.money(pend.length * 3.2) + "；生成后逐条 ASR 回听。", () => {
+    App.confirm("批量生成对白 · " + p.name, "E" + eps.join(" / E") + " 共 " + pend.length + " 条待生成，预计 ¥" + DB.state.money(pend.length * 3.2) + "；生成后逐条 ASR 回听。", () => {
       App.job({
         title: "批量生成对白", steps: ["校验音色档案", "分配并行额度", "逐条合成与回听", "写入用量"],
         run() {
@@ -241,11 +241,11 @@
             const v = D.voiceProfiles.find(pv => voiceProject(pv) === pid && d.voice.indexOf(pv.char) >= 0);
             if (!v || v.status !== "启用") { block.push(d.id); return; }
             d.audio = "已生成 v1"; d.asr = "回听一致"; d.status = "已通过"; d.cost = 3.2;
-            Store.spend(d.project, 3.2, { cap: "音频生成", note: "对白 " + d.id });
+            DB.state.spend(d.project, 3.2, { cap: "音频生成", note: "对白 " + d.id });
             ok += 1;
           });
-          Store.log(p.name + " 对白批量", "生成 " + ok + " 条", "成功", pid);
-          return { ok: ok > 0, msg: "已生成 " + ok + " 条" + (block.length ? "；" + block.length + " 条因音色停用被拦" : "") + "，扣费 ¥" + Store.money(ok * 3.2) };
+          DB.state.log(p.name + " 对白批量", "生成 " + ok + " 条", "成功", pid);
+          return { ok: ok > 0, msg: "已生成 " + ok + " 条" + (block.length ? "；" + block.length + " 条因音色停用被拦" : "") + "，扣费 ¥" + DB.state.money(ok * 3.2) };
         }
       });
     }, "批量生成");
@@ -273,7 +273,7 @@
     const used = D.dialogues.filter(d => d.project === pid && String(d.voice).indexOf(v.char) >= 0 && d.status !== "已通过").length;
     App.confirm("停用声音档案", v.char + " 仍有 " + used + " 条未完成对白；停用后这些对白无法生成，需先替换音色。", () => {
       v.status = "停用";
-      Store.log("音色 " + v.id, "停用（未完成对白 " + used + " 条）", "成功", v.id);
+      DB.state.log("音色 " + v.id, "停用（未完成对白 " + used + " 条）", "成功", v.id);
       App.closeDrawer(); App.toast("已停用 " + v.id, "warn"); App.refresh();
     }, "停用");
   });
@@ -281,7 +281,7 @@
     if (!App.guard("production.write")) return;
     const v = D.voiceProfiles.find(p => p.id === el.dataset.id);
     v.status = "启用";
-    Store.log("音色 " + v.id, "启用", "成功", v.id);
+    DB.state.log("音色 " + v.id, "启用", "成功", v.id);
     App.closeDrawer(); App.toast("已启用 " + v.id); App.refresh();
   });
 
@@ -306,7 +306,7 @@
             if (D.voiceProfiles.some(v => voiceProject(v) === pid && v.char === d.char)) return { ok: false, msg: "该项目「" + d.char + "」已有声音档案，不能重复建档" };
             const id = "VO-" + String(D.voiceProfiles.length + 1).padStart(2, "0");
             D.voiceProfiles.push({ id: id, project: pid, char: d.char, lang: d.lang, timbre: d.timbre, rate: d.rate, emotion: "待定义", rights: d.rights, coverage: d.coverage, status: "启用" });
-            Store.log("音色 " + id, "新建：" + d.char + " · " + pid, "成功", id);
+            DB.state.log("音色 " + id, "新建：" + d.char + " · " + pid, "成功", id);
             return { ok: true, msg: "声音档案已创建：" + id };
           }
         });
@@ -328,7 +328,7 @@
           run() {
             v.rights = v.rights.replace(/·\s*至\s*\d{4}-\d{2}-\d{2}/, "").replace(/\s*·\s*$/, "") + " · 至 " + d.until + " · 回执 " + d.proof;
             v.status = "启用";
-            Store.log("音色 " + v.id, "续期至 " + d.until + "，回执 " + d.proof, "成功", v.id);
+            DB.state.log("音色 " + v.id, "续期至 " + d.until + "，回执 " + d.proof, "成功", v.id);
             return { ok: true, msg: v.id + " 已续期至 " + d.until + "，回执已留档" };
           }
         });
@@ -359,7 +359,7 @@
             affected.forEach(x => { x.audio = "需重做"; x.asr = "—"; x.status = "需重做"; x.voice = v.char + " · 声音档案 " + v.id; });
             D.lipSync.filter(l => affected.some(x => x.id === l.line)).forEach(l => { l.status = "需重做"; l.match = "待重做"; });
             old.status = "已替换";
-            Store.log("音色替换", old.id + " → " + v.id + "：" + d.note, "成功", v.id);
+            DB.state.log("音色替换", old.id + " → " + v.id + "：" + d.note, "成功", v.id);
             return { ok: true, msg: "已替换，标记 " + affected.length + " 条对白与对应口型需重做" };
           }
         });
@@ -399,7 +399,7 @@
           run() {
             const id = "AU-" + pid.slice(3) + "-" + d.type + "-" + String(D.audioAssets.filter(a => a.project === pid).length + 1).padStart(2, "0");
             D.audioAssets.push({ id: id, project: pid, type: d.type, name: d.name, source: d.source, rights: d.rights, used: d.used, mix: "待设定", status: "待确认" });
-            Store.log("音频素材 " + id, "登记：" + d.name + " · " + pid, "成功", id);
+            DB.state.log("音频素材 " + id, "登记：" + d.name + " · " + pid, "成功", id);
             return { ok: true, msg: "素材已登记：" + id + "（待确认后方可用于混音）" };
           }
         });
@@ -417,7 +417,7 @@
     if (!App.guard("production.write")) return;
     const a = D.audioAssets.find(x => x.id === el.dataset.id);
     a.status = "已确认";
-    Store.log("音频素材 " + a.id, "确认可用", "成功", a.id);
+    DB.state.log("音频素材 " + a.id, "确认可用", "成功", a.id);
     App.closeDrawer(); App.toast("已确认 " + a.id); App.refresh();
   });
 
@@ -444,7 +444,7 @@
             const rr = D.rights.find(r => (!r.project || r.project === a.project) && /阻断|到期|缺失/.test(String(r.status) + " " + String(r.proof)) && String(r.subject).indexOf(a.name) >= 0);
             if (rr) { rr.status = "有效"; rr.proof = "替换素材授权 · " + d.to; rr.term = "长期 · 随项目"; rr.review = "已复核"; }
             D.timelines.filter(t => t.project === a.project).forEach(t => { t.stale = (t.stale || 0) + 1; });
-            Store.log("音频素材 " + a.id, "替换为 " + d.to + "：" + d.note, "成功", a.id);
+            DB.state.log("音频素材 " + a.id, "替换为 " + d.to + "：" + d.note, "成功", a.id);
             return { ok: true, msg: "已替换 " + a.id + "，需重新混音并复检" + (rr ? "；关联授权 " + rr.id + " 已按新素材补齐" : "") };
           }
         });
@@ -467,7 +467,7 @@
           run() {
             if (d.way === "删除该处使用并重混") {
               a.used = "已移除使用"; a.status = "已移除";
-              Store.log("音频素材 " + a.id, "移除使用：" + d.note, "成功", a.id);
+              DB.state.log("音频素材 " + a.id, "移除使用：" + d.note, "成功", a.id);
               return { ok: true, msg: "已移除使用，需重混并重新质检" };
             }
             if (d.way === "替换为已授权素材") {
@@ -478,7 +478,7 @@
               a.rights = "第三方授权 · " + d.proof + " · 至 " + (d.until || "待登记");
               a.status = "待复核";
             }
-            Store.log("音频素材 " + a.id, d.way + "：" + d.note + " · 回执 " + d.proof, "成功", a.id);
+            DB.state.log("音频素材 " + a.id, d.way + "：" + d.note + " · 回执 " + d.proof, "成功", a.id);
             return { ok: true, msg: "授权已更新，需复检通过后才解除交付阻断" };
           }
         });
@@ -507,7 +507,7 @@
             s.asr = "错字 " + d.typo + " · 校对" + (Number(d.typo) === 0 ? "完成" : "后待复核");
             s.timeline = Number(d.time) === 0 ? "整数毫秒 · 无累计漂移" : "整数毫秒 · 已修正 " + d.time + " 处";
             s.status = (Number(d.typo) === 0 && Number(d.time) === 0) ? "已通过" : "待复核";
-            Store.log("字幕 " + pid + " E" + ep, "校对：" + d.note + " → " + s.status, "成功", s.version);
+            DB.state.log("字幕 " + pid + " E" + ep, "校对：" + d.note + " → " + s.status, "成功", s.version);
             return { ok: true, msg: "已保存 " + s.version + "，状态" + s.status };
           }
         });
@@ -551,9 +551,9 @@
               s.version = "SUB-" + String(ep).padStart(2, "0") + " v" + n;
               s.lines = lines; s.timeline = "整数毫秒 · 待复核"; s.asr = "错字 2 · 待校对"; s.style = d.style; s.status = "处理中";
             }
-            Store.spend(pid, cost, { cap: "字幕生成", note: "生成 " + s.version });
-            Store.log("字幕 " + pid + " E" + ep, "生成 " + s.version, "成功", s.version);
-            return { ok: true, msg: "已生成 " + s.version + "（" + lines + " 行），扣费 ¥" + Store.money(cost) + "；需校对后转已通过" };
+            DB.state.spend(pid, cost, { cap: "字幕生成", note: "生成 " + s.version });
+            DB.state.log("字幕 " + pid + " E" + ep, "生成 " + s.version, "成功", s.version);
+            return { ok: true, msg: "已生成 " + s.version + "（" + lines + " 行），扣费 ¥" + DB.state.money(cost) + "；需校对后转已通过" };
           }
         });
       }
@@ -565,18 +565,18 @@
     const pid = (el && el.dataset && el.dataset.pid) || ((App.currentProject() || {}).id || "");
     const pend = D.lipSync.filter(l => lipProject(l) === pid && l.status !== "已通过" && l.status !== "需重做");
     if (!pend.length) { App.toast("当前项目没有待生成的口型对齐", "bad"); return; }
-    App.confirm("批量口型对齐 · " + pid, "共 " + pend.length + " 条，预计 ¥" + Store.money(pend.length * 5.6) + "；匹配度低于 85% 判待人工。", () => {
+    App.confirm("批量口型对齐 · " + pid, "共 " + pend.length + " 条，预计 ¥" + DB.state.money(pend.length * 5.6) + "；匹配度低于 85% 判待人工。", () => {
       App.job({
         title: "批量口型对齐", steps: ["读取对白音频", "逐条对齐", "匹配度判定"],
         run() {
           let ok = 0;
           pend.forEach(l => {
             l.status = "已通过"; l.match = "93% 帧对齐"; l.cost = 5.6;
-            Store.spend(pid, 5.6, { cap: "音频生成", note: "口型 " + l.id });
+            DB.state.spend(pid, 5.6, { cap: "音频生成", note: "口型 " + l.id });
             ok += 1;
           });
-          Store.log("口型对齐 " + pid, "完成 " + ok + " 条", "成功", pid);
-          return { ok: true, msg: "已对齐 " + ok + " 条，扣费 ¥" + Store.money(ok * 5.6) };
+          DB.state.log("口型对齐 " + pid, "完成 " + ok + " 条", "成功", pid);
+          return { ok: true, msg: "已对齐 " + ok + " 条，扣费 ¥" + DB.state.money(ok * 5.6) };
         }
       });
     }, "开始对齐");
@@ -599,8 +599,8 @@
             const dl = D.dialogues.find(x => x.id === l.line);
             if (dl && dl.status !== "已通过") return { ok: false, msg: "对白 " + l.line + " 尚未生成完成，不能做口型" };
             l.status = "排队中"; l.match = "待生成"; l.cost = 5.6;
-            Store.spend(pid, 5.6, { cap: "音频生成", note: "重做口型 " + l.id });
-            Store.log("口型 " + l.id, "重做：" + d.note, "成功", l.id);
+            DB.state.spend(pid, 5.6, { cap: "音频生成", note: "重做口型 " + l.id });
+            DB.state.log("口型 " + l.id, "重做：" + d.note, "成功", l.id);
             return { ok: true, msg: "已提交重做，排队中" };
           }
         });

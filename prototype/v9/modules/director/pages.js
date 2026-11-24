@@ -24,7 +24,7 @@
           const readyAssets = assets.filter(a => a.status === "已确认" || a.status === "抽检通过" || a.consistency === "3 处出场外观一致" || a.consistency === "5 处出场一致");
           const contract = shots.filter(s => s.scene && s.desc && s.duration && s.chars);
           const totalScenes = eps.reduce((n, e) => n + (Number(e.scenes) || 0), 0);
-          const gate = Store.gate(pid, "生产");
+          const gate = DB.state.gate(pid, "生产");
           const inProd = ["生产中", "后期制作中", "质量检测中", "待最终审核", "已完成", "已交付", "已归档"].indexOf(p.status) >= 0;
           const canPlan = p.status === "生产准备中";
           const pendingAssets = assets.filter(a => readyAssets.indexOf(a) < 0);
@@ -144,7 +144,7 @@
           const epRange = eps.length ? "E" + eps[0] + (eps.length > 1 ? "–E" + eps[eps.length - 1] : "") : "暂无镜头";
           const contract = list.filter(s => s.scene && s.desc && s.duration && s.chars && s.model && s.refs);
           const ready = list.filter(s => ["待生成", "待执行"].indexOf(s.status) >= 0 && s.model && s.model !== "待选择");
-          const bg = Store.budgetOf(pid);
+          const bg = DB.state.budgetOf(pid);
           const pct = bg && bg.total ? Math.round(bg.used / bg.total * 100) : 0;
           const rows = list.map(s =>
             '<tr><td>' + U.code(s.no) + '<div class="faint small">E' + s.ep + " / S" + s.scene + "</div></td><td class=\"cell-wrap\">" + U.esc(s.desc) + "</td><td>" + U.esc(s.frame) + " · " + U.esc(s.angle) + " · " + U.esc(s.move) + '</td><td class="num">' + U.esc(s.duration) + '</td><td class="cell-wrap muted">' + U.esc(s.chars) + '</td><td class="cell-wrap">' + U.esc(s.refs) + "</td><td>" + U.pill(s.status) + "</td><td>" +
@@ -157,7 +157,7 @@
               U.card("批量提交校验", U.table(["校验项", "结果", "说明"], [
                 ["契约完整性", contract.length === list.length ? "通过" : "待补", contract.length + " / " + list.length + " 个镜头字段齐全"],
                 ["可提交镜头", ready.length ? "通过" : "注意", ready.length + " 个待生成/待执行镜头"],
-                ["预算", bg ? (pct < 85 ? "通过" : "注意") : "待补", bg ? p.name + " 已用 " + pct + "%（¥" + Store.money(bg.used) + " / ¥" + Store.money(bg.total) + "）" : "未建立项目预算"],
+                ["预算", bg ? (pct < 85 ? "通过" : "注意") : "待补", bg ? p.name + " 已用 " + pct + "%（¥" + DB.state.money(bg.used) + " / ¥" + DB.state.money(bg.total) + "）" : "未建立项目预算"],
                 ["引用资产", list.filter(s => s.refs && s.refs !== "—").length === list.length ? "通过" : "待补", "引用版本需与人物/场景/道具当前版本一致"],
                 ["并行上限", "按规则", "同一场景内并行 2 个，跨场景不抢占配额"]
               ].map(r => "<tr><td>" + r[0] + "</td><td>" + U.pill(r[1]) + '</td><td class="cell-wrap muted">' + r[2] + "</td></tr>").join("")), "校验失败项不进入队列") +
@@ -264,7 +264,7 @@
     const pid = (el && el.dataset.id) || ((App.currentProject() || {}).id || "");
     const plan = D.plans.find(x => x.project === pid && x.status !== "已固化") || D.plans.find(x => x.project === pid);
     if (!plan) { App.toast("没有可固化的生产计划：请先完成剧本拆解", "bad"); return; }
-    const g = Store.gate(pid, "生产");
+    const g = DB.state.gate(pid, "生产");
     if (!g.ok) { App.toast("生产门禁未通过：" + g.items.filter(i => !i.ok).map(i => i.label).join("、"), "bad"); return; }
     App.modal({
       title: "固化镜头生产计划 · " + plan.id, sub: "固化后不得再静默修改；变更须新建计划版本",
@@ -276,8 +276,8 @@
           title: "固化管理计划", sub: "校验门禁 → 写入计划版本 → 项目进入生产中",
           steps: ["校验生产门禁", "写入固化时间与操作者", "推进项目状态", "通知生产队列"],
           run() {
-            const r = Store.ops.freezePlan(plan.id);
-            if (r.ok) Store.log("计划 " + plan.id, "固化说明：" + d.note, "成功", plan.id);
+            const r = DB.state.freezePlan(plan.id);
+            if (r.ok) DB.state.log("计划 " + plan.id, "固化说明：" + d.note, "成功", plan.id);
             return r;
           },
           after(out) { if (out && out.ok) App.go("projects/workflow", { id: pid }); }
@@ -300,7 +300,7 @@
     const c = D.characters.find(x => x.id === el.dataset.id);
     if (!c) return;
     if (c.refs < 3) { App.toast("参考资产不足 3 张，无法确认：" + c.name, "bad"); return; }
-    App.job({ title: "确认识别设定", steps: ["校验参考资产数量", "锁定版本", "写审计"], run() { return Store.ops.confirmAsset("character", c.id); }, after() { App.closeDrawer(); } });
+    App.job({ title: "确认识别设定", steps: ["校验参考资产数量", "锁定版本", "写审计"], run() { return DB.state.confirmAsset("character", c.id); }, after() { App.closeDrawer(); } });
   });
 
   App.on("director.locDetail", (el) => {
@@ -314,7 +314,7 @@
     const l = D.locations.find(x => x.id === el.dataset.id);
     if (!l) return;
     if (l.refs < 2) { App.toast("场景参考不足 2 张，无法确认", "bad"); return; }
-    App.job({ title: "确认场景设定", steps: ["校验参考资产", "锁定版本", "写审计"], run() { return Store.ops.confirmAsset("location", l.id); }, after() { App.closeDrawer(); } });
+    App.job({ title: "确认场景设定", steps: ["校验参考资产", "锁定版本", "写审计"], run() { return DB.state.confirmAsset("location", l.id); }, after() { App.closeDrawer(); } });
   });
 
   App.on("director.propDetail", (el) => {
@@ -326,7 +326,7 @@
   });
   App.on("director.confirmProp", (el) => {
     if (!App.guard("director.write")) return;
-    App.job({ title: "确认道具设定", steps: ["校验版本", "锁定一致性口径"], run() { return Store.ops.confirmAsset("prop", el.dataset.id); } });
+    App.job({ title: "确认道具设定", steps: ["校验版本", "锁定一致性口径"], run() { return DB.state.confirmAsset("prop", el.dataset.id); } });
   });
 
   App.on("director.submitShot", (el) => {
@@ -347,8 +347,8 @@
           title: "提交镜头生产", sub: "预检 → 排队 → 写入任务台账",
           steps: ["校验镜头契约与模型", "预算与依赖预检", "写入任务并排队"],
           run() {
-            const r = Store.ops.submitTask({ project: s.project, shot: s.id, model: s.model, priority: d.priority });
-            if (r.ok) Store.log("镜头 " + s.id, "提交生产任务 " + r.data.id + "：" + d.note, "成功", r.data.id);
+            const r = DB.state.submitTask({ project: s.project, shot: s.id, model: s.model, priority: d.priority });
+            if (r.ok) DB.state.log("镜头 " + s.id, "提交生产任务 " + r.data.id + "：" + d.note, "成功", r.data.id);
             return r;
           },
           after() { App.closeDrawer(); }
@@ -369,7 +369,7 @@
         run() {
           let ok = 0, block = [];
           pend.forEach(s => {
-            const r = Store.ops.submitTask({ project: s.project, shot: s.id, model: s.model });
+            const r = DB.state.submitTask({ project: s.project, shot: s.id, model: s.model });
             if (r.ok) ok += 1; else block.push(s.id + "：" + r.msg);
           });
           return { ok: ok > 0, msg: "已提交 " + ok + " 个镜头" + (block.length ? "；" + block.length + " 个被拦下：" + block[0] : "") };
@@ -393,10 +393,10 @@
           title: "创建重生成任务", steps: ["校验镜头当前状态", "创建新一次尝试 任务", "写入返工台账"],
           run() {
             if (d.scope !== "单镜头局部重生成" && s.status === "已通过") return { ok: false, msg: "整场重生成会浪费已通过镜头，已阻断；请选择单镜头局部重生成" };
-            const r = Store.ops.submitTask({ project: s.project, shot: s.id, model: s.model, priority: "高" });
+            const r = DB.state.submitTask({ project: s.project, shot: s.id, model: s.model, priority: "高" });
             if (!r.ok) return r;
             s.status = "排队中";
-            Store.log("镜头 " + s.id, "重新生成：" + d.note, "成功", r.data.id);
+            DB.state.log("镜头 " + s.id, "重新生成：" + d.note, "成功", r.data.id);
             return { ok: true, msg: "已创建重生成任务 " + r.data.id + "，原结果保留" };
           },
           after() { App.closeDrawer(); }
@@ -421,8 +421,8 @@
           title: "创建重生成任务", steps: ["校验镜头状态", "创建任务"],
           run() {
             const s = D.shots.find(x => x.id === d.shot);
-            const r = Store.ops.submitTask({ project: s.project, shot: s.id, model: s.model, priority: "高" });
-            if (r.ok) Store.log("镜头 " + s.id, "重生成：" + d.note, "成功", r.data.id);
+            const r = DB.state.submitTask({ project: s.project, shot: s.id, model: s.model, priority: "高" });
+            if (r.ok) DB.state.log("镜头 " + s.id, "重生成：" + d.note, "成功", r.data.id);
             return r;
           }
         });
@@ -433,10 +433,10 @@
   App.on("director.replan", (el) => {
     if (!App.guard("director.write")) return;
     const pid = (el && el.dataset.id) || ((App.currentProject() || {}).id || "");
-    const p = Store.prj(pid);
+    const p = DB.state.prj(pid);
     if (!p || p.status !== "生产准备中") { App.toast("仅「生产准备中」可重新规划（当前：" + (p ? p.status : "—") + "）", "bad"); return; }
     App.confirm("重新规划镜头契约", "将基于锁定剧本重建场次与镜头契约；已有镜头版本保留，冲突项进入待处理。", () => {
-      App.job({ title: "重新规划镜头 · " + pid, steps: ["读取锁定剧本", "重建场次", "重建镜头契约"], run() { return Store.ops.breakdown(p.id); }, after(out) { if (out && out.ok) App.go("director/plan", { id: pid }); } });
+      App.job({ title: "重新规划镜头 · " + pid, steps: ["读取锁定剧本", "重建场次", "重建镜头契约"], run() { return DB.state.breakdown(p.id); }, after(out) { if (out && out.ok) App.go("director/plan", { id: pid }); } });
     }, "重新规划");
   });
 
@@ -455,7 +455,7 @@
           title: "追加参考资产", steps: ["校验来源与视图", "写入资产引用", "刷新档案版本"],
           run() {
             c.refs = (c.refs || 0) + 1;
-            Store.log("人物 " + c.id, "追加参考资产（" + d.view + "）", "成功", c.id);
+            DB.state.log("人物 " + c.id, "追加参考资产（" + d.view + "）", "成功", c.id);
             return { ok: true, msg: "已追加 " + d.view + " 参考，共 " + c.refs + " 张" };
           }
         });
@@ -479,7 +479,7 @@
             c.version = "v" + n; c.status = "待确认";
             const affected = D.shots.filter(s => s.project === c.project && s.refs.indexOf(c.id) >= 0);
             affected.forEach(s => { if (s.status === "已通过") s.status = "需复核"; });
-            Store.log("人物 " + c.id, "新建版本 v" + n + "：" + d.note, "成功", c.id);
+            DB.state.log("人物 " + c.id, "新建版本 v" + n + "：" + d.note, "成功", c.id);
             return { ok: true, msg: "已创建 v" + n + "，受影响镜头 " + affected.length + " 个标记需复核" };
           },
           after() { App.closeDrawer(); }
@@ -499,10 +499,10 @@
       run() {
         const sample = shots.slice(0, Math.max(2, Math.round(shots.length * 0.2)));
         const bad = sample.filter(s => s.status !== "已通过");
-        const report = { id: "QR-" + pid.replace("SP-", "") + "-C" + sample.length + "-" + (D.qualityReports.length + 1), project: pid, object: pid + " / 一致性抽检", level: "镜头级", version: "抽检 " + sample.length + " 个", result: bad.length ? "REVIEW_REQUIRED" : "PASS", items: sample.length * 3, issues: bad.length, review: bad.length, fail: 0, engine: "视觉模型 V2", at: Store.at(), note: "抽检样本 " + sample.length + " 个" };
+        const report = { id: "QR-" + pid.replace("SP-", "") + "-C" + sample.length + "-" + (D.qualityReports.length + 1), project: pid, object: pid + " / 一致性抽检", level: "镜头级", version: "抽检 " + sample.length + " 个", result: bad.length ? "REVIEW_REQUIRED" : "PASS", items: sample.length * 3, issues: bad.length, review: bad.length, fail: 0, engine: "视觉模型 V2", at: DB.state.at(), note: "抽检样本 " + sample.length + " 个" };
         D.qualityReports.unshift(report);
         bad.forEach(s => D.qualityIssues.unshift({ report: report.id, project: pid, dim: "人物一致性", where: s.id, level: "中", action: "局部重生成", auto: "否" }));
-        Store.log("一致性抽检", "抽检 " + sample.length + " 个镜头，问题 " + bad.length + " 项", bad.length ? "待处理" : "成功", report.id);
+        DB.state.log("一致性抽检", "抽检 " + sample.length + " 个镜头，问题 " + bad.length + " 项", bad.length ? "待处理" : "成功", report.id);
         return { ok: true, msg: "抽检完成：样本 " + sample.length + " 个，" + (bad.length ? bad.length + " 项待人工判断" : "全部通过") };
       }
     });
@@ -537,7 +537,7 @@
             if (D.shots.some(s => s.id === id)) return { ok: false, msg: "镜头编号冲突：" + id };
             const order = Math.max(0, ...epShots.map(s => Number(s.order) || 0)) + 1;
             D.shots.push({ id: id, project: pid, ep: ep, scene: d.scene, no: "SH-" + nextNo, order: order, frame: d.frame, angle: d.angle, move: d.move, lens: "35mm 倾向", desc: d.desc, chars: d.chars, emotion: "—", line: "—", voice: "—", duration: d.duration + " 秒", refs: d.refs, model: d.model, quality: "人物一致性 / 画面异常 / 时长", status: "待生成", version: "—", qc: "" });
-            Store.log("镜头 " + id, "新建镜头契约", "成功", id);
+            DB.state.log("镜头 " + id, "新建镜头契约", "成功", id);
             return { ok: true, msg: "镜头契约已创建：" + id };
           }
         });
@@ -559,7 +559,7 @@
           run() {
             const id = nextId("LC", D.locations);
             D.locations.push({ id: id, project: pid, name: d.name, type: d.type, layout: d.layout, light: d.light, color: d.color, props: "—", refs: 0, version: "v1", rights: "AI 生成 · 无需授权", status: "待确认" });
-            Store.log("场景 " + id, "新增场景档案：" + pid, "成功", id);
+            DB.state.log("场景 " + id, "新增场景档案：" + pid, "成功", id);
             return { ok: true, msg: "场景已新增：" + d.name + "，待确认参考后可进入生产" };
           }
         });
@@ -580,7 +580,7 @@
           run() {
             const id = nextId("PR", D.props);
             D.props.push({ id: id, project: pid, name: d.name, type: d.type, look: d.look, state: d.state || "全程同一状态", owner: d.owner || "—", refs: 0, version: "v1", consistency: "待抽检" });
-            Store.log("道具 " + id, "新增道具档案：" + pid, "成功", id);
+            DB.state.log("道具 " + id, "新增道具档案：" + pid, "成功", id);
             return { ok: true, msg: "道具已新增：" + d.name };
           }
         });
@@ -605,7 +605,7 @@
           run() {
             const id = nextId("CH", D.characters);
             D.characters.push({ id: id, project: pid, name: d.name, age: d.age, look: d.look, build: d.build, hair: "—", costume: d.costume, forbid: d.forbid, refs: 0, version: "v1", rights: d.rights, status: "待确认", reuse: "待定" });
-            Store.log("人物 " + id, "创建人物档案：" + pid, "成功", id);
+            DB.state.log("人物 " + id, "创建人物档案：" + pid, "成功", id);
             return { ok: true, msg: "档案已创建：" + d.name + "；参考资产 0 张，暂不可提交生产" };
           }
         });

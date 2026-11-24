@@ -10,9 +10,9 @@
         desc: "质量分四级（资产 / 镜头 / 单集 / 整剧）× 十维矩阵，结论只有 PASS / REVIEW_REQUIRED / FAIL 三种，门禁按级别逐层放行。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p || !Derived.canViewProject(p)) return U.page("质量与返工 / 质量门禁", "项目不在可见范围", "请从项目列表进入可见项目，或由负责人授权后再查看质量门禁。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目", "跨项目或不存在项目不渲染检测内容。"));
+          if (!p || !DB.derived.canViewProject(p)) return U.page("质量与返工 / 质量门禁", "项目不在可见范围", "请从项目列表进入可见项目，或由负责人授权后再查看质量门禁。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目", "跨项目或不存在项目不渲染检测内容。"));
           const pid = p.id;
-          const wf = Derived.workflow(p);
+          const wf = DB.derived.workflow(p);
           const reports = D.qualityReports.filter(r => String(r.object).indexOf(p.id) >= 0);
           const failing = reports.filter(r => r.fail > 0 || r.result === "未通过" || r.result === "FAIL");
           const latest = reports.slice(-1)[0];
@@ -53,7 +53,7 @@
         desc: "报告可追溯到检测项、检测能力与结论；报告是交付包中的必需内容，不允许手写替代。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p || !Derived.canViewProject(p)) return U.page("质量与返工 / 质量报告", "项目不在可见范围", "请从项目列表进入可见项目，或由负责人授权后再查看检测报告。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目", "跨项目或不存在项目不渲染检测报告。"));
+          if (!p || !DB.derived.canViewProject(p)) return U.page("质量与返工 / 质量报告", "项目不在可见范围", "请从项目列表进入可见项目，或由负责人授权后再查看检测报告。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目", "跨项目或不存在项目不渲染检测报告。"));
           const pid = p.id;
           const reports = D.qualityReports.filter(r => String(r.object).indexOf(pid) >= 0);
           const reportIds = new Set(reports.map(r => r.id));
@@ -100,7 +100,7 @@
         desc: "返工按最小单元执行：能只重做一个镜头就不整场重跑；旧版本一律保留，成本单独入账。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p || !Derived.canViewProject(p)) return U.page("质量与返工 / 返工台账", "项目不在可见范围", "请从项目列表进入可见项目，或由负责人授权后再查看返工台账。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目", "跨项目或不存在项目不渲染返工记录。"));
+          if (!p || !DB.derived.canViewProject(p)) return U.page("质量与返工 / 返工台账", "项目不在可见范围", "请从项目列表进入可见项目，或由负责人授权后再查看返工台账。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目", "跨项目或不存在项目不渲染返工记录。"));
           const pid = p.id;
           const ledger = D.reworkLedger.filter(r => r.project === pid);
           const rows = ledger.map(r =>
@@ -199,9 +199,9 @@
         return App.job({
           title: labels[decide], steps: ["校验裁决依据", "写入报告", "联动返工台账"],
           run() {
-            const r = Store.ops.judgeIssue(report, Number(idx), decide, d.note || "");
+            const r = DB.state.judgeIssue(report, Number(idx), decide, d.note || "");
             if (!r.ok) return r;
-            Store.log("质量报告 " + report, labels[decide] + "：" + issue.dim + " · " + issue.where, "成功", report);
+            DB.state.log("质量报告 " + report, labels[decide] + "：" + issue.dim + " · " + issue.where, "成功", report);
             return { ok: true, msg: r.msg };
           }
         });
@@ -225,9 +225,9 @@
           title: "重跑返工", steps: ["校验对象状态", "创建尝试记录", "写入返工台账与费用"],
           run() {
             r.round += 1; r.status = "进行中";
-            Store.spend(r.project, r.cost, { cap: "返工重跑", task: r.target, note: d.policy });
-            Store.log("返工 " + r.id, "第 " + r.round + " 轮重跑：" + d.note, "成功", r.id);
-            return { ok: true, msg: "已提交第 " + r.round + " 轮重跑（" + d.policy + "），扣费 ¥" + Store.money(r.cost) };
+            DB.state.spend(r.project, r.cost, { cap: "返工重跑", task: r.target, note: d.policy });
+            DB.state.log("返工 " + r.id, "第 " + r.round + " 轮重跑：" + d.note, "成功", r.id);
+            return { ok: true, msg: "已提交第 " + r.round + " 轮重跑（" + d.policy + "），扣费 ¥" + DB.state.money(r.cost) };
           }
         });
       }
@@ -256,10 +256,10 @@
             const obj = D.shots.find(s => s.id === d.target && s.project === pid) || D.dialogues.find(x => x.id === d.target && x.project === pid) || D.audioAssets.find(x => x.id === d.target && x.project === pid);
             if (!obj) return { ok: false, msg: "返工对象不存在或不属于当前项目：" + d.target, fields: { target: "对象不存在" } };
             if (d.type === "合规风险" && d.way === "仅重做该单元") return { ok: false, msg: "合规类返工不接受纯自动处理，请选择人工确认或转人工", fields: { way: "合规项需人工" } };
-            D.reworkLedger.unshift({ id: "RW-" + String(D.reworkLedger.length + 1).padStart(3, "0") + "-" + Math.floor(Math.random() * 90 + 10), project: pid, target: d.target, type: d.type, round: 1, cost: 0, old: "旧版本保留", status: d.way === "转人工决策" ? "转人工" : "进行中", at: Store.at() });
+            D.reworkLedger.unshift({ id: "RW-" + String(D.reworkLedger.length + 1).padStart(3, "0") + "-" + Math.floor(Math.random() * 90 + 10), project: pid, target: d.target, type: d.type, round: 1, cost: 0, old: "旧版本保留", status: d.way === "转人工决策" ? "转人工" : "进行中", at: DB.state.at() });
             const s = D.shots.find(x => x.id === d.target);
             if (s) { s.status = "需返工"; }
-            Store.log("返工 " + d.target, d.type + " · " + d.way + " · " + d.note, "成功", d.target);
+            DB.state.log("返工 " + d.target, d.type + " · " + d.way + " · " + d.note, "成功", d.target);
             return { ok: true, msg: "返工单已建立（" + d.type + " / " + d.way + "），对象已标记需返工" };
           }
         });

@@ -20,14 +20,61 @@
             '<div class="grid grid-2 mt-4">' +
               U.card("交付与成本趋势", U.lineChart(A.trend.labels, [
                 { name: "交付作品（部）", color: "var(--accent)", values: A.trend.delivered },
-                { name: "累计成本（千元）", color: "var(--info)", values: A.trend.cost.map(v => Math.round(v / 1000)) }
-              ], { height: 196 }) + U.listRows([["交付曲线", "9 月下旬起加速，11 月趋稳"], ["成本曲线", "与交付量同步上升，单集成本下降中"]]) , "两条曲线单位不同，仅作趋势对照") +
+                { name: "累计成本（千元）", color: "var(--info)", values: A.trend.cost.map(v => Math.round(v / 1000)), axis: "right" }
+              ], { height: 196 }) + U.listRows([["交付曲线", "9 月下旬起加速，11 月趋稳"], ["成本曲线", "与交付量同步上升，单集成本下降中"], ["双轴口径", "交付量走左轴、成本走右轴，避免量级差异压平曲线"]]) , "两条曲线单位不同，使用双轴分别标注刻度") +
               U.card("数据口径", U.table(["数据类别", "含义", "用途"], [
                 ["生成过程数据", "调用量、成功率、返工率", "生产管理"],
                 ["项目完成数据", "完成集数、周期", "项目考核"],
                 ["有效交付数据", "终审通过并交付", "经营结算"]
               ].map(r => '<tr><td class="cell-strong">' + r[0] + '</td><td class="cell-wrap">' + r[1] + '</td><td class="cell-wrap muted">' + r[2] + "</td></tr>").join("")), "三类数据不得混用") +
             "</div>" +
+            U.card("企业指标口径（业务方案 §19.3 五组 · §19.5 口径定义）", (function () {
+              const scoped = DB.derived.visibleProjects();
+              const ids = scoped.map(p => p.id);
+              const costs = D.costs.filter(c => ids.indexOf(c.project) >= 0);
+              const delivered = D.deliveries.filter(d => ids.indexOf(d.project) >= 0 && ["已交付", "已归档"].indexOf(d.status) >= 0);
+              const passedEp = D.episodes.filter(e => ids.indexOf(e.project) >= 0 && e.qc === "PASS").length;
+              const tasks = D.tasks.filter(t => ids.indexOf(t.project) >= 0);
+              const done = tasks.filter(t => t.status === "成功").length;
+              const terminal = tasks.filter(t => ["成功", "失败", "已取消"].indexOf(t.status) >= 0);
+              const reworkShots = D.reworkLedger.filter(r => ids.indexOf(r.project) >= 0);
+              const allShots = D.shots.filter(s => ids.indexOf(s.project) >= 0);
+              const failCost = costs.reduce((s, c) => s + (c.failed || 0), 0);
+              const actual = costs.reduce((s, c) => s + (c.actual || 0), 0);
+              const est = costs.reduce((s, c) => s + (c.est || 0), 0);
+              const budget = scoped.reduce((s, p) => s + (p.budget || 0), 0);
+              const rows = [
+                ["项目", "项目总数", String(scoped.length), "可见范围内全部项目"],
+                ["项目", "进行中", String(scoped.filter(p => ["草稿", "创意策划中", "剧本创作中", "待剧本审核", "生产准备中", "生产中", "后期制作中", "质量检测中", "待最终审核"].indexOf(p.status) >= 0).length), "未进入终态或归档的项目"],
+                ["项目", "已完成", String(scoped.filter(p => ["已完成", "已交付", "已归档"].indexOf(p.status) >= 0).length), "终审通过及以后"],
+                ["项目", "已终止", String(scoped.filter(p => p.status === "已终止").length), "终态项目"],
+                ["项目", "项目完成率", scoped.length ? Math.round(scoped.filter(p => ["已完成", "已交付", "已归档"].indexOf(p.status) >= 0).length / scoped.length * 100) + "%" : "待补充", "已完成 ÷ 项目总数"],
+                ["作品", "完成短剧数", String(scoped.filter(p => ["已完成", "已交付", "已归档"].indexOf(p.status) >= 0).length), "达到项目完成条件"],
+                ["作品", "完成集数", String(passedEp), "终审通过并交付的集数"],
+                ["作品", "交付作品数", String(delivered.length), "已确认交付的交付包"],
+                ["作品", "成片总时长", delivered.length ? delivered.reduce((s, d) => s + (Number(d.episodes) || 0), 0) + " 集" : "待补充", "按交付包集数汇总"],
+                ["作品", "视频生成总时长", allShots.length ? String(allShots.filter(s => s.status === "已通过").length) + " 个镜头" : "待补充", "按已通过镜头数折算，精确时长待计量回填"],
+                ["质量", "剧本审核通过率", (function () { const rs = D.reviews.filter(r => ids.indexOf(r.project) >= 0 && String(r.node).indexOf("剧本") >= 0); return rs.length ? Math.round(rs.filter(r => r.result === "通过").length / rs.length * 100) + "%" : "待补充"; })(), "节点 A 通过 ÷ 剧本审核总数"],
+                ["质量", "终审通过率", (function () { const rs = D.reviews.filter(r => ids.indexOf(r.project) >= 0 && String(r.node).indexOf("成片") >= 0); return rs.length ? Math.round(rs.filter(r => String(r.result).indexOf("通过") >= 0).length / rs.length * 100) + "%" : "待补充"; })(), "节点 B 通过 ÷ 终审总数"],
+                ["质量", "镜头生成成功率", terminal.length ? Math.round(done / terminal.length * 100) + "%" : "待补充", "成功任务 ÷ 终态任务"],
+                ["质量", "视频返工率", allShots.length ? Math.round(reworkShots.length / allShots.length * 100) + "%" : "待补充", "返工镜头 ÷ 已生产镜头"],
+                ["质量", "音频异常率", "待补充", "音频检测项异常占比，需音频质检回填"],
+                ["质量", "作品质量评分", "待补充", "质量分仅辅助排序，不替代合规结论"],
+                ["效率", "平均项目制作周期", "待补充", "正式生产启动至正式交付，需时间戳回填"],
+                ["效率", "平均单集周期", "待补充", "同上"],
+                ["效率", "单位时间完成集数", "待补充", "同上"],
+                ["效率", "任务成功率", terminal.length ? Math.round(done / terminal.length * 100) + "%" : "待补充", "取消任务是否计入分母已声明：计入终态"],
+                ["成本", "企业 AI 总消耗", money(actual), "已确认实际成本，失败成本单列"],
+                ["成本", "各项目实际成本", scoped.length ? scoped.map(p => p.id + " ¥" + Math.round(p.actual || 0)).join("、") : "待补充", "按项目归属分列"],
+                ["成本", "单集成本", passedEp ? money(Math.round(actual / passedEp)) : "待补充", "实际成本 ÷ 已交付集数"],
+                ["成本", "失败任务成本", money(failCost), "失败与重试费用同样入账"],
+                ["成本", "预算使用率", budget ? Math.round(actual / budget * 100) + "%" : "待补充", "实际成本 ÷ 项目预算合计"],
+                ["成本", "预计成本合计", money(est), "预计与实际分栏，不混为一项"]
+              ];
+              return U.table(["指标组", "指标", "数值", "口径"], rows.map(r =>
+                "<tr><td>" + U.esc(r[0]) + '</td><td class="cell-strong">' + U.esc(r[1]) + '</td><td class="num">' + U.esc(r[2]) + '</td><td class="cell-wrap muted">' + U.esc(r[3]) + "</td></tr>").join("")) +
+                U.notice("未取得可靠数据的指标显示为「待补充」，不以估算值填充为确定值（业务方案 §19.7）。", "info");
+            })(), "指标口径固定，不接受临时定义；口径与下钻页面一致") +
             U.card("定时快照（不可回溯篡改）", U.table(["快照", "时间", "项目", "交付", "集数", "质量", "成本", "失败成本", "状态"], snapRows)) +
             '<div class="grid grid-3 mt-4">' +
               U.card("企业预算", U.progress(40.5, "年度 ¥1,200,000 · 已用 ¥486,300", "") + U.listRows([["预留", "¥96,000"], ["待核实", "¥24,120"], ["失败成本", "¥38,640"]]) , "预算使用率按已确认成本计算") +
@@ -72,6 +119,22 @@
           return U.page("经营分析 / 员工对比", "员工对比", "成本高不等于效率低：要看交付量与质量；反之亦然。",
             U.btn("部门对比", "analytics.toDepts") + U.btn("个人视图", "analytics.toMe", "primary"),
             U.card("员工贡献对比（" + A.contribution.length + " 人）", U.table(["员工", "创建", "执行", "审核", "交付", "成本", "质量分", "质量", "操作"], rows)) +
+            U.card("员工个人指标（业务方案 §19.4 十二项）", U.table(["员工", "创建项目数", "有效生产项目数", "完成项目数", "完成短剧数", "完成集数", "视频生产量", "任务成功率", "作品通过率", "返工率", "平均制作周期", "AI 使用成本"], A.contribution.map(c => {
+              const u = D.users.find(x => x.name === c.user);
+              const uid = u ? u.id : "";
+              const owned = D.projects.filter(p => p.ownerId === uid);
+              const withTask = owned.filter(p => D.tasks.some(t => t.project === p.id && t.attempt > 0));
+              const finished = owned.filter(p => ["已完成", "已交付", "已归档"].indexOf(p.status) >= 0);
+              const eps = D.episodes.filter(e => owned.some(p => p.id === e.project) && e.qc === "PASS").length;
+              const shots = D.shots.filter(s => owned.some(p => p.id === s.project) && s.status === "已通过").length;
+              const tasks = D.tasks.filter(t => t.executor === c.user);
+              const terminal = tasks.filter(t => ["成功", "失败", "已取消"].indexOf(t.status) >= 0);
+              const okT = tasks.filter(t => t.status === "成功").length;
+              const reworks = D.reworkLedger.filter(r => owned.some(p => p.id === r.project)).length;
+              const passedWorks = finished.length;
+              const totalWorks = owned.length;
+              return "<tr><td>" + U.esc(c.user) + "</td><td class=\"num\">" + owned.length + '</td><td class="num">' + withTask.length + '</td><td class="num">' + finished.length + '</td><td class="num">' + passedWorks + '</td><td class="num">' + eps + '</td><td class="num">' + shots + " 镜</td><td class=\"num\">" + (terminal.length ? Math.round(okT / terminal.length * 100) + "%" : "待补充") + '</td><td class="num">' + (totalWorks ? Math.round(passedWorks / totalWorks * 100) + "%" : "待补充") + '</td><td class="num">' + (shots ? Math.round(reworks / shots * 100) + "%" : "待补充") + '</td><td class="num">待补充</td><td class="num">' + money(c.cost) + "</td></tr>";
+            }), "暂无员工贡献数据"), "贡献按创建 / 执行 / 审核 / 交付分别统计，不以最后负责人覆盖历史贡献") +
             '<div class="split mt-4"><div class="stack">' +
               U.card("成本与交付关系", A.contribution.map(c => U.hbar(c.user, c.cost, 90000, " 元")).join(""), "成本为个人可归因部分") +
               U.card("对比维度口径", U.table(["维度", "定义", "注意"], [
@@ -93,8 +156,8 @@
         render() {
           const me = App.identity();
           const month = App.get(SCOPE, "month", "2026-11");
-          const u = Derived.actorUser(me);
-          const mine = Derived.myProjects(me);
+          const u = DB.derived.actorUser(me);
+          const mine = DB.derived.myProjects(me);
           if (!mine.length) {
             return U.page("经营分析 / 我的数据", "我的数据", "当前身份「" + me.name + "」没有可归因的生产数据：个人视图只统计本人负责或参与的项目。",
               U.btn("企业整体数据", "analytics.toEnterprise") + U.btn("员工对比", "analytics.toEmployees"),
@@ -105,12 +168,12 @@
           const failed = myTasks.filter(t => t.status === "失败" || t.status === "待人工处理").length;
           const rate = myTasks.length ? Math.round(done / myTasks.length * 100) : 0;
           const mineIds = mine.map(p => p.id);
-          const costs = Derived.visibleCosts().filter(c => mineIds.indexOf(c.project) >= 0);
+          const costs = DB.derived.visibleCosts().filter(c => mineIds.indexOf(c.project) >= 0);
           const personalCost = costs.filter(c => String(c.bearer).indexOf("个人") >= 0).reduce((s, c) => s + c.actual + c.failed, 0);
           const entCost = costs.filter(c => String(c.bearer).indexOf("个人") < 0).reduce((s, c) => s + c.actual + c.failed, 0);
           const total = personalCost + entCost;
           const share = total ? Math.round(personalCost / total * 100) : 0;
-          const home = Derived.home(me);
+          const home = DB.derived.home(me);
           const records = myTasks.slice(0, 5);
           return U.page("经营分析 / 我的数据", "我的数据", "个人数据用于自我复盘：任务成功率、返工率与成本结构，不含他人数据。",
             U.btn("切换月份", "analytics.month") + U.btn("导出我的数据", "common.export"),

@@ -16,7 +16,7 @@
 | 派生数据层 | `assets/js/derived.js` | 数据范围与跨页指标（可见项目/成员/成本/预算、首页 KPI、项目事实汇总） | 否 |
 | 组件层 | `assets/js/ui.js` | 纯函数渲染组件 | 否 |
 | 应用层 | `assets/js/app.js` | 路由、权限、弹窗、异步作业、Toast、身份切换 | 仅界面态 |
-| 模块层 | `modules/<域>/pages.js` | 注册路由与动作；动作只调 `Store.ops` / `App.*` | 否 |
+| 模块层 | `modules/<域>/pages.js` | 注册路由与动作；动作只调 `DB.ops` / `App.*` | 否 |
 
 模块动作统一写作 `App.on("域.动作", (el) => …)`，按钮通过 `data-action="域.动作"` 触发；需要的业务参数放在 `data-*` 上。
 
@@ -75,7 +75,7 @@
 - `run()` 在最后一步执行，异常被捕获为 `{ok:false,msg}`；
 - 完成后自动清遮罩；`refresh !== false` 时调用 `App.refresh()`，页表单类动作传 `refresh:false` 以保留用户输入；再按 `ok` 弹成功或失败 Toast，最后执行 `after(out)`；
 - 遮罩挂在独立的 `#job-root` 层，不占用弹窗的 `#overlay-root`：作业结束时弹窗保持打开，失败可继续改字段重提，只有成功分支才关闭弹窗；
-- 业务失败不会伪造成功：`Store.ops` 返回 `{ok:false,msg,fields}` 时，Toast 显示原因，表单场景回填字段级错误（`.field.invalid` + `.field-error`）与表单级错误（`.form-error`）。
+- 业务失败不会伪造成功：`DB.ops` 返回 `{ok:false,msg,fields}` 时，Toast 显示原因，表单场景回填字段级错误（`.field.invalid` + `.field-error`）与表单级错误（`.form-error`）。
 
 所有写操作必须放入 `App.job`，标题用业务动作名，`steps` 用真实步骤（校验前置 → 提交/调用 → 落库/写台账 → 联动/通知）。
 
@@ -97,7 +97,7 @@
 
 1. 页面字段即提交数据：项目名称（必填）、题材、目标受众、计划集数（4–60）、单集时长、画幅、语言、所属部门、预算（金额格式）、交付格式、风格、内容禁忌、创意内容、输入方式。
 2. 读取与校验：`App.collect(view)` 读取全部 `[name]` 控件；`App.validateFields(view, data)` 校验必填、数值范围、金额格式，错误回填到字段并汇总到页内 `.form-error`，**输入保留**。
-3. 业务校验（`Store.ops.createProject`）：名称必填/2–20 字/企业内不重复；集数 4–60；部门预算与企业预算按「总额 − 已用 − 预留」校验余额，不足时回填预算字段；通过后分配 `SP-26032+` 编号。
+3. 业务校验（`DB.ops.createProject`）：名称必填/2–20 字/企业内不重复；集数 4–60；部门预算与企业预算按「总额 − 已用 − 预留」校验余额，不足时回填预算字段；通过后分配 `SP-26032+` 编号。
 4. 作业：`App.job({ refresh:false, run, after })`——成功才 `App.go("projects/detail",{id})`；失败不刷新页面，保留已填内容并把原因与字段错误回填。
 5. 数据变更：新增项目（状态「草稿」、负责人=当前员工、成员含本人）、项目预算台账、首版 brief、审计记录、通知；草稿不占用生产资源。
 6. 边界：`保存草稿` 允许名称留空（自动取「未命名项目 N」）以先存后补，但预算/集数仍走 Business 层默认值；创建成功后刷新或切换身份会重置内存数据。
@@ -427,7 +427,8 @@
 | 脚本 | 作用 | 运行 |
 | --- | --- | --- |
 | `tools/regress.mjs` | 模块分组、路由前缀、权限码、64 路由可渲染、占位文本 | `node tools/regress.mjs` |
-| `tools/flow.mjs` | 直驱 `Store.ops` 走真实业务链路（18 条断言） | `node tools/flow.mjs` |
+| `tools/flow.mjs` | 直驱 `DB.ops` 走真实业务链路（18 条断言） | `node tools/flow.mjs` |
+| `tools/_journey.mjs` | 直驱 `DB.ops` 走 22 步全链路断言 | `node tools/_journey.mjs` |
 | `_smoke.html` | 浏览器内遍历 64 路由 + 3 个身份权限拦截，捕获 JS 错误 | 打开 `http://localhost:4190/_smoke.html` |
 | `_e2e.html` | 浏览器真实点击链路（26 条断言：创建、执行拦截、终审、交付、质量裁决、通知闭环、暂停、预算下限、供应商失败、合规返工、重复邮箱） | 打开 `http://localhost:4190/_e2e.html` |
 
