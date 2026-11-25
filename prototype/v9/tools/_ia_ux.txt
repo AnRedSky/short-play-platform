@@ -1,4 +1,4 @@
-## 交互盘点 · 页面 56 条 · 有标记 10 条
+## 交互盘点 · 页面 56 条 · 有标记 9 条
 
 ## 页面功能定位
 - 台账操作型 38 页：analytics/enterprise / analytics/me / assets/library / audio/bgm / audio/dialogue / audio/subtitle / audio/voice / compliance/audit / compliance/rights / compliance/risks / cost/budget / cost/ledger / creation/review / director/cast / director/shots / director/world / models/config / models/providers / models/routing / notify/inbox / ops/capabilities / ops/config / ops/logs / ops/overview / ops/queue / orgs/departments / orgs/enterprise / orgs/grants / orgs/handover / orgs/members / orgs/roles / projects/detail / projects/lifecycle / projects/workflow / quality/rework / tasks/attempt / tasks/list / tasks/queue
@@ -8,9 +8,8 @@
 - 陈列页 0 页：—
 
 ## 查询能力覆盖
-- 有查询区 10 页 / 有表格 48 页
-- 无查询区且最长表 ≥10 行：**1 页**
-  - workspace/assistant · 表2 行15 页内动作12
+- 有查询区 11 页 / 有表格 48 页
+- 无查询区且最长表 ≥10 行：**0 页**
 
 ## 只读死端（无写入 / 无跳转 / 无导出）
 
@@ -25,7 +24,7 @@
 - assets/library · 4 种：抽屉 2 / 跳转 1 / 状态切换 2 / 写入 2
 - compliance/rights · 4 种：抽屉 1 / 弹窗 4 / 跳转 1 / 写入 1
 - compliance/risks · 4 种：抽屉 1 / 弹窗 1 / 跳转 1 / 状态切换 1
-- creation/brief · 4 种：抽屉 3 / 弹窗 1 / 跳转 1 / 写入 1
+- creation/brief · 4 种：抽屉 2 / 弹窗 1 / 跳转 1 / 写入 1
 - tasks/list · 4 种：抽屉 1 / 弹窗 3 / 跳转 3 / 状态切换 1
 - video/preview · 4 种：弹窗 2 / 跳转 3 / 状态切换 1 / 写入 1
 
@@ -44,7 +43,7 @@ compliance/risks	台账操作型	2	3	0	0	2	4	1	1	1	1	0	承载≥4种
 cost/budget	台账操作型	1	1	0	0	2	4	2	0	4	1	1	—
 cost/ledger	台账操作型	1	1	0	0	1	10	2	1	1	1	1	承载≥4种
 creation/breakdown	只读台账型	4	5	0	0	2	0	0	0	0	2	0	—
-creation/brief	任务型	0	0	0	0	2	10	0	3	1	1	1	承载≥4种
+creation/brief	任务型	0	0	0	0	2	9	0	2	1	1	1	承载≥4种
 creation/plan	只读台账型	1	5	0	0	2	3	0	1	0	2	0	—
 creation/review	台账操作型	3	8	0	0	2	3	0	3	1	1	0	—
 creation/script	导航页	0	0	0	0	2	0	0	0	0	2	0	—
@@ -85,5 +84,5 @@ tasks/list	台账操作型	3	11	0	0	2	23	2	1	3	3	0	承载≥4种
 tasks/queue	台账操作型	2	4	0	0	2	0	0	0	1	1	0	—
 video/preview	任务型	0	0	0	0	2	7	0	0	2	3	1	承载≥4种
 video/production	任务型	0	0	0	0	3	7	0	1	3	4	1	承载≥4种
-workspace/assistant	只读台账型	2	15	0	0	3	12	0	2	0	1	0	无查询区
+workspace/assistant	只读台账型	2	15	1	0	3	12	0	2	0	1	0	—
 workspace/home	任务型	0	0	0	0	2	11	0	1	1	8	0	—

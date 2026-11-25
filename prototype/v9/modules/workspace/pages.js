@@ -125,6 +125,7 @@
                   : '<div class="btn-row-inline">' + U.btn(parsed.confirm ? "确认执行（高风险）" : "执行", "workspace.run", "primary") + U.btn("修改参数", "workspace.editParams") + "</div>"),
                 "解析不等于执行")
                 : U.empty("尚未解析指令", "输入一句话或点选上方示例，静态原型会按关键词识别目标类型并展示抽取结果。")) +
+              '<div class="toolbar"><input class="search" placeholder="搜索目标类型 / 触发词 / 流程" data-filter="q"><span class="faint small" data-filter-count></span></div>' +
               U.card("可识别的目标类型（业务方案 §20.4）", U.table(["目标类型", "触发词示例", "落到的业务流程", "风险等级"], [
                 ["新建项目", "新建 / 创建一部…短剧", "项目创建 → 创意设定", "低"],
                 ["生成候选剧本", "生成完整剧本 / 根据当前创意生成剧本", "剧本生成 → 待剧本审核", "低"],

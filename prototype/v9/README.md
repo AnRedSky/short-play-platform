@@ -1,4 +1,4 @@
-# FRAME 短剧工场 · 第 9.7.6 版静态交互原型
+# FRAME 短剧工场 · 第 9.7.7 版静态交互原型
 
 单一企业内部 AI 短剧制作平台的静态交互原型。**全部数据为虚构示例数据**，不连接任何真实模型、存储、任务调度或账单系统；但业务流程按真实系统执行：状态机、门禁、表单校验、权限拦截、成败反馈与数据联动都是真实逻辑，不是占位 Toast。
 
@@ -30,6 +30,7 @@ B2 收盘后在同版内继续做了五类整改，均以脚本断言落地：
 - **承载方式复核（C-1~C-4）**：新增 `tools/_audit_carry.mjs`，按动作处理体核对「页面跳转 / 抽屉 / 弹窗 / 页内切换」是否用对（325 动作：跳转 89 · 抽屉 46 · 弹窗 124 · 页内切换 31）。整改后重弹窗 7→0（6 个多字段表单加 `wide: true` 走两列网格），重抽屉 8→0（6 个字段 >10 的抽屉按同类成对合并，16→11、15→10、13→10、12→7、12→7、12→8，信息不删）。**未新增路由**。判定树与 C-01…C-06 见 `docs/REVIEW-CARRY-V9.7.0.md`。
 - **交互复核（I-1~I-5）**：新增 `tools/_audit_ux.mjs`（按动作处理体反查承载方式：抽屉 / 弹窗 / 跳转 / 状态切换 / 写入）。整改后：有查询区的页面 1→10、长表无查询 9→1（仅 `workspace/assistant` 字典表白名单）、只读死端 1→0、单行动作过载 1→0（`models/config` 5→2，低频动作迁入「管理」抽屉 `models.detail`）、「详情/档案」承载二义 2 组→0（`orgs.members` 改「档案页」）。`applyFilters` 计数改为整页聚合，多表页面不再只报最后一张表。方向与五条规范见 `docs/REVIEW-UX-V9.7.0.md`。
 - **布局简洁度（S-01）**：新增 `tools/_audit_layout.mjs` 量化 56 页骨架（台账 28 / 详情 15 / 评审 9 / 看板 4）与六个密度指标；首批把 4 张最宽的表裁到 ≤10 列：`cost/ledger` 18→9（归属七维移入「核验」抽屉）、`compliance/rights` 14→9、`tasks/list` 13→10、`models/providers` 11→9。方向与后续清单见 `docs/REVIEW-SIMPLIFY-V9.7.0.md`（列 ≤9 / 卡 ≤5 / 提示 ≤1 / 容器 ≤2 四条基线）。
+- **E 系列：交互承载与查询能力（9.7.7）**：`creation/brief` 的「查看该方式说明」抽屉改为页内说明行（切换输入方式不必再开抽屉、也不用关掉才能比对另一种），该页抽屉 3→2；`workspace/assistant` 的「可识别的目标类型」15 行表补查询区，全站「有表格但无查询区且最长表 ≥10 行」由 1 页降为 **0 页**。`video/preview` 的「版本列表」快捷入口经复核判定保留：与 tab 同目标但场景不同（看片中切换 vs 浏览时切换），不算双入口。新增 `tools/check.mjs` 一键门禁并接入 CI（`prototype-quality` job，Node 22），把 17 条脚本审计从"记得逐条跑"变成"一条命令/一次 CI"。
 - **D-10 抽屉内宽表收口（9.7.6）**：`assets.detail` 的「引用位置明细」3 列在 324px 抽屉内容区里溢出 42px、`workspace.cmdHelp` 的「目标 / 示例话术 / 风险」3 列溢出 8px。改法同 D-08：前者把「引用类型」压成引用对象副行（2 列），后者把风险 pill 挂到目标下方（2 列，风险与指令贴在一起反而更好扫）。复测 `_pixel` 两档 8 个抽屉全部无内层横溢。
 - **D-11 本地服务去缓存（9.7.6）**：新增 `tools/serve.mjs`（Node 内置模块实现，仅绑 127.0.0.1，`Cache-Control: no-store`，`favicon.ico` 返 204 免无关 404）。此前用 `python -m http.server`，Chrome 按 `Last-Modified` 走启发式缓存，改完模块 JS 常看到旧列，D-08 期间因此吃过两次假阴性（误以为改没生效）。现在改完刷新即生效，`?v=` 只作版本标记、不再承担破缓存职责。
 - **D-08 列序调整（9.7.5）**：把 1280 下仍需横滚的宽表降到不溢出（信息不删，只做「同主题两行堆叠 + 删冗余列」）。实测口径为「表格真实列宽」，逐页改：`models/config` 9→7（供给模式入供应商副行、类型·能力合一、端点去协议头）、`tasks/list` 9→7（状态+优先级、四状态压成 供/下/存/质、尝试·失败·成本合一）、`tasks/queue` 8→7 与 3→2、`assets/library` 9→8（规格入资产副行）、`compliance/rights` 9→8（期限·商用性、状态·复核）、`audio/bgm` 9→6、`post/delivery` 9→6（校验并入文件·体积并在悬停给全串，主表移出 split 改全宽）、`creation/review` 4→2、`creation/breakdown` 6→5/6→4/3→2、`director/shots` 7→6（时长入镜头副行）、`projects/workflow` 5→3。复测 `_pixel` 两档全部表格 `need=0`（FAILS=0），`_smoke` 56 路由、`_e2e` 37/37、18 条审计脚本与 `flow`/`_journey` 全通过。同时给 `_pixel.html` 加会话复位（清 localStorage + 重载 + 等满 56 路由），修掉「入口/弹窗时有时无」的状态污染。逐表数据见 `tools/_ia_pixel.txt`，完整过程见 `docs/PLAN-IA-REMEDIATION-V9.7.0.md` 第十四章。
@@ -370,6 +371,7 @@ Menu.on('change', (state, reason) => {});   // 统一事件通知
 ```
 cd prototype\v9
 Get-ChildItem -Recurse -Filter *.js | ForEach-Object { node --check $_.FullName }
+node tools/check.mjs             # 一键门禁：17 条脚本审计（回归/内链/动作/权限/指标/布局/承载/业务流/生命周期），硬指标不过 exit 1；CI 的 prototype-quality job 跑同一条
 node tools/regress.mjs
 node tools/flow.mjs
 node tools/_journey.mjs

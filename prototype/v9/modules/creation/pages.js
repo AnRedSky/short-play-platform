@@ -31,8 +31,8 @@
             '</div><aside class="stack">' +
               U.card("输入方式（七选一）", '<div class="brief-mode-grid">' + D.briefModes.map((m, i) => '<button type="button" class="brief-mode' + (mode === m.mode ? " on" : "") + '" data-action="creation.modeSet" data-value="' + U.esc(m.mode) + '">' +
                 '<span class="mode-no">' + String(i + 1).padStart(2, "0") + '</span><span><b>' + U.esc(m.mode) + "</b><small>" + U.esc(m.input) + "</small></span>" + (mode === m.mode ? U.pill("当前", "accent") : "") + "</button>").join("") + "</div>" +
-                U.notice("方式不同，产物同构：都落成同一份结构化创意设定，便于下游版本化与追溯。", "info"), "参考资料须确认有权使用",
-                U.btn("查看该方式说明", "creation.modeDetail", "sm")) +
+                U.notice("方式不同，产物同构：都落成同一份结构化创意设定，便于下游版本化与追溯。", "info") +
+                '<div class="faint small mt-2">输出：' + U.esc((D.briefModes.find(x => x.mode === mode) || D.briefModes[0] || {}).output || "—") + "；落库与校验口径相同（必填 / 长度 / 合规 / 来源授权），切换方式不必翻说明。</div>", "参考资料须确认有权使用") +
               U.card("生成前校验", U.listRows([
                 ["必填", "题材、受众、时长、风格任一缺失则不启动"],
                 ["长度", "不超过单集时长上限，超出提示拆分"],
@@ -324,13 +324,6 @@
     App.set(SCOPE, "briefMode:" + pid, val);
     App.toast("输入方式已切换为「" + val + "」");
     App.refresh();
-  });
-  App.on("creation.modeDetail", () => {
-    const pid = (App.currentProject() || {}).id || "";
-    const cur = App.get(SCOPE, "briefMode:" + pid, "自由描述");
-    const m = D.briefModes.find(x => x.mode === cur) || D.briefModes[0];
-    App.drawer("输入方式说明 · " + m.mode, U.desc([["输入", m.input], ["输出", m.output], ["落库", "结构化创意设定（版本化）"], ["校验", "必填、长度、合规、来源授权"]]) +
-      U.notice("无论哪种输入方式，产物都是同一结构；差异只在引导与抽取重点。", "info"));
   });
   App.on("creation.importNovel", () => {
     if (!App.guard("creation.write")) return;

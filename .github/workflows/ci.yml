@@ -361,3 +361,17 @@ jobs:
       - name: Stop the infrastructure stack
         if: always()
         run: docker compose -f docker/docker-compose.infra.yml down --volumes
+
+  prototype-quality:
+    name: prototype-quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prototype/v9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Static prototype audit gate (route / link / action / permission / layout / carry)
+        run: node tools/check.mjs
