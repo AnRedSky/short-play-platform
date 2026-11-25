@@ -88,7 +88,7 @@
             return '<tr><td class="num">E' + e.no + '</td><td class="cell-wrap">' + U.esc(e.title) + '</td><td class="num">' + e.scenes + '</td><td class="num">' + es.length + '</td><td class="num">' + pass + '</td><td>' + U.pill(e.status) + '</td><td>' + U.btn("查看镜头", "director.sceneShots", "sm", { id: "E" + e.no, pid: pid }) + "</td></tr>";
           }).join("");
           return U.page("导演规划 / 镜头生产计划", "镜头生产计划 · " + p.name, "计划只固化可执行的镜头契约；参考资产未就绪、剧本未锁定的场次不进入生产队列。",
-            (canPlan ? U.btn("重新规划", "director.replan", "", { id: pid }) + U.btn("固化生产计划", "director.freezePlan", "primary", { id: pid }) : (inProd ? U.btn("查看生产流水线", "projects.wfOpen", "primary", { pid: pid }) : (p.status === "创意策划中" ? U.btn("先选定创意方案", "creation.toPlan", "primary", { id: pid }) : U.btn("先完成剧本审核", "creation.toScript", "primary", { id: pid })))) + U.btn("进入分镜板", "director.toStoryboard", "", { id: pid }) + (inProd || canPlan ? U.btn("去视频生产", "director.toVideo", "", { id: pid }) : ""),
+            (canPlan ? U.btn("重新规划", "director.replan", "", { id: pid }) + U.btn("固化生产计划", "director.freezePlan", "primary", { id: pid }) : (inProd ? U.btn("制作流水线", "projects.wfOpen", "primary", { pid: pid }) : (p.status === "创意策划中" ? U.btn("查看方案", "creation.toPlan", "primary", { id: pid }) : U.btn("剧本版本", "creation.toScript", "primary", { id: pid })))) + U.btn("进入分镜板", "director.toStoryboard", "", { id: pid }) + (inProd || canPlan ? U.btn("去视频生产", "director.toVideo", "", { id: pid }) : ""),
             U.card("规划链路", chain, "规划阶段不产生视频成本") +
             '<div class="grid grid-4 mt-4">' +
               U.metric("镜头总数", String(shots.length), "契约完整 " + contract.length + " · 待补 " + (shots.length - contract.length), "▤") +
@@ -162,7 +162,7 @@
           return U.page("导演规划 / 场景与道具", "场景与道具 · " + p.name, "场景与道具的连续性靠版本与状态追踪，不靠记忆；当前只显示本项目的场景与道具。",
             U.btn("新增场景", "director.newLoc", "", { pid: pid }) + U.btn("新增道具", "director.newProp", "primary", { pid: pid }),
             U.card("场景（" + locs.length + "）", U.table(["场景", "类型", "布局", "光线", "色彩", "参考", "版本", "状态", "操作"], locRows, "当前项目还没有场景档案"), "场景参考不足时不允许生产该场次") +
-            U.card("道具（" + props.length + "）", U.table(["道具", "类型", "外观", "状态变化", "归属", "参考", "版本", "一致性", "操作"], propRows, "当前项目还没有道具档案"), "道具状态变化必须标注集次", U.btn("一致性报告", "director.check", "sm", { pid: pid })) +
+            U.card("道具（" + props.length + "）", U.table(["道具", "类型", "外观", "状态变化", "归属", "参考", "版本", "一致性", "操作"], propRows, "当前项目还没有道具档案"), "道具状态变化必须标注集次", U.btn("一致性抽检", "director.check", "sm", { pid: pid })) +
             '<div class="grid grid-2 mt-4">' +
               U.card("场景一致性要求", U.listRows([["光线基准", "同一场景跨集复用必须保持同一光线版本"], ["构图基准", "关键物件位置在画面中的基准不得随集次漂移"], ["复用", "同一场景跨集复用需保持同一版本"], ["抽检", "新场次首次生成必须抽检 1 帧"]]) , "场景变更影响整场镜头") +
               U.card("道具连续性", (props.length
@@ -189,7 +189,7 @@
           const pct = bg && bg.total ? Math.round(bg.used / bg.total * 100) : 0;
           const rows = list.map(s =>
             '<tr><td>' + U.code(s.no) + '<div class="faint small">E' + s.ep + " / S" + s.scene + "</div></td><td class=\"cell-wrap\">" + U.esc(s.desc) + "</td><td>" + U.esc(s.frame) + " · " + U.esc(s.angle) + " · " + U.esc(s.move) + '</td><td class="num">' + U.esc(s.duration) + '</td><td class="cell-wrap muted">' + U.esc(s.chars) + '</td><td class="cell-wrap">' + U.esc(s.refs) + "</td><td>" + U.pill(s.status) + "</td><td>" +
-            U.btn("详情", "director.shotDetail", "sm", { id: s.id }) + " " + U.btn("提交生产", "director.submitShot", "sm", { id: s.id }) + "</td></tr>").join("");
+            U.btn("查看完整契约", "director.shotDetail", "sm", { id: s.id }) + " " + U.btn("提交生产", "director.submitShot", "sm", { id: s.id }) + "</td></tr>").join("");
           const view = App.get(SCOPE, "view", "table");
           const tabsBar = U.card("", U.tabs([
             { value: "table", label: "镜头清单", count: list.length },
@@ -238,7 +238,7 @@
       ["运镜 / 镜头倾向", s.move + " · " + s.lens], ["时长", s.duration], ["人物 / 情绪", s.chars + " · " + s.emotion],
       ["台词", s.line], ["参考", s.refs], ["模型 / 质检项", s.model + " · " + s.quality], ["状态 / 版本", s.status + " · " + s.version]]) +
       U.notice("下游只引用具体镜头契约与版本；改契约必须新建版本并重新提交生成。", "info") +
-      '<div class="btn-row-inline">' + U.btn("重新生成这一镜", "director.regenerate", "primary", { id: s.id }) + "</div>");
+      '<div class="btn-row-inline">' + U.btn("重新生成", "director.regenerate", "primary", { id: s.id }) + "</div>");
   });
   App.on("director.sceneShots", (el) => { if (App.guard("director.write")) App.go("director/shots", { id: (el && el.dataset.pid) || ((App.currentProject() || {}).id || "") }); else App.go("director/shots"); });
 })();

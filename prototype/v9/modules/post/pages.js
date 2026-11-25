@@ -15,7 +15,7 @@
     const works = D.works.filter(w => w.project === p.id);
     const rows = works.map(w =>
       '<tr><td>' + U.entity(w.name, w.project, "▣") + "</td><td>" + U.pill(w.status) + '</td><td class="num">' + U.esc(w.episodes) + "</td><td>" + U.esc(w.duration) + "</td><td>" + U.esc(w.delivered) + "</td><td>" + U.esc(w.version) + '</td><td class="cell-wrap muted">' + U.esc(w.next) + "</td><td>" +
-      U.btn("版本链", "post.versionChain", "sm", { p: w.project }) + " " + U.btn("详情", "post.workDetail", "sm", { p: w.project }) + (w.status === "已交付" && App.can("project.create") ? " " + U.btn("新建 V2", "post.newVersion", "sm", { id: w.project }) : "") + "</td></tr>").join("");
+      U.btn("版本链", "post.versionChain", "sm", { p: w.project }) + " " + U.btn("详情", "post.workDetail", "sm", { p: w.project }) + (w.status === "已交付" && App.can("project.create") ? " " + U.btn("新建 V2 版本链", "post.newVersion", "sm", { id: w.project }) : "") + "</td></tr>").join("");
     const dps = D.deliveries.filter(x => x.project === p.id).sort((a, b) => String(b.at).localeCompare(String(a.at)));
     const dp = dps[0];
     const rv = D.reviews.filter(r => r.project === p.id).slice(-1)[0];
@@ -106,7 +106,7 @@
             '<tr><td class="num">E' + String(e.no).padStart(2, "0") + '</td><td class="cell-strong">' + U.esc(e.title) + '</td><td class="num">' + e.scenes + '</td><td class="num">' + e.shots + "</td><td>" + U.esc(e.duration) + "</td><td>" + U.pill(e.qc) + "</td><td>" + U.pill(e.status) + "</td><td>" +
             U.btn("镜头与报告", "projects.wfEpDetail", "sm", { pid: p.id, ep: e.no }) + "</td></tr>").join("");
           return U.page("后期与剪辑 / 分集成片", "分集成片", "整剧交付前每一集都要有质检结论；缺一集即视为集数不完整。",
-            U.btn("打开制作流水线", "projects.wfOpen", "primary", { pid: p.id }) + U.btn("进入终审", "post.toReview", "", { id: p.id }),
+            U.btn("制作流水线", "projects.wfOpen", "primary", { pid: p.id }) + U.btn("进入终审", "post.toReview", "", { id: p.id }),
             '<div class="grid grid-4">' +
               U.metric("目标集数", String(p.episodes), U.esc(p.duration), "▤") +
               U.metric("已通过", String(wf.passEps.length), "含整集质检 PASS", "✓") +
@@ -212,7 +212,7 @@
                 : U.btn("处理交付阻断", "projects.wfRights", "primary", { pid: p.id }))
             : p.status === "待最终审核"
               ? U.btn("进入终审", "projects.wfFinal", "primary", { pid: p.id })
-              : U.btn("打开制作流水线", "projects.wfOpen", "primary", { pid: p.id });
+              : U.btn("制作流水线", "projects.wfOpen", "primary", { pid: p.id });
           const tab = App.get(SCOPE, "tab", "delivery");
           const tabsBar = U.card("", U.tabs([
             { value: "delivery", label: "交付包", count: list.length },
@@ -502,7 +502,7 @@
       ["时间线", tl.length ? tl.map(t => "E" + t.ep + " " + t.version).join("；") : "—"],
       ["成片", dl.length ? dl.map(d => d.version).join("；") : "—"],
       ["交付", dl.length ? dl.map(d => d.id + " · " + d.status).join("；") : "未生成"]
-    ]) + (canNew ? '<div class="btn-row-inline">' + U.btn("从此版本新建 V2", "post.newVersion", "primary", { id: p }) + "</div>" : ""));
+    ]) + (canNew ? '<div class="btn-row-inline">' + U.btn("新建 V2 版本链", "post.newVersion", "primary", { id: p }) + "</div>" : ""));
   });
 
   App.on("post.newVersion", (el) => {

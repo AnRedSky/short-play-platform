@@ -529,7 +529,7 @@
         recordCmd(p.intent, text, "已查询 " + pj.name + "：" + DB.derived.progressOf(pj).done + " / " + DB.derived.progressOf(pj).total + " 集");
         const pb = DB.derived.budgetOfProject(pj);
         App.drawer("进度查询 · " + pj.name, U.desc([["项目", pj.id + " · " + pj.name], ["状态", pj.status], ["阶段", pj.phase], ["集进度", DB.derived.progressOf(pj).done + " / " + DB.derived.progressOf(pj).total], ["预算", "¥" + pb.total + "（已用 ¥" + pb.used + " · " + pb.pct + "%）"], ["更新时间", String(pj.updated)]]) +
-          '<div class="btn-row-inline">' + U.btn("进入项目", "projects.detail", "primary", { id: pj.id }) + "</div>");
+          '<div class="btn-row-inline">' + U.btn("项目档案", "projects.detail", "primary", { id: pj.id }) + "</div>");
         DB.state.log("指令助手", "查询进度：" + text, "成功", "cmd");
         return;
       }

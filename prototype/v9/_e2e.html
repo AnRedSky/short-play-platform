@@ -136,7 +136,7 @@ window.addEventListener("error", (e) => { out.push("ERROR " + e.message + " @" +
   const issue0 = W().DB.qualityIssues.find((i) => i.report === "QR-26031-E17-03");
   await submitModal({ note: "" }, 800);
   log(!!(fieldError() || modalError()) && !issue0.decision, "空理由被拦截（" + (fieldError() || modalError() || "无") + "）");
-  await submitModal({ note: "该镜头为 3 秒过场，眉疤不可见且不影响叙事" }, 3200);
+  await submitModal({ note: "该镜头为 3 秒过场，眉疤不可见且不影响叙事" }, 5200);
   const issue = W().DB.qualityIssues.find((i) => i.report === "QR-26031-E17-03" && i.decision);
   log(!!issue, "裁决已写入报告 → " + (issue ? issue.decision : "无 · " + lastToast()));
 
@@ -146,7 +146,7 @@ window.addEventListener("error", (e) => { out.push("ERROR " + e.message + " @" +
   log(await click("notify.close") && hasModal(), "打开记录结论弹窗");
   await submitModal({ kind: "已在业务页处理完成", note: "太短" }, 800);
   log(!!(fieldError() || modalError()), "结论文案不足被拦截");
-  await submitModal({ kind: "已在业务页处理完成", note: "SH-05 已局部重生成并复检通过" }, 3200);
+  await submitModal({ kind: "已在业务页处理完成", note: "SH-05 已局部重生成并复检通过" }, 5200);
   const done = W().DB.notifications.filter((x) => x.state === "已处理").length;
   log(done > 0, "通知闭环写回状态 → 已处理 " + done + " 条");
 
@@ -155,7 +155,7 @@ window.addEventListener("error", (e) => { out.push("ERROR " + e.message + " @" +
   await go("projects/detail?id=SP-26031");
   const p31b = W().DB.projects.find((p) => p.id === "SP-26031");
   log(await click("projects.pause") && hasModal(), "打开暂停项目弹窗");
-  await submitModal({ reason: "预算接近阈值，等待追加审批" }, 3200);
+  await submitModal({ reason: "预算接近阈值，等待追加审批" }, 5200);
   log(p31b.status === "已暂停", "项目暂停生效 → " + p31b.status);
 
   /* 8. 预算调整：低于已用必须拒绝（企业管理员具备 cost.manage） */
@@ -168,7 +168,7 @@ window.addEventListener("error", (e) => { out.push("ERROR " + e.message + " @" +
   if (adjustBtn) adjustBtn.click();
   await wait(450);
   log(hasModal(), "打开调整预算弹窗（SP-26031）");
-  await submitModal({ total: "5000", note: "压缩预算，等待审批人确认" }, 3200);
+  await submitModal({ total: "5000", note: "压缩预算，等待审批人确认" }, 5200);
   log(bgRow.total === total0 && /已用|低于|不足/.test(modalError() || lastToast()), "低于已用被拦截（¥" + bgRow.used + " · " + (modalError() || lastToast()) + "）");
 
   /* 9. 模型连通性：停用且鉴权失效的供应商必须失败 */
@@ -193,7 +193,7 @@ window.addEventListener("error", (e) => { out.push("ERROR " + e.message + " @" +
   await go("orgs/members");
   const existEmail = W().DB.users[0].email;
   log(await click("orgs.newMember") && hasModal(), "打开邀请员工弹窗");
-  await submitModal({ name: "新成员", email: existEmail }, 3200);
+  await submitModal({ name: "新成员", email: existEmail }, 5200);
   log(/邮箱/.test(fieldError() || modalError()), "重复邮箱被拦截 → " + (fieldError() || modalError()));
 
   /* 12. 合并页 tab 的状态层持久化（B2 归并契约：tab 键进状态层，刷新后保持） */

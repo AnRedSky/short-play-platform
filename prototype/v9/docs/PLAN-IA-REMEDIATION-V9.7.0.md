@@ -163,6 +163,7 @@ B6 文档版本（R-28/R-31/R-32）        门禁：全套回归 + _e2e 37 断�
 | B7 规则收敛 | **R-17 已闭环** | `_audit_rules` 43 张 → **15 张（每域 1 张，超标页 0）**；28 张条文抽进 `docs/RULES-V9.7.0.md`（脚本生成，§R-01…§R-43），页面折叠为一行回指提示 |
 | B7 浏览器验收 | **R-28 已闭环** | `_smoke.html`：56 路由 + 9 条 tab 断言 + 3 身份拦截，**Smoke OK**；`_e2e.html`：断言 **28 → 37**（新增 3 页 × 3 条 tab 状态持久化），**E2E OK** |
 | B7 密度收尾 | **R-17 收尾已闭环** | 折叠后 5 个过薄页：同页并排的两条折叠提示合并为一条带结论口径行（`ops/logs`、`audio/voice`、`audio/subtitle`、`post/delivery`、`analytics/me`）；`ops/logs` 补「来源分布」（按日志表实时统计）与「队列积压与失败」（按 `DB.ops.queue` 投影）两张真实派生卡；`creation/script` 无正文样本时补「剧本流转与当前位置」卡。判定口径收紧为 <1400 字符，或 卡≤1 无表且 <3000 字符，`orgs/member`（下钻空态）白名单 → **过薄 0 页 / 56 页**，规则卡仍 15 张、单页 ≤1 |
+| R-19 文案收口 | **已闭环** | 新增 `tools/_audit_labels.mjs`（按 `U.btn("<文案>","<动作>")` 整对扫描 244 个动作），同动作多文案 **12 组 → 0 组**：`projects.wfOpen`(制作流水线/查看生产流水线/打开制作流水线)、`projects.detail`(项目档案/查看项目档案/进入项目)、`compliance.toAudit`(审计日志/查看审计流水)、`post.newVersion`(新建 V2 版本链/新建 V2/从此版本新建 V2)、`director.check`(一致性抽检/一致性报告)、`director.regenerate`(重新生成/重新生成这一镜)、`director.shotDetail`(查看完整契约/详情)、`video.regenShot`(重新生成/局部重生成)、`creation.toPlan|toScript`(查看方案/先选定创意方案 · 剧本版本/先完成剧本审核) 全部统一；`video/preview` 同一行两个按钮指向同一动作（「采用该版本」与「接受并记录理由」）属重复动作，删「采用该版本」只留带理由的那颗。白名单收敛为 3 条并写明理由（`common.export` 按对象命名、`quality.judge` 判罚选项、`projects.wfDelivery` 交付状态互斥 CTA） |
 
 ### 部分完成
 

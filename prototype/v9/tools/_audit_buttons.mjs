@@ -2,7 +2,7 @@
    判定口径（与 docs/PLAN-IA-REMEDIATION-V9.7.0.md R-18 一致）：
      ① 同一页（含各 tab）里同一个 data-action 只允许出现 1 个按钮
      ② 同一页独立动作数 ≤ 6（合并页按 tab 分别判定，不叠加）
-     ③ 同一动作在全站允许 1 个文案（白名单：common.export / quality.judge，见 R-19 豁免）
+     ③ 同一动作在全站允许 1 个文案（白名单：common.export / quality.judge / projects.wfDelivery，见 R-19 豁免）
    用法：node tools/_audit_buttons.mjs [--write]
          --write 时把明细写入 tools/_ia_btn2.txt */
 import fs from "node:fs";
@@ -59,7 +59,7 @@ const TABS = {
 };
 const TABKEY = { "director/shots": "view", "projects/list": "rel" };
 
-const WHITELIST_LABELS = ["common.export", "quality.judge"]; // 按对象命名 / 判罚选项，属合理豁免
+const WHITELIST_LABELS = ["common.export", "quality.judge", "projects.wfDelivery"]; // 按对象命名 / 判罚选项 / 交付状态互斥 CTA
 const WHITELIST_CONTROL = ["video.preview"]; // 画面控件：缩略图磁贴与播放浮层，标签随镜头号/图标变化，不是操作文案
 
 const stripTags = (s) => s.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
@@ -122,5 +122,5 @@ const out = [
 
 if (write) fs.writeFileSync(path.join(root, "tools", "_ia_btn2.txt"), out + "\n", "utf8");
 console.log(out.split("\n").slice(-6).join("\n"));
-console.log(`白名单：${WHITELIST_LABELS.join(" / ")}（R-19 豁免，按对象命名 / 判罚选项）`);
+console.log(`白名单：${WHITELIST_LABELS.join(" / ")}（R-19 豁免：按对象命名 / 判罚选项 / 交付状态互斥 CTA）`);
 if (write) console.log("明细已写入 tools/_ia_btn2.txt");

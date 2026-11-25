@@ -53,7 +53,7 @@
           const list = vTasks(pid);
           if (["已交付", "已归档"].indexOf(p.status) >= 0) {
             return U.page("视频生产 / 生产队列", "视频生产 · " + p.name, "项目已交付，生产队列冻结：不得再提交新批次或重跑镜头，历史任务只读保留。",
-              U.btn("查看项目档案", "projects.detail", "primary", { id: p.id }),
+              U.btn("项目档案", "projects.detail", "primary", { id: p.id }),
               U.card("生产队列 · 已冻结", U.empty(p.status + " · 不接受新生成", "如需变更，必须先按流程新建版本链；原交付包与生产记录不会被覆盖。", App.can("delivery.execute") ? U.btn("查看交付包", "post.toDelivery", "", { id: p.id }) : ""), "已交付项目只读")
             );
           }
@@ -216,8 +216,8 @@
                   '<div class="check-row"><span class="cr-k">' + c[0] + '</span><span class="cr-v">' + U.esc(c[1]) + '</span><span class="cr-r">' + U.esc(c[2]) + '</span><span class="cr-s">' + U.pill(c[3]) + '</span></div>').join("") + '</div>', "比对结论进入质量报告") +
               '</section>' +
               '<aside class="review-side">' +
-                U.card("采用决策", U.notice("当前结果存在 " + reviewCount + " 项需人工判断：可局部重生成，或接受并记录理由。接受理由进入质量报告与审计。", "warn") +
-                  '<div class="btn-col">' + (frozen ? '<span class="faint small">项目已交付，镜头只读；如需变更请新建版本链。</span>' : U.btn("采用该版本", "video.adoptCurrent", "primary", { id: s.id }) + U.btn("局部重生成", "video.regenShot", "", { id: s.id }) + U.btn("接受并记录理由", "video.adoptCurrent", "", { id: s.id })) + "</div>", "不能只点「通过」不写理由") +
+                U.card("采用决策", U.notice("当前结果存在 " + reviewCount + " 项需人工判断：可重新生成该镜头，或接受并记录理由。接受理由进入质量报告与审计。", "warn") +
+                  '<div class="btn-col">' + (frozen ? '<span class="faint small">项目已交付，镜头只读；如需变更请新建版本链。</span>' : U.btn("接受并记录理由", "video.adoptCurrent", "primary", { id: s.id }) + U.btn("重新生成", "video.regenShot", "", { id: s.id })) + "</div>", "不能只点「通过」不写理由") +
                 U.card("镜头摘要", U.desc([["镜头", s.no + " · E" + s.ep + " / S" + s.scene], ["画面", s.desc], ["景别 / 机位 / 运镜", s.frame + " · " + s.angle + " · " + s.move], ["时长", s.duration], ["引用资产", s.refs], ["模型 / 配置", s.model + " · " + (s.config || "个人自持配置")]]) , "契约是评审基准") +
                 U.card("同组衔接", U.listRows([["前一镜头", prev ? prev.no + " · " + prev.frame + " · " + prev.desc : "无（本集首镜）"], ["本镜头", s.no + " · " + s.frame], ["后一镜头", next ? next.no + " · " + next.frame + " · " + next.desc : "无（本集末镜）"], ["衔接检查", "光线、雨量、道具状态与人物造型需连续"]]) , "衔接问题按镜头返工") +
               '</aside>' +

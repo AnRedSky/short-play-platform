@@ -252,7 +252,7 @@
           const sum = DB.derived.projectSummary(p);
           const grantable = App.can("grant.manage");
           const actions = [];
-          actions.push(U.btn("打开制作流水线", "projects.wfOpen", "primary", { pid: p.id }));
+          actions.push(U.btn("制作流水线", "projects.wfOpen", "primary", { pid: p.id }));
           if (App.can("project.manage") && DB.state.canMove(p, "已暂停").ok) actions.push(U.btn("暂停项目", "projects.pause", "", { id: p.id }));
           if (grantable) actions.push(U.btn("发起移交", "orgs.transfer"));
           if (App.can("delivery.execute") && ["待最终审核", "已完成"].indexOf(p.status) >= 0) actions.push(U.btn("进入交付", "projects.deliveryLink", "primary", { id: p.id }));
@@ -326,7 +326,7 @@
               const next = DB.derived.workflow(p).next[0];
               return '<tr><td>' + U.entity(p.name, p.id, "剧") + '</td><td>' + U.pill(p.status) + '</td><td class="cell-wrap">' + U.esc(p.phase) + '</td><td>' + U.esc(p.owner) + '</td><td class="idx">' + U.esc(p.updated) + '</td><td class="cell-wrap muted">' + U.esc(next ? next.title : "无待办") + "</td></tr>";
             }).join(""), "当前可见范围内没有项目"), "状态迁移由动作写入审计，本页只显示当前快照") +
-            '<div class="mt-4">' + U.btn("查看审计流水", "compliance.toAudit") + "</div>"
+            '<div class="mt-4">' + U.btn("审计日志", "compliance.toAudit") + "</div>"
           );
         }
       }
