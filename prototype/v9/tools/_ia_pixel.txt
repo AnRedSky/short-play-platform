@@ -1,66 +1,32 @@
-像素级抽检快照 · 9.7.2 · 2026-11-25
-入口：_pixel.html（iframe 按 1280×800 / 1440×800 两档逐页量测；56 路由 × 2 档 + 9 个弹窗 + 8 个抽屉）
-结论：页面级横向溢出 0、窄卡 0、宽表首末列全部吸附在滚动视口内、弹窗底部操作全部可见、抽屉贴边且内部无横溢
+# _pixel.html 量测快照 · 第 9.7.5 版（D-08 列序调整后）
 
-=== viewport 1280x800 ===
-  projects/workflow tables=5col/need90 → 横滚 1
-  creation/review tables=5col/need0 4col/need115 5col/need0 → 横滚 1
-  creation/breakdown tables=6col/need0 6col/need24 6col/need44 3col/need28 3col/need0 → 横滚 3
-  director/shots tables=8col/need16/操作末列 3col/need0 → 横滚 1
-  audio/bgm tables=9col/need101/操作末列 3col/need0 → 横滚 1
-  post/delivery tables=9col/need239/操作末列 3col/need0 → 横滚 1
-  tasks/list tables=9col/need200/操作末列 3col/need0 3col/need0 → 横滚 1
-  tasks/queue tables=8col/need12 3col/need52 → 横滚 2
-  models/config tables=9col/need229/操作末列 4col/need0 → 横滚 1
-  assets/library tables=9col/need131/操作末列 → 横滚 1
-  compliance/rights tables=9col/need101/操作末列 → 横滚 1
-  页面级：56 路由，横向溢出/窄卡异常 0
-  modal creation.importNovel [导入小说改编为剧本] w=880 h=704 两列=401+401+401+401+401+401+401+401+401+401 fields=12 foot=可见
-  modal assets.upload [资产新版本] w=880 h=594 两列=无 fields=6 foot=可见
-  modal audio.newVoice [批量生成对白] w=880 h=594 两列=无 fields=6 foot=可见
-  modal compliance.newRight [新增授权] w=880 h=704 两列=无 fields=9 foot=可见
-  modal compliance.newRisk [登记风险] w=880 h=640 两列=无 fields=6 foot=可见
-  modal director.newShot [新增镜头] w=880 h=704 两列=无 fields=10 foot=可见
-  modal director.newChar [新增角色] w=880 h=660 两列=无 fields=7 foot=可见
-  modal orgs.grantNew 无触发入口，跳过（需 grant.manage，owner 无）
-  modal models.newProvider [接入模型服务] w=620 h=475 两列=无 fields=4 foot=可见
-  drawer assets.detail w=420 right=1265/1265 表横滚 1
-  drawer post.deliveryDetail w=420 right=1265/1265
-  drawer creation.openScript w=420 right=1265/1265
-  drawer workspace.cmdHelp w=420 right=1265/1265 表横滚 1
-  drawer video.taskDetail w=420 right=1265/1265
-  drawer orgs.preview 无触发入口，跳过
-  drawer quality.reworkDetail w=420 right=1265/1265
-  drawer director.shotDetail w=420 right=1265/1265
+口径：iframe 逐页渲染 1280×800 与 1440×800 两档，逐表量 `table.scrollWidth - wrap.clientWidth`（need=0 表示不横滚）；
+弹窗量整窗高、内容两列数、`.modal-foot` 是否在视口内；抽屉量 `right` 与 `documentElement.clientWidth` 是否贴边。
+每轮开跑前清 localStorage 并重载，避免上一轮 e2e 的业务状态/身份残留污染结论。
 
-=== viewport 1440x800 ===
-  projects/workflow tables=5col/need10 → 横滚 1
-  creation/review tables=5col/need0 4col/need54 5col/need0 → 横滚 1
-  post/delivery tables=9col/need140/操作末列 3col/need0 → 横滚 1
-  tasks/list tables=9col/need40/操作末列 3col/need0 3col/need0 → 横滚 1
-  models/config tables=9col/need69/操作末列 4col/need0 → 横滚 1
-  页面级：56 路由，横向溢出/窄卡异常 0
-  modal creation.importNovel [导入小说改编为剧本] w=880 h=704 两列=401+401+401+401+401+401+401+401+401+401 fields=12 foot=可见
-  modal assets.upload [资产新版本] w=880 h=594 两列=无 fields=6 foot=可见
-  modal audio.newVoice [批量生成对白] w=880 h=594 两列=无 fields=6 foot=可见
-  modal compliance.newRight [新增授权] w=880 h=704 两列=无 fields=9 foot=可见
-  modal compliance.newRisk [登记风险] w=880 h=640 两列=无 fields=6 foot=可见
-  modal director.newShot [新增镜头] w=880 h=704 两列=无 fields=10 foot=可见
-  modal director.newChar [新增角色] w=880 h=660 两列=无 fields=7 foot=可见
-  modal orgs.grantNew 无触发入口，跳过（需 grant.manage，owner 无）
-  modal models.newProvider [接入模型服务] w=620 h=475 两列=无 fields=4 foot=可见
-  drawer assets.detail w=420 right=1425/1425 表横滚 1
-  drawer post.deliveryDetail w=420 right=1425/1425
-  drawer creation.openScript w=420 right=1425/1425
-  drawer workspace.cmdHelp w=420 right=1425/1425 表横滚 1
-  drawer video.taskDetail w=420 right=1425/1425
-  drawer orgs.preview 无触发入口，跳过
-  drawer quality.reworkDetail w=420 right=1425/1425
-  drawer director.shotDetail w=420 right=1425/1425
+## 1280×800
+- 页面级：56 路由，横向溢出 / 窄卡异常 0 条；全部表格 need=0
+- 弹窗 9 项：foot 均可见；`creation.importNovel` 内容区两列 401+401（12 字段），其余单列
+- 抽屉 8 项：right=1265/1265 全部贴边；`assets.detail`、`workspace.cmdHelp` 内部宽表仍横滚 1（420px 抽屉的预期行为）
 
-像素级抽检全部通过（无溢出/无挤压/无出视口）
+## 1440×800
+- 页面级：56 路由，横向溢出 / 窄卡异常 0 条；全部表格 need=0
+- 抽屉 right=1425/1425 全部贴边
 
-修复前（同一脚本，9.7.1 口径）26 项 FAIL：
-- 11 页宽表的「操作」列被横向滚动推出视口 89–238px（post/delivery、models/config、tasks/list、assets/library、audio/bgm、compliance/rights、director/shots、projects/workflow、creation/review、creation/breakdown、tasks/queue）
-- 2 个高表单弹窗整窗滚动导致提交按钮在视口外（creation.importNovel 底部操作 y=991/800、compliance.newRight y=816/800），director.newShot 亦有 13px 溢出
-- 抽屉判据误用 window.innerWidth（含滚动条 15px），已改为 documentElement.clientWidth：8 个抽屉实际均贴边
+## 结论
+FAILS=0，标题 `Pixel OK`。较 9.7.2 基线（11 页操作列被推出 89–238px、3 个高表单弹窗提交键滚出视口）已清零。
+
+## 本轮列序调整明细（信息不删，只做同主题两行堆叠 / 删冗余列）
+| 页 | 列数 | 处理 |
+|---|---|---|
+| models/config | 9→7 | 删「供给模式」并入供应商副行；「类型·能力」合一；端点去协议头 |
+| tasks/list | 9→7 | 状态+优先级合一；四状态压成 供/下/存/质 单字标签；尝试·失败·成本合一 |
+| tasks/queue | 8→7 / 3→2 | 「平均耗时」并入状态说明副行；「原因·对象」合一 |
+| assets/library | 9→8 | 删「规格」并入资产副行（type 留在筛选与详情） |
+| compliance/rights | 9→8 | 期限+商用性合一；复核 pill 移入状态列 |
+| audio/bgm | 9→6 | 删项目列；类型入素材副行；使用位置+混音参数合一 |
+| post/delivery | 9→6 | 删项目列；校验并入文件·体积（悬停看全串）；审核人+时间合一；主表移出 split 改全宽 |
+| creation/review | 4→2 | 受影响数量入维度副行；明细+处理口径合一 |
+| creation/breakdown | 6→5 / 6→4 / 3→2 | 场+镜头合一；引用+版本合一；类型入对象副行；位置入事项副行 |
+| director/shots | 7→6 | 时长入镜头副行；人物+引用资产合一 |
+| projects/workflow | 5→3 | 报告+对象合一；结果+问题合一 |

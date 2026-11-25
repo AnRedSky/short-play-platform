@@ -186,7 +186,7 @@ window.App = (function () {
     app.innerHTML =
       '<div class="shell">' +
         '<aside class="sidebar' + (S.menuOpen ? " open" : "") + '" id="sidebar">' +
-          '<div class="sidebar-brand"><span class="mark">FR</span><div><b>FRAME 短剧工场</b><small>AI 短剧创作工作台 · 第 9.7.2 版</small></div></div>' +
+          '<div class="sidebar-brand"><span class="mark">FR</span><div><b>FRAME 短剧工场</b><small>AI 短剧创作工作台 · 第 9.7.5 版</small></div></div>' +
           '<nav class="nav" id="menu-root" aria-label="主导航"></nav>' +
           '<div class="sidebar-foot">一人一部戏 · 从创意到交付<br>静态原型 · 全部数据为虚构演示</div>' +
         "</aside>" +

@@ -225,8 +225,8 @@
               U.card("变更影响分析（业务方案 §6.4）", (function () {
                 const imp = DB.state.impactAnalysis(projectId, target.id);
                 if (!imp.ok) return U.empty("无法执行影响分析", "项目不存在。");
-                return U.table(["分析维度", "受影响数量", "明细", "处理口径"], imp.dims.map(d =>
-                  "<tr><td class=\"cell-strong\">" + U.esc(d.label) + '</td><td class="num">' + d.count + '</td><td class="cell-wrap muted">' + (d.items.length ? U.esc(d.items.slice(0, 3).join("；")) + (d.items.length > 3 ? " 等 " + d.items.length + " 项" : "") : "—") + '</td><td class="cell-wrap muted">' + U.esc(d.note) + "</td></tr>").join("")) +
+                return U.table(["分析维度 · 数量", "明细 · 处理口径"], imp.dims.map(d =>
+                  "<tr><td class=\"cell-strong\">" + U.esc(d.label) + '<div class="faint small">受影响 ' + d.count + ' 项</div></td><td class="cell-wrap muted">' + (d.items.length ? U.esc(d.items.slice(0, 3).join("；")) + (d.items.length > 3 ? " 等 " + d.items.length + " 项" : "") : "—") + '<div class="faint small">' + U.esc(d.note) + "</div></td></tr>").join("")) +
                   '<div class="btn-row-inline">' + U.btn("查看镜头级受影响清单", "creation.impact", "primary", { id: projectId }) + "</div>";
               })(), "影响分析必须到镜头级清单，不能只给汇总计数") +
               U.card("历史审核", U.table(["记录", "对象", "结论", "审核人", "时间"], D.reviews.filter(r => String(r.node).indexOf("剧本") >= 0 && (!projectId || String(r.object).indexOf(projectId) >= 0)).map(r =>
@@ -284,14 +284,14 @@
                 { label: firstShots[0].refs, meta: "对象引用", state: "" }
               ]) : U.empty("尚无拆解对象", "锁定剧本并拆解后显示引用链")) + "</div>", "引用对象版本，不引用自由文本；数据来自当前项目 " + pid) +
             '<div class="split mt-4"><div class="stack">' +
-              U.card("集 / 场", U.table(["集", "标题", "场", "镜头", "时长", "状态"], eps.map(e =>
-                '<tr><td class="num">E' + e.no + '</td><td>' + U.esc(e.title) + '</td><td class="num">' + e.scenes + '</td><td class="num">' + e.shots + '</td><td class="num">' + U.esc(e.duration) + "</td><td>" + U.pill(e.status) + "</td></tr>").join("")), "集状态由生产进度回写") +
-              U.card("人物", U.table(["人物", "造型关键", "禁用项", "引用镜头", "版本", "状态"], chars.map(c =>
-                '<tr><td>' + U.entity(c.name, c.id, c.name.slice(0, 1)) + '</td><td class="cell-wrap muted">' + U.esc(c.look) + '</td><td class="cell-wrap">' + U.esc(c.forbid) + '</td><td class="num">' + shots.filter(s => String(s.refs).indexOf(c.id) >= 0).length + "</td><td>" + U.code(c.version) + "</td><td>" + U.pill(c.status) + "</td></tr>").join("")), "禁用项会进入提示词负面约束") +
-              U.card("场景 / 道具", U.table(["对象", "类型", "布局 / 外观", "引用镜头", "版本", "状态"], locs.concat(props).map(o =>
-                '<tr><td>' + U.entity(o.name, o.id, "景") + '</td><td>' + U.esc(o.type) + '</td><td class="cell-wrap muted">' + U.esc(o.layout || o.look) + '</td><td class="num">' + shots.filter(s => String(s.refs).indexOf(o.id) >= 0).length + "</td><td>" + U.code(o.version) + "</td><td>" + U.pill(o.status || o.consistency) + "</td></tr>").join("")), "道具状态变化需标注在集次") +
+              U.card("集 / 场", U.table(["集", "标题", "场 / 镜头", "时长", "状态"], eps.map(e =>
+                '<tr><td class="num">E' + e.no + '</td><td>' + U.esc(e.title) + '</td><td class="num">' + e.scenes + " / " + e.shots + '</td><td class="num">' + U.esc(e.duration) + "</td><td>" + U.pill(e.status) + "</td></tr>").join("")), "集状态由生产进度回写") +
+              U.card("人物", U.table(["人物", "造型关键", "禁用项", "引用 / 版本", "状态"], chars.map(c =>
+                '<tr><td>' + U.entity(c.name, c.id, c.name.slice(0, 1)) + '</td><td class="cell-wrap muted">' + U.esc(c.look) + '</td><td class="cell-wrap">' + U.esc(c.forbid) + '</td><td class="num">' + shots.filter(s => String(s.refs).indexOf(c.id) >= 0).length + '<div class="faint small mono">' + U.esc(c.version) + "</div></td><td>" + U.pill(c.status) + "</td></tr>").join("")), "禁用项会进入提示词负面约束") +
+              U.card("场景 / 道具", U.table(["对象", "布局 / 外观", "引用 / 版本", "状态"], locs.concat(props).map(o =>
+                '<tr><td>' + U.entity(o.name, o.id, "景") + '<div class="faint small">' + U.esc(o.type) + '</div></td><td class="cell-wrap muted">' + U.esc(o.layout || o.look) + '</td><td class="num">' + shots.filter(s => String(s.refs).indexOf(o.id) >= 0).length + '<div class="faint small mono">' + U.esc(o.version) + "</div></td><td>" + U.pill(o.status || o.consistency) + "</td></tr>").join("")), "道具状态变化需标注在集次") +
             '</div><div class="stack">' +
-              U.card("拆解待处理与自检", (pendingRows.length ? U.table(["事项", "位置", "影响"], pendingRows.map(r => "<tr><td class=\"cell-wrap\">" + U.esc(r[0]) + '</td><td class="idx">' + U.esc(r[1]) + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("")) : U.empty("暂无待处理项", "资产确认、镜头契约与时间线均无未决项")) +
+              U.card("拆解待处理与自检", (pendingRows.length ? U.table(["事项 · 位置", "影响"], pendingRows.map(r => '<tr><td class="cell-wrap">' + U.esc(r[0]) + '<div class="faint small idx">' + U.esc(r[1]) + '</div></td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("")) : U.empty("暂无待处理项", "资产确认、镜头契约与时间线均无未决项")) +
                 '<div class="mt-3">' + U.table(["检查", "结论", "依据"], selfCheck.map(r => "<tr><td>" + U.esc(r[0]) + "</td><td>" + (r[1] ? U.pill("通过") : U.pill("不通过")) + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("")) + "</div>", "待处理项必须能定位到对象；自检不通过不进入镜头契约固化") +
             "</div></div>"
           );

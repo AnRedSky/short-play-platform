@@ -33,8 +33,13 @@
             (!kw || (t.id + t.project + t.kind + t.shot + t.executor).indexOf(kw) >= 0));
           const rows = list.map(t => {
             const steps = t.steps || { vendor: "未开始", download: "未开始", persist: "未开始", qc: "未开始" };
+            /* 四状态压成单字标签 + 悬浮全称：9 列在 1280 下放不下，「供 / 下 / 存 / 质」四个字足够区分，全称在 title 里 */
+            const stepPill = (short, name, v) => {
+              const kind = /完成|通过|已/.test(v) ? "ok" : /失败|超时|阻断|缺/.test(v) ? "bad" : /中|处理|下载/.test(v) ? "warn" : "";
+              return '<span title="' + name + "：" + U.esc(v) + '">' + U.pill(short, kind) + "</span>";
+            };
             return '<tr><td>' + U.code(t.id) + '<div class="faint small">' + U.esc(t.kind) + "</div></td><td>" + U.esc(t.project) + '<div class="faint small">E' + t.ep + " / S" + t.scene + " · " + U.esc(t.shot) + "</div></td><td>" +
-            U.pill(t.status) + "</td><td>" + U.esc(t.priority) + '</td><td class="cell-wrap muted">' + U.esc(t.model) + " · " + U.esc(t.config) + '</td><td class="idx">' + U.pill(steps.vendor) + " " + U.pill(steps.download) + " " + U.pill(steps.persist) + " " + U.pill(steps.qc) + '</td><td class="num">' + t.attempt + " / " + t.maxAttempts + '<div class="faint small">' + (t.failType && t.failType !== "—" ? U.pill(t.failType, FAIL_TYPES[t.failType] && FAIL_TYPES[t.failType].retryable ? "warn" : "bad") : "—") + '</div></td><td class="num">¥' + t.est + " / ¥" + t.actual + "</td><td>" +
+            U.pill(t.status) + '<div class="faint small">优先级 ' + U.esc(t.priority) + '</div></td><td class="cell-wrap muted">' + U.esc(t.model) + " · " + U.esc(t.config) + '</td><td class="idx">' + stepPill("供", "供应商", steps.vendor) + stepPill("下", "下载", steps.download) + stepPill("存", "持久化", steps.persist) + stepPill("质", "质检", steps.qc) + '</td><td class="num">' + t.attempt + " / " + t.maxAttempts + '<div class="faint small">' + (t.failType && t.failType !== "—" ? U.pill(t.failType, FAIL_TYPES[t.failType] && FAIL_TYPES[t.failType].retryable ? "warn" : "bad") : "—") + " · ¥" + t.est + " / ¥" + t.actual + '</div></td><td>' +
             U.btn("详情", "tasks.detail", "sm", { id: t.id }) + " " + U.btn("尝试与调用记录", "tasks.toAttempts", "sm", { id: t.id }) + "</td></tr>";
           }).join("");
           const toolbar = '<div class="toolbar"><span class="field-wrap"><input class="field" data-filter="tasks.kw" name="kw" placeholder="搜索任务 / 项目 / 执行人" value="' + U.esc(kw) + '"></span>' +
@@ -45,7 +50,7 @@
             '<span class="faint small">' + (scopedProject ? "只显示《" + U.esc(scopedProject.name) + "》的任务；切回全部不会改变任务状态" : "聚合 " + projects.length + " 个可见项目的任务") + "</span></div>";
           return U.page("任务与队列 / 生产任务", "生产任务", "任务、尝试、调用三层记录；失败成本与重试成本一律入账。",
             U.btn("资源池与队列", "tasks.toQueue") + U.btn("尝试与调用记录", "tasks.toAttempts"),
-            U.card("任务列表 · 当前 " + list.length + " 条", toolbar + U.table(["任务", "项目 · 集 · 镜头", "状态", "优先级", "模型 · 配置", "四状态（供应商 / 下载 / 持久化 / 质检）", "尝试 · 失败类型", "预计 / 实际", "操作"], rows, "当前筛选条件下没有任务"), list.length ? "筛选只影响当前视图，不改变任务状态；提交时间等明细在「详情」抽屉" : "当前筛选条件下没有任务") +
+            U.card("任务列表 · 当前 " + list.length + " 条", toolbar + U.table(["任务", "项目 · 集 · 镜头", "状态 / 优先级", "模型 · 配置", "四状态（供 / 下 / 存 / 质）", "尝试 · 失败 · 成本", "操作"], rows, "当前筛选条件下没有任务"), list.length ? "四状态顺序为供应商 / 下载 / 持久化 / 质检，悬停看全称；筛选只影响当前视图，提交时间等明细在「详情」抽屉" : "当前筛选条件下没有任务") +
             U.tableFoot("共 " + D.tasks.filter(visTask).length + " 条可见任务 · 当前视图 " + list.length + " 条", "筛选只影响当前视图，不改变任务状态；非成员项目任务不可见") +
             '<div class="split mt-4"><div class="stack">' +
               U.card("任务状态（业务方案 §12.2 · " + STATE_DESC.length + " 类）", U.table(["状态", "含义", "可执行操作"], STATE_DESC.map(s => {
@@ -90,13 +95,13 @@
             "</div>" +
             U.card("队列看板", U.kanban(cols), "当前可见项目 · 按状态分列") +
             '<div class="split mt-4"><div class="stack">' +
-              U.card("资源池", U.table(["队列", "等待", "执行中", "失败", "待重试", "并发", "平均耗时", "状态说明"], q.map(x => {
+              U.card("资源池", U.table(["队列", "等待", "执行中", "失败", "待重试", "并发", "状态说明 · 均耗时"], q.map(x => {
                 const lim = poolLimit(x.name);
-                return '<tr><td class="cell-strong">' + U.esc(x.name) + '</td><td class="num">' + x.pending + '</td><td class="num">' + x.running + '</td><td class="num">' + x.failed + '</td><td class="num">' + x.retry + "</td><td>" + (lim === null ? U.esc(x.concurrency) : '<span class="cell-strong">' + lim + " / " + U.esc(String(x.concurrency).split("/")[1].trim()) + "</span>") + "</td><td>" + U.esc(x.avg) + '</td><td class="cell-wrap muted">' + U.esc(x.note) + "</td></tr>";
+                return '<tr><td class="cell-strong">' + U.esc(x.name) + '</td><td class="num">' + x.pending + '</td><td class="num">' + x.running + '</td><td class="num">' + x.failed + '</td><td class="num">' + x.retry + "</td><td>" + (lim === null ? U.esc(x.concurrency) : '<span class="cell-strong">' + lim + " / " + U.esc(String(x.concurrency).split("/")[1].trim()) + "</span>") + '</td><td class="cell-wrap muted">' + U.esc(x.note) + '<div class="faint small">均耗时 ' + U.esc(x.avg) + "</div></td></tr>";
               }).join(""), "暂无队列") +
                 U.notice("资源归属为「个人自持」时，任务只能用该员工的凭据执行；不得借用他人配置完成交付。并发值即「调整并发」保存后的生效值。", "info"), "平台资源池总览 · 等待 / 执行口径为全平台") +
             '</div><div class="stack">' +
-              U.card("等待原因 · 实时", U.table(["原因", "对象", "处理"], (() => {
+              U.card("等待原因 · 实时", U.table(["原因 · 对象", "处理"], (() => {
                 const vis = D.tasks.filter(visTask);
                 const queued = vis.filter(t => t.status === "排队中");
                 const running = vis.filter(t => t.status === "执行中");
@@ -105,7 +110,7 @@
                 if (queued.length) rows.push(["等待资源派发", queued[0].id, "队列中 " + queued.length + " 个任务，按优先级与提交时间入池"]);
                 if (running.length) rows.push(["资源池占用", running[0].id, "执行中 " + running.length + " 个；并发上限见资源池表"]);
                 budget.forEach(p => rows.push(["预算状态 " + p.budgetState, p.id, "预算受限时新任务应暂停提交"]));
-                return rows.length ? rows.map(r => '<tr><td class="cell-wrap">' + U.esc(r[0]) + "</td><td>" + U.code(r[1]) + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("") : '<tr><td colspan="3" class="cell-wrap muted">当前可见项目没有排队或预算受限任务</td></tr>';
+                return rows.length ? rows.map(r => '<tr><td class="cell-wrap">' + U.esc(r[0]) + '<div class="mt-1">' + U.code(r[1]) + '</div></td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("") : '<tr><td colspan="2" class="cell-wrap muted">当前可见项目没有排队或预算受限任务</td></tr>';
               })(), "无需排队")) +
               U.notice("口径与规则见《口径与规则汇总》§R-39：队列原则", "info") +
             "</div></div>"

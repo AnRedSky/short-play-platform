@@ -183,7 +183,7 @@
           const wf = DB.derived.workflow(p);
           const list = D.deliveries.filter(x => x.project === p.id);
           const rows = list.map(x =>
-            '<tr><td>' + U.code(x.id) + '</td><td>' + U.esc(x.project) + '</td><td>' + U.esc(x.version) + '<span class="faint small"> · ' + x.episodes + ' 集</span></td><td class="num">' + x.files + '<span class="faint small"> · ' + U.esc(x.size) + '</span></td><td class="cell-wrap">' + U.esc(x.checksum) + '</td><td>' + U.esc(x.reviewer) + '</td><td>' + U.esc(x.at) + '</td><td>' + U.pill(x.status) + '</td><td>' +
+            '<tr><td>' + U.code(x.id) + '</td><td>' + U.esc(x.version) + '<span class="faint small"> · ' + x.episodes + ' 集</span></td><td class="cell-wrap">' + x.files + '<span class="faint small"> · ' + U.esc(x.size) + '</span><div class="faint small mono" title="' + U.esc(x.checksum) + '">' + U.esc(String(x.checksum).slice(0, 14)) + (String(x.checksum).length > 14 ? "…" : "") + '</div></td><td>' + U.esc(x.reviewer) + '<div class="faint small">' + U.esc(x.at) + '</div></td><td>' + U.pill(x.status) + '</td><td>' +
             U.btn("交付清单", "post.deliveryDetail", "sm", { id: x.id }) + "</td></tr>").join("");
           const dp = list.slice(-1)[0];
           const rightsOk = (wf.gateDelivery.items.find(i => i.key === "rights") || {}).ok;
@@ -227,8 +227,8 @@
               U.metric("交付内容项", D.deliveryChecklist.length + " 类", "按清单逐项核验", "▤") +
               U.metric("阻断项", String(blockers.length), blockers.length ? blockers.map(i => i.label).join("、") : "无阻断", "!") +
             "</div>" +
-            '<div class="split"><div class="stack-wide">' +
-              U.card("交付包清单 · " + U.esc(p.name), U.table(["交付包", "项目", "版本 · 集数", "文件 · 体积", "校验", "审核人", "时间", "状态", "操作"], rows, "当前项目还没有生成交付包")) +
+            U.card("交付包清单 · " + U.esc(p.name), U.table(["交付包", "版本 · 集数", "文件 · 体积 · 校验", "审核人 · 时间", "状态", "操作"], rows, "当前项目还没有生成交付包")) +
+            '<div class="split mt-4"><div class="stack-wide">' +
               U.card("交付内容模板（9 类）", U.table(["内容项", "要求", "状态"], chk), "具体项目按清单逐项核验") +
             '</div><div class="stack">' +
               U.card("生成前检查", U.listRows([

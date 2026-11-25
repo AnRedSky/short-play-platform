@@ -26,7 +26,7 @@
               '<tr><td class="cell-strong">' + U.esc(p.name) + '<div class="faint small">' + U.esc(p.id) + '</div></td><td>' + U.esc(p.owner) + '</td><td class="cell-wrap">' + U.esc(p.capabilities) + '</td><td class="cell-wrap">' + U.esc(p.quota) + '</td><td>' + U.pill(p.status) + '</td><td class="cell-wrap muted">全员仅见脱敏值，管理员也不得读取明文</td></tr>').join("")), "分配对象与额度来自企业托管配置，不与个人自持混算")
             : "";
           const rows = mine.map(p =>
-            '<tr><td>' + U.entity(p.name, p.id, "◉") + '</td><td>' + U.pill(p.mode || "个人自持", p.mode === "企业托管" ? "info" : "accent") + '</td><td class="cell-wrap">' + U.esc(p.kind) + '</td><td class="cell-wrap">' + U.esc(p.capabilities) + '</td><td class="cell-wrap muted">' + U.esc(p.endpoint) + '</td><td>' + U.esc(p.quota) + "</td><td>" + U.masked(p.masked) + "</td><td>" + U.pill(p.status) + "</td><td>" +
+            '<tr><td>' + U.entity(p.name, p.id + " · " + (p.mode || "个人自持"), "◉") + '</td><td class="cell-wrap">' + U.esc(String(p.kind || "").replace("内置适配器 · ", "")) + '<div class="faint small">' + U.esc(p.capabilities) + '</div></td><td class="cell-wrap muted" title="' + U.esc(p.endpoint) + '">' + U.esc(String(p.endpoint || "").replace(/^https?:\/\//, "")) + '</td><td>' + U.esc(p.quota) + "</td><td>" + U.masked(p.masked) + "</td><td>" + U.pill(p.status) + "</td><td>" +
             U.btn("测试", "models.test", "sm", { id: p.id }) + " " + U.btn("管理", "models.detail", "sm", { id: p.id }) + "</td></tr>").join("");
           return U.page("模型与资源 / 资源配置", "资源配置", "每个任务执行时明确归属：使用谁的配置、谁的额度，避免「借用他人配置」这类不可审计的做法。",
             (App.can("models.manage")
@@ -38,7 +38,7 @@
               U.metric("已用额度", usedPct + "%", "个人额度平均占用", "▮") +
               U.metric("异常资源", String(bad.length), bad.length ? bad.map(p => p.id + " " + p.status).join(" / ") : "当前无异常", "!") +
             "</div>" +
-            U.card("我的资源配置", U.table(["供应商", "供给模式", "类型", "能力", "端点", "额度", "凭据（脱敏）", "状态", "操作"], rows), "行内只留测试与凭据更新；设为默认、启停、删除都收在「管理」抽屉") +
+            U.card("我的资源配置", U.table(["供应商", "类型 · 能力", "端点", "额度", "凭据（脱敏）", "状态", "操作"], rows), "行内只留测试与凭据更新；设为默认、启停、删除都收在「管理」抽屉") +
             (entBlock ? '<div class="mt-4">' + entBlock + "</div>" : "") +
             '<div class="split mt-4"><div class="stack">' +
               U.card("资源归属与可见性", U.table(["归属", "凭据可见性", "额度归属", "适用角色"], [

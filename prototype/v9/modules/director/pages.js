@@ -187,7 +187,7 @@
           const bg = DB.state.budgetOf(pid);
           const pct = bg && bg.total ? Math.round(bg.used / bg.total * 100) : 0;
           const rows = list.map(s =>
-            '<tr><td>' + U.code(s.no) + '<div class="faint small">E' + s.ep + " / S" + s.scene + "</div></td><td class=\"cell-wrap\">" + U.esc(s.desc) + "</td><td>" + U.esc(s.frame) + " · " + U.esc(s.angle) + " · " + U.esc(s.move) + '</td><td class="num">' + U.esc(s.duration) + '</td><td class="cell-wrap muted">' + U.esc(s.chars) + '</td><td class="cell-wrap">' + U.esc(s.refs) + "</td><td>" + U.pill(s.status) + "</td><td>" +
+            '<tr><td>' + U.code(s.no) + '<div class="faint small">E' + s.ep + " / S" + s.scene + " · " + U.esc(s.duration) + "</div></td><td class=\"cell-wrap\">" + U.esc(s.desc) + "</td><td>" + U.esc(s.frame) + " · " + U.esc(s.angle) + " · " + U.esc(s.move) + '</td><td class="cell-wrap muted">' + U.esc(s.chars) + '<div class="faint small">' + U.esc(s.refs) + "</div></td><td>" + U.pill(s.status) + "</td><td>" +
             U.btn("查看完整契约", "director.shotDetail", "sm", { id: s.id }) + " " + U.btn("提交生产", "director.submitShot", "sm", { id: s.id }) + "</td></tr>").join("");
           const view = App.get(SCOPE, "view", "table");
           const tabsBar = U.card("", U.tabs([
@@ -197,7 +197,7 @@
           return U.page("导演规划 / 镜头契约", view === "board" ? "分镜视图 · " + p.name : "镜头契约 · " + p.name,
             view === "board" ? "先看画面再谈镜头：每张卡是一份可执行的镜头契约，状态来自任务，不靠拖动伪造。" : "契约固化后才允许提交生成；缺字段、参考未就绪或预算触发的镜头不允许进入队列。",
             U.btn("新建镜头", "director.newShot", "primary", { pid: pid }) + U.btn("批量提交", "director.batchSubmit", "", { pid: pid }) + (view === "board" ? U.btn("一致性抽检", "director.check", "", { pid: pid }) : ""),
-            tabsBar + (view === "board" ? boardBlock(p) : U.card("镜头清单 · " + epRange, U.table(["镜头", "画面描述", "景别 / 机位 / 运镜", "时长", "人物", "引用资产", "状态", "操作"], rows, "当前项目还没有镜头契约"), "镜头清单只包含当前项目") +
+            tabsBar + (view === "board" ? boardBlock(p) : U.card("镜头清单 · " + epRange, U.table(["镜头", "画面描述", "景别 / 机位 / 运镜", "人物 · 引用资产", "状态", "操作"], rows, "当前项目还没有镜头契约"), "镜头清单只包含当前项目") +
             '<div class="split mt-4"><div class="stack">' +
               (list.length ? U.card("镜头卡预览", '<div class="shot-grid">' + list.slice(0, 3).map(s => U.shotCard(s)).join("") + "</div>", "镜头卡用于分镜评审，不代替契约字段") : U.empty("没有可预览的镜头", "先完成剧本拆解或新建镜头契约")) +
               U.card("批量提交校验", U.table(["校验项", "结果", "说明"], [

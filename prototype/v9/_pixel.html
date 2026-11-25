@@ -5,7 +5,7 @@
 </head>
 <body>
 <pre id="out">running…</pre>
-<iframe id="f" src="/index.html?v=9.7.2"></iframe>
+<iframe id="f" src="/index.html?v=9.7.5"></iframe>
 <script>
 const out = [];
 const fail = [];
@@ -110,6 +110,16 @@ function drawerStats() {
     await wait(200);
   }
   if (!W().App) { put("FAIL app not ready"); document.title = "Pixel FAIL"; return; }
+  /* 先复位：上一轮 _e2e 会改业务状态并切身份，残留状态会让「入口 / 弹窗」时有时无，
+     量出来的结论就不可复现。清掉本机存储 + 重载，再等路由注册完。 */
+  try { W().localStorage.clear(); } catch (e) { /* 隐私模式忽略 */ }
+  W().location.hash = "";
+  W().location.reload();
+  const t1 = Date.now();
+  while (Date.now() - t1 < 12000) {
+    if (W().App && W().App.routes && W().App.routes().length >= 56) break;
+    await wait(200);
+  }
   const routes = W().App.routes().map((r) => r.path);
   if (routes.length < 56) { put("FAIL 路由注册未完成：仅 " + routes.length + " 条"); document.title = "Pixel FAIL"; return; }
   const has = {};
@@ -132,7 +142,7 @@ function drawerStats() {
     let pageBad = 0;
     for (const p of routes) {
       W().location.hash = "#/" + p;
-      await wait(320);
+      await wait(520);
       const s = pageStats();
       const flags = [];
       if (s.bo > 0) flags.push("PAGE-XO=" + s.bo);
@@ -150,11 +160,11 @@ function drawerStats() {
       const p = findRoute(act);
       if (!p) { log("  modal " + act + " 无触发入口，跳过"); continue; }
       W().location.hash = "#/" + p;
-      await wait(340);
+      await wait(540);
       const el = D().querySelector('#view [data-action="' + act + '"]');
       if (!el) { log("  modal " + act + " 入口元素缺失（" + p + "）"); continue; }
       el.dispatchEvent(new Event("click", { bubbles: true }));
-      await wait(320);
+      await wait(520);
       const m = modalStats();
       if (!m) { bad("modal " + w + " " + act + " 点击后未打开（入口页 " + p + "）"); W().App.closeModal(); continue; }
       const flags = [];
@@ -177,7 +187,7 @@ function drawerStats() {
       const p = findRoute(act);
       if (!p) { log("  drawer " + act + " 无触发入口，跳过"); continue; }
       W().location.hash = "#/" + p;
-      await wait(340);
+      await wait(540);
       const el = D().querySelector('#view [data-action="' + act + '"]');
       if (!el) { log("  drawer " + act + " 入口元素缺失（" + p + "）"); continue; }
       el.dispatchEvent(new Event("click", { bubbles: true }));

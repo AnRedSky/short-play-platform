@@ -86,7 +86,7 @@
           const visPids = DB.derived.visibleProjects().map(x => x.id);
           const scoped = pid ? D.rights.filter(r => r.project === pid || !r.project) : D.rights.filter(r => !r.project || visPids.indexOf(r.project) >= 0);
           const rows = scoped.map(r =>
-            '<tr><td>' + U.code(r.id) + "</td><td>" + U.esc(r.project || "平台级") + '<div class="faint small">' + U.esc(r.subject) + '</div></td><td>' + U.esc(r.type) + '</td><td>' + U.esc(r.owner) + '<div class="faint small cell-wrap">' + U.esc(r.proof) + '</div></td><td class="cell-wrap">' + U.esc(r.use) + '<div class="faint small">' + U.esc(r.region) + '</div></td><td>' + U.esc(r.term) + '</td><td class="cell-wrap">' + U.esc(r.commercial) + " · " + U.pill(r.review) + "</td><td>" + U.pill(r.status) + "</td><td>" +
+            '<tr><td>' + U.code(r.id) + "</td><td>" + U.esc(r.project || "平台级") + '<div class="faint small">' + U.esc(r.subject) + '</div></td><td>' + U.esc(r.type) + '</td><td>' + U.esc(r.owner) + '<div class="faint small cell-wrap">' + U.esc(r.proof) + '</div></td><td class="cell-wrap">' + U.esc(r.use) + '<div class="faint small">' + U.esc(r.region) + '</div></td><td>' + U.esc(r.term) + '<div class="faint small">' + U.esc(r.commercial) + "</div></td><td>" + U.pill(r.status) + '<div class="faint small">' + U.pill(r.review) + "</div></td><td>" +
             U.btn("详情", "compliance.rightDetail", "sm", { id: r.id }) + "</td></tr>").join("");
           const blocked = scoped.filter(r => String(r.status).indexOf("阻断") >= 0);
           const expiring = scoped.filter(r => String(r.status).indexOf("到期") >= 0);
@@ -102,7 +102,7 @@
               U.metric("快到期", String(expiring.length), soon ? soon.id + " · " + soon.subject : "当前范围没有到期项", "!") +
               U.metric("阻断交付", String(blocked.length), bad ? bad.id + " · " + bad.subject : "当前范围没有阻断", "×") +
             "</div>" +
-            U.card("授权台账 · " + scoped.length + " 项" + (p ? " · " + U.esc(p.name) : ""), U.table(["编号", "项目 · 对象", "类型", "权利人 / 证明", "使用范围 · 区域", "期限", "商用性 · 复核", "状态", "操作"], rows, "当前项目没有授权记录"), "证明与区域并入对应列；完整字段在「详情」抽屉") +
+            U.card("授权台账 · " + scoped.length + " 项" + (p ? " · " + U.esc(p.name) : ""), U.table(["编号", "项目 · 对象", "类型", "权利人 / 证明", "使用范围 · 区域", "期限 · 商用性", "状态 / 复核", "操作"], rows, "当前项目没有授权记录"), "证明与区域并入对应列；完整字段在「详情」抽屉") +
             '<div class="split mt-4"><div class="stack">' +
               (bad ? U.card(bad.id + " · 阻断交付", U.notice(bad.subject + "：来源或证明缺失，当前项目交付已被阻断；补授权或替换素材后才能解除。", "bad") +
                 '<div class="btn-row-inline">' + U.btn("登记续期", "compliance.renew", "sm", { id: bad.id }) + U.btn("替换素材", "compliance.replace", "sm", { id: bad.id }) + "</div>", "来源不明不得交付")

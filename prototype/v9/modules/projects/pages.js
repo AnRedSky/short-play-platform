@@ -168,8 +168,8 @@
                 '<span class="wf-ep-meta">' + pass + " / " + sh.length + " 镜 · " + (e.qc === "PASS" ? "PASS" : U.esc(e.qc || "未检")) + "</span></button>";
             }).join("") + "</div>", "点击任意一集查看该集镜头、时间线与质检记录") +
             '<div class="wf-latest mt-4">' +
-              U.card("最近质检", U.table(["报告", "对象", "结果", "问题", "时间"], D.qualityReports.filter(r => String(r.object).indexOf(p.id) === 0).slice(0, 6).map(r =>
-                '<tr><td>' + U.code(r.id) + '</td><td class="cell-wrap">' + U.esc(r.object) + '</td><td>' + U.pill(r.result) + '</td><td class="num">' + r.issues + '</td><td class="idx">' + U.esc(r.at) + "</td></tr>").join("")), "报告绑定被检版本") +
+              U.card("最近质检", U.table(["报告 · 对象", "结果 · 问题", "时间"], D.qualityReports.filter(r => String(r.object).indexOf(p.id) === 0).slice(0, 6).map(r =>
+                '<tr><td>' + U.code(r.id) + '<div class="faint small">' + U.esc(r.object) + '</div></td><td>' + U.pill(r.result) + '<div class="faint small">问题 ' + r.issues + ' 项</div></td><td class="idx">' + U.esc(r.at) + "</td></tr>").join("")), "报告绑定被检版本") +
               U.card("成本与预算", U.desc([
                 ["已用", "¥" + DB.derived.budgetOfProject(p).used.toLocaleString("zh-CN")],
                 ["剩余", "¥" + Math.max(0, DB.derived.budgetOfProject(p).total - DB.derived.budgetOfProject(p).used).toLocaleString("zh-CN")],

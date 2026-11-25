@@ -318,3 +318,66 @@ B6 文档版本（R-28/R-31/R-32）        门禁：全套回归 + _e2e 37 断�
 | D-05 | 审计脚本接 GitHub Actions | 未做，卡推送策略 |
 | D-08 | 1280 下仍有 5 页宽表需要横滚（`post/delivery` 239、`models/config` 229、`tasks/list` 200、`assets/library` 131、`compliance/rights` 101），中间列被吸附列遮挡 | 新增后续项：要么再降 1 列，要么把高频中列（状态/时间）提到吸附列旁；需先按真实点击频次排序再定 |
 | D-09 | `_pixel.html` 未进 CI，靠手动起服务跑 | 与 D-05 一并处理 |
+
+---
+
+## 十四、D-08 列序调整执行结果（9.7.5）
+
+### 14.1 问题定义与判据
+
+D-04 已把「操作列被推出视口」用吸附列兜住，但宽表本身仍在横滚：1280 内容区 941px，而 `models/config` 自然宽 1170、`tasks/list` 1141、`assets/library` 1072、`compliance/rights` 1042。吸附列只能保住首末列，滚动时中间列仍被两侧吸附列压住，读到的是「半截表」。D-08 的目标是把 1280 下每个表格的 `scrollWidth - wrap.clientWidth` 压到 0。
+
+判据不看列数，而看**真实几何**：`_pixel.html` 逐表量 need，need=0 才算收口。这也是本轮放弃「按列数一刀切」的原因——同样 9 列，窄卡里的表和全宽表需要完全不同。
+
+### 14.2 统一手法：同主题两行堆叠，不删信息
+
+| 手法 | 说明 | 典型用例 |
+| --- | --- | --- |
+| 副行堆叠 | 同主题两个字段放一个单元格，第二行用 `.faint.small` | 供应商 `PRV-07 · 自持`、状态 pill 下挂「优先级 P1」、交付包「文件数 · 体积」+ 校验前缀 |
+| 同轴合并 | 业务上必然一起读的字段并成一列，表头写 `A · B` | `期限 · 商用性`、`状态 · 复核`、`审核人 · 时间`、`人物 · 引用资产`、`结果 · 问题` |
+| 缩写标签 | 四状态压成 `供 / 下 / 存 / 质`，`title` 保留全称 | `tasks/list` 四状态列 |
+| 去冗余列 | 卡片标题已声明项目时删「项目」列（页内唯一项目） | `audio/bgm`、`post/delivery` |
+| 显示降级 | 长串截断 + `title` + 详情抽屉看全量 | 端点去 `https://`、校验和截 14 位 |
+
+**禁用做法**（会破坏可用性，本轮未用）：删业务字段只留 Tooltip、把表改成一列 KV 堆叠、缩小字号或压 padding。
+
+### 14.3 逐页结果（1280 实测 need）
+
+| 页面 | 列数 | 改前 need | 改后 need |
+| --- | --- | --- | --- |
+| models/config | 9→7 | 229 | 0 |
+| tasks/list | 9→7 | 200 | 0 |
+| tasks/queue（资源池 / 等待原因） | 8→7 / 3→2 | 12 / 52 | 0 / 0 |
+| assets/library | 9→8 | 131 | 0 |
+| compliance/rights | 9→8 | 101 | 0 |
+| audio/bgm | 9→6 | 101 | 0 |
+| post/delivery | 9→6 | 239 | 0 |
+| creation/review | 4→2 | 115 | 0 |
+| creation/breakdown | 6→5 / 6→4 / 3→2 | 44 / 28 / 24 | 0 |
+| director/shots | 8→7→6 | 16 | 0 |
+| projects/workflow | 5→3 | 90 | 0 |
+
+`post/delivery` 额外做了一次结构判断：主表原本放在 `.split` 的左半边（宽 557），即便列数降到 6 仍需 74px 横滚；把「交付包清单」提为全宽主表、「交付内容模板」与「生成前检查」降到下方 split，need 直接归零，信息层级也更符合「主表在上、核验在下」。
+
+### 14.4 过程中修掉的两个测量口径缺陷
+
+1. **`_pixel` 未复位会话**：上一轮 `_e2e` 会切身份（staff / auditor）并写业务状态，残留在 localStorage 里，导致本轮报 4 条「点击后未打开」（`audio.newVoice`、`director.newShot`）与一批「无触发入口」。现象是"时有时无"，若据此去改页面就会改错。修法：开跑前 `localStorage.clear()` + 重载 + 重等 56 条路由。复位后这些条目全部正常，仅 `orgs.grantNew`（需 `grant.manage`）与 `orgs.preview` 因权限无入口，属于预期跳过。
+2. **模块 JS 的启发式缓存**：`python -m http.server` 的 `Last-Modified` 会被 Chrome 启发式缓存，改了 `modules/*/pages.js` 但 `?v=` 没变时，浏览器仍渲染旧列——表现为「代码已改、need 不变」。本轮因此出现过一次假阴性（`director/shots` 连改两版都报 8col/need16）。纪律：**每次改模块 JS 必须同步升 `?v=`**，否则量测结论不可信。
+
+### 14.5 复测与回归
+
+- `_pixel`：1280 与 1440 两档，56 路由 + 9 弹窗 + 8 抽屉，**FAILS=0**；所有表格 need=0；弹窗 bottom 操作全部可见；抽屉 right 贴边；`Pixel OK`。
+- `_smoke`：`routes=56`，9 组合并页 tab 正常，`Smoke OK`。
+- `_e2e`：37 PASS / 0 FAIL，`E2E OK`。
+- 脚本侧：`regress` 通过；`_audit_links` 56 / LEGACY 10 / 失效 0；`_audit_actions` 330·264·0；`_audit_perms` 36 / 23；`_audit_kpi` 127；`_audit_dups` 0；`_audit_project_guard` 23；`_audit_naming` 56/0；`_audit_buttons` 76 快照 0 例外；`_audit_rules` 14 张；`_audit_labels` 252/0；`_audit_density` 过薄 0；`_audit_overlap` 真双入口 0；`_audit_layout` 硬阻断 0 · 软观察 **39**（9.7.2 为 41，宽表降列后自然减少）；`_audit_ux`、`_audit_carry`（弹窗过重 0 / 抽屉过载 0 / 跳转过碎 0）；`flow` 18；`_journey` 22。
+- 24 个 js `node --check` 全过。
+
+### 14.6 遗留与后续
+
+| 编号 | 事项 | 状态 / 建议 |
+| --- | --- | --- |
+| D-08 | 1280 宽表横滚 | **已收口**，两档 need=0 |
+| D-09 | `_pixel.html` 进 CI | 未做，仍卡推送策略（见第十四章末） |
+| D-10 | 420px 抽屉内宽表（`assets.detail`、`workspace.cmdHelp`）仍横滚 1 | 预期行为，不阻断；若要彻底消除，需把抽屉内表改成 KV 列表，建议随下一次抽屉统一评审一起做 |
+| D-11 | 版本号纪律 | 已确认：改模块 JS 必须同步升 `?v=`；建议后续把 `?v=` 改为构建期时间戳，从根上消除启发式缓存踩坑 |
+| 推送策略 | `origin/develop` 停在 `fb36f1e`，本地已积累 6 个整改提交 | 待用户拍板：直推 develop 或开 PR 到 main；D-05（Actions 接审计）与 D-09 均等此决策 |

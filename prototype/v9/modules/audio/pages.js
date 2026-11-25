@@ -102,13 +102,13 @@
           const assets = D.audioAssets.filter(a => a.project === pid);
           const canEdit = !!p && ["已交付", "已归档"].indexOf(p.status) < 0;
           const rows = assets.map(a =>
-            '<tr><td>' + U.entity(a.name, a.id, "♫") + '</td><td>' + U.esc(a.project) + '</td><td>' + U.esc(a.type) + '</td><td class="cell-wrap muted">' + U.esc(a.source) + '</td><td class="cell-wrap">' + U.esc(a.rights) + '</td><td>' + U.esc(a.used) + '</td><td class="cell-wrap">' + U.esc(a.mix) + "</td><td>" + U.pill(a.status) + "</td><td>" +
+            '<tr><td>' + U.entity(a.name, a.id, "♫") + '<div class="faint small">' + U.esc(a.type) + '</div></td><td class="cell-wrap muted">' + U.esc(a.source) + '</td><td class="cell-wrap">' + U.esc(a.rights) + '</td><td class="cell-wrap">' + U.esc(a.used) + '<div class="faint small">混音 ' + U.esc(a.mix) + "</div></td><td>" + U.pill(a.status) + "</td><td>" +
             U.btn("详情", "audio.assetDetail", "sm", { id: a.id }) + (canEdit ? " " + U.btn("替换素材", "audio.replaceAsset", "sm", { id: a.id }) : "") + "</td></tr>").join("");
           const blocked = assets.filter(a => /阻断|待复检/.test(String(a.status)));
           const first = blocked[0];
           return U.page("音频与字幕 / 配乐与音效", "配乐与音效", "素材入库时登记来源、授权与使用范围；交付前按授权再次校验。",
             (canEdit ? U.btn("登记素材", "audio.newAsset", "primary", { pid: pid }) : "") + U.btn("授权台账", "audio.toRights", "", { pid: pid }),
-            U.card("素材台账 · " + U.esc(p ? p.name : pid), U.table(["素材", "项目", "类型", "来源", "授权", "使用位置", "混音参数", "状态", "操作"], rows, "当前项目还没有登记音频素材"), assets.length ? "入库即登记来源与授权，交付前再次复核" : "当前项目还没有登记音频素材") +
+            U.card("素材台账 · " + U.esc(p ? p.name : pid), U.table(["素材 · 类型", "来源", "授权", "使用位置 · 混音参数", "状态", "操作"], rows, "当前项目还没有登记音频素材"), assets.length ? "入库即登记来源与授权，交付前再次复核" : "当前项目还没有登记音频素材") +
             '<div class="split mt-4"><div class="stack">' +
               (first ? U.card("授权阻断 · " + first.id, U.notice(first.name + " 的授权为「" + first.rights + "」，在补授权或替换前不得进入交付。", "bad") +
                 U.desc([["素材", first.name], ["使用位置", first.used], ["授权状态", first.rights], ["处置选项", "补授权 / 替换 / 删除该处"]]) +
