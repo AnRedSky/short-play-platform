@@ -29,8 +29,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { postApi } from '../../../services/post'
+import { useProjectScope } from '../../../composables/useProjectScope'
 import { useSessionStore } from '../../../stores/session'
-import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
 import { useRouter } from 'vue-router'
 import type { Row } from '../../../mock/db'
@@ -40,7 +40,7 @@ import StatCards from '../../../components/ui/StatCards.vue'
 import DataTable, { type Column } from '../../../components/ui/DataTable.vue'
 
 const session = useSessionStore()
-const projectStore = useProjectStore()
+const { projectId } = useProjectScope(load)
 const ui = useUiStore()
 const router = useRouter()
 
@@ -58,7 +58,7 @@ const columns: Column[] = [
 ]
 
 async function load() {
-  const result = await postApi.episodes(projectStore.currentId)
+  const result = await postApi.episodes(projectId.value)
   episodes.value = result.rows.map((row, index) => ({ ...row, no: row.no ?? index + 1 }))
 }
 
@@ -69,7 +69,7 @@ async function output(row: Row) {
 }
 
 async function qc(row: Row) {
-  await postApi.runQuality({ project: projectStore.currentId, ep: row.no, version: row.timeline })
+  await postApi.runQuality({ project: projectId.value, ep: row.no, version: row.timeline })
   ui.toast(`第 ${row.no} 集质检已提交`)
   await load()
 }

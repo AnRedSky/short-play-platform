@@ -9,11 +9,11 @@
 
     <div class="toolbar act-bar" style="margin-bottom: 14px">
       <input v-model="search" class="search" placeholder="搜索资产名 / 编号 / 类型" />
-      <select v-model="cat" class="filter">
+      <select v-model="query.cat" class="filter">
         <option value="">分类 · 全部</option>
         <option v-for="item in categories" :key="item" :value="item">{{ item }}</option>
       </select>
-      <select v-model="qc" class="filter">
+      <select v-model="query.qc" class="filter">
         <option value="">质检 · 全部</option>
         <option value="已确认">已确认</option>
         <option value="待检">待检</option>
@@ -69,6 +69,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { assetApi } from '../../services/assets'
+import { useTableQuery } from '../../composables/useTableQuery'
 import { useSessionStore } from '../../stores/session'
 import { useProjectStore } from '../../stores/project'
 import { useUiStore } from '../../stores/ui'
@@ -83,18 +84,13 @@ const projectStore = useProjectStore()
 const ui = useUiStore()
 
 const assets = ref<Row[]>([])
-const search = ref('')
-const cat = ref('')
-const qc = ref('')
 const selected = ref<Row | null>(null)
+const { search, filters: query, visible } = useTableQuery(assets, {
+  search: (row) => `${row.name}${row.id}${row.type}`,
+  filter: (row, filters) => (!filters.cat || row.cat === filters.cat) && (!filters.qc || row.qc === filters.qc),
+})
 
 const categories = computed(() => [...new Set(assets.value.map((row) => String(row.cat)))])
-const visible = computed(() => assets.value.filter((row) => {
-  if (search.value && !`${row.name}${row.id}${row.type}`.includes(search.value)) return false
-  if (cat.value && row.cat !== cat.value) return false
-  if (qc.value && row.qc !== qc.value) return false
-  return true
-}))
 
 async function load() {
   const [assetRows, categoryRows] = await Promise.all([

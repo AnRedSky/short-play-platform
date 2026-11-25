@@ -171,7 +171,8 @@ async function runAction(action: any) {
     })
     return
   }
-  const yes = await ui.confirm(action.label, `将项目状态推进到「${action.next === '__prev__' ? '暂停前状态' : action.next}」。动作会写入审计日志。`)
+  const danger = ['terminate', 'deliver', 'archive'].includes(String(action.key))
+  const yes = await ui.confirm(action.label, `将项目状态推进到「${action.next === '__prev__' ? '暂停前状态' : action.next}」。动作会写入审计日志。`, danger)
   if (!yes) return
   await projectApi.transition(projectStore.currentId, action.key)
   ui.toast(`${action.label} 已完成`)

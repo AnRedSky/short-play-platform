@@ -9,6 +9,18 @@
       </HeadActions>
     </PageHeader>
 
+    <div v-if="groupInfo && groupInfo.group.tabs.length > 1" class="tabs">
+      <RouterLink
+        v-for="tab in groupInfo.group.tabs"
+        :key="tab.path"
+        :to="tab.path"
+        class="tab"
+        :class="{ active: tab.path === route.path }"
+      >
+        {{ tab.label }}
+      </RouterLink>
+    </div>
+
     <div class="toolbar act-bar" style="margin-bottom: 14px">
       <input v-if="spec.table.search" v-model="search" class="search" placeholder="搜索…" />
       <select v-for="filter in spec.table.filters || []" :key="filter.key" v-model="filterValues[filter.key]" class="filter">
@@ -73,7 +85,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { specApi } from '../services/spec'
 import type { Row } from '../mock/db'
 import { useSessionStore } from '../stores/session'
@@ -84,6 +96,7 @@ import HeadActions from '../components/ui/HeadActions.vue'
 import StatCards from '../components/ui/StatCards.vue'
 import DataTable from '../components/ui/DataTable.vue'
 import { SPECS, type PageAction } from './specs'
+import { groupFor } from './spec-groups'
 
 const route = useRoute()
 const session = useSessionStore()
@@ -91,6 +104,7 @@ const project = useProjectStore()
 const ui = useUiStore()
 
 const spec = computed(() => SPECS[route.path] ?? SPECS['/fallback'])
+const groupInfo = computed(() => groupFor(route.path))
 const title = computed(() => spec.value.title)
 const rows = ref<Row[]>([])
 const total = ref(0)
@@ -160,6 +174,12 @@ watch([search, () => ({ ...filterValues })], () => {
   window.clearTimeout(timer)
   timer = window.setTimeout(reload, 260)
 }, { deep: true })
+
+watch(() => route.path, () => {
+  search.value = ''
+  for (const key of Object.keys(filterValues)) delete filterValues[key]
+  reload()
+})
 
 onMounted(reload)
 defineExpose({ reload })

@@ -8,18 +8,18 @@
     </PageHeader>
 
     <div class="tabs">
-      <button v-for="tab in relationTabs" :key="tab.key" class="tab" :class="{ active: relation === tab.key }" @click="relation = tab.key">
+      <button v-for="tab in relationTabs" :key="tab.key" class="tab" :class="{ active: query.relation === tab.key }" @click="query.relation = tab.key">
         {{ tab.label }}<span class="count-badge">{{ tab.count }}</span>
       </button>
     </div>
 
     <div class="toolbar act-bar" style="margin-bottom: 14px">
       <input v-model="search" class="search" placeholder="搜索项目名 / 编号 / 题材" />
-      <select v-model="status" class="filter">
+      <select v-model="query.status" class="filter">
         <option value="">状态 · 全部</option>
         <option v-for="item in statuses" :key="item" :value="item">{{ item }}</option>
       </select>
-      <select v-model="dept" class="filter">
+      <select v-model="query.dept" class="filter">
         <option value="">部门 · 全部</option>
         <option v-for="item in depts" :key="item" :value="item">{{ item }}</option>
       </select>
@@ -75,6 +75,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { projectApi } from '../../services/projects'
+import { useTableQuery } from '../../composables/useTableQuery'
 import { useSessionStore } from '../../stores/session'
 import { useProjectStore } from '../../stores/project'
 import type { Row } from '../../mock/db'
@@ -89,11 +90,19 @@ const projectStore = useProjectStore()
 const router = useRouter()
 const projects = ref<Row[]>([])
 const loading = ref(false)
-const search = ref('')
-const status = ref('')
-const dept = ref('')
-const relation = ref<string>('all')
 const selected = ref<Row | null>(null)
+const { search, filters: query, visible } = useTableQuery(projects, {
+  search: (row) => `${row.name}${row.id}${row.genre}`,
+  filter: (row, filters) => {
+    if (filters.status && row.status !== filters.status) return false
+    if (filters.dept && row.dept !== filters.dept) return false
+    if (filters.relation === 'own') return row.ownerId === session.identity?.userId
+    if (filters.relation === 'join') return row.ownerId !== session.identity?.userId && related(row)
+    if (filters.relation === 'review') return String(row.status).includes('待') && related(row)
+    return true
+  },
+})
+query.relation = 'all'
 
 const columns: Column[] = [
   { key: 'name', label: '项目', width: '180px' },
@@ -123,16 +132,6 @@ const relationTabs = computed(() => [
   { key: 'join', label: '我参与', count: projects.value.filter((row) => row.ownerId !== session.identity?.userId && related(row)).length },
   { key: 'review', label: '待我审核', count: projects.value.filter((row) => String(row.status).includes('待') && related(row)).length },
 ])
-
-const visible = computed(() => projects.value.filter((row) => {
-  if (search.value && !`${row.name}${row.id}${row.genre}`.includes(search.value)) return false
-  if (status.value && row.status !== status.value) return false
-  if (dept.value && row.dept !== dept.value) return false
-  if (relation.value === 'own') return row.ownerId === session.identity?.userId
-  if (relation.value === 'join') return row.ownerId !== session.identity?.userId && related(row)
-  if (relation.value === 'review') return String(row.status).includes('待') && related(row)
-  return true
-}))
 
 async function load() {
   loading.value = true

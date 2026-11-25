@@ -51,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { projectApi } from '../../../services/projects'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
@@ -70,7 +70,7 @@ const stages = ref<any[]>([])
 const allowed = ref<any[]>([])
 const selectedState = ref<Row | null>(null)
 
-const current = projectStore.current
+const current = computed(() => projectStore.current)
 
 const columns: Column[] = [
   { key: 'name', label: '状态' },
@@ -93,11 +93,22 @@ function preview(row: Row) {
 }
 
 async function run(action: any) {
-  const reason = action.needReason
-    ? window.prompt(`${action.label} · 请填写原因`)
-    : null
-  if (action.needReason && !reason) return
-  await projectApi.transition(projectStore.currentId, action.key, reason ?? undefined)
+  if (action.needReason) {
+    ui.openDialog({
+      title: action.label,
+      subtitle: `当前状态「${current.value?.status}」→「${action.next === '__prev__' ? '暂停前状态' : action.next}」；必须填写原因。`,
+      fields: [{ key: 'reason', label: '原因', type: 'textarea', required: true, placeholder: '说明为什么执行该动作' }],
+      submitLabel: '确认执行',
+      onSubmit: async (values) => {
+        await projectApi.transition(projectStore.currentId, action.key, String(values.reason))
+        ui.toast(`${action.label} 已完成`)
+        await projectStore.load()
+        await load()
+      },
+    })
+    return
+  }
+  await projectApi.transition(projectStore.currentId, action.key)
   ui.toast(`${action.label} 已完成`)
   await projectStore.load()
   await load()

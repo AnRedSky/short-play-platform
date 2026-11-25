@@ -9,7 +9,7 @@
     </PageHeader>
 
     <div class="toolbar act-bar" style="margin-bottom: 14px">
-      <select v-model="ep" class="filter">
+      <select v-model="query.ep" class="filter">
         <option value="">全部集</option>
         <option v-for="item in episodes" :key="item" :value="item">第 {{ item }} 集</option>
       </select>
@@ -67,6 +67,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { directorApi } from '../../services/director'
+import { useTableQuery } from '../../composables/useTableQuery'
 import { useSessionStore } from '../../stores/session'
 import { useProjectStore } from '../../stores/project'
 import { useUiStore } from '../../stores/ui'
@@ -81,16 +82,13 @@ const projectStore = useProjectStore()
 const ui = useUiStore()
 
 const shots = ref<Row[]>([])
-const ep = ref('')
-const search = ref('')
 const selected = ref<Row | null>(null)
+const { search, filters: query, visible } = useTableQuery(shots, {
+  search: (row) => `${row.no}${row.desc}${row.line}${row.id}`,
+  filter: (row, filters) => !filters.ep || String(row.ep) === filters.ep,
+})
 
 const episodes = computed(() => [...new Set(shots.value.map((row) => Number(row.ep)))].sort((a, b) => a - b))
-const visible = computed(() => shots.value.filter((row) => {
-  if (ep.value && String(row.ep) !== ep.value) return false
-  if (search.value && !`${row.no}${row.desc}${row.line}${row.id}`.includes(search.value)) return false
-  return true
-}))
 
 async function load() {
   const result = await directorApi.shots(projectStore.currentId)

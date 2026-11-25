@@ -4,7 +4,7 @@
       <HeadActions>
         <button class="btn" @click="$router.push('/ops/queue')">队列明细</button>
         <button class="btn" @click="$router.push('/ops/logs')">日志</button>
-        <button class="btn" v-if="session.can('platform.config')" @click="$router.push('/ops/config')">平台配置</button>
+        <button class="btn" v-if="can('platform.config')" @click="$router.push('/ops/config')">平台配置</button>
       </HeadActions>
     </PageHeader>
 
@@ -75,14 +75,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { opsApi } from '../../services/ops'
-import { useSessionStore } from '../../stores/session'
+import { usePermission } from '../../composables/usePermission'
 import type { Row } from '../../mock/db'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import HeadActions from '../../components/ui/HeadActions.vue'
 import DataTable from '../../components/ui/DataTable.vue'
 import StatusPill from '../../components/ui/StatusPill.vue'
 
-const session = useSessionStore()
+const { can } = usePermission()
 const payload = ref<Record<string, any>>({})
 
 const queues = computed<Row[]>(() => payload.value.queues || [])
