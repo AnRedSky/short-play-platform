@@ -313,6 +313,7 @@
           const active = visible.filter(p => ["生产中", "生产准备中", "后期制作中", "质量检测中", "待最终审核"].indexOf(p.status) >= 0).length;
           return U.page("项目中心 / 生命周期", "生命周期与状态机", "每次迁移保留迁移记录：迁移前后状态、触发动作、操作者或系统主体、时间、关联任务。",
             U.btn("批量暂停项目", "projects.pauseAll") + U.btn("批量恢复项目", "projects.resumeAll") + U.btn("终止指定项目", "projects.terminate", "danger"),
+            '<div class="toolbar"><input class="search" placeholder="搜索状态 / 进入条件 / 迁移记录" data-filter="q"><span class="faint small" data-filter-count></span></div>' +
             U.card("状态定义与进入条件", U.table(["状态", "含义", "进入条件", "是否可终止"], D.projectStates.map(s =>
               "<tr><td>" + U.pill(s.name) + '</td><td class="cell-wrap">' + U.esc(s.mean) + '</td><td class="cell-wrap muted">' + U.esc(s.enter) + "</td><td>" + U.esc(s.end) + "</td></tr>").join("")), "状态与业务结果分离") +
             '<div class="grid grid-2 mt-4">' +

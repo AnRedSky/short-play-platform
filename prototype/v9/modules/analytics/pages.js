@@ -87,6 +87,7 @@
           return U.page("经营分析 / 企业整体", tab === "depts" ? "部门对比" : tab === "emps" ? "员工对比" : "企业整体数据", "数据按下钻口径组织：先看整体，再定位部门与员工，不做无来源的推测。",
             U.btn("导出报表", "common.export", "primary"),
             tabsBar + (tab === "depts" ? deptBlock() : tab === "emps" ? empBlock() : '<div class="grid grid-4">' + metrics + "</div>" +
+            '<div class="toolbar"><input class="search" placeholder="搜索部门 / 员工 / 项目" data-filter="q"><span class="faint small" data-filter-count></span></div>' +
             U.card("交付与成本趋势", U.lineChart(A.trend.labels, [
                 { name: "交付作品（部）", color: "var(--accent)", values: A.trend.delivered },
                 { name: "累计成本（千元）", color: "var(--info)", values: A.trend.cost.map(v => Math.round(v / 1000)), axis: "right" }

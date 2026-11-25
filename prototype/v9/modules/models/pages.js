@@ -27,10 +27,7 @@
             : "";
           const rows = mine.map(p =>
             '<tr><td>' + U.entity(p.name, p.id, "◉") + '</td><td>' + U.pill(p.mode || "个人自持", p.mode === "企业托管" ? "info" : "accent") + '</td><td class="cell-wrap">' + U.esc(p.kind) + '</td><td class="cell-wrap">' + U.esc(p.capabilities) + '</td><td class="cell-wrap muted">' + U.esc(p.endpoint) + '</td><td>' + U.esc(p.quota) + "</td><td>" + U.masked(p.masked) + "</td><td>" + U.pill(p.status) + "</td><td>" +
-            U.btn("测试", "models.test", "sm", { id: p.id }) + " " + U.btn("设为默认", "models.setDefault", "sm", { id: p.id }) + " " +
-            U.btn("更新凭据", "models.updateCredential", "sm", { id: p.id }) + " " +
-            U.btn(p.status === "启用" ? "停用" : "启用", "models.toggle", "sm", { id: p.id }) + " " +
-            U.btn("删除", "models.remove", "sm", { id: p.id }) + "</td></tr>").join("");
+            U.btn("测试", "models.test", "sm", { id: p.id }) + " " + U.btn("管理", "models.detail", "sm", { id: p.id }) + "</td></tr>").join("");
           return U.page("模型与资源 / 资源配置", "资源配置", "每个任务执行时明确归属：使用谁的配置、谁的额度，避免「借用他人配置」这类不可审计的做法。",
             (App.can("models.manage")
               ? U.btn("供应商与模型", "models.toProviders", "primary") + U.btn("路由策略", "models.toRouting")
@@ -41,7 +38,7 @@
               U.metric("已用额度", usedPct + "%", "个人额度平均占用", "▮") +
               U.metric("异常资源", String(bad.length), bad.length ? bad.map(p => p.id + " " + p.status).join(" / ") : "当前无异常", "!") +
             "</div>" +
-            U.card("我的资源配置", U.table(["供应商", "供给模式", "类型", "能力", "端点", "额度", "凭据（脱敏）", "状态", "操作"], rows)) +
+            U.card("我的资源配置", U.table(["供应商", "供给模式", "类型", "能力", "端点", "额度", "凭据（脱敏）", "状态", "操作"], rows), "行内只留测试与凭据更新；设为默认、启停、删除都收在「管理」抽屉") +
             (entBlock ? '<div class="mt-4">' + entBlock + "</div>" : "") +
             '<div class="split mt-4"><div class="stack">' +
               U.card("资源归属与可见性", U.table(["归属", "凭据可见性", "额度归属", "适用角色"], [
@@ -91,6 +88,7 @@
           const noCompatText = noCompat.map(c => c.item).join("、");
           return U.page("模型与资源 / 能力与路由", "能力与路由", "备用模型不是自动兜底：兼容项不满足时不允许切换，只能人工决策或调整镜头设计。",
             U.btn("修改路由策略", "models.editRoute", "primary") + U.btn("供应商与模型", "models.toProviders"),
+            '<div class="toolbar"><input class="search" placeholder="搜索能力 / 模型 / 兼容项" data-filter="q"><span class="faint small" data-filter-count></span></div>' +
             '<div class="grid grid-4">' +
               U.metric("能力项", String(D.capabilities.length), "文本到成片全链路", "▤") +
               U.metric("视频能力", String(D.videoCapabilities.length), "已接入 / 受限 / 规则实现", "▦") +
@@ -161,6 +159,25 @@
         });
       }
     });
+  });
+
+  /* 资源管理抽屉（I-2）：档案 + 低频/危险动作归属地，行内只留测试与凭据更新 */
+  App.on("models.detail", (el) => {
+    const id = el.dataset.id;
+    const p = D.providers.find(x => x.id === id);
+    if (!p) return;
+    const mine = p.ownerId === App.identity().userId || App.can("models.manage");
+    App.drawer("资源 · " + p.name, U.desc([
+      ["编号", p.id], ["供给模式", p.mode || "个人自持"], ["类型", p.kind], ["能力", p.capabilities],
+      ["端点", p.endpoint], ["鉴权", p.auth], ["区域", p.region], ["额度", p.quota],
+      ["凭据（脱敏）", p.masked], ["归属人", p.owner], ["验证", p.test], ["状态", p.status]
+    ]) + U.notice("凭据明文不可回显；设为默认只影响新任务，历史任务保留原引用标识。", "info") +
+      '<div class="btn-row-inline">' +
+      (mine ? U.btn("更新凭据", "models.updateCredential", "primary", { id: p.id }) +
+        U.btn("设为默认", "models.setDefault", "", { id: p.id }) +
+        U.btn(p.status === "启用" ? "停用" : "启用", "models.toggle", "", { id: p.id }) : "") +
+      (App.can("models.manage") && mine ? U.btn("删除", "models.remove", "", { id: p.id }) : "") +
+      "</div>");
   });
 
   /* 启用 / 停用资源配置（业务方案 §13.7：配置失效时暂停相关任务并通知配置人） */

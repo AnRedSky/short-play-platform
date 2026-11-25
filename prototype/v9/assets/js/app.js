@@ -286,9 +286,11 @@ window.App = (function () {
       const visible = rows.filter(r => !r.hidden).length;
       const emptyRow = wrap.querySelector(".table-empty-row");
       if (emptyRow) emptyRow.hidden = visible > 0;
-      const counter = wrap.parentElement.querySelector("[data-filter-count]");
-      if (counter) counter.textContent = "显示 " + visible + " / " + rows.length + " 条";
     });
+    /* 计数按整页聚合：多表页面共用一个 [data-filter-count]，避免只统计最后一张表 */
+    const allRows = Array.from(view.querySelectorAll(".table-wrap tbody tr:not(.table-empty-row)"));
+    const shown = allRows.filter(r => !r.hidden).length;
+    view.querySelectorAll("[data-filter-count]").forEach(c => { c.textContent = "显示 " + shown + " / " + allRows.length + " 条"; });
   }
 
   /* ---------- 反馈 ---------- */

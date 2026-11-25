@@ -110,7 +110,7 @@
           const parsed = App.get(SCOPE, "parsed", null);
           const history = App.get(SCOPE, "cmdHistory", []);
           return U.page("工作台 / 指令式生产助手", "指令式生产助手", "它不是一个会自己编排一切的 Agent：每条指令都必须落到既定动作上，超出动作清单的请求会被明确拒绝。",
-            U.btn("查看可用指令", "workspace.cmdHelp") + U.btn("指令历史", "workspace.cmdHistory"),
+            U.btn("查看可用指令", "workspace.cmdHelp") + U.btn("指令历史", "workspace.cmdHistory") + U.btn("去生产任务", "workspace.toTasks"),
             '<div class="split"><div class="stack">' +
               U.card("输入指令", '<label class="field-wrap full"><span class="field-label">自然语言指令（按关键词解析）</span><textarea class="field" id="cmd-input" rows="4" placeholder="例如：把《雾城来信》第 18 集第 1 场重新生成一版">' + U.esc(App.get(SCOPE, "cmd", "")) + '</textarea></label>' +
                 '<div class="chip-row">' +
@@ -176,6 +176,7 @@
   });
   App.on("workspace.assistantLink", () => App.go("workspace/assistant"));
   App.on("workspace.toNotify", () => App.go("notify/inbox"));
+  App.on("workspace.toTasks", () => App.go("tasks/list"));
   App.on("workspace.toCreation", (el) => App.go("creation/brief", { id: (el && el.dataset && el.dataset.pid) || ((App.currentProject() || {}).id || "") }));
   App.on("workspace.toDirector", (el) => App.go("director/plan", { id: (el && el.dataset && el.dataset.pid) || ((App.currentProject() || {}).id || "") }));
   App.on("workspace.toVideo", (el) => {

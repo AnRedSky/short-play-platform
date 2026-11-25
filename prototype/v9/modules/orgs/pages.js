@@ -15,7 +15,7 @@
 
   function memberRows(list) {
     return list.map(u => '<tr><td>' + U.entity(u.name, u.email, u.name.slice(0, 1)) + '</td><td>' + U.esc(u.dept) + '</td><td>' + U.esc(u.role) + '</td><td>' + U.pill(u.status) + '</td><td class="num">' + u.projects + '</td><td class="num">' + u.delivered + "</td><td>" +
-      U.btn("档案", "orgs.member", "sm", { id: u.id }) + (App.can("org.manage") ? " " + U.btn(u.status === "在职" ? "停用" : "启用", "orgs.toggle", "sm", { id: u.id }) : "") + "</td></tr>").join("");
+      U.btn("档案页", "orgs.member", "sm", { id: u.id }) + (App.can("org.manage") ? " " + U.btn(u.status === "在职" ? "停用" : "启用", "orgs.toggle", "sm", { id: u.id }) : "") + "</td></tr>").join("");
   }
 
   AppModule.register({
@@ -173,6 +173,7 @@
           };
           return U.page("组织与权限 / 项目授权", "项目成员授权", "项目授权不授予企业级数据范围；成员不得通过项目授权获得他人个人凭据。",
             (App.can("grant.manage") ? U.btn("新增授权", "orgs.grantNew", "primary") : "") + U.btn("导出授权台账", "common.export"),
+            '<div class="toolbar"><input class="search" placeholder="搜索项目 / 成员 / 角色" data-filter="q"><span class="faint small" data-filter-count></span></div>' +
             U.card("项目 × 成员授权矩阵", U.table(["项目", "成员", "项目角色", "授权范围", "最近变更", "操作"], D.projects.flatMap(p =>
               (p.members || []).map(m => {
                 const u = D.users.find(x => x.id === m.userId) || { name: m.userId, dept: "—" };

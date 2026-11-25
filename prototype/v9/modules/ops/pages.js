@@ -65,6 +65,7 @@
           return U.page("平台管理 / 能力字典", "能力字典与适配器", "能力字典供模型声明与任务匹配使用；适配器按能力契约实现，业务模块不直接依赖供应商 SDK。",
             U.btn("登记适配器", "ops.adapterRegister", "primary") + U.btn("导出字典", "common.export"),
             U.tabs([{ value: "caps", label: "能力字典", count: D.capabilities.length }, { value: "adapters", label: "供应商适配器", count: D.ops.adapters.length }], tab, "ops.tab") +
+            '<div class="toolbar"><input class="search" placeholder="搜索能力 / 适配器 / 供应商" data-filter="q"><span class="faint small" data-filter-count></span></div>' +
             (tab === "caps"
               ? U.card("十六类模型能力", U.table(["能力类别", "主要用途", "输入 → 输出", "计费单位", "已登记模型"], D.capabilities.map(c =>
                   '<tr><td class="cell-strong">' + U.esc(c.cap) + "</td><td class=\"cell-wrap\">" + U.esc(c.use) + '</td><td class="faint">' + U.esc(c.io) + '</td><td><span class="code">' + U.esc(c.unit) + "</span></td><td class=\"num\">" + c.models + "</td></tr>").join("")) +

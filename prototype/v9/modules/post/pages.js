@@ -149,6 +149,7 @@
           const canFinal = p.status === "待最终审核";
           return U.page("审核与交付 / 最终成片审核", "最终成片审核", "审核基于「集」与「镜头」定位问题，不写主观整体评价；结论直接决定返工范围。",
             U.btn(canFinal ? "进入终审" : "打开制作流水线", canFinal ? "projects.wfFinal" : "projects.wfOpen", "primary", { pid: p.id }) + U.btn("审核记录", "post.reviewHistory", "", { pid: p.id }),
+            '<div class="toolbar"><input class="search" placeholder="搜索审核记录 / 审核人 / 结论" data-filter="q"><span class="faint small" data-filter-count></span></div>' +
             '<div class="grid grid-4">' +
               U.metric("待审核", canFinal ? "1 项" : "0 项", canFinal ? "质检已完成，等待终审" : "当前状态「" + p.status + "」", "▤") +
               U.metric("已通过", String(passed), "当前项目审核记录", "✓") +
