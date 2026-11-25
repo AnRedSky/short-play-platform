@@ -241,6 +241,15 @@ function transition(id: string, body: Row): Envelope {
   project.phase = stageChain(project).find((stage) => stage.state === 'now')?.name ?? project.phase
   project.updated = now()
 
+  if (next === '已交付') {
+    const placeholder = rows('deliveries').findIndex(
+      (row) => row.project === project.id && String(row.status).startsWith('未生成'),
+    )
+    if (placeholder >= 0) rows('deliveries').splice(placeholder, 1)
+    rows('deliveries').unshift(buildDelivery(project, { version: 'V1' }))
+    project.delivered = project.episodes
+  }
+
   rows('audits').unshift({
     id: nextId('AUD', 'audits'),
     time: now(),
@@ -435,10 +444,10 @@ function finalReview(body: Row): Envelope {
   return ok({ project })
 }
 
-function delivery(body: Row): Envelope {
-  const project = projectOf(String(body.project ?? ''))
-  const row: Row = {
-    id: `DP-${project.id}-${String(body.version ?? 'V1')}`,
+function buildDelivery(project: Row, body: Row): Row {
+  const seq = rows('deliveries').filter((row) => row.project === project.id && row.status === '已交付').length + 1
+  return {
+    id: `DP-${String(project.id).replace(/^SP-/, '')}-${String(seq).padStart(2, '0')}`,
     project: project.id,
     version: body.version ?? 'V1',
     episodes: body.episodes ?? project.episodes,
@@ -451,6 +460,11 @@ function delivery(body: Row): Envelope {
     receiver: body.receiver ?? '企业内容库',
     frozen: true,
   }
+}
+
+function delivery(body: Row): Envelope {
+  const project = projectOf(String(body.project ?? ''))
+  const row = buildDelivery(project, body)
   rows('deliveries').unshift(row)
   if (project.status === '已完成') {
     project._prevStatus = project.status
