@@ -30,3 +30,12 @@ FAILS=0，标题 `Pixel OK`。较 9.7.2 基线（11 页操作列被推出 89–2
 | creation/breakdown | 6→5 / 6→4 / 3→2 | 场+镜头合一；引用+版本合一；类型入对象副行；位置入事项副行 |
 | director/shots | 7→6 | 时长入镜头副行；人物+引用资产合一 |
 | projects/workflow | 5→3 | 报告+对象合一；结果+问题合一 |
+
+---
+
+## 9.7.6 追加（D-10 抽屉内宽表 + D-11 no-store 服务）
+
+- `assets.detail` 抽屉「引用位置明细」由 3 列（引用类型 / 引用对象 / 位置，324px 内容区溢出 42px）改为 2 列（引用对象 + 类型副行 / 位置），need=0。
+- `workspace.cmdHelp` 抽屉「可用指令」由 3 列（目标 123 / 示例话术 150 / 风险 93，溢出 8px）改为 2 列（目标 + 风险 pill 副行 / 示例话术），need=0，风险与指令同行更易扫。
+- 复测：两档 8 个抽屉全部「无内层横溢」字样消失（`assets.detail`、`workspace.cmdHelp` 不再出现 `表横滚 1`）；页面级仍 56 路由 0 异常；FAILS=0，`Pixel OK`。
+- 服务改用 `node tools/serve.mjs 4199`：`Cache-Control: no-store`，改模块 JS 后刷新即生效，`?v=` 回归「版本标记」本职。

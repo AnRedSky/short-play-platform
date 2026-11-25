@@ -164,8 +164,8 @@ function assetReferences(a) {
       U.card("版本历史与使用位置", U.table(["版本", "时间", "变更说明", "被引用位置"], (a.versionLog || []).slice().reverse().map(v =>
         "<tr><td>" + U.esc(v.version) + '</td><td class="idx">' + U.esc(v.at) + '</td><td class="cell-wrap">' + U.esc(v.note) + '</td><td class="cell-wrap muted">' + U.esc(v.usedBy || "—") + "</td></tr>").join(""),
         "当前仅有一个版本，尚未产生版本差异") , "版本不覆盖，旧版本永久可查") +
-      U.card("引用位置明细", U.table(["引用类型", "引用对象", "位置"], refList.map(r =>
-        "<tr><td>" + U.esc(r.kind) + '</td><td class="cell-wrap">' + U.esc(r.target) + '</td><td class="idx">' + U.esc(r.where) + "</td></tr>").join(""),
+      U.card("引用位置明细", U.table(["引用对象", "位置"], refList.map(r =>
+        "<tr><td class=\"cell-wrap\">" + U.esc(r.target) + '<div class="faint small">' + U.esc(r.kind) + '</div></td><td class="idx">' + U.esc(r.where) + "</td></tr>").join(""),
         "该资产当前没有下游引用"), "引用关系必须可查询（业务方案 §14.4）") +
       '<div class="btn-row-inline">' + U.btn("引用检查", "assets.refs", "", { id: a.id }) + (App.can("asset.manage") ? U.btn("新版本", "assets.newVersion", "primary", { id: a.id }) : "") +
       (App.can("asset.manage") ? U.btn("归档", "assets.archiveOne", "sm", { id: a.id }) : "") +

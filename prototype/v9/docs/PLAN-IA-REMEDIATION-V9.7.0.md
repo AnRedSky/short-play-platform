@@ -381,3 +381,57 @@ D-04 已把「操作列被推出视口」用吸附列兜住，但宽表本身仍
 | D-10 | 420px 抽屉内宽表（`assets.detail`、`workspace.cmdHelp`）仍横滚 1 | 预期行为，不阻断；若要彻底消除，需把抽屉内表改成 KV 列表，建议随下一次抽屉统一评审一起做 |
 | D-11 | 版本号纪律 | 已确认：改模块 JS 必须同步升 `?v=`；建议后续把 `?v=` 改为构建期时间戳，从根上消除启发式缓存踩坑 |
 | 推送策略 | `origin/develop` 停在 `fb36f1e`，本地已积累 6 个整改提交 | 待用户拍板：直推 develop 或开 PR 到 main；D-05（Actions 接审计）与 D-09 均等此决策 |
+
+---
+
+## 十五、D-10 / D-11 执行结果（9.7.6）
+
+### 15.1 D-10：抽屉内宽表收口
+
+D-08 把页面级表格的 1280 横滚清零后，`_pixel` 只剩抽屉内部两处横溢。抽屉可视内容区只有 324–358px，比页面窄卡还窄，任何两列 `cell-wrap`（min-width 150–180）叠加就会溢出。
+
+| 抽屉 | 改前 | 改后 |
+| --- | --- | --- |
+| `assets.detail` · 引用位置明细 | 3 列（引用类型 90 / 引用对象 150 / 位置 126），324px 内容区 need=42 | 2 列（引用对象 + 类型副行 / 位置），need=0 |
+| `workspace.cmdHelp` · 可用指令 | 3 列（目标 123 / 示例话术 150 / 风险 93），358px 内容区 need=8 | 2 列（目标 + 风险 pill 副行 / 示例话术），need=0 |
+
+`cmdHelp` 的合并还带来一个副产品：风险等级原本在第三列、与指令横向隔开，视线要走两跳；压成副行后「这条命令有多危险」和命令本身在同一格里，扫读成本更低。这不是为了省列而省列。
+
+复测：`_pixel` 两档 8 个抽屉全部不再出现「表横滚 1」。
+
+### 15.2 D-11：本地服务 no-store
+
+根因不是浏览器"太爱缓存"，而是 `python -m http.server` 只给 `Last-Modified`、没有 `Cache-Control`，Chrome 于是按「资源年龄的 10%」做启发式缓存——改完 `modules/*/pages.js` 再刷新，拿到的还是旧文件。D-08 期间两次出现「代码已改、need 不变」的假阴性，都是这个原因。
+
+新增 `tools/serve.mjs`（零依赖，Node 内置模块）：
+
+- 响应头 `Cache-Control: no-store, no-cache, must-revalidate` + `Pragma: no-cache` + `Expires: 0`；
+- 仅绑 `127.0.0.1`，默认 4199，端口可传参；
+- 带 MIME 表（html/js/mjs/css/json/图片/字体/md/txt）；
+- 目录请求回落 `index.html`；路径穿越（`..`）直接 403；
+- `/favicon.ico` 返 204，避免审计台里挂一条与页面无关的 404（此前每轮 `_pixel` 都会带 1 条 error）。
+
+实测：`HEAD /index.html` → `Cache-Control: no-store, must-revalidate, no-cache`；`HEAD /modules/tasks/pages.js` → `text/javascript; charset=utf-8`；`/favicon.ico` → 204。
+
+`?v=` 从此只作版本标记，不再承担破缓存职责；人工"改完必须升 ?v"的纪律解除，但发版时仍统一升版本号。
+
+### 15.3 回归
+
+- `regress` 通过；`_audit_links` 56 / LEGACY 10 / 失效 0；`_audit_actions` 330·264·0；`_audit_perms` 36 / 23 · missing none；`_audit_kpi` 127；`_audit_dups` 0；`_audit_project_guard` 23；`_audit_naming` 56/0；`_audit_buttons` 76 快照 0 例外；`_audit_rules` 14；`_audit_labels` 252/0；`_audit_density` 过薄 0。
+- `_audit_layout` 硬阻断 0 · 软观察 **39**；`_audit_overlap` 同名卡片 0 / 真双入口 0 / 写操作跨页 0 / 相似度 ≥0.5 为 0（唯一同名指标「已通过 ×3」属正常 KPI 复用）；`_audit_ux`、`_audit_carry`（弹窗过重 0 / 抽屉过载 0 / 跳转过碎 0）通过。
+- `flow` 18/18；`_journey` 22/22。
+- 浏览器：`_smoke` routes=56、`Smoke OK`；`_e2e` 37 PASS / 0 FAIL、`E2E OK`；`_pixel` 两档 FAILS=0、`Pixel OK`。
+- 全部 js `node --check`（含新增 `tools/serve.mjs`）通过。
+
+### 15.4 后续（E 系列：交互承载收敛）
+
+几何与列序已收口，下一批该动"同一页里承载方式过杂"：`_audit_ux` 目前仍有 4 页在同页混用 4 种承载（弹窗 / 抽屉 / 跳转 / 状态切换）。
+
+| 编号 | 页面 | 现状 | 方向 |
+| --- | --- | --- | --- |
+| E-01 | tasks/list | 抽屉 1 / 弹窗 3 / 跳转 3 / 状态切换 1 | 「详情」抽屉与「尝试与调用记录」跳转并存，收敛为：行内详情走抽屉，历史走页内 tab，去掉 1 条冗余跳转 |
+| E-02 | creation/brief | 抽屉 3 / 弹窗 1 / 跳转 1 / 写入 1 | 三个抽屉里两个只读说明（输入方式 / 生成前校验），改页内展开，抽屉只保留"追溯链路" |
+| E-03 | video/preview | 弹窗 2 / 跳转 3 / 状态切换 1 / 写入 1 | 预览与版本混在一页，按"看片 → 定版"拆承载：看片抽屉、定版弹窗、版本管理跳 `post/versions` |
+| E-04 | compliance/risks | 抽屉 1 / 弹窗 1 / 跳转 1 / 状态切换 1 | 处置动作与风险详情分离，处置统一走弹窗（写操作单入口），详情降为行内展开 |
+
+同时保留两项待决策：D-09（`_pixel` 进 CI）、D-05（审计脚本接 Actions），均卡在推送策略（`origin/develop` 停在 `fb36f1e`，本地已积 9 个整改提交）。

@@ -15,7 +15,7 @@
 ## 抽屉过载（字段 ≥12 或动作 ≥4）· 0 条
 
 ## 入边为 0 的页面（只能从菜单进入，下钻缺失）
-- models/config · 8073 字符
+- models/config · 7693 字符
 - ops/capabilities · 6296 字符
 - ops/overview · 7609 字符
 - orgs/departments · 4185 字符

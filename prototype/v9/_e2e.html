@@ -5,7 +5,7 @@
 </head>
 <body>
 <pre id="out">running…</pre>
-<iframe id="f" src="/index.html?v=9.7.5"></iframe>
+<iframe id="f" src="/index.html?v=9.7.6"></iframe>
 <script>
 const out = [];
 const flush = () => { document.getElementById("out").textContent = out.join("\n") || "running…"; };
@@ -49,7 +49,7 @@ async function go(hash) {
 }
 async function reload() {
   const fr = document.getElementById("f");
-  fr.src = "/index.html?v=9.7.5&r=" + Date.now();
+  fr.src = "/index.html?v=9.7.6&r=" + Date.now();
   await until(() => { try { return !!(W().App && W().DB.state && D().querySelector("#view")); } catch (e) { return false; } }, 9000);
   await wait(600);
 }
