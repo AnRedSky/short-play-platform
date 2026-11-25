@@ -195,13 +195,13 @@
           const offboarded = D.users.filter(u => ["停用", "已停用", "离职"].indexOf(u.status) >= 0).map(u => u.id);
           const candidates = D.projects.filter(p => (p.ownerId && offboarded.indexOf(p.ownerId) >= 0) || p.status === "异常中");
           const activeTask = (pid) => D.tasks.filter(t => t.project === pid && ["排队中", "执行中", "待执行", "待质检", "待人工处理", "失败", "重试中", "已暂停"].indexOf(t.status) >= 0).length;
-          const hp = candidates[0] || null;
+          const hp = candidates.find(p => p.id === App.get(SCOPE, "handoverProject", "")) || candidates[0] || null;
           const hpTasks = hp ? D.tasks.filter(t => t.project === hp.id && ["排队中", "执行中", "待执行", "待质检", "待人工处理", "失败", "重试中", "已暂停"].indexOf(t.status) >= 0) : [];
           const hpAssets = hp ? D.assets.filter(a => a.project === hp.id) : [];
           const hpOpenRisk = hp ? D.risks.filter(r => r.project === hp.id && String(r.status).indexOf("已") < 0).length : 0;
           const hpBlockRight = hp ? D.rights.filter(r => r.project === hp.id && String(r.status).indexOf("阻断") >= 0).length : 0;
           return U.page("组织与权限 / 离职与移交", "离职与移交", "移交保留原创建人、历史负责人、执行人、调用配置引用与费用归属；项目归属企业不变。",
-            U.btn("发起移交", "orgs.transfer", "primary") + U.btn("移交历史", "orgs.history"),
+            U.btn("发起移交", "orgs.transfer", "primary", hp ? { pid: hp.id } : {}) + U.btn("移交历史", "orgs.history"),
             U.card("待移交项目", U.table(["项目", "当前负责人", "阶段", "进行中任务", "待审 / 异常", "预算余额", "移交建议"], candidates.map(p =>
               '<tr><td>' + U.entity(p.name, p.id, "剧") + "</td><td>" + U.esc(p.owner) + "</td><td>" + U.esc(p.phase) + '</td><td class="num">' + activeTask(p.id) + "</td><td>" + U.pill(p.status) + '</td><td class="num">¥' + leftOf(p).toLocaleString() + "</td><td>" + U.esc(p.status === "异常中" ? "先闭环合规阻断，再移交" : "可直接移交，历史记录保留") + "</td><td>" + U.btn("移交预览", "orgs.preview", "sm", { id: p.id }) + "</td></tr>").join("")) +
               U.notice("停用员工名下项目、历史集数与已发生费用全部保留，不随人员变动删除。", "warn"), "移交不等于删除") +
@@ -425,6 +425,11 @@
     });
   });
 
+  App.on("orgs.toHandover", (el) => {
+    const pid = el && el.dataset && el.dataset.id;
+    if (pid) App.set(SCOPE, "handoverProject", pid);
+    App.go("orgs/handover");
+  });
   App.on("orgs.transfer", (el) => {
     if (!App.guard("grant.manage")) return;
     const requested = (el && el.dataset && el.dataset.pid) || "";

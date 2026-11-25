@@ -178,3 +178,29 @@ B6 文档版本（R-28/R-31/R-32）        门禁：全套回归 + _e2e 37 断�
 恢复方式（可复现）：按"两侧皆为非 ASCII 则视为正文、否则视为引号"的邻接规则逐字符回写，`post/pages.js` 另有 2 处 `" 处…"` 形态需手工回填（`refs + " 处"`、`" 处下游引用…"`）。恢复后 `node --check` 全站 0 失败，`regress / _audit_links / _audit_actions / _audit_perms / _audit_naming / _audit_kpi / flow / _journey / _audit_dups / _audit_project_guard` 全绿。
 
 **结论：禁止再用 PowerShell 批量替换 JS 源码**。改文案一律走 `Edit` 工具逐处替换，或写 `.mjs` 脚本用 Node 读写（Node 端 UTF-8 无此问题）。
+
+## 七、重复功能复核（2026-11-25 · 工具化，不再靠人眼）
+
+动机：前六章都是「按清单改」，缺一份能反复跑的「是否还有重复」的判据。新增 `tools/_audit_overlap.mjs`，对 56 条路由逐页渲染，按四个维度自动比对，并区分「允许重复」与「真重复」。
+
+复核范围：56 路由 = 菜单内 53 + 下钻 3（`orgs/member`、`projects/detail`、`projects/new`）。
+
+判定维度与结果：
+
+| 维度 | 口径 | 结果 |
+| --- | --- | --- |
+| ① 同名卡片跨页 | 卡片标题在 ≥2 页出现 = 同一块内容画两次 | **0** |
+| ② 同名指标 ≥3 页 | 「已通过」出现在 `audio/dialogue`、`post/episodes`、`post/review` | 三处粒度不同（对白校验 / 分集质检 / 成片审核），保留 |
+| ③ 页面级按钮同一动作 ≥2 页 | 只统计「业务动作」，导航 / 本地导出 / 全局创建单列 | **真双入口 0**；允许重复 8 组：`common.export` 12 页（各页导出自己的数据集）、`projects.wfOpen` 7 页 + `creation.toScript` 3 页 + `compliance.toRisks` 2 页 + `models.toProviders` 2 页 + `common.projects` 2 页 + `tasks.toList` 2 页（全部是导航到同一目的地）、`projects.new` 2 页（首页 CTA 与项目列表，全局创建入口） |
+| ③b 写操作被 ≥2 个菜单页引用 | 从 handler 体是否含 `App.modal/confirm/job/drawer` 判定写动作，再看它出现在几个菜单页的 HTML 里 | **0**（改前 1：`director.check` 出现在 `director/cast` 与 `director/world`） |
+| ④ 页面相似度 ≥0.5 | 卡片标题 + 指标 + 页面级动作的 Jaccard | **0 对**（最高对未达阈值） |
+
+本轮据此修掉的 4 处残留（都是「同一件事两处可做」，不是文案问题）：
+
+1. `projects/workflow` 头部「暂停项目」删除——暂停属生命周期操作，统一在 `projects/detail`（单项目）与 `projects/lifecycle`（批量），生产板不再误触。E2E 本就走 `projects/detail`，断言不受影响。
+2. `projects/detail`「发起移交」改为导航到 `orgs/handover`（新增动作 `orgs.toHandover`，带项目预选；`orgs/handover` 读取 `orgs.handoverProject` 决定预览对象）——移交的唯一执行入口收敛到组织域，项目档案只负责跳转。
+3. `projects/lifecycle` 的「可见项目状态分布」删除——与 `projects/list` 的「项目状态分布」是同一份计数，属重复呈现；该卡改为「暂停与恢复动作」（只讲动作语义，并注明「状态分布见项目列表」）。标题避开「口径」二字，规则卡审计维持 15 张。
+4. `director/cast` 头部与 `director/world` 道具卡上的「一致性抽检」删除——抽检是项目级动作（读全部镜头、写质量报告），入口只留 `director/shots` 镜头清单。
+   另：`models/config` 的「新增资源」改为按权限分流——管理员看到「供应商与模型」导航（新增供应商只在 `models/providers`），无管理权限的员工保留「新增资源」（他们进不去 providers，这是必要入口）。
+
+结论：**结构层面的重复页功能已全部处理完成**，剩余跨页重复只允许三类——导航到同一目的地、页面本地导出、全局创建入口（首页新建项目）。这三类不是冗余，而是入口便利；一旦有人把某个「写动作」加进第二个页面，`_audit_overlap` 的 ③b 会直接报出来。

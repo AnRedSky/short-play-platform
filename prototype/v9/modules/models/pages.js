@@ -32,7 +32,9 @@
             U.btn(p.status === "启用" ? "停用" : "启用", "models.toggle", "sm", { id: p.id }) + " " +
             U.btn("删除", "models.remove", "sm", { id: p.id }) + "</td></tr>").join("");
           return U.page("模型与资源 / 资源配置", "资源配置", "每个任务执行时明确归属：使用谁的配置、谁的额度，避免「借用他人配置」这类不可审计的做法。",
-            U.btn("新增资源", "models.newProvider", "primary") + (App.can("models.manage") ? U.btn("路由策略", "models.toRouting") : ""),
+            (App.can("models.manage")
+              ? U.btn("供应商与模型", "models.toProviders", "primary") + U.btn("路由策略", "models.toRouting")
+              : U.btn("新增资源", "models.newProvider", "primary")),
             '<div class="grid grid-4">' +
               U.metric("个人自持", String(selfP.length), "使用本人凭据与个人额度", "◉") +
               U.metric("企业托管资源", String(allocated.length), allocated.length ? allocated.map(p => p.name).join(" / ") : "当前无企业分配资源", "◇") +
@@ -88,7 +90,7 @@
           const noCompat = D.routePolicy.compat.filter(c => !c.ok);
           const noCompatText = noCompat.map(c => c.item).join("、");
           return U.page("模型与资源 / 能力与路由", "能力与路由", "备用模型不是自动兜底：兼容项不满足时不允许切换，只能人工决策或调整镜头设计。",
-            U.btn("修改路由策略", "models.editRoute", "primary") + U.btn("供应商", "models.toProviders"),
+            U.btn("修改路由策略", "models.editRoute", "primary") + U.btn("供应商与模型", "models.toProviders"),
             '<div class="grid grid-4">' +
               U.metric("能力项", String(D.capabilities.length), "文本到成片全链路", "▤") +
               U.metric("视频能力", String(D.videoCapabilities.length), "已接入 / 受限 / 规则实现", "▦") +

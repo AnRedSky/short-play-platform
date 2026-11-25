@@ -112,7 +112,6 @@
           const stagePage = { script: "creation/script", breakdown: "creation/breakdown", plan: "director/plan", video: "video/production", post: "audio/subtitle", qc: "quality/reports", final: "post/review", delivery: "post/delivery" };
           return U.page("项目中心 / " + p.id + " / 制作流水线", p.name + " · 从剧本到交付", "不是功能目录，而是这部戏今天真实走到哪一步。每个按钮都落到项目状态、任务、成本与质检记录上。",
             U.btn("项目档案", "projects.detail", "", { id: p.id }) +
-            (App.can("project.manage") && DB.state.canMove(p, "已暂停").ok ? U.btn("暂停项目", "projects.pause", "", { id: p.id }) : "") +
             U.btn("返回项目列表", "common.projects"),
             '<section class="wf-hero">' +
               '<div class="wf-cover">' + (U.cover(p.id) ? '<img src="' + U.esc(U.cover(p.id)) + '" alt="">' : "") +
@@ -254,7 +253,7 @@
           const actions = [];
           actions.push(U.btn("制作流水线", "projects.wfOpen", "primary", { pid: p.id }));
           if (App.can("project.manage") && DB.state.canMove(p, "已暂停").ok) actions.push(U.btn("暂停项目", "projects.pause", "", { id: p.id }));
-          if (grantable) actions.push(U.btn("发起移交", "orgs.transfer"));
+          if (grantable) actions.push(U.btn("发起移交", "orgs.toHandover", "", { id: p.id }));
           if (App.can("delivery.execute") && ["待最终审核", "已完成"].indexOf(p.status) >= 0) actions.push(U.btn("进入交付", "projects.deliveryLink", "primary", { id: p.id }));
           const members = (p.members || []).map(m => {
             const u = D.users.find(x => x.id === m.userId) || { name: m.userId, dept: "—" };
@@ -318,9 +317,8 @@
               "<tr><td>" + U.pill(s.name) + '</td><td class="cell-wrap">' + U.esc(s.mean) + '</td><td class="cell-wrap muted">' + U.esc(s.enter) + "</td><td>" + U.esc(s.end) + "</td></tr>").join("")), "状态与业务结果分离") +
             '<div class="grid grid-2 mt-4">' +
               U.notice("口径与规则见《口径与规则汇总》§R-33：迁移规则", "info") +
-              U.card("可见项目状态分布", U.stackbar([{ label: "已暂停", value: paused, color: "var(--warn)" }, { label: "异常中", value: abnormal, color: "var(--bad)" }, { label: "进行中", value: active, color: "var(--ok)" }, { label: "其他", value: Math.max(0, visible.length - paused - abnormal - active), color: "var(--line-strong)" }]) +
-                U.listRows([["暂停", "阻止新任务派发；按供应商能力取消或等待运行中任务收口"], ["恢复", "重新计算可执行任务集合，不重复提交已成功任务"], ["异常恢复", "重新做预算预检与资源可用性检查"]]) +
-                '<div class="mt-3">' + U.btn("查看异常中心", "projects.incidentsLink", "sm") + "</div>", "计数来自当前可见项目，不使用固定示例值") +
+              U.card("暂停与恢复动作", U.listRows([["暂停", "阻止新任务派发；按供应商能力取消或等待运行中任务收口"], ["恢复", "重新计算可执行任务集合，不重复提交已成功任务"], ["异常恢复", "重新做预算预检与资源可用性检查"], ["批量与单项目", "批量只作用于当前可见项目；单项目暂停在项目档案，避免生产板误触"]]) +
+                '<div class="mt-3">' + U.btn("查看异常中心", "projects.incidentsLink", "sm") + "</div>", "状态分布见项目列表，此处不重复计数") +
             "</div>" +
             U.card("项目当前状态", U.table(["项目", "当前状态", "阶段", "负责人", "更新时间", "下一步"], visible.map(p => {
               const next = DB.derived.workflow(p).next[0];

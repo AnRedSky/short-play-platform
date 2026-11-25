@@ -1,0 +1,140 @@
+## 路由 56 条 · 菜单内 53 条 · 下钻 3 条
+
+## ① 同名卡片跨页（同一块内容被两页各画一次）
+无
+
+## ② 同名指标 ≥3 页
+- 已通过 × 3：audio/dialogue / post/episodes / post/review
+
+## ③ 同一动作被 ≥2 页当作页面级按钮（双入口）
+无（其余均为导航 / 页面本地导出 / 全局创建入口）
+
+### 允许重复的三类
+- common.export × 12（页面本地导出（各页导出自己的数据集））：analytics/enterprise / assets/library / compliance/rights / director/cast / ops/capabilities / ops/config / ops/logs / ops/queue / orgs/grants / orgs/members / projects/list / tasks/attempt
+- projects.wfOpen × 7（导航到同一目的地）：creation/breakdown / creation/script / post/delivery / post/episodes / post/review / projects/detail / workspace/home
+- creation.toScript × 3（导航到同一目的地）：creation/plan / creation/review / director/plan
+- compliance.toRisks × 2（导航到同一目的地）：compliance/audit / compliance/rights
+- models.toProviders × 2（导航到同一目的地）：models/config / models/routing
+- projects.new × 2（全局创建入口（首页 CTA 与项目列表））：projects/list / workspace/home
+- common.projects × 2（导航到同一目的地）：projects/new / projects/workflow
+- tasks.toList × 2（导航到同一目的地）：tasks/attempt / tasks/queue
+
+## ③b 写操作被 ≥2 个菜单页引用（同一件事两处可改）
+无
+
+## ④ 页面相似度 ≥0.5（疑似同功能两块皮）
+无
+
+## ⑤ 页面功能清单（供人工判定重叠）
+- analytics/enterprise · 卡 3：交付与成本趋势 | 企业指标口径（业务方案 §19.3 五组 · §19.5 口径定义） | 定时快照（不可回溯篡改）
+    页面级动作：common.export ｜ tab：analytics.tab
+- analytics/me · 卡 0：—
+    页面级动作：analytics.toEnterprise / analytics.toEmployees
+- assets/library · 卡 3：资产目录 · 2 项 · 第七码头 | 八类资产 | A-1132 · 不可交付资产
+    页面级动作：assets.upload / common.export ｜ tab：assets.tab
+- audio/bgm · 卡 6：素材台账 · 第七码头 | 授权阻断 · AU-26015-BGM-03 | 混音标准 | 授权类型 | 使用建议 | 素材状态
+    页面级动作：audio.newAsset / audio.toRights
+- audio/dialogue · 卡 4：对白清单 · 第七码头 | 生成与校验规则 | 当前项目音频成本 | 对白状态分布
+    页面级动作：audio.batchDialogue / audio.toVoice
+- audio/subtitle · 卡 1：字幕校验项 · 第七码头
+    页面级动作：audio.genSub / audio.batchLip
+- audio/voice · 卡 4：声音档案 · 第七码头 | 授权风险 · VO-11 | 试听占位 | 音频异常 · 第七码头
+    页面级动作：audio.newVoice / audio.rightsCheck
+- compliance/audit · 卡 2：日志 · 当前 1 条 · 第七码头 | 11 类审计事件
+    页面级动作：compliance.toRights / compliance.toRisks
+- compliance/rights · 卡 5：授权台账 · 3 项 · 第七码头 | RT-03 · 阻断交付 | 授权有效期规则 | RT-02 · 快到期的授权 | 权利类型分布
+    页面级动作：compliance.newRight / compliance.toRisks / common.export
+- compliance/risks · 卡 3：风险清单 · 2 项 · 第七码头 | 等级与处置 | IN-0087 · 未闭环
+    页面级动作：compliance.newRisk / compliance.toAudit ｜ tab：compliance.tab
+- cost/budget · 卡 4：预算表 · 第七码头 | 预检与阻塞 | SP-26015 第七码头 预算告警 | 使用率分布
+    页面级动作：cost.toLedger / cost.setThreshold
+- cost/ledger · 卡 3：成本明细 · 1 笔 | 十维成本口径 | CR-26015-204 · 失败成本示例
+    页面级动作：cost.toBudget ｜ tab：cost.tab
+- creation/breakdown · 卡 7：拆解结果 · SCR-26015-V2 | 集 / 场 | 人物 | 场景 / 道具 | 引用关系 | 拆解待处理 | 拆解质量自检
+    页面级动作：projects.wfOpen / creation.toDirector
+- creation/brief · 卡 6：当前项目 · 第七码头 | 创意设定台账 · 第七码头 | 当前创意设定 · CB-26015-02 | 版本记录 | 输入方式（七选一） | 生成前校验
+    页面级动作：creation.toPlan / creation.importNovel
+- creation/plan · 卡 2：方案对比 | 方案到剧本的交接
+    页面级动作：creation.toScript / creation.toBrief
+- creation/review · 卡 6：待审对象 | 分集覆盖 | 审核清单（7 项） | 审核结论 | 变更影响分析（业务方案 §6.4） | 历史审核
+    页面级动作：creation.reviewHistory / creation.toScript
+- creation/script · 卡 3：当前版本 | 分集覆盖 · SP-26015 | 剧本流转与当前位置
+    页面级动作：creation.toReview / projects.wfOpen
+- director/cast · 卡 3：人物档案表 | 档案待处理 | 当前项目人物
+    页面级动作：director.newChar / common.export
+- director/plan · 卡 6：规划链路 | 场次规划 · 第七码头 | 并行分组与门禁 | 镜头契约必填字段 | 规划待处理 | 规划口径
+    页面级动作：creation.toScript / director.toStoryboard
+- director/shots · 卡 4：镜头清单 · E9 | 镜头卡预览 | 批量提交校验 | 契约字段组（10 项）
+    页面级动作：director.newShot / director.batchSubmit ｜ tab：director.view
+- director/world · 卡 4：场景（0） | 道具（0） | 场景一致性要求 | 道具连续性
+    页面级动作：director.newLoc / director.newProp
+- models/config · 卡 6：我的资源配置 | 企业托管资源与额度（管理员视图） | 资源归属与可见性 | PRV 资源异常 | 额度占用 | 资源验证记录
+    页面级动作：models.toProviders / models.toRouting
+- models/providers · 卡 4：供应商（8 家） | 模型能力档案（7 个） | 接入方式 | 错误分类
+    页面级动作：models.newProvider / models.toLogs
+- models/routing · 卡 6：路由策略 · RP-26031-04 | 备用切换兼容校验 | 能力清单 | 剪辑与后期能力 | 视频能力可用性 | 路由原则
+    页面级动作：models.editRoute / models.toProviders
+- notify/inbox · 卡 2：升级规则 | 通知要素与渠道
+    页面级动作：notify.readAll / notify.toIncidents ｜ tab：notify.tab
+- ops/capabilities · 卡 1：十六类模型能力
+    页面级动作：ops.adapterRegister / common.export ｜ tab：ops.tab
+- ops/config · 卡 2：全局参数 | 数据保留与归档策略
+    页面级动作：ops.saveConfig / common.export
+- ops/logs · 卡 3：系统日志 | 来源分布 | 队列积压与失败
+    页面级动作：common.export
+- ops/overview · 卡 4：服务健康与监控 | 平台边界说明 | 存储占用 | 按角色可见范围
+    页面级动作：ops.queueLink / ops.toConfig
+- ops/queue · 卡 4：任务队列 | 媒体存储 | 备份与恢复 | 容量与成本趋势
+    页面级动作：common.export
+- orgs/departments · 卡 2：部门列表 | 部门视图授权
+    页面级动作：orgs.newDept
+- orgs/enterprise · 卡 4：企业档案 | 统一治理范围 | 企业策略 | 治理边界
+    页面级动作：orgs.editEnterprise / orgs.editPolicy / orgs.toAnalytics
+- orgs/grants · 卡 2：项目 × 成员授权矩阵 | 待处理授权申请
+    页面级动作：orgs.grantNew / common.export
+- orgs/handover · 卡 3：待移交项目 | 移交预览要素 · 第七码头 | 移交与成员变更记录
+    页面级动作：orgs.transfer / orgs.history
+- orgs/member（下钻） · 卡 0：—
+    页面级动作：orgs.toMembers
+- orgs/members · 卡 1：成员目录
+    页面级动作：orgs.newMember / common.export
+- orgs/roles · 卡 3：六类角色 | 权限码清单（36 项） | 三层判定与按钮层示例
+    页面级动作：orgs.newRole / orgs.editPerms
+- post/delivery · 卡 3：交付包清单 · 第七码头 | 交付内容模板（9 类） | 生成前检查
+    页面级动作：projects.wfOpen ｜ tab：post.tab
+- post/episodes · 卡 5：分集成片 · 第七码头 | 分集完成度 | 成片输出规格 | 分集质检结论 | 整剧打包条件
+    页面级动作：projects.wfOpen / post.toReview
+- post/review · 卡 5：成片审核记录 · 第七码头 | 审核清单（节点 B · 10 项） | 审核结论口径（业务方案 §16.3 · 四种结论） | 当前审核对象 · 第七码头 | 判定维度
+    页面级动作：projects.wfOpen / post.reviewHistory
+- post/timeline · 卡 6：时间线清单 | E1 时间线 · 未创建 | 剪辑要点 | 时间线结构 | 标脏片段 | 输出规格
+    页面级动作：post.toEpisodes
+- post/versions · 卡 3：链路视图 · 第七码头 | 版本记录 · 第七码头 | 当前版本状态
+    页面级动作：post.refCheck / post.toAssets
+- projects/detail（下钻） · 卡 8：阶段进度 | 项目档案 | 创作基准（下游唯一依据） | 成员与授权 | 预算与成本 | 质量与审核 | 风险与待办 | 生命周期记录
+    页面级动作：projects.wfOpen / projects.pause / orgs.toHandover
+- projects/lifecycle · 卡 3：状态定义与进入条件 | 暂停与恢复动作 | 项目当前状态
+    页面级动作：projects.pauseAll / projects.resumeAll / projects.terminate
+- projects/list · 卡 1：项目状态分布
+    页面级动作：projects.new / common.export ｜ tab：projects.setRel
+- projects/new（下钻） · 卡 5：项目属性（必填项标 *） | 创意输入 | 创建校验 | 从既有项目复制 | 预算与资源预检
+    页面级动作：common.projects
+- projects/workflow · 卡 3：全 16 集生产板 | 最近质检 | 成本与预算
+    页面级动作：projects.detail / common.projects
+- quality/reports · 卡 5：QR-26015-E09 · 未通过 | 报告可信口径 | 检测结果分布 | 报告趋势 | 报告有效期
+    页面级动作：quality.toRework ｜ tab：quality.tab
+- quality/rework · 卡 4：返工台账 | 自动 vs 人工 | RW-26015-009 · 第 3 轮 | 返工成本分布
+    页面级动作：quality.newRework / quality.toReports
+- tasks/attempt · 卡 5：尝试记录 | 模型调用记录 | T-8821 · 3 次尝试 / 上限 3 | 失败分类 | 凭据隔离
+    页面级动作：tasks.toList / common.export
+- tasks/list · 卡 5：任务列表 · 当前 1 条 | 任务状态（业务方案 §12.2 · 11 类） | 失败类型与差异化策略（业务方案 §12.5） | T-8821 · 已用尽尝试 | 重试规则
+    页面级动作：tasks.toQueue / tasks.toAttempts
+- tasks/queue · 卡 3：队列看板 | 资源池 | 等待原因 · 实时
+    页面级动作：tasks.toList / tasks.setConcurrency
+- video/preview · 卡 4：与契约比对 | 采用决策 | 镜头摘要 | 同组衔接
+    页面级动作：video.regenShot ｜ tab：video.tab
+- video/production · 卡 4：四状态分离口径 | 失败处理与重试 | 批次进度 | 资源配置占用
+    页面级动作：video.newBatch / video.pauseQueue / video.toTasks
+- workspace/assistant · 卡 5：输入指令 | 可识别的目标类型（业务方案 §20.4） | 本次会话执行记录 | 能力边界 | 确认机制
+    页面级动作：workspace.cmdHelp / workspace.cmdHistory
+- workspace/home · 卡 2：分集 | 今日待办
+    页面级动作：projects.new / projects.wfOpen

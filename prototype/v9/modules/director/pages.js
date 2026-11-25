@@ -126,7 +126,7 @@
             '<tr><td>' + U.entity(c.name, c.id, String(c.name).slice(0, 1)) + "</td><td>" + U.esc(c.age) + '</td><td class="cell-wrap">' + U.esc(c.look) + '</td><td class="cell-wrap muted">' + U.esc(c.costume) + '</td><td class="cell-wrap">' + U.esc(c.forbid) + '</td><td class="num">' + (c.refs || 0) + "</td><td>" + U.code(c.version) + "</td><td>" + U.pill(c.status) + "</td><td>" +
             U.btn("档案", "director.charDetail", "sm", { id: c.id }) + "</td></tr>").join("");
           return U.page("导演规划 / 人物视觉档案", "人物视觉档案 · " + p.name, "人物一致性靠固定参考与禁用项约束，不靠每次重新描述；这里只显示当前项目的档案。",
-            U.btn("新建人物档案", "director.newChar", "primary", { pid: pid }) + U.btn("一致性抽检", "director.check", "primary", { pid: pid }) + U.btn("导出档案", "common.export"),
+            U.btn("新建人物档案", "director.newChar", "primary", { pid: pid }) + U.btn("导出档案", "common.export"),
             U.card("人物档案表", U.table(["人物", "年龄", "外观特征", "造型", "禁用项", "参考", "版本", "状态", "操作"], rows, "当前项目还没有人物档案"), "档案版本变更需列出受影响镜头") +
             '<div class="split mt-4"><div class="stack">' +
               (sel
@@ -162,7 +162,7 @@
           return U.page("导演规划 / 场景与道具", "场景与道具 · " + p.name, "场景与道具的连续性靠版本与状态追踪，不靠记忆；当前只显示本项目的场景与道具。",
             U.btn("新增场景", "director.newLoc", "", { pid: pid }) + U.btn("新增道具", "director.newProp", "primary", { pid: pid }),
             U.card("场景（" + locs.length + "）", U.table(["场景", "类型", "布局", "光线", "色彩", "参考", "版本", "状态", "操作"], locRows, "当前项目还没有场景档案"), "场景参考不足时不允许生产该场次") +
-            U.card("道具（" + props.length + "）", U.table(["道具", "类型", "外观", "状态变化", "归属", "参考", "版本", "一致性", "操作"], propRows, "当前项目还没有道具档案"), "道具状态变化必须标注集次", U.btn("一致性抽检", "director.check", "sm", { pid: pid })) +
+            U.card("道具（" + props.length + "）", U.table(["道具", "类型", "外观", "状态变化", "归属", "参考", "版本", "一致性", "操作"], propRows, "当前项目还没有道具档案"), "道具状态变化必须标注集次") +
             '<div class="grid grid-2 mt-4">' +
               U.card("场景一致性要求", U.listRows([["光线基准", "同一场景跨集复用必须保持同一光线版本"], ["构图基准", "关键物件位置在画面中的基准不得随集次漂移"], ["复用", "同一场景跨集复用需保持同一版本"], ["抽检", "新场次首次生成必须抽检 1 帧"]]) , "场景变更影响整场镜头") +
               U.card("道具连续性", (props.length
