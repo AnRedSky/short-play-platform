@@ -25,6 +25,7 @@ B2 收盘后在同版内继续做了五类整改，均以脚本断言落地：
 - **权限对齐（B5）**：新增 `delivery.read` / `task.read`；`workspace/home` 改 `project.read|platform.read`（六身份全可达）；`post/delivery` 读走 `delivery.read`、执行走 `delivery.execute`；`tasks/*` 路由 `task.read`、写按钮 `task.operate`；`models/config` 改 `models.own|models.manage`，管理员多一张「企业托管资源与额度」。
 - **预算单账本（R-32）**：`DB.analytics.depts` 与 `DB.enterprise` 的预算字段降级为 `DB.budgets` 的投影，由 `derived.syncScopeBudgets()` 在账本变动后回写；补齐「短剧二组」「经营管理部」两条部门账本；`_audit_kpi` 112 → 127 项（新增"部门/企业已用 = 账本 used"断言）。
 - **规则卡收敛（R-17）**：`tools/_audit_rules.mjs` 盘出 43 张规则/口径卡（10 页各 2 张）。每个域只留 1 张（共 **15 张**，单页 ≤1），其余 28 张条文由 `tools/_dump_rules.mjs` 渲染抽取进 `docs/RULES-V9.7.0.md`（§R-01…§R-43 按域分节），页面对应位置折叠为一行 `U.notice("口径与规则见《口径与规则汇总》§R-xx：…")`。折叠由 `tools/_fold_rules.mjs` 做括号配对替换，信息不丢、可回查。
+- **密度修补（R-17 收尾）**：折叠后 `tools/_audit_density.mjs` 报出 5 个过薄页。处理：①同页并排的两条折叠提示合并为一条带结论的口径行（`ops/logs` §R-21+R-22、`audio/voice` §R-08+R-09、`audio/subtitle` §R-06+R-07、`post/delivery` §R-28+R-29、`analytics/me` §R-02+R-03），不再出现"两行空提示"的视觉空洞；②`ops/logs` 补两张**真实派生**卡（来源分布按日志表实时统计、队列积压/失败/重试按 `DB.ops.queue` 投影）；③`creation/script` 无正文样本时补「剧本流转与当前位置」卡（四步流转 + 当前停在哪一步），不再只有空态。判定口径同步收紧为「<1400 字符，或 卡≤1 无表且 <3000 字符」，`orgs/member`（下钻缺 query 的空态）白名单。结果：**过薄 0 页 / 56 页**，规则卡仍 15 张、单页 ≤1。
 - **浏览器验收（R-28）**：`_smoke.html` 56 路由 + 9 条合并页 tab 断言 + 3 身份拦截 → **Smoke OK**；`_e2e.html` 断言 **28 → 37**（新增交付包 / 成本台账 / 分镜板三页的「切 tab 后内容正常 + `App.refresh()` 后仍停在该 tab」）→ **E2E OK**。
 - **冒烟与回归**：`_smoke.html` 路由遍历自适应 `App.routes()`（当前 56），并新增 9 条合并页 tab 断言（点击 `data-value` 后断言非空、无 `undefined/NaN`）。切 tab 前会把身份重置为项目负责人（`i-owner`），`analytics/*` 用 `i-admin`——否则上一步角色遍历留下的无权限身份会让页面变 403，误判成"缺 tab 控件"。
 
@@ -370,6 +371,7 @@ node tools/_audit_dups.mjs       # 动作重复
 node tools/_audit_naming.mjs     # 页眉/标题/章节唯一性，面包屑必须由 DB.menu 派生
 node tools/_audit_buttons.mjs    # 按钮密度（同页同动作 ≤1、页面级动作 ≤6）与 ≥12KB 体量
 node tools/_audit_rules.mjs      # 规则/口径卡分布：全站 ≤17 张且单页 ≤1（改规则卡后必跑）
+node tools/_audit_density.mjs    # 页面密度：<1400 字符、或 卡≤1 无表且 <3000 字符 视为过薄（R-17 折叠后遗症复核）
 node tools/_audit_project_guard.mjs  # 项目页阻断
 node tools/_probe_tab.mjs video/preview versions   # 单 tab 渲染探针（合并页必跑）
 ```

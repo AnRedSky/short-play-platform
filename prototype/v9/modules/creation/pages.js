@@ -94,7 +94,13 @@
                 ? (p.status === "创意策划中" ? U.btn("查看方案", "creation.toPlan", "primary", { id: project }) : p.status === "剧本创作中" ? U.btn("生成候选剧本", "creation.generateScript", "primary", { id: project }) : U.btn("制作流水线", "projects.wfOpen", "primary", { pid: project }))
                 : U.btn("去剧本审核", "creation.toReview", "primary", { id: project })) + U.btn("制作流水线", "projects.wfOpen", "", { pid: project }),
               U.card("当前版本", cur ? U.desc([["版本", cur.id], ["状态", cur.status], ["规模", cur.episodes + " 集 / " + (cur.scenes || 0) + " 场 / " + (cur.shots || 0) + " 镜 / " + (cur.lines || 0) + " 行"], ["项目", project], ["提交人 / 时间", cur.by + " · " + cur.at], ["说明", cur.note || "—", true]]) : U.empty("暂无剧本版本", "先导入小说或从创意生成候选剧本。"), "未载入正文时不展示虚构内容") +
-              U.card("分集覆盖 · " + project, eps.length ? U.table(["集", "标题", "场", "镜头", "时长", "状态"], eps.map(e => '<tr><td class="num">E' + e.no + '</td><td>' + U.esc(e.title) + '</td><td class="num">' + e.scenes + '</td><td class="num">' + e.shots + '</td><td class="num">' + U.esc(e.duration) + '</td><td>' + U.pill(e.status) + "</td></tr>").join("")) : U.empty("尚未拆解分集", "剧本审核锁定后才能生成集、场与镜头契约"), "只展示当前项目真实记录")
+              U.card("分集覆盖 · " + project, eps.length ? U.table(["集", "标题", "场", "镜头", "时长", "状态"], eps.map(e => '<tr><td class="num">E' + e.no + '</td><td>' + U.esc(e.title) + '</td><td class="num">' + e.scenes + '</td><td class="num">' + e.shots + '</td><td class="num">' + U.esc(e.duration) + '</td><td>' + U.pill(e.status) + "</td></tr>").join("")) : U.empty("尚未拆解分集", "剧本审核锁定后才能生成集、场与镜头契约"), "只展示当前项目真实记录") +
+              U.card("剧本流转与当前位置", U.listRows([
+                ["1 创意设定", "结构化创意设定确认后才允许生成候选剧本"],
+                ["2 候选剧本", "可并存多个候选，未通过不进入生产"],
+                ["3 审核锁定", "正式版本锁定后不静默覆盖，修改走变更或新建 V2"],
+                ["4 拆集建约", "锁定后拆出集 / 场 / 镜头契约，成为下游唯一依据"]
+              ]), "当前停在：" + (!cur ? "未建立剧本版本" : cur.locked ? "已锁定 " + cur.id : "候选 " + cur.id + "（待审核）"))
             );
           }
           const scriptEps = D.episodes.filter(e => e.project === project).sort((a, b) => a.no - b.no);

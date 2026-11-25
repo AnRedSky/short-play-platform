@@ -185,8 +185,7 @@
                 U.listRows([["个人承担", money(personalCost) + " · " + share + "%"], ["企业承担", money(entCost) + " · " + (100 - share) + "%"], ["失败成本", money(costs.reduce((s, c) => s + c.failed, 0)) + "（含重试）"]]) , "按承担方分列，不合并成一句总消耗") +
             '</div><div class="stack">' +
               U.card("项目完成度", mine.length ? U.bars(mine.map(p => p.id.slice(-5)), mine.map(p => DB.derived.progressOf(p).pct), "%") : U.empty("暂无项目", "无可见项目。"), "按已完成集数占比") +
-              U.notice("口径与规则见《口径与规则汇总》§R-02：复盘提示", "info") +
-              U.notice("口径与规则见《口径与规则汇总》§R-03：口径说明", "info") +
+              U.notice("复盘口径：失败任务需在质量报告里回指任务与镜头；统计月份只做视图标注，历史快照不可改写（§R-02 / §R-03）。", "info") +
             "</div></div>"
           );
         }

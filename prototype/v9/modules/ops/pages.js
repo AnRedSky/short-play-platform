@@ -118,6 +118,8 @@
             "<tr><td>" + U.esc(l.at) + '</td><td>' + U.pill(l.level, l.level === "ERROR" ? "bad" : l.level === "WARN" ? "warn" : "info") + '</td><td>' + U.esc(l.source) + '</td><td class="cell-wrap">' + U.esc(l.message) + "</td></tr>").join("");
           const errors = logs.filter(l => l.level === "ERROR").length;
           const warns = logs.filter(l => l.level === "WARN").length;
+          const srcs = Object.entries(logs.reduce((m, l) => { m[l.source] = (m[l.source] || 0) + 1; return m; }, {}));
+          const qs = D.ops.queue || [];
           return U.page("平台管理 / 系统日志", "系统日志", "日志用于定位问题，不承担业务鉴权；凭据、密钥等敏感字段一律脱敏。",
             U.btn("导出日志快照", "common.export"),
             '<div class="grid grid-4">' +
@@ -128,9 +130,10 @@
             "</div>" +
             U.card("系统日志", U.table(["时间", "级别", "来源", "内容"], svcLogs, "当前没有日志记录")) +
             '<div class="grid grid-2 mt-4">' +
-              U.notice("口径与规则见《口径与规则汇总》§R-21：日志边界", "info") +
-              U.notice("口径与规则见《口径与规则汇总》§R-22：监控口径", "info") +
-            "</div>");
+              U.card("来源分布", U.listRows([["按级别", "ERROR " + errors + " · WARN " + warns + " · INFO " + Math.max(0, logs.length - errors - warns)], ["按来源", srcs.map(s => s[0] + " " + s[1]).join(" · ")]]) , "按上方日志表实时统计") +
+              U.card("队列积压与失败", U.listRows(qs.map(q => [q.name, "待执行 " + q.pending + " · 失败 " + q.failed + " · 重试 " + q.retry])), "与「监控概览」页同源，只报积压 / 失败 / 重试") +
+            "</div>" +
+            U.notice("日志边界：运维日志与业务审计分离、任何日志不记录凭据明文，审计走「合规与审计 / 审计日志」（§R-21 / §R-22）。", "info"));
         }
       },
       {

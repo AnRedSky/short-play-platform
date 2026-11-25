@@ -87,8 +87,7 @@
                 '<div class="wave-box"><span class="wave-line"></span><span class="faint small">48kHz · 单声道 · −16 LUFS（参数取自最近一次生成记录）</span></div>', "不伪造音频内容") +
             '</div><div class="stack">' +
               U.card("音频异常 · " + U.esc(p ? p.name : pid), '<div class="kv-grid">' + U.kv("对白异常", badDlg + " 条") + U.kv("口型不匹配", badLip + " 条") + U.kv("字幕待处理", badSub + " 条") + U.kv("声音档案", voices.length + " 份") + "</div>", "当前项目实际记录") +
-              U.notice("口径与规则见《口径与规则汇总》§R-08：音色规则", "info") +
-              U.notice("口径与规则见《口径与规则汇总》§R-09：成本口径", "info") +
+              U.notice("音色与成本口径：一人一档、跨集同版本、真人声音须留授权；语音按生成秒数计费，失败与重试同样入账（§R-08 / §R-09）。", "info") +
             "</div></div>"
           );
         }
@@ -162,8 +161,7 @@
                 ["标点", "句末标点统一", subBad.length ? "待复核" : "已校验"],
                 ["敏感词", "合规词典命中即阻断", "0 命中"]
               ].map(r => "<tr><td>" + r[0] + "</td><td class=\"cell-wrap\">" + r[1] + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("")), "校验结果进入分集质量报告") +
-              U.notice("口径与规则见《口径与规则汇总》§R-06：口型口径", "info") +
-              U.notice("口径与规则见《口径与规则汇总》§R-07：静态原型说明", "info") +
+              U.notice("口型与字幕口径：口型按对白帧对齐、台词变更须重做口型，匹配度低于 85% 判人工；本原型不含真实字幕与音频文件（§R-06 / §R-07）。", "info") +
             "</div>"
           );
         }
