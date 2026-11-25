@@ -148,18 +148,13 @@ function assetReferences(a) {
     const refList = assetReferences(a);
     App.drawer("资产 · " + a.id,
       U.desc([
-        ["名称", a.name],
-        ["类型", a.cat + " / " + a.type],
-        ["企业归属", "企业内部私有化部署 · 单企业主体"],
-        ["项目归属", a.project + (pj ? " · " + pj.name : "")],
-        ["创建人", a.creator || "—"],
-        ["执行人", a.executor || "—"],
-        ["来源（模型调用与参数摘要）", a.origin || "—"],
+        ["名称 · 类型", a.name + " · " + a.cat + " / " + a.type],
+        ["归属", (a.project + (pj ? " · " + pj.name : "")) + " · 企业私有化"],
+        ["创建 / 执行", (a.creator || "—") + " → " + (a.executor || "—")],
+        ["来源（模型调用与参数）", a.origin || "—"],
         ["版本", a.version + " / 共 " + a.versions + " 版"],
-        ["存储位置", a.storage || "企业媒体存储 / " + a.project],
-        ["校验摘要", a.checksum || "—"],
-        ["格式 / 尺寸 / 时长", a.size || "—"],
-        ["质量状态", a.qc || "—"],
+        ["存储 · 校验", (a.storage || "企业媒体存储 / " + a.project) + " · " + (a.checksum || "—")],
+        ["格式 / 尺寸 / 时长 · 质量", (a.size || "—") + " · " + (a.qc || "—")],
         ["授权信息", a.rights || "—"],
         ["引用关系", refList.length ? refList.length + " 处：" + refList.map(r => r.where).join("、") : "无下游引用"],
         ["归档状态", a.archived ? "已归档 · 只读可查（仍参与历史统计）" : "未归档"],
@@ -293,6 +288,7 @@ function assetReferences(a) {
     const defaultPid = visible.some(x => x.id === requested) ? requested : visible[0].id;
     const p = D.projects.find(x => x.id === defaultPid);
     App.modal({
+      wide: true,
       title: "登记资产" + (p ? " · " + p.name : ""), sub: "资产必须登记来源与授权，未确认前不得进入正式引用",
       body: U.fSelect("归属项目", "project", visible.map(x => ({ value: x.id, label: x.id + " · " + x.name })), { required: true, value: defaultPid }) +
         U.fField("名称", "name", { required: true, minlen: 2 }) +

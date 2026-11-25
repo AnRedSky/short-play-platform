@@ -168,9 +168,14 @@
     if (!p) return;
     const mine = p.ownerId === App.identity().userId || App.can("models.manage");
     App.drawer("资源 · " + p.name, U.desc([
-      ["编号", p.id], ["供给模式", p.mode || "个人自持"], ["类型", p.kind], ["能力", p.capabilities],
-      ["端点", p.endpoint], ["鉴权", p.auth], ["区域", p.region], ["额度", p.quota],
-      ["凭据（脱敏）", p.masked], ["归属人", p.owner], ["验证", p.test], ["状态", p.status]
+      ["编号 · 供给模式", p.id + " · " + (p.mode || "个人自持")],
+      ["类型 · 能力", p.kind + " · " + p.capabilities],
+      ["端点", p.endpoint],
+      ["鉴权 · 区域", p.auth + " · " + p.region],
+      ["额度", p.quota],
+      ["凭据（脱敏）", p.masked],
+      ["归属人 · 验证", p.owner + " · " + p.test],
+      ["状态", p.status]
     ]) + U.notice("凭据明文不可回显；设为默认只影响新任务，历史任务保留原引用标识。", "info") +
       '<div class="btn-row-inline">' +
       (mine ? U.btn("更新凭据", "models.updateCredential", "primary", { id: p.id }) +

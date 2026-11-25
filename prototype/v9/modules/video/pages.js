@@ -394,7 +394,7 @@
     if (t.status === "待人工处理" || t.status === "失败") acts.push(U.btn("处理失败", "video.handleFail", "primary", { id: t.id }));
     if (t.status !== "成功" && t.status !== "已取消") acts.push(U.btn("取消任务", "video.cancelTask", "sm", { id: t.id }));
     App.closeDrawer();
-    App.drawer("任务 · " + t.id, U.desc([["项目 / 集 / 场 / 镜头", t.project + " · E" + t.ep + " / S" + t.scene + " / " + t.shot], ["类型", t.kind], ["状态", t.status], ["优先级", t.priority], ["依赖", t.deps.join("；") || "无"], ["输入", t.input], ["输出", t.output], ["模型 / 配置", t.model + " · " + t.config], ["执行人 / 资源归属", t.executor + " / " + t.resourceOwner], ["尝试", t.attempt + " / " + t.maxAttempts], ["预计 / 实际", "¥" + t.est + " / ¥" + t.actual], ["失败原因", t.failReason], ["质量", t.qc]]) +
+    App.drawer("任务 · " + t.id, U.desc([["项目 / 集 / 场 / 镜头", t.project + " · E" + t.ep + " / S" + t.scene + " / " + t.shot], ["类型 · 状态", t.kind + " · " + t.status], ["优先级 · 依赖", t.priority + " · " + (t.deps.join("；") || "无")], ["输入", t.input], ["输出", t.output], ["模型 / 配置", t.model + " · " + t.config], ["执行人 / 资源归属", t.executor + " / " + t.resourceOwner], ["尝试 / 上限", t.attempt + " / " + t.maxAttempts], ["预计 / 实际", "¥" + t.est + " / ¥" + t.actual], ["失败原因 · 质量", t.failReason + " · " + t.qc]]) +
       '<div class="btn-row-inline">' + acts.join("") + U.btn("查看尝试记录", "video.closeAndGoAttempts", "sm", { id: t.id }) + "</div>");
   });
 

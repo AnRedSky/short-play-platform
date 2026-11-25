@@ -283,7 +283,7 @@
   App.on("director.charDetail", (el) => {
     const c = D.characters.find(x => x.id === el.dataset.id);
     if (!c) return;
-    App.drawer("人物档案 · " + c.name, U.desc([["编号", c.id], ["视觉年龄", c.age], ["外观", c.look], ["体型", c.build], ["发型", c.hair], ["造型", c.costume], ["禁用项", c.forbid], ["参考资产", c.refs + " 张"], ["版本", c.version], ["权利", c.rights], ["适用集次", c.reuse], ["状态", c.status]]) +
+    App.drawer("人物档案 · " + c.name, U.desc([["编号 · 视觉年龄", c.id + " · " + c.age], ["外观 · 体型", c.look + " · " + c.build], ["发型 · 造型", c.hair + " · " + c.costume], ["禁用项", c.forbid], ["参考资产 · 版本", c.refs + " 张 · " + c.version], ["权利 · 适用集次", c.rights + " · " + c.reuse], ["状态", c.status]]) +
       (c.status === "已确认" ? U.notice("该档案已确认，可作为生产基准。", "ok") : U.notice("档案未确认前，引用它的镜头不可固化。", "warn")) +
       '<div class="btn-row-inline">' +
       (c.status === "已确认" ? "" : U.btn("确认视觉设定", "director.confirmChar", "primary", { id: c.id })) +
@@ -512,6 +512,7 @@
     const eps = D.episodes.filter(e => e.project === pid).sort((a, b) => a.no - b.no);
     if (!eps.length) { App.toast("项目还没有分集结构，请先完成剧本拆解", "bad"); return; }
     App.modal({
+      wide: true,
       title: "新建镜头契约 · " + p.name, sub: "契约字段缺一不可，缺失项不允许提交生产",
       body: '<div class="form-grid">' + U.fSelect("集", "ep", eps.map(e => ({ value: String(e.no), label: "E" + e.no + " · " + e.title })), { required: true }) + U.fSelect("场", "scene", ["01", "02", "03", "04", "05", "06"], { required: true }) + "</div>" +
         U.fTextarea("画面描述", "desc", { required: true, minlen: 12, rows: 3 }) +
@@ -588,6 +589,7 @@
     if (!App.guard("director.write")) return;
     const pid = currentPid(el);
     App.modal({
+      wide: true,
       title: "新建人物档案 · " + pid, sub: "参考资产不足 3 张时档案保持「待确认」，不可作为生产基准",
       body: '<div class="form-grid">' + U.fField("人物名称", "name", { required: true, minlen: 1 }) + U.fField("视觉年龄", "age", { required: true, type: "number", min: 16, max: 80, value: "28" }) + "</div>" +
         U.fField("外观特征", "look", { required: true, minlen: 6 }) + U.fField("体型", "build", { required: true }) +

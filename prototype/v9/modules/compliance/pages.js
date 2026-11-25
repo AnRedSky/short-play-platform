@@ -225,6 +225,7 @@
     if (!App.guard("compliance.write")) return;
     const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || "";
     App.modal({
+      wide: true,
       title: "新增授权记录", sub: "证明编号与使用范围必填；平台级条款仅企业管理员可登记",
       body: U.fSelect("归属", "project", (App.can("org.manage") ? [{ value: "", label: "平台级条款（所有项目适用）" }] : []).concat(DB.derived.visibleProjects().map(x => ({ value: x.id, label: x.id + " · " + x.name }))), { value: pid || (DB.derived.visibleProjects()[0] || {}).id }) +
         U.fField("授权对象", "subject", { required: true }) + U.fSelect("类型", "type", ["生成内容", "声音", "音乐", "字体", "模型条款", "第三方素材"], { required: true }) +
@@ -267,7 +268,7 @@
   App.on("compliance.rightDetail", (el) => {
     const r = rightById(el.dataset.id);
     if (!r) { App.toast("该授权记录不在当前可见范围", "bad"); return; }
-    App.drawer("授权 · " + r.id, U.desc([["对象", r.subject], ["项目", r.project || "平台级"], ["类型", r.type], ["权利方", r.owner], ["使用范围", r.use], ["地域", r.region], ["期限", r.term], ["商用", r.commercial], ["限制", r.limit], ["凭证", r.proof], ["复核", r.review], ["状态", r.status]]) +
+    App.drawer("授权 · " + r.id, U.desc([["对象 · 项目", r.subject + " · " + (r.project || "平台级")], ["类型 · 权利方", r.type + " · " + r.owner], ["使用范围 · 区域", r.use + " · " + r.region], ["期限 · 商用", r.term + " · " + r.commercial], ["限制", r.limit], ["凭证", r.proof], ["复核 · 状态", r.review + " · " + r.status]]) +
       '<div class="btn-row-inline">' + U.btn("登记续期", "compliance.renew", "primary", { id: r.id }) + U.btn("替换素材", "compliance.replace", "", { id: r.id }) +
       (r.status === "有效" ? U.btn("停用", "compliance.disable", "sm", { id: r.id }) : "") + "</div>");
   });
@@ -405,6 +406,7 @@
     if (!App.guard("compliance.write")) return;
     const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || ((App.currentProject() || {}).id || "");
     App.modal({
+      wide: true,
       title: "登记风险", sub: "风险必须可定位到项目、对象与责任人才可跟踪",
       body: U.fSelect("项目", "project", DB.derived.visibleProjects().map(x => ({ value: x.id, label: x.id + " · " + x.name })), { required: true, value: pid }) +
         U.fSelect("类型", "type", ["授权风险", "内容合规", "质量风险", "预算风险", "数据安全"]) +

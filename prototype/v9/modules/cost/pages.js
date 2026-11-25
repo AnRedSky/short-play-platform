@@ -148,7 +148,7 @@
     const c = D.costs.find(x => x.id === el.dataset.id);
     if (!c) return;
     if (!DB.derived.visibleCosts().some(x => x.id === c.id)) { App.toast("该成本记录不在当前可见范围", "bad"); return; }
-    App.drawer("成本核验 · " + c.id, U.desc([["项目 / 集 / 镜头", c.project + " · E" + c.ep + " / " + c.shot], ["任务", c.task], ["能力", c.cap], ["预计", money(c.est)], ["实际", money(c.actual)], ["失败成本", money(c.failed)], ["费用承担方", c.bearer], ["费用来源", c.source], ["资源配置人", c.resourceOwner || "—"], ["实际执行人", c.executor || "—"], ["部门归属", c.dept || "—"], ["供应商", c.provider], ["状态", c.status], ["账单", c.bill], ["调整记录", c.adjustment || "无"]]) +
+    App.drawer("成本核验 · " + c.id, U.desc([["项目 / 集 / 镜头", c.project + " · E" + c.ep + " / " + c.shot], ["任务 · 能力", c.task + " · " + c.cap], ["预计 / 实际", money(c.est) + " / " + money(c.actual)], ["失败成本", money(c.failed)], ["承担方 · 来源", c.bearer + " · " + c.source], ["配置人 / 执行人", (c.resourceOwner || "—") + " / " + (c.executor || "—")], ["部门 · 供应商", (c.dept || "—") + " · " + c.provider], ["状态", c.status], ["账单", c.bill], ["调整记录", c.adjustment || "无"]]) +
       U.notice(c.status === "待核实" ? "该笔尚未与账单核对，不得计入已确认成本。" : "已与供应商账单核对一致。", c.status === "待核实" ? "warn" : "ok"));
   });
 

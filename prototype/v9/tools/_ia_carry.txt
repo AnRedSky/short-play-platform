@@ -1,0 +1,358 @@
+## 承载核查 · 动作 325 条 · 路由 56 条
+
+## 承载分布
+- 页面跳转：89 条
+- 抽屉：46 条
+- 弹窗：124 条
+- 页面内切换：31 条
+- 写入：35 条
+- 导出：0 条
+
+## 弹窗过重（字段 ≥6 或弹窗内含表格）· 0 条
+
+## 跳转过碎（目标页 <3000 字符、无写入、仅 1 条入边）· 0 条
+
+## 抽屉过载（字段 ≥12 或动作 ≥4）· 0 条
+
+## 入边为 0 的页面（只能从菜单进入，下钻缺失）
+- audio/bgm · 4194 字符
+- audio/dialogue · 5280 字符
+- director/world · 2387 字符
+- models/config · 8073 字符
+- ops/capabilities · 3986 字符
+- ops/logs · 3404 字符
+- ops/overview · 7609 字符
+- orgs/departments · 4185 字符
+- orgs/enterprise · 3679 字符
+- orgs/grants · 8924 字符
+- post/versions · 2809 字符
+- projects/list · 8577 字符
+- workspace/home · 4317 字符
+
+## 明细
+action	kind	字段	抽屉字段	步骤	目标	含表
+analytics.toEnterprise	页面跳转	0	0	0	analytics/enterprise	
+analytics.tab	页面内切换	0	0	0	—	
+analytics.toDepts	页面跳转	0	0	0	analytics/enterprise	
+analytics.toEmployees	页面跳转	0	0	0	analytics/enterprise	
+analytics.toMe	页面跳转	0	0	0	analytics/me	
+analytics.month	弹窗	1	0	0	—	
+analytics.empDetail	抽屉	0	4	0	—	
+assets.toLibrary	页面跳转	0	0	0	assets/library	
+assets.toUsage	页面跳转	0	0	0	assets/library	
+assets.tab	页面内切换	0	0	0	—	
+assets.cat	页面内切换	0	0	0	—	
+assets.trace	抽屉	0	7	0	—	
+assets.detail	抽屉	0	11	0	—	是
+assets.refs	抽屉	0	4	0	—	
+assets.deleteCheck	弹窗	2	0	3	—	
+assets.archiveOne	弹窗	1	0	3	—	
+assets.deleteOne	弹窗	0	0	2	—	
+assets.newVersion	弹窗	3	0	3	—	
+assets.upload	弹窗	6	0	2	—	
+audio.toVoice	页面跳转	0	0	0	audio/voice	
+audio.toRights	页面跳转	0	0	0	compliance/rights	
+audio.subTab	页面内切换	0	0	0	—	
+audio.listen	抽屉	0	7	0	—	
+audio.regenLine	弹窗	2	0	4	—	
+audio.batchDialogue	弹窗	0	0	4	—	
+audio.previewVoice	抽屉	0	9	0	—	
+audio.voiceDetail	抽屉	0	8	0	—	
+audio.disableVoice	弹窗	0	0	0	—	
+audio.enableVoice	写入	0	0	0	—	
+audio.newVoice	弹窗	6	0	2	—	
+audio.renew	弹窗	3	0	3	—	
+audio.replaceVoice	弹窗	2	0	3	—	
+audio.rightsCheck	页面跳转	0	0	3	compliance/rights	
+audio.newAsset	弹窗	5	0	2	—	
+audio.assetDetail	抽屉	0	7	0	—	
+audio.confirmAsset	写入	0	0	0	—	
+audio.replaceAsset	弹窗	3	0	3	—	
+audio.fixRights	弹窗	3	0	3	—	
+audio.proofSub	弹窗	3	0	3	—	
+audio.genSub	弹窗	2	0	3	—	
+audio.batchLip	弹窗	0	0	3	—	
+audio.redoLip	弹窗	1	0	3	—	
+compliance.toRights	页面跳转	0	0	0	compliance/rights	
+compliance.toRisks	页面跳转	0	0	0	compliance/risks	
+compliance.toAudit	页面跳转	0	0	0	compliance/audit	
+compliance.tab	页面内切换	0	0	0	—	
+compliance.etype	页面内切换	0	0	0	—	
+compliance.exportAudit	弹窗	0	0	0	—	
+compliance.newRight	弹窗	9	0	0	—	
+compliance.rightDetail	抽屉	0	7	0	—	
+compliance.renew	弹窗	3	0	3	—	
+compliance.replace	弹窗	2	0	3	—	
+compliance.disable	弹窗	1	0	3	—	
+compliance.riskDetail	抽屉	0	9	0	—	
+compliance.closeRisk	弹窗	3	0	3	—	
+compliance.escalate	弹窗	2	0	3	—	
+compliance.newRisk	弹窗	6	0	2	—	
+cost.toLedger	页面跳转	0	0	0	cost/ledger	
+cost.toBudget	页面跳转	0	0	0	cost/budget	
+cost.toUsage	页面跳转	0	0	0	cost/ledger	
+cost.tab	页面内切换	0	0	0	—	
+cost.ledgerLink	页面跳转	0	0	0	cost/ledger	
+cost.proj	页面内切换	0	0	0	—	
+cost.verify	抽屉	0	10	0	—	
+cost.adjust	弹窗	4	0	3	—	
+cost.freeze	弹窗	1	0	3	—	
+cost.adjustBudget	弹窗	4	0	3	—	
+cost.setThreshold	弹窗	3	0	2	—	
+cost.addBudget	弹窗	3	0	3	—	
+cost.resume	弹窗	0	0	2	—	
+creation.toPlan	页面跳转	0	0	0	creation/plan	
+creation.toBrief	页面跳转	0	0	0	creation/brief	
+creation.toScript	页面跳转	0	0	0	creation/script	
+creation.toReview	页面跳转	0	0	0	creation/review	
+creation.toBreakdown	页面跳转	0	0	0	creation/breakdown	
+creation.toDirector	页面跳转	0	0	0	director/plan	
+creation.modeSet	页面内切换	0	0	0	—	
+creation.modeDetail	抽屉	0	4	0	—	
+creation.importNovel	弹窗	12	0	5	projects/detail	
+creation.openBrief	抽屉	0	7	0	—	
+creation.briefTrace	抽屉	0	0	0	—	是
+creation.scoreDetail	抽屉	0	0	0	—	
+creation.reviewTab	页面内切换	0	0	0	—	
+creation.scriptScene	页面内切换	0	0	0	—	
+creation.openScript	抽屉	0	8	0	—	
+creation.diff	抽屉	0	3	0	—	
+creation.reviewHistory	抽屉	0	0	0	—	是
+creation.newBrief	弹窗	4	0	4	creation/plan	
+creation.deriveBrief	弹窗	2	0	3	—	
+creation.regenPlan	写入	0	0	4	—	
+creation.choosePlan	弹窗	1	3	3	creation/script	
+creation.generateScript	页面跳转	0	0	5	creation/review	
+creation.submitReview	弹窗	0	0	0	creation/review	
+creation.approveScript	弹窗	3	0	4	projects/workflow	
+creation.rejectScript	弹窗	3	0	4	—	
+creation.terminateScript	弹窗	2	0	3	—	
+creation.impact	抽屉	0	5	0	—	是
+creation.lock	弹窗	1	0	4	—	
+creation.editScript	弹窗	4	0	4	creation/review	
+creation.partialScript	弹窗	3	0	3	—	
+creation.rerunBreakdown	弹窗	0	0	4	creation/breakdown	
+director.view	页面内切换	0	0	0	—	
+director.toStoryboard	页面跳转	0	0	0	director/shots	
+director.boardEp	页面内切换	0	0	0	—	
+director.boardState	页面内切换	0	0	0	—	
+director.boardShot	页面内切换	0	0	0	—	
+director.toShots	页面跳转	0	0	0	director/shots	
+director.toCast	页面跳转	0	0	0	director/cast	
+director.toVideo	页面跳转	0	0	0	video/production	
+director.toQueue	页面跳转	0	0	0	video/production	
+director.shotDetail	抽屉	0	9	0	—	
+director.sceneShots	页面跳转	0	0	0	director/shots	
+director.freezePlan	弹窗	1	0	4	projects/workflow	
+director.charDetail	抽屉	0	7	0	—	
+director.confirmChar	写入	0	0	3	—	
+director.locDetail	抽屉	0	10	0	—	
+director.confirmLoc	写入	0	0	3	—	
+director.propDetail	抽屉	0	8	0	—	
+director.confirmProp	写入	0	0	2	—	
+director.submitShot	弹窗	2	6	3	—	
+director.batchSubmit	弹窗	0	0	3	—	
+director.regenerate	弹窗	3	0	3	—	
+director.pickRegen	弹窗	3	0	2	—	
+director.replan	弹窗	0	0	3	director/plan	
+director.addRef	弹窗	3	0	3	—	
+director.versionChar	弹窗	1	0	3	—	
+director.check	写入	0	0	3	—	
+director.newShot	弹窗	10	0	3	—	
+director.newLoc	弹窗	5	0	2	—	
+director.newProp	弹窗	5	0	2	—	
+director.newChar	弹窗	7	0	3	—	
+models.toRouting	页面跳转	0	0	0	models/routing	
+models.toProviders	页面跳转	0	0	0	models/providers	
+models.toLogs	页面跳转	0	0	0	tasks/attempt	
+models.test	写入	0	0	3	—	
+models.updateCredential	弹窗	2	0	3	—	
+models.detail	抽屉	0	8	0	—	
+models.toggle	弹窗	0	0	3	—	
+models.remove	弹窗	0	0	3	—	
+models.setDefault	弹窗	0	0	2	—	
+models.newProvider	弹窗	4	0	3	—	
+models.editRoute	弹窗	4	0	3	—	
+notify.tab	页面内切换	0	0	0	—	
+notify.toIncidents	页面跳转	0	0	0	compliance/risks	
+notify.toTasks	页面跳转	0	0	0	tasks/list	
+notify.readAll	写入	0	0	0	—	
+notify.read	写入	0	0	0	—	
+notify.jump	页面跳转	0	0	0	—	
+notify.prefs	弹窗	4	0	3	—	
+notify.handle	抽屉	0	7	0	—	
+notify.close	弹窗	2	0	3	—	
+notify.toTask	弹窗	4	0	3	—	
+notify.escalate	弹窗	2	0	3	—	
+notify.incidentAction	弹窗	3	0	3	—	
+ops.tab	页面内切换	0	0	0	—	
+ops.refresh	写入	0	0	0	—	
+ops.queueLink	页面跳转	0	0	0	ops/queue	
+ops.toConfig	页面跳转	0	0	0	ops/config	
+ops.adapterRegister	弹窗	5	0	0	—	
+ops.editConfig	弹窗	4	0	3	—	
+ops.saveConfig	弹窗	0	0	3	—	
+ops.restoreDrill	弹窗	3	0	3	—	
+ops.scaleRequest	弹窗	2	0	3	—	
+orgs.toMembers	页面跳转	0	0	0	orgs/members	
+orgs.toRoles	页面跳转	0	0	0	orgs/roles	
+orgs.toAnalytics	页面跳转	0	0	0	analytics/enterprise	
+orgs.member	页面跳转	0	0	0	orgs/member	
+orgs.editEnterprise	弹窗	4	0	0	—	
+orgs.editPolicy	弹窗	2	0	0	—	
+orgs.disable	弹窗	0	0	0	—	
+orgs.newDept	弹窗	5	0	0	—	
+orgs.deptDetail	抽屉	0	8	0	—	
+orgs.deptStats	页面跳转	0	0	0	analytics/departments	
+orgs.roleDetail	抽屉	0	4	0	—	
+orgs.newRole	写入	0	0	0	—	
+orgs.editPerms	写入	0	0	0	—	
+orgs.grant	弹窗	3	0	0	—	
+orgs.editGrant	弹窗	1	0	0	—	
+orgs.preview	抽屉	0	7	0	—	
+orgs.history	抽屉	0	0	0	—	
+orgs.toggle	弹窗	3	0	3	—	
+orgs.offboard	弹窗	5	0	3	—	
+orgs.newMember	弹窗	5	0	3	—	
+orgs.toHandover	页面跳转	0	0	0	orgs/handover	
+orgs.transfer	弹窗	3	0	4	—	
+orgs.grantNew	弹窗	3	0	3	—	
+orgs.revokeGrant	弹窗	1	0	3	—	
+post.toEpisodes	页面跳转	0	0	0	post/episodes	
+post.toReview	页面跳转	0	0	0	post/review	
+post.toDelivery	页面跳转	0	0	0	post/delivery	
+post.tab	页面内切换	0	0	0	—	
+post.toAssets	页面跳转	0	0	0	assets/library	
+post.openTimeline	页面跳转	0	0	0	post/timeline	
+post.epPreview	抽屉	0	0	0	—	
+post.reviewDetail	抽屉	0	9	0	—	
+post.reviewHistory	抽屉	0	0	0	—	是
+post.newTimeline	弹窗	2	0	2	—	
+post.exportTimeline	弹窗	2	0	4	—	
+post.epQc	抽屉	0	7	0	—	
+post.runEpQc	写入	0	0	3	—	
+post.deliveryDetail	抽屉	0	11	0	—	
+post.confirmDelivery	弹窗	2	0	3	—	
+post.voidDelivery	弹窗	0	0	0	—	
+post.archiveProject	写入	0	0	2	—	
+post.workDetail	抽屉	0	8	0	—	
+post.qcIssues	抽屉	0	0	0	—	
+post.versionChain	抽屉	0	0	0	—	
+post.newVersion	弹窗	4	0	3	projects/detail	
+post.refCheck	抽屉	0	6	0	—	
+projects.new	页面跳转	0	0	0	projects/new	
+projects.setStatus	页面内切换	0	0	0	—	
+projects.setRel	页面内切换	0	0	0	—	
+projects.lifecycleLink	页面跳转	0	0	0	projects/lifecycle	
+projects.incidentsLink	页面跳转	0	0	0	notify/incidents	
+projects.qcLink	页面跳转	0	0	0	quality/reports	
+projects.deliveryLink	页面跳转	0	0	0	post/delivery	
+projects.detail	页面跳转	0	0	3	projects/detail	
+projects.saveDraft	写入	0	0	0	—	
+projects.create	写入	0	0	0	—	
+projects.pause	弹窗	1	0	3	—	
+projects.resumeAll	弹窗	0	0	3	—	
+projects.pauseAll	弹窗	3	0	3	—	
+projects.terminate	弹窗	3	0	3	—	
+projects.wfOpen	页面跳转	0	0	0	projects/workflow	
+projects.wfBrief	页面跳转	0	0	0	creation/brief	
+projects.wfGoReview	页面跳转	0	0	0	creation/review	
+projects.wfGenerateScript	页面跳转	0	0	3	projects/workflow	
+projects.wfApprove	弹窗	1	0	3	projects/workflow	
+projects.wfBreakdown	弹窗	0	0	3	projects/workflow	
+projects.wfAssets	弹窗	0	0	3	projects/workflow	
+projects.wfFreeze	弹窗	0	0	3	projects/workflow	
+projects.wfBatch	弹窗	1	0	4	projects/workflow	
+projects.wfTimeline	弹窗	1	0	3	projects/workflow	
+projects.wfSubtitle	页面跳转	0	0	0	audio/subtitle	
+projects.wfFinishPost	弹窗	0	0	4	projects/workflow	
+projects.wfQcAll	弹窗	0	0	4	projects/workflow	
+projects.wfFinal	弹窗	3	0	3	projects/workflow	
+projects.wfDelivery	弹窗	0	0	3	projects/workflow	
+projects.wfRights	弹窗	3	0	5	compliance/rights	
+projects.wfArchive	弹窗	0	0	3	projects/workflow	
+projects.wfBudget	弹窗	2	0	3	projects/workflow	
+projects.wfResume	写入	0	0	3	—	
+projects.wfQuality	页面跳转	0	0	0	quality/reports	
+projects.wfEpDetail	抽屉	0	6	0	—	是
+projects.wfToShots	页面跳转	0	0	0	director/shots	
+projects.wfToProduction	页面跳转	0	0	0	video/production	
+projects.wfToQuality	页面跳转	0	0	0	quality/reports	
+quality.toReports	页面跳转	0	0	0	quality/reports	
+quality.toRework	页面跳转	0	0	0	quality/rework	
+quality.tab	页面内切换	0	0	0	—	
+quality.reworkDetail	抽屉	0	7	0	—	
+quality.reportDetail	抽屉	0	7	0	—	
+quality.judge	弹窗	3	0	3	—	
+quality.rerun	弹窗	2	0	3	—	
+quality.newRework	弹窗	5	0	3	—	
+tasks.toList	页面跳转	0	0	0	tasks/list	
+tasks.toQueue	页面跳转	0	0	0	tasks/queue	
+tasks.toAttempts	页面跳转	0	0	0	tasks/attempt	
+tasks.clearTask	页面内切换	0	0	0	—	
+tasks.st	页面内切换	0	0	0	—	
+tasks.scope	页面跳转	0	0	0	tasks/list	
+tasks.detail	抽屉	0	7	0	—	是
+tasks.execute	写入	0	0	3	—	
+tasks.batchRetry	弹窗	2	0	3	—	
+tasks.switchModel	弹窗	2	0	3	—	
+tasks.pauseQueue	弹窗	2	0	3	—	
+tasks.decide	弹窗	2	0	3	—	
+tasks.cancel	弹窗	2	0	2	—	
+tasks.setConcurrency	弹窗	4	0	3	—	
+video.filter	页面内切换	0	0	0	—	
+video.toTasks	页面跳转	0	0	0	tasks/list	
+video.toAttempts	页面跳转	0	0	0	tasks/attempt	
+video.tab	页面内切换	0	0	0	—	
+video.toResults	页面跳转	0	0	0	video/preview	
+video.toPreview	页面跳转	0	0	0	video/preview	
+video.toStoryboard	页面跳转	0	0	0	director/shots	
+video.toModels	页面跳转	0	0	0	—	
+video.selectTask	页面内切换	0	0	0	—	
+video.closeAndGoAttempts	页面跳转	0	0	0	tasks/attempt	
+video.playPreview	写入	0	0	0	—	
+video.preview	页面跳转	0	0	0	video/preview	
+video.runTask	写入	0	0	3	—	
+video.newBatch	弹窗	3	0	5	—	
+video.pauseQueue	弹窗	0	0	0	—	
+video.taskDetail	抽屉	0	10	0	—	
+video.cancelTask	弹窗	2	0	3	—	
+video.handleFail	弹窗	2	0	3	—	
+video.adopt	弹窗	1	0	3	—	
+video.adoptCurrent	弹窗	3	0	3	—	
+video.regenShot	弹窗	2	0	3	—	
+workspace.viewEp	页面内切换	0	0	0	—	
+workspace.openEp	页面跳转	0	0	0	video/production	
+workspace.assistantLink	页面跳转	0	0	0	workspace/assistant	
+workspace.toNotify	页面跳转	0	0	0	notify/inbox	
+workspace.toTasks	页面跳转	0	0	0	tasks/list	
+workspace.toCreation	页面跳转	0	0	0	creation/brief	
+workspace.toDirector	页面跳转	0	0	0	director/plan	
+workspace.toVideo	页面跳转	0	0	0	video/production	
+workspace.toPost	页面跳转	0	0	0	post/timeline	
+workspace.toScript	页面跳转	0	0	0	creation/script	
+workspace.toCast	页面跳转	0	0	0	director/cast	
+workspace.toQuality	页面跳转	0	0	0	quality/reports	
+workspace.toCost	页面跳转	0	0	0	cost/ledger	
+workspace.sample	页面内切换	0	0	0	—	
+workspace.clearCmd	页面内切换	0	0	0	—	
+workspace.parse	页面内切换	0	0	0	—	
+workspace.pickTarget	页面内切换	0	0	0	—	
+workspace.cmdHelp	抽屉	0	0	0	—	是
+workspace.cmdHistory	抽屉	0	0	0	—	
+workspace.run	抽屉	8	6	3	projects/new	是
+workspace.editParams	弹窗	1	0	0	—	
+common.home	写入	0	0	0	—	
+common.projects	写入	0	0	0	—	
+common.switchProject	写入	0	0	0	—	
+common.useProject	写入	0	0	0	—	
+common.reset	写入	0	0	3	—	
+common.menu	写入	0	0	0	—	
+common.closeModal	写入	0	0	0	—	
+common.closeDrawer	写入	0	0	0	—	
+common.backdrop	写入	0	0	0	—	
+common.focusIdentity	写入	0	0	0	—	
+common.export	写入	0	0	0	—	
+common.noop	写入	0	0	0	—	
+common.tab	写入	0	0	0	—	
+common.filter	写入	0	0	0	—	

@@ -288,6 +288,7 @@
     const chars = D.characters.filter(c => c.project === pid);
     if (!chars.length) { App.toast("《" + p.name + "》还没有人物档案，需先在导演规划建立人物", "bad"); return; }
     App.modal({
+      wide: true,
       title: "新建声音档案 · " + p.name, sub: "无授权依据的音色不得用于商业交付",
       body: U.fSelect("角色", "char", chars.map(c => ({ value: c.name, label: c.name + "（" + c.id + "）" })), { required: true }) +
         U.fSelect("语种", "lang", ["普通话", "粤语", "英语"]) + U.fField("音色描述", "timbre", { required: true, minlen: 4 }) + U.fField("语速", "rate", { required: true, placeholder: "例如 偏慢 0.92" }) +
