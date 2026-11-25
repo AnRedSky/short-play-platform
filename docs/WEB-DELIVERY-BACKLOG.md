@@ -7,7 +7,7 @@
 1. 一任务一提交，Conventional Commits：`feat|fix|refactor|chore(web): <范围> <结果>`；只提交 `develop`。
 2. 目录硬约束：域主入口 `views/<domain>/index.vue`；域内子页 `views/<domain>/<page>/index.vue`；域私有组件/逻辑放 `<domain>/components|composables`，跨域才进 `components/ui|shell`。
 3. 分层硬约束：页面不直连 `api/client`、不出现 `http.*`，一律走 `services/<domain>/index.ts`；`npm run check:layering` 必须通过。
-4. 完成定义（DoD）：`npm run check` 全绿（typecheck + 路由 56/56 + 规格 33/33 + 分层）→ 浏览器冒烟目标页无控制台报错 → 清理临时脚本/空目录 → 提交并在本看板更新状态。
+4. 完成定义（DoD）：`npm run check` 全绿（typecheck + 路由 56/56 + 规格 33/33 + 分层）→ `npm run test:e2e` 全绿（3 条用例）→ 浏览器冒烟目标页无控制台报错 → 清理临时脚本/空目录/测试产物 → 提交并在本看板更新状态。
 5. 不接真实 API；接口差异只改 service 内部，页面与 mock 契约保持稳定。
 6. 每轮交付固定两段：**完成任务**（含提交号/验证结果）+ **后续推进**（下一项任务 ID 与验收点）。
 
@@ -23,15 +23,15 @@
 | P-02 | SpecPage 规格页瘦身：同构页按域合并，目标 ≤15 条 | 完成（本轮） | 33 条规格归为 13 个域组，组内标签切换，56 路由覆盖不变 |
 | P-03 | 域内 composables 抽取（项目范围、权限、列表筛选） | 完成（本轮） | 3 个共享 composable：useProjectScope / usePermission / useTableQuery，3 个页面已接入 |
 | P-04 | 交互文案与空态统一（按钮主次、空态、危险色） | 待开始 | 设计走查清单全通过 |
-| F-01 | 全流程 E2E 脚本化：创建→创意→剧本→镜头→生产→后期→质检→交付 | 待开始 | Playwright 一条用例跑通闭环 |
-| F-02 | 权限矩阵快照测试：各身份可访问路由 | 待开始 | 6 身份 × 56 路由断言通过 |
+| F-01 | 全流程 E2E：立项→创意→剧本→镜头→生产→后期→质检→交付 | 完成（本轮） | 新建项目从三步表单走完 10 个关卡至交付；存量项目后期→质检→终审→交付闭环；`npm run test:e2e` 退出码 0 |
+| F-02 | 权限矩阵快照测试：各身份可访问路由 | 完成（本轮） | 6 身份 × 56 路由快照生成并可回归；owner 41、staff 35、admin 31、dept 24、auditor 21、ops 6 |
 | F-03 | mock 契约字段映射草案（为将来真实 API 预留） | 待开始 | 文档列出字段差异与适配点，不改代码 |
-| Q-01 | CI 接入 `npm run check` + 构建产物 | 待开始 | PR/推送自动执行并阻断失败 |
-| Q-02 | 性能预算：主包 ≤450KB，SpecPage 独立 chunk | 待开始 | 构建报告达标 |
+| Q-01 | CI 接入 `npm run check` + 构建 + E2E | 待开始 | PR/推送自动执行并阻断失败 |
+| Q-02 | 性能预算：主包 ≤450KB，SpecPage 独立 chunk | 待开始 | 构建报告达标（当前 469.41KB / gzip 99.00KB） |
 
 ## 三、推进顺序
 
-`P-01 → P-02 → P-03 → F-01 → F-02 → Q-01 → Q-02`，P-04 与 P-01 并行。
+`F-01 → F-02 → P-04 → Q-01 → Q-02 → F-03`；后端按 `docs/BACKEND-FOLLOWUP.md` 的 B-01 → B-03 并行启动，前端以 mock 契约先行为准。
 
 ## 四、后端跟进
 
@@ -42,3 +42,10 @@
 - 开工：状态改「进行中」，写清本轮范围与不改动项。
 - 阻塞：在看板对应行标注阻塞原因与所需输入，不跨任务硬推。
 - 完成：补提交号 + `npm run check` 结果 + 冒烟页面清单，再进入下一 ID。
+
+## 六、测试门禁
+
+- 单元/静态门禁：`cd web && npm run check`。
+- 全链路：`cd web && npm run test:e2e`，由 `scripts/run-e2e.mjs` 构建后启动 4173 预览并在结束时回收，不留下常驻进程。
+- 权限基线：`tests/e2e/__snapshots__/permission-matrix.spec.ts/permission-matrix.json`；仅权限规则有意变更时执行 `npx playwright test tests/e2e/permission-matrix.spec.ts --update-snapshots`，并在提交说明中解释差异，CI 禁止自动更新。
+- E2E 只依赖 mock；新增页面若改权限或主流程，必须同步更新快照或用例断言。
