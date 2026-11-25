@@ -481,3 +481,38 @@ D-08 把页面级表格的 1280 横滚清零后，`_pixel` 只剩抽屉内部两
 | E-04 | `orgs/grants` 单卡 76%（9215 字符） | 单卡承载过重，建议拆「授权台账」与「授权申请」两张卡 |
 | E-05 | 浏览器三项进 CI（D-09） | 需要 Chromium + `serve.mjs` 起服务；可与 D-05 同一 workflow，成本约 +90 秒 |
 | 决策 | `origin/develop` 停在 `fb36f1e`，本地已积 11 个整改提交 | 待拍板：直推 develop 或开 PR 到 main（CI 的 prototype-quality 只有在推送后才会真正跑起来） |
+
+---
+
+## 十七、短剧制作全流程评估（9.7.8）
+
+### 17.1 为什么单独做这一轮
+
+此前整改按"页面"推进（去重、承载、宽表、布局），缺一次**沿业务流程纵向**的核验：从立项一路走到交付，看节点之间是否真的接得上。本轮只做评估与一个 P0 修复，不动信息架构。
+
+### 17.2 方法：不再靠肉眼通读
+
+新增 `tools/_audit_chain.mjs`：载入真实模块，从每个动作处理器的**函数体**里抽 `App.go("…")`（跳转）、`App.modal/confirm/drawer`（承载）、`App.set`（状态），生成页面级有向图。再叠加浏览器实测（462 次弹窗/抽屉开关、逐页首帧耗时、逐页按钮清点）与端到端提交实测。
+
+### 17.3 结论：星形，不是链形
+
+`projects/workflow` 一个页面扇出到 `creation/brief`、`creation/review`、`audio/subtitle`、`director/shots`、`video/production`、`quality/reports`、`post/delivery`。节点之间几乎没有前后置衔接，因此：
+
+- 从立项出发可达 17/26（样本 `SP-26031` 生产中），9 个节点只能靠侧栏或枢纽页在对应状态才出现入口；
+- 死端 3 个：`director/world`、`director/shots`、`audio/subtitle`（页面内无任何出边）；
+- 零入边 1 个：`director/cast`；
+- 关口动作（通过/退回/终审/交付）全在枢纽页，`post/review`、`post/delivery` 页内只有"去流水线"。
+
+### 17.4 P0-01：弹窗主按钮全部失效（已修）
+
+`common.backdrop` 是 `.modal` 的父节点，点击委托 `closest("[data-action]")` 会让弹窗内所有无 `data-action` 的控件命中它并被 `preventDefault()`：表单不触发 `submit`、勾选框点不动。复现：`creation/review?id=SP-26028` → 通过并锁定 → 点主按钮 → 无反应（Enter 可提交）。
+
+修法：`if (name === "common.backdrop" && e.target !== el) return;`。修复后实测：真实 click → job → `SP-26028` 待剧本审核 → 生产准备中 → 自动跳 `workflow`；勾选框恢复可点；`_e2e` 从 37 条加到 40 条（新增 3 条"真实 click 提交"断言），避免 `requestSubmit()` 再次掩盖回归。
+
+### 17.5 其余问题（进下一轮，不在本轮改）
+
+P1：`post/review` 四种结论无动作、`post/delivery` 无交付动作、`creation/review` 7 项审核清单勾选不落库、3 个死端、星形拓扑。P2：`director/shots` 868 按钮 / 144ms 首帧、`post/timeline` 等 4 页 9.9k–13.7k 字符、3 处同页重复入口、立项页 11 必填不指名字段、job 期间底层按钮未禁用。完整清单见 `docs/REVIEW-PRODUCTION-FLOW-V9.7.8.md`。
+
+### 17.6 回归
+
+`node tools/check.mjs` 17/17 PASS（新增链路审计观察项）；`_e2e` 40 PASS / 0 FAIL；`_smoke` 56 路由；`_pixel` 两档 FAILS=0；`node --check` 全量通过。

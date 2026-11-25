@@ -1,0 +1,80 @@
+# 短剧制作全链路审计 · 26 个菜单节点 / 24 链路节点
+
+## 1. 链路逐节点
+```
+ 1 projects/new         立项     → creation/brief       跳 ✗  入边  1  出边  1  动作  3（跳0/弹0/抽0/态0/写0/未登记2）表 0 行 0 字段 22
+ 2 creation/brief       创意设定   → creation/plan        跳 1  入边  1  出边  2  动作  5（跳1/弹1/抽2/态1/写0/未登记0）表 0 行 0 字段 0
+ 3 creation/plan        创意方案   → creation/script      跳 1  入边  1  出边  2  动作  3（跳2/弹0/抽1/态0/写0/未登记0）表 1 行 6 字段 0
+ 4 creation/script      剧本版本   → creation/review      跳 1  入边  3  出边  3  动作  8（跳3/弹1/抽2/态1/写0/未登记0）表 1 行 4 字段 0
+ 5 creation/review      剧本审核   → creation/breakdown   跳 2  入边  1  出边  1  动作  5（跳1/弹1/抽3/态0/写0/未登记0）表 3 行 15 字段 7
+ 6 creation/breakdown   剧本拆解   → assets/library       跳 4  入边  2  出边  2  动作  2（跳2/弹0/抽0/态0/写0/未登记0）表 5 行 46 字段 0
+ 7 assets/library       素材库    → director/plan        跳 ✗  入边  2  出边  1  动作  7（跳1/弹1/抽2/态2/写0/未登记0）表 1 行 6 字段 1
+ 8 director/plan        镜头计划   → director/cast        跳 ✗  入边  2  出边  3  动作  5（跳5/弹0/抽0/态0/写0/未登记0）表 2 行 28 字段 0
+ 9 director/cast        人物档案   → director/world       跳 1  入边  0  出边  1  动作  6（跳1/弹3/抽1/态0/写0/未登记0）表 2 行 6 字段 0
+10 director/world       场景道具   → director/shots       跳 ✗  入边  1  出边  0  动作  4（跳0/弹2/抽2/态0/写0/未登记0）表 3 行 12 字段 0
+11 director/shots       镜头契约   → video/production     跳 ✗  入边  1  出边  0  动作  5（跳0/弹3/抽1/态1/写0/未登记0）表 2 行 439 字段 0
+12 video/production     视频队列   → video/preview        跳 1  入边  2  出边  3  动作 10（跳4/弹2/抽1/态1/写0/未登记2）表 0 行 0 字段 0
+13 video/preview        预览校验   → audio/dialogue       跳 ✗  入边  2  出边  2  动作  7（跳3/弹2/抽0/态1/写0/未登记1）表 0 行 0 字段 0
+14 audio/dialogue       对白配音   → audio/voice          跳 1  入边  1  出边  1  动作  4（跳1/弹2/抽1/态0/写0/未登记0）表 2 行 9 字段 0
+15 audio/voice          声音档案   → audio/bgm            跳 ✗  入边  1  出边  1  动作  4（跳1/弹1/抽2/态0/写0/未登记0）表 1 行 4 字段 0
+16 audio/bgm            配乐音效   → audio/subtitle       跳 ✗  入边  1  出边  1  动作  4（跳1/弹2/抽1/态0/写0/未登记0）表 2 行 8 字段 0
+17 audio/subtitle       字幕口型   → post/timeline        跳 ✗  入边  1  出边  0  动作  4（跳0/弹3/抽0/态1/写0/未登记0）表 2 行 24 字段 0
+18 post/timeline        时间线    → post/episodes        跳 1  入边  1  出边  2  动作  4（跳2/弹2/抽0/态0/写0/未登记0）表 1 行 18 字段 0
+19 post/episodes        分集成片   → post/review          跳 1  入边  1  出边  3  动作  4（跳3/弹0/抽1/态0/写0/未登记0）表 2 行 34 字段 0
+20 post/review          成片审核   → quality/reports      跳 2  入边  2  出边  1  动作  2（跳1/弹0/抽1/态0/写0/未登记0）表 3 行 18 字段 1
+21 quality/reports      质量报告   → quality/rework       跳 1  入边  2  出边  1  动作  3（跳1/弹0/抽1/态1/写0/未登记0）表 1 行 3 字段 0
+22 quality/rework       返工台账   → post/delivery        跳 ✗  入边  1  出边  1  动作  4（跳1/弹2/抽1/态0/写0/未登记0）表 2 行 8 字段 0
+23 post/delivery        交付包    → post/versions        跳 1  入边  1  出边  2  动作  4（跳2/弹0/抽1/态1/写0/未登记0）表 2 行 12 字段 0
+24 post/versions        版本链    → —                    跳 —  入边  1  出边  1  动作  2（跳1/弹0/抽1/态0/写0/未登记0）表 1 行 5 字段 0
+```
+
+## 2. 端到端可达性（从「立项」projects/new 出发，仅算页面间跳转，不含侧栏）
+- 立项可达节点：26 个菜单节点中 17 个可达；到「交付包」3 跳
+- 从立项出发不可达（只能靠侧栏）：projects/lifecycle / creation/brief / creation/plan / director/cast / director/world / audio/dialogue / audio/voice / post/timeline / post/episodes
+
+## 2.1 主链顺序假设下的入口缺口（建议级，不是缺陷）
+说明：按「立项 → 创意 → 拆解 → 素材 → 导演 → 视频 → 音频 → 后期 → 质量 → 交付」这一条主链逐段试跳；缺口也可能是节点之间本就并联（如人物档案与场景道具），需与业务确认，故本节只作建议。
+- projects/new（立项）→ creation/brief：4 跳内不可达
+- assets/library（素材库）→ director/plan：4 跳内不可达
+- director/plan（镜头计划）→ director/cast：4 跳内不可达
+- director/world（场景道具）→ director/shots：4 跳内不可达
+- director/shots（镜头契约）→ video/production：4 跳内不可达
+- video/preview（预览校验）→ audio/dialogue：4 跳内不可达
+- audio/voice（声音档案）→ audio/bgm：4 跳内不可达
+- audio/bgm（配乐音效）→ audio/subtitle：4 跳内不可达
+- audio/subtitle（字幕口型）→ post/timeline：4 跳内不可达
+- quality/rework（返工台账）→ post/delivery：4 跳内不可达
+
+## 3. 页面间零入边（只能从侧栏菜单进入）
+- director/cast（人物档案）
+
+## 4. 死端页（无任何页面间出边）
+- ✗ director/world
+- ✗ director/shots
+- ✗ audio/subtitle
+
+## 5. 有输入但无任何承接（死表单）
+- ✗ post/review 字段 1 · 动作 projects.wfOpen,post.reviewHistory
+
+## 6. 页面引用了未登记动作
+- ✗ models/config：models.test
+- ✗ models/providers：models.test
+- ✗ notify/inbox：notify.readAll
+- ✗ ops/overview：ops.refresh
+- ✗ orgs/roles：orgs.newRole,orgs.editPerms
+- ✗ projects/new：projects.saveDraft,projects.create
+- ✗ video/production：video.runTask,video.toModels
+- ✗ video/preview：video.playPreview
+
+## 7. 同名弹窗（同一标题被多处触发）
+- 指定位置局部修改 ·  ← creation/script:creation.partialScript / creation/review:creation.partialScript
+
+## 8. 体量 Top6
+1. director/shots 232873 字符 · 表 2 · 字段 0 · 动作 5
+2. post/timeline 13737 字符 · 表 1 · 字段 0 · 动作 4
+3. projects/workflow 13397 字符 · 表 1 · 字段 0 · 动作 4
+4. post/episodes 12625 字符 · 表 2 · 字段 0 · 动作 4
+5. director/plan 11827 字符 · 表 2 · 字段 0 · 动作 5
+6. creation/breakdown 9952 字符 · 表 5 · 字段 0 · 动作 2
+
+## 9. 承载汇总（26 页）：跳转 41 · 弹窗 31 · 抽屉 24 · 状态切换 10 · 写入 0

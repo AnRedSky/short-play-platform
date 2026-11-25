@@ -34,7 +34,8 @@ const CHECKS = [
 
 /* 只报告不阻断：承载方式多样性、交互盘点属于观察项，没有硬阈值 */
 const OBSERVE = [
-  { tool: "_audit_ux", name: "交互盘点（观察）" }
+  { tool: "_audit_ux", name: "交互盘点（观察）" },
+  { tool: "_audit_chain", name: "短剧制作链路（观察）", note: "死端/零入边/关口动作位置见 docs/REVIEW-PRODUCTION-FLOW-V9.7.8.md" }
 ];
 
 let failed = 0;
@@ -58,7 +59,11 @@ for (const c of OBSERVE) {
   const r = run(c.tool);
   const out = (r.stdout || "") + (r.stderr || "");
   const marked = /有标记 (\d+) 条/.exec(out);
-  rows.push({ name: c.name, ok: r.status === 0, ms: 0, observe: true, reason: marked ? "标记 " + marked[1] + " 条（观察项，不阻断）" : "" });
+  const chainDead = /## 4\. 死端页[\s\S]*?\n- (✗ [^\n]+)/.exec(out);
+  rows.push({
+    name: c.name, ok: r.status === 0, ms: 0, observe: true,
+    reason: c.note ? c.note : marked ? "标记 " + marked[1] + " 条（观察项，不阻断）" : chainDead ? "死端：" + chainDead[1].replace("✗ ", "") : ""
+  });
 }
 
 console.log("");

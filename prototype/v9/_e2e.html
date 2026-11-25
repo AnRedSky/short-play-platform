@@ -5,7 +5,7 @@
 </head>
 <body>
 <pre id="out">running…</pre>
-<iframe id="f" src="/index.html?v=9.7.7"></iframe>
+<iframe id="f" src="/index.html?v=9.7.8"></iframe>
 <script>
 const out = [];
 const flush = () => { document.getElementById("out").textContent = out.join("\n") || "running…"; };
@@ -49,7 +49,7 @@ async function go(hash) {
 }
 async function reload() {
   const fr = document.getElementById("f");
-  fr.src = "/index.html?v=9.7.7&r=" + Date.now();
+  fr.src = "/index.html?v=9.7.8&r=" + Date.now();
   await until(() => { try { return !!(W().App && W().DB.state && D().querySelector("#view")); } catch (e) { return false; } }, 9000);
   await wait(600);
 }
@@ -214,6 +214,33 @@ window.addEventListener("error", (e) => { out.push("ERROR " + e.message + " @" +
     await wait(500);
     const afterRefresh = (D().querySelector("#view") || {}).textContent || "";
     log(afterRefresh.indexOf(c.word) >= 0 && afterRefresh.length > 30, c.path + " 刷新后仍停留在 " + c.value + "（含「" + c.word + "」）");
+  }
+
+  /* 13. 弹窗主按钮必须可点：真实 click 触发 submit（不能用 requestSubmit 代替） */
+  await reload();
+  await asIdentity("i-owner");
+  await go("creation/review?id=SP-26028");
+  log(await click("creation.approveScript") && hasModal(), "打开「通过并锁定」弹窗");
+  const approveForm = D().getElementById("app-form");
+  if (approveForm) {
+    const setV = (k, v) => {
+      const el = approveForm.querySelector('[name="' + k + '"]');
+      if (!el) return;
+      if (el.type === "checkbox") el.checked = !!v; else el.value = v;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    setV("positions", "全剧");
+    setV("note", "已核对分集结构与对白，通过。");
+    const submitBtn = approveForm.querySelector('button[type="submit"]');
+    submitBtn.click();
+    await wait(300);
+    log(!!D().querySelector(".job-mask"), "弹窗主按钮真实 click 触发提交（job 面板出现），不再被 backdrop 吞掉");
+    await wait(3600);
+    const okState = W().DB.projects.find((p) => p.id === "SP-26028");
+    log(!!okState && okState.status === "生产准备中", "提交落地：SP-26028 → " + (okState ? okState.status : "缺失"));
+  } else {
+    log(false, "弹窗表单未出现");
   }
 
   document.getElementById("out").textContent = out.join("\n") + "\n\nDONE";

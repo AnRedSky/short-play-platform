@@ -186,7 +186,7 @@ window.App = (function () {
     app.innerHTML =
       '<div class="shell">' +
         '<aside class="sidebar' + (S.menuOpen ? " open" : "") + '" id="sidebar">' +
-          '<div class="sidebar-brand"><span class="mark">FR</span><div><b>FRAME 短剧工场</b><small>AI 短剧创作工作台 · 第 9.7.7 版</small></div></div>' +
+          '<div class="sidebar-brand"><span class="mark">FR</span><div><b>FRAME 短剧工场</b><small>AI 短剧创作工作台 · 第 9.7.8 版</small></div></div>' +
           '<nav class="nav" id="menu-root" aria-label="主导航"></nav>' +
           '<div class="sidebar-foot">一人一部戏 · 从创意到交付<br>静态原型 · 全部数据为虚构演示</div>' +
         "</aside>" +
@@ -542,6 +542,11 @@ window.App = (function () {
       if (!el) return;
       const name = el.dataset.action;
       if (!name) return;
+      /* 弹窗的 backdrop 是 .modal 的父节点，它的 data-action 会被 closest() 命中；
+         若把弹窗内「提交按钮 / 勾选框 / 输入框」的点击也一并 preventDefault，
+         表单就不会触发 submit、勾选框也点不动（只按 Enter 才能提交）。
+         因此 backdrop 只在点击背板本身时生效。 */
+      if (name === "common.backdrop" && e.target !== el) return;
       e.preventDefault();
       dispatch(name, el, e);
     });
