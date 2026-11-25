@@ -53,23 +53,35 @@ const put = (t) => { document.getElementById("out").textContent = t; };
     }
   }
 
-  /* 合并页 tab 断言（B2 归并后 9 个宿主页的 tab 必须渲染出真实内容） */
+  /* 合并页 tab 断言（B2 归并后 9 个宿主页的 tab 必须渲染出真实内容）
+     切 tab 前先把身份重置为项目负责人，否则上一步的角色遍历会停在无权限身份上 */
+  const setIdentity = async (id) => {
+    const sel = D().getElementById("identity-switch");   // 每次重新取：切身份会重建侧栏，旧引用会失效
+    if (!sel) return;
+    sel.value = id;
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+    await wait(400);
+  };
+  await setIdentity("i-owner");
   const tabCases = [
-    ["projects/list", "rel"], ["quality/reports", "gates"], ["post/delivery", "works"],
-    ["video/preview", "versions"], ["director/shots", "board"], ["assets/library", "refs"],
-    ["cost/ledger", "usage"], ["compliance/risks", "dispose"], ["analytics/enterprise", "depts"]
+    ["projects/list", "projects.setRel", "own"], ["quality/reports", "quality.tab", "gates"],
+    ["post/delivery", "post.tab", "works"], ["video/preview", "video.tab", "versions"],
+    ["director/shots", "director.view", "board"], ["assets/library", "assets.tab", "refs"],
+    ["cost/ledger", "cost.tab", "usage"], ["compliance/risks", "compliance.tab", "dispose"],
+    ["analytics/enterprise", "analytics.tab", "depts", "i-admin"]
   ];
   const tabBad = [];
-  for (const [p, v] of tabCases) {
+  for (const [p, action, v, asId] of tabCases) {
+    if (asId) await setIdentity(asId);
     W().location.hash = "#/" + p;
-    await wait(400);
-    const chip = D().querySelector('#view button[data-value="' + v + '"]');
-    if (!chip) { tabBad.push(p + " 缺少 tab=" + v + " 的切换控件"); continue; }
+    await wait(500);
+    const chip = D().querySelector('#view button[data-action="' + action + '"][data-value="' + v + '"]');
+    if (!chip) { tabBad.push(p + " 缺少 " + action + "=" + v + " 的切换控件"); continue; }
     chip.dispatchEvent(new Event("click", { bubbles: true }));
-    await wait(350);
+    await wait(400);
     const text = (D().querySelector("#view") || {}).textContent || "";
-    if (text.trim().length < 20) tabBad.push(p + " tab=" + v + " 渲染为空");
-    if (/undefined|NaN|\[object Object\]/.test(text)) tabBad.push(p + " tab=" + v + " 含 undefined/NaN");
+    if (text.trim().length < 20) tabBad.push(p + " " + action + "=" + v + " 渲染为空");
+    if (/undefined|NaN|\[object Object\]/.test(text)) tabBad.push(p + " " + action + "=" + v + " 含 undefined/NaN");
   }
 
   put("routes=" + routes.length + "\n" + (bad.length ? "ROUTE ISSUES:\n" + bad.join("\n") : "所有路由渲染正常，无 JS 错误、无 undefined/NaN") +

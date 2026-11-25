@@ -128,19 +128,8 @@
             "</div>" +
             U.card("系统日志", U.table(["时间", "级别", "来源", "内容"], svcLogs, "当前没有日志记录")) +
             '<div class="grid grid-2 mt-4">' +
-              U.card("日志边界", U.listRows([
-                ["系统运维配置", "不包含员工个人凭据，也不成为绕过企业权限的通道"],
-                ["业务内容", "运维身份默认不读取业务内容；必要访问须授权并留痕"],
-                ["凭据", "任何日志都不记录 API Key 明文"],
-                ["审计", "业务操作审计在「合规与审计 / 审计日志」，与系统日志分离"]
-              ]), "运维日志与业务审计分离") +
-              U.card("监控口径", U.listRows([
-                ["队列积压", D.ops.queue.map(q => q.name + " 待执行 " + q.pending).join("；")],
-                ["失败率", D.ops.queue.map(q => q.name + " 失败 " + q.failed).join("；")],
-                ["重试率", D.ops.queue.map(q => q.name + " 重试 " + q.retry).join("；")],
-                ["供应商延迟", D.ops.services.map(s => s.name + " " + s.latency).join("；")],
-                ["磁盘容量", D.ops.storage.total + " GB / 已用 " + D.ops.storage.used + " GB"]
-              ]), "业务方案 §21.2 要求的可观测指标") +
+              U.notice("口径与规则见《口径与规则汇总》§R-21：日志边界", "info") +
+              U.notice("口径与规则见《口径与规则汇总》§R-22：监控口径", "info") +
             "</div>");
         }
       },
@@ -155,7 +144,7 @@
             U.card("数据保留与归档策略", U.table(["对象", "保留期", "到期动作", "说明"], D.ops.retention.map(r =>
               "<tr><td>" + U.esc(r.object) + '</td><td class="num">' + U.esc(r.period) + "</td><td>" + U.esc(r.action) + '</td><td class="cell-wrap faint">' + U.esc(r.note) + "</td></tr>").join("")) +
               U.notice("审计记录保留期不得短于业务追溯要求；清理任务必须可审计，不得清理仍被引用的对象。", "warn"), "业务数据与审计记录长期保留") +
-            U.card("配置边界", U.listRows([["个人凭据域", "与运维配置物理隔离，平台配置不承载任何 API Key"], ["白名单变更", "需审计；执行中任务不中断，新任务须符合新策略"], ["企业策略", "由企业管理员维护，平台不代替企业决策"], ["审计查看", "运维身份不读取业务审计明细，由审计与经营管理身份查看"]]) , "运维不等于业务权限")
+            U.notice("口径与规则见《口径与规则汇总》§R-20：配置边界", "info")
           );
         }
       }

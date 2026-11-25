@@ -54,8 +54,7 @@
                 { label: "待修复", value: fix, color: "var(--warn)" },
                 { label: "未生成", value: Math.max(0, rest), color: "var(--line-strong)" }
               ], "对白", String(list.length)), "按当前项目对白条目计数") +
-              U.card("异常提示", (first ? U.notice(first.id + " " + first.text + "：" + first.asr + "，需重生成后重新回听。", "warn") : U.notice("当前项目没有回听不一致或音量异常的对白。", "ok")) +
-                U.listRows([["音量标准", "−16 LUFS ± 2"], ["语速偏差", "不超过 ±8%"], ["情绪一致", "与场次标注一致"]]) , "异常需与镜头一并闭环") +
+              U.notice("口径与规则见《口径与规则汇总》§R-05：异常提示", "info") +
             "</div></div>"
           );
         }
@@ -88,10 +87,8 @@
                 '<div class="wave-box"><span class="wave-line"></span><span class="faint small">48kHz · 单声道 · −16 LUFS（参数取自最近一次生成记录）</span></div>', "不伪造音频内容") +
             '</div><div class="stack">' +
               U.card("音频异常 · " + U.esc(p ? p.name : pid), '<div class="kv-grid">' + U.kv("对白异常", badDlg + " 条") + U.kv("口型不匹配", badLip + " 条") + U.kv("字幕待处理", badSub + " 条") + U.kv("声音档案", voices.length + " 份") + "</div>", "当前项目实际记录") +
-              U.card("音色规则", U.listRows([
-                ["一人一档", "同一人物不得同时启用多个音色"], ["跨集一致", "全剧使用同一档案版本"], ["语言", "方言片段需在档案中登记覆盖范围"], ["克隆授权", "真人声音必须留存授权书与使用范围"], ["停用", "停用不影响已交付内容，但阻止新生成"]
-              ]), "音色变更需重跑受影响对白") +
-              U.card("成本口径", U.notice("语音按生成秒数计费，失败与重试同样入账；不允许把失败成本摊入成功条目。", "info")) +
+              U.notice("口径与规则见《口径与规则汇总》§R-08：音色规则", "info") +
+              U.notice("口径与规则见《口径与规则汇总》§R-09：成本口径", "info") +
             "</div></div>"
           );
         }
@@ -165,8 +162,8 @@
                 ["标点", "句末标点统一", subBad.length ? "待复核" : "已校验"],
                 ["敏感词", "合规词典命中即阻断", "0 命中"]
               ].map(r => "<tr><td>" + r[0] + "</td><td class=\"cell-wrap\">" + r[1] + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("")), "校验结果进入分集质量报告") +
-              U.card("口型口径", U.listRows([["对齐", "按对白帧计算，不按整句估算"], ["匹配度", "低于 85% 判 REVIEW_REQUIRED"], ["台词变更", "需重做口型，不重新配音则不允许"], ["成本", "按视频秒数计费，重做单独入账"], ["当前项目待处理", lipBad.length + " 条"]]) , "口型不可复用其他台词结果") +
-              U.card("静态原型说明", U.notice("字幕文件与口型结果在本原型中仅以参数与状态呈现，不包含真实字幕或音频文件。", "info")) +
+              U.notice("口径与规则见《口径与规则汇总》§R-06：口型口径", "info") +
+              U.notice("口径与规则见《口径与规则汇总》§R-07：静态原型说明", "info") +
             "</div>"
           );
         }

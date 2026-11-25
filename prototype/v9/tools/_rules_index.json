@@ -1,0 +1,247 @@
+{
+  "analytics": [
+    {
+      "id": "R-01",
+      "route": "analytics/enterprise",
+      "title": "企业指标口径（业务方案 §19.3 五组 · §19.5 口径定义）"
+    },
+    {
+      "id": "R-02",
+      "route": "analytics/me",
+      "title": "复盘提示"
+    },
+    {
+      "id": "R-03",
+      "route": "analytics/me",
+      "title": "口径说明"
+    }
+  ],
+  "audio": [
+    {
+      "id": "R-04",
+      "route": "audio/dialogue",
+      "title": "生成与校验规则"
+    },
+    {
+      "id": "R-05",
+      "route": "audio/dialogue",
+      "title": "异常提示"
+    },
+    {
+      "id": "R-06",
+      "route": "audio/subtitle",
+      "title": "口型口径"
+    },
+    {
+      "id": "R-07",
+      "route": "audio/subtitle",
+      "title": "静态原型说明"
+    },
+    {
+      "id": "R-08",
+      "route": "audio/voice",
+      "title": "音色规则"
+    },
+    {
+      "id": "R-09",
+      "route": "audio/voice",
+      "title": "成本口径"
+    }
+  ],
+  "compliance": [
+    {
+      "id": "R-10",
+      "route": "compliance/audit",
+      "title": "留痕规则"
+    },
+    {
+      "id": "R-11",
+      "route": "compliance/rights",
+      "title": "授权有效期规则"
+    }
+  ],
+  "cost": [
+    {
+      "id": "R-12",
+      "route": "cost/budget",
+      "title": "预算规则（6 条）"
+    },
+    {
+      "id": "R-13",
+      "route": "cost/budget",
+      "title": "阈值口径"
+    },
+    {
+      "id": "R-14",
+      "route": "cost/ledger",
+      "title": "十维成本口径"
+    }
+  ],
+  "director": [
+    {
+      "id": "R-15",
+      "route": "director/cast",
+      "title": "档案规则"
+    },
+    {
+      "id": "R-16",
+      "route": "director/plan",
+      "title": "规划口径"
+    }
+  ],
+  "models": [
+    {
+      "id": "R-17",
+      "route": "models/config",
+      "title": "安全边界"
+    },
+    {
+      "id": "R-18",
+      "route": "models/routing",
+      "title": "路由原则"
+    }
+  ],
+  "notify": [
+    {
+      "id": "R-19",
+      "route": "notify/inbox",
+      "title": "升级规则"
+    }
+  ],
+  "ops": [
+    {
+      "id": "R-20",
+      "route": "ops/config",
+      "title": "配置边界"
+    },
+    {
+      "id": "R-21",
+      "route": "ops/logs",
+      "title": "日志边界"
+    },
+    {
+      "id": "R-22",
+      "route": "ops/logs",
+      "title": "监控口径"
+    },
+    {
+      "id": "R-23",
+      "route": "ops/overview",
+      "title": "平台边界说明"
+    }
+  ],
+  "orgs": [
+    {
+      "id": "R-24",
+      "route": "orgs/departments",
+      "title": "组织边界规则"
+    },
+    {
+      "id": "R-25",
+      "route": "orgs/enterprise",
+      "title": "治理边界"
+    },
+    {
+      "id": "R-26",
+      "route": "orgs/grants",
+      "title": "授权规则"
+    },
+    {
+      "id": "R-27",
+      "route": "orgs/handover",
+      "title": "人员变动处理口径"
+    }
+  ],
+  "post": [
+    {
+      "id": "R-28",
+      "route": "post/delivery",
+      "title": "阻断提示"
+    },
+    {
+      "id": "R-29",
+      "route": "post/delivery",
+      "title": "冻结规则"
+    },
+    {
+      "id": "R-30",
+      "route": "post/review",
+      "title": "审核结论口径（业务方案 §16.3 · 四种结论）"
+    },
+    {
+      "id": "R-31",
+      "route": "post/versions",
+      "title": "版本规则"
+    }
+  ],
+  "projects": [
+    {
+      "id": "R-32",
+      "route": "projects/lifecycle",
+      "title": "状态定义与进入条件"
+    },
+    {
+      "id": "R-33",
+      "route": "projects/lifecycle",
+      "title": "迁移规则"
+    },
+    {
+      "id": "R-34",
+      "route": "projects/list",
+      "title": "状态机提示"
+    }
+  ],
+  "quality": [
+    {
+      "id": "R-35",
+      "route": "quality/reports",
+      "title": "报告可信口径"
+    },
+    {
+      "id": "R-36",
+      "route": "quality/rework",
+      "title": "返工规则"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "R-37",
+      "route": "tasks/attempt",
+      "title": "成本口径"
+    },
+    {
+      "id": "R-38",
+      "route": "tasks/list",
+      "title": "重试规则"
+    },
+    {
+      "id": "R-39",
+      "route": "tasks/queue",
+      "title": "队列原则"
+    }
+  ],
+  "video": [
+    {
+      "id": "R-40",
+      "route": "video/production",
+      "title": "四状态分离口径"
+    },
+    {
+      "id": "R-41",
+      "route": "video/production",
+      "title": "成本提示"
+    }
+  ],
+  "workspace": [
+    {
+      "id": "R-42",
+      "route": "workspace/assistant",
+      "title": "能力边界"
+    },
+    {
+      "id": "R-43",
+      "route": "workspace/assistant",
+      "title": "静态原型说明"
+    }
+  ]
+}

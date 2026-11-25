@@ -24,7 +24,9 @@ B2 收盘后在同版内继续做了五类整改，均以脚本断言落地：
 - **按钮密度与体量（R-18 / R-22 / R-23）**：新增 `tools/_audit_buttons.mjs`（按 tab 渲染 76 个快照，口径为"表格行内、带 `data-value`/`data-id`/`data-pid` 的按钮随数据重复，不算页面操作"）。结果：同页重复动作 0、动作 >6 的页 0、≥12KB 的页 0；`analytics/enterprise` 14929 → 10989 字符（口径表 25 行 → 10 行核心指标 + 指向规范 §19.3–§19.5），`ops/overview` 的队列明细改为一行摘要、明细归 `ops/queue`。
 - **权限对齐（B5）**：新增 `delivery.read` / `task.read`；`workspace/home` 改 `project.read|platform.read`（六身份全可达）；`post/delivery` 读走 `delivery.read`、执行走 `delivery.execute`；`tasks/*` 路由 `task.read`、写按钮 `task.operate`；`models/config` 改 `models.own|models.manage`，管理员多一张「企业托管资源与额度」。
 - **预算单账本（R-32）**：`DB.analytics.depts` 与 `DB.enterprise` 的预算字段降级为 `DB.budgets` 的投影，由 `derived.syncScopeBudgets()` 在账本变动后回写；补齐「短剧二组」「经营管理部」两条部门账本；`_audit_kpi` 112 → 127 项（新增"部门/企业已用 = 账本 used"断言）。
-- **冒烟与回归**：`_smoke.html` 路由遍历自适应 `App.routes()`（当前 56），并新增 9 条合并页 tab 断言（点击 `data-value` 后断言非空、无 `undefined/NaN`）。`_e2e.html` 计数断言尚未补齐。
+- **规则卡收敛（R-17）**：`tools/_audit_rules.mjs` 盘出 43 张规则/口径卡（10 页各 2 张）。每个域只留 1 张（共 **15 张**，单页 ≤1），其余 28 张条文由 `tools/_dump_rules.mjs` 渲染抽取进 `docs/RULES-V9.7.0.md`（§R-01…§R-43 按域分节），页面对应位置折叠为一行 `U.notice("口径与规则见《口径与规则汇总》§R-xx：…")`。折叠由 `tools/_fold_rules.mjs` 做括号配对替换，信息不丢、可回查。
+- **浏览器验收（R-28）**：`_smoke.html` 56 路由 + 9 条合并页 tab 断言 + 3 身份拦截 → **Smoke OK**；`_e2e.html` 断言 **28 → 37**（新增交付包 / 成本台账 / 分镜板三页的「切 tab 后内容正常 + `App.refresh()` 后仍停在该 tab」）→ **E2E OK**。
+- **冒烟与回归**：`_smoke.html` 路由遍历自适应 `App.routes()`（当前 56），并新增 9 条合并页 tab 断言（点击 `data-value` 后断言非空、无 `undefined/NaN`）。切 tab 前会把身份重置为项目负责人（`i-owner`），`analytics/*` 用 `i-admin`——否则上一步角色遍历留下的无权限身份会让页面变 403，误判成"缺 tab 控件"。
 
 > 施工纪律（事故后写入）：**不要用 PowerShell 对 `modules/*/pages.js` 批量 `.Replace`**。本版曾因 `$map` 被展平导致 4 个文件的全部双引号被替换成中文字符（director→`进`、post→`处`、projects→`打`、video→`去`），已按"两侧皆为非 ASCII 视为正文"的邻接规则逐字符恢复并有全量 `node --check` 与回归证据。改文案一律用编辑器逐处替换，或写 `.mjs` 用 Node 读写。
 
@@ -367,6 +369,7 @@ node tools/_audit_links.mjs      # 失效内链（含 LEGACY 旧地址转发）
 node tools/_audit_dups.mjs       # 动作重复
 node tools/_audit_naming.mjs     # 页眉/标题/章节唯一性，面包屑必须由 DB.menu 派生
 node tools/_audit_buttons.mjs    # 按钮密度（同页同动作 ≤1、页面级动作 ≤6）与 ≥12KB 体量
+node tools/_audit_rules.mjs      # 规则/口径卡分布：全站 ≤17 张且单页 ≤1（改规则卡后必跑）
 node tools/_audit_project_guard.mjs  # 项目页阻断
 node tools/_probe_tab.mjs video/preview versions   # 单 tab 渲染探针（合并页必跑）
 ```
@@ -374,7 +377,7 @@ node tools/_probe_tab.mjs video/preview versions   # 单 tab 渲染探针（合�
 浏览器侧（4190 服务在线）：
 
 - `http://localhost:4190/_smoke.html`：56 路由渲染 + 9 条合并页 tab 断言 + 3 个身份权限拦截 + 全局 JS 错误巡检。
-- `http://localhost:4190/_e2e.html`：真实点击链路 27 条断言（新建项目校验与创建、前置依赖拦截、终审门禁、交付说明与分批交付、质量理由校验与裁决写回、通知闭环、项目暂停、预算低于已用、供应商连通性失败、合规类返工禁止重跑、重复邮箱占用）。
+- `http://localhost:4190/_e2e.html`：真实点击链路 37 条断言（新建项目校验与创建、前置依赖拦截、终审门禁、交付说明与分批交付、质量理由校验与裁决写回、通知闭环、项目暂停、预算低于已用、供应商连通性失败、合规类返工禁止重跑、重复邮箱占用、三页 tab 状态持久化）。
 
 ## 与《通用静态原型开发规范》的符合性说明
 

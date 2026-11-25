@@ -137,13 +137,7 @@
                 ? U.table(["人物", "状态", "参考资产", "处理建议"], pending.map(c => ["<span class=\"cell-wrap\">" + U.esc(c.name) + "</span>", U.pill(c.status), (c.refs || 0) + " 张 / 至少 3 张", (c.refs || 0) < 3 ? "补参考资产后再确认" : "确认视觉设定"]).map(r => "<tr><td>" + r[0] + "</td><td>" + r[1] + '</td><td class="num">' + r[2] + '</td><td class="muted">' + r[3] + "</td></tr>").join(""))
                 : U.empty("全部档案已确认", "当前项目的人物参考资产均满足生产基准"), "未确认档案引用的镜头不可固化") +
             '</div><div class="stack">' +
-              U.card("档案规则", U.listRows([
-                ["一人一档", "同名人物不得重复建档，跨项目可复制而非共享"],
-                ["版本", "造型或外观变更产生新版本，旧版本保留"],
-                ["禁用项", "必须具体可执行，例如「不得戴眼镜」而非「保持风格」"],
-                ["参考资产", "至少 3 张，包含正脸与侧脸；不足时禁止提交生产"],
-                ["授权", "真人形象必须有授权，AI 生成形象记录供应商条款"]
-              ]), "档案不足即门禁不通过") +
+              U.notice("口径与规则见《口径与规则汇总》§R-15：档案规则", "info") +
               U.card("当前项目人物", chars.length ? U.listRows(chars.map(c => [c.name + "（" + c.id + "）", c.version + " · " + c.status]), "点击档案可查看禁用项") : U.empty("暂无人物", "新建人物档案后在这里汇总"),
                 U.btn("全部档案", "director.toCast", "sm", { id: pid })) +
             "</div></div>"

@@ -107,7 +107,7 @@
                 budget.forEach(p => rows.push(["预算状态 " + p.budgetState, p.id, "预算受限时新任务应暂停提交"]));
                 return rows.length ? rows.map(r => '<tr><td class="cell-wrap">' + U.esc(r[0]) + "</td><td>" + U.code(r[1]) + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("") : '<tr><td colspan="3" class="cell-wrap muted">当前可见项目没有排队或预算受限任务</td></tr>';
               })(), "无需排队")) +
-              U.card("队列原则", U.listRows([["优先级", "高优先级先入池，同优先级按提交时间"], ["依赖", "依赖未满足不入队"], ["预算", "预算超限自动暂停新任务"], ["公平性", "单员工并发不超过 2"]]) , "排队不产生费用") +
+              U.notice("口径与规则见《口径与规则汇总》§R-39：队列原则", "info") +
             "</div></div>"
           );
         }
@@ -144,7 +144,7 @@
                 ["合规阻断", "否", "换素材 / 人工决策"]
               ].map(r => "<tr><td>" + r[0] + "</td><td>" + U.pill(r[1], r[1] === "是" ? "ok" : "bad") + '</td><td class="cell-wrap muted">' + r[2] + "</td></tr>").join("")), "分类决定后续动作") +
             '</div><div class="stack">' +
-              U.card("成本口径", U.desc([["预计成本", "提交时按模型单价 × 用量"], ["实际成本", "以调用记录为准"], ["失败成本", "单独计入，不摊入成功项"], ["重试成本", "每次尝试 单独记账"], ["企业侧", "按部门口径汇总"]]) , "成本不可事后估算") +
+              U.notice("口径与规则见《口径与规则汇总》§R-37：成本口径", "info") +
               U.card("凭据隔离", U.notice("调用记录仅展示脱敏凭据与上游任务号，任何角色均不可读取明文密钥。", "info")) +
             "</div></div>"
           );

@@ -103,7 +103,7 @@
             U.card("预算表 · " + (p ? U.esc(p.name) : "可见 " + budgets.length + " 项"), U.table(["层级", "名称", "总额", "已用", "预留", "单集预算（总额 ÷ 集数）", "使用率", "状态", "负责人", "操作"], rows, p ? "当前项目未建立独立预算" : "当前可见范围内没有预算记录"), p && !budgets.length ? "该项目未建立项目预算，成本只能按企业 / 部门额度归集" : "按项目、部门、企业三级展示；预算状态五态：未设置 / 正常 / 接近阈值 / 已超限 / 已冻结") +
             U.tableFoot("可见范围：" + DB.derived.scopeLabel(), "口径：总额 − 已用 − 预留 = 可用余额") +
             '<div class="split mt-4"><div class="stack">' +
-              U.card("预算规则（6 条）", U.table(["规则", "执行方式"], D.budgetRules.map((r, i) => '<tr><td class="num">' + (i + 1) + '</td><td class="cell-wrap">' + U.esc(r) + "</td></tr>")), "规则由企业管理员配置") +
+              U.notice("口径与规则见《口径与规则汇总》§R-12：预算规则（6 条）", "info") +
               U.card("预检与阻塞", U.notice("任务提交前先估算并做预算预检；超限任务保持「待执行」并写明阻塞原因（预算超限 / 单集超限 / 需负责人审批）。", "info")) +
             '</div><div class="stack">' +
               (hot
@@ -111,7 +111,7 @@
                   '<div class="btn-row-inline">' + (App.can("cost.manage") ? U.btn("追加预算", "cost.addBudget", "sm", { name: hot.name }) + U.btn("恢复任务", "cost.resume", "sm") : "") + "</div>", "接近阈值不等于可继续")
                 : U.card("预算告警", U.empty("当前可见范围内没有接近阈值的预算", "使用率超过 85% 会在这里显示并阻止继续派发。"), "阈值可配置")) +
               U.card("使用率分布", labels.length ? U.bars(labels, values, "%") : U.empty("没有可用预算", "预算台账为空时无法绘制分布。"), "按当前可见层级展示，数值来自预算表") +
-              U.card("阈值口径", U.listRows([["提醒", "70% 提醒项目负责人"], ["预警", "85% 提醒部门管理员"], ["暂停", "90% 暂停非关键任务"], ["冻结", "100% 全部暂停"]]) , "阈值可配置") +
+              U.notice("口径与规则见《口径与规则汇总》§R-13：阈值口径", "info") +
             "</div></div>"
           );
         }

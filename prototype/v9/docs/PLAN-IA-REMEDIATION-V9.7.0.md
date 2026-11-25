@@ -93,8 +93,7 @@ B2 九条（统一手法：重复页主体抽成 `xxxBlock(p)` 纯函数 → 宿
 | --- | --- | --- | --- | --- | --- |
 | R-15 | P2 | 菜单 label 与页面 title 不一致 1 例：`projects/workflow`「制作流水线」vs「项目制作流水线」 | 菜单名即 title | `data.js` / `projects/pages.js` | §2 不一致 0 |
 | R-16 | P1 | 8 页 metric 与其下明细卡 1:1 重复（首页、授权台账、风险、成本、路由、通知、返工…） | 保留带下钻的 KPI，删同名明细卡 | 8 个 `pages.js` | §6 8 → 0 |
-| R-17 | P1 | 47 张规则/口径卡分布各页，占屏比最高 | 每域留 1 张「口径与规则」，其余改为页头 `?` 抽屉或 `INTERACTION-SPEC` 章节 | 全部模块 | 规则卡 47 → ≤17；每页 ≤1 |
-| R-18 | P1 | 同页重复按钮（`creation/brief` 11 个、`creation/script` 16 个、`video/preview` 11 个） | 同页同动作只留 1 个，其余进「更多」；每页 ≤6 | 对应模块 | 同页同动作 ≤1、按钮 ≤6（`_audit_buttons`） |
+| R-17 | P1 | 47 张规则/口径卡分布各页，占屏比最高 | 每域留 1 张「口径与规则」，其余改为页头 `?` 抽屉或 `INTERACTION-SPEC` 章节 | 全部模块 | 规则卡 47 → ≤17；每页 ≤1 || R-18 | P1 | 同页重复按钮（`creation/brief` 11 个、`creation/script` 16 个、`video/preview` 11 个） | 同页同动作只留 1 个，其余进「更多」；每页 ≤6 | 对应模块 | 同页同动作 ≤1、按钮 ≤6（`_audit_buttons`） |
 | R-19 | P1 | 19 组同一动作多套文案（`projects.wfOpen` 6 种、`common.export` 20 种） | 动作 → 唯一文案表；导出按对象命名 | `app.js` 动作表 | 19 → ≤10；同动作文案唯一 |
 | R-20 | P2 | 3 例文案与落点不符：`查看拆解结果`→拆解页、`处理交付阻断`→授权台账、`打开分镜板`→镜头契约 | 文案改成落点页 title | 3 个模块 | `_ia3` B 段 0 条 |
 | R-21 | P1 | 首页 13 区块（hero + 8 阶段链路 + 分集卡 + 下一步 + 4 KPI + 明细） | 按 D3：hero（预算+进度）/ 待办表 / 当前项目 / 1 张风险 / 1 条下一步；链路只留一行摘要 + 跳流水线 | `modules/workspace/pages.js` | 首页区块 ≤8；链路明细只在 `projects/workflow` |
@@ -161,14 +160,14 @@ B6 文档版本（R-28/R-31/R-32）        门禁：全套回归 + _e2e 37 断�
 | B4 按钮与体量 | R-18 / R-22 / R-23 | `_audit_buttons` 全站 76 快照：同页重复动作 0、动作 >6 的页 0、≥12KB 的页 0（`analytics/enterprise` 14929 → 10989）；`ops/overview` 队列明细改一行摘要，明细归 `ops/queue` |
 | B5 权限对齐 | R-24…R-27 | `_audit_perms` 23 guard codes / 0 missing；`workspace/home` 六身份可达；`delivery.read` / `task.read` 写入权限字典与角色 |
 | B6 脚本与账本 | R-31 / R-32 / R-34 | `_audit_naming` + `_audit_buttons` 已建；`_audit_kpi` 112 → **127 项**（新增部门/企业预算 = 账本断言）；`LEGACY` 10 条断言通过 |
+| B7 规则收敛 | **R-17 已闭环** | `_audit_rules` 43 张 → **15 张（每域 1 张，超标页 0）**；28 张条文抽进 `docs/RULES-V9.7.0.md`（脚本生成，§R-01…§R-43），页面折叠为一行回指提示 |
+| B7 浏览器验收 | **R-28 已闭环** | `_smoke.html`：56 路由 + 9 条 tab 断言 + 3 身份拦截，**Smoke OK**；`_e2e.html`：断言 **28 → 37**（新增 3 页 × 3 条 tab 状态持久化），**E2E OK** |
 
 ### 部分完成
 
 | 条目 | 现状 | 剩余 |
 | --- | --- | --- |
-| R-28 | `_smoke.html` 已按 `App.routes()` 自适应 56 路由，并新增 9 条合并页 tab 断言（点击 `data-value` 后断言非空、无 undefined/NaN）；`_e2e.html` 未加计数 | 浏览器侧跑一遍 `_smoke/_e2e`（需本地服务）；`_e2e` 补 9 条 tab 断言 |
-| R-19 | 全站同动作多文案 2 组（白名单） | 在 `_audit_buttons` 里固化白名单理由（已写注释），文档留痕即可 |
-| R-17 | 规则/口径卡未系统收敛 | 47 → ≤17，需逐域判断保留哪一张；`analytics` 已把 25 行口径表压到 10 行 |
+| R-19 | 全站同动作多文案 0 组（`common.export` / `quality.judge` / `video.preview` 三类已白名单化并写明理由） | 无（如需绝对唯一，导出可按对象路由拆动作） |
 
 ### 事故与恢复记录（必读）
 

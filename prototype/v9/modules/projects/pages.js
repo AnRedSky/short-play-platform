@@ -84,9 +84,7 @@
                 { label: "已交付 / 归档", value: counts.delivered, color: "var(--ok)" },
                 { label: "草稿", value: counts.draft, color: "var(--line-strong)" }
               ], "共 " + visible.length + " 个项目", String(visible.length)), "按当前可见项目的真实状态归类") +
-              U.card("状态机提示", U.notice("主流程不允许跨阶段跳跃：例如从「剧本创作中」不可直接进入「生产中」。质量检测与待最终审核由系统自动进出，不靠人工点按钮伪造。", "info") +
-                U.listRows([["连续失败", "重试达上限 → 转人工 → 异常中"], ["预算触发", "暂停受影响任务，不整项目静默继续"], ["终止", "取消未执行任务，保留记录与已发生费用"]]), "详见项目生命周期页",
-                U.btn("查看状态机", "projects.lifecycleLink", "sm")) +
+              U.notice("口径与规则见《口径与规则汇总》§R-34：状态机提示", "info") +
             "</div>"
           );
         }
@@ -319,14 +317,7 @@
             U.card("状态定义与进入条件", U.table(["状态", "含义", "进入条件", "是否可终止"], D.projectStates.map(s =>
               "<tr><td>" + U.pill(s.name) + '</td><td class="cell-wrap">' + U.esc(s.mean) + '</td><td class="cell-wrap muted">' + U.esc(s.enter) + "</td><td>" + U.esc(s.end) + "</td></tr>").join("")), "状态与业务结果分离") +
             '<div class="grid grid-2 mt-4">' +
-              U.card("迁移规则", U.listRows([
-                ["顺序", "主流程按业务动作顺序推进，不允许跨阶段跳跃"],
-                ["自动进出", "「质量检测中」由分集成片输出自动进入；无阻断项自动进入「待最终审核」"],
-                ["干涉状态", "「已暂停」「异常中」可挂在任一进行中状态之上，恢复回到被挂起前状态"],
-                ["终止", "取消尚未执行的下游计划与任务，保留已产生记录与费用"],
-                ["返工", "「已完成」后可退回后期或生产，但必须保留原终审记录"],
-                ["记录", "状态变更写入项目生命周期记录，含原因、操作者、时间与关联任务"]
-              ]), "禁止手工改状态伪造完成数量") +
+              U.notice("口径与规则见《口径与规则汇总》§R-33：迁移规则", "info") +
               U.card("可见项目状态分布", U.stackbar([{ label: "已暂停", value: paused, color: "var(--warn)" }, { label: "异常中", value: abnormal, color: "var(--bad)" }, { label: "进行中", value: active, color: "var(--ok)" }, { label: "其他", value: Math.max(0, visible.length - paused - abnormal - active), color: "var(--line-strong)" }]) +
                 U.listRows([["暂停", "阻止新任务派发；按供应商能力取消或等待运行中任务收口"], ["恢复", "重新计算可执行任务集合，不重复提交已成功任务"], ["异常恢复", "重新做预算预检与资源可用性检查"]]) +
                 '<div class="mt-3">' + U.btn("查看异常中心", "projects.incidentsLink", "sm") + "</div>", "计数来自当前可见项目，不使用固定示例值") +

@@ -196,6 +196,26 @@ window.addEventListener("error", (e) => { out.push("ERROR " + e.message + " @" +
   await submitModal({ name: "新成员", email: existEmail }, 3200);
   log(/邮箱/.test(fieldError() || modalError()), "重复邮箱被拦截 → " + (fieldError() || modalError()));
 
+  /* 12. 合并页 tab 的状态层持久化（B2 归并契约：tab 键进状态层，刷新后保持） */
+  await reload();
+  await asIdentity("i-owner");
+  const tabCases = [
+    { path: "post/delivery", action: "post.tab", value: "works", key: "post/tab", word: "作品" },
+    { path: "cost/ledger", action: "cost.tab", value: "usage", key: "cost/tab", word: "用量" },
+    { path: "director/shots?id=SP-26015", action: "director.view", value: "board", key: "director/view", word: "分镜" }
+  ];
+  for (const c of tabCases) {
+    await go(c.path);
+    log(!!D().querySelector('#view button[data-action="' + c.action + '"]'), c.path + " 存在 tab 切换控件");
+    await click(c.action, '[data-value="' + c.value + '"]');
+    const afterClick = (D().querySelector("#view") || {}).textContent || "";
+    log(afterClick.length > 30 && /undefined|NaN|\[object Object\]/.test(afterClick) === false, c.path + " 切到 " + c.value + " 后内容正常（" + afterClick.length + " 字符）");
+    W().App.refresh();
+    await wait(500);
+    const afterRefresh = (D().querySelector("#view") || {}).textContent || "";
+    log(afterRefresh.indexOf(c.word) >= 0 && afterRefresh.length > 30, c.path + " 刷新后仍停留在 " + c.value + "（含「" + c.word + "」）");
+  }
+
   document.getElementById("out").textContent = out.join("\n") + "\n\nDONE";
   document.title = "E2E " + (out.filter((x) => x.startsWith("FAIL") || x.startsWith("ERROR") || x.startsWith("IFRAME")).length ? "FAIL" : "OK");
 })().catch((e) => { out.push("FATAL " + e.message + "\n" + e.stack); document.getElementById("out").textContent = out.join("\n"); });

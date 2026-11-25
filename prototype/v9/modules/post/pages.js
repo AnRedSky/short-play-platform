@@ -237,8 +237,8 @@
                 ["授权齐备", (wf.gateDelivery.items.find(i => i.key === "rights") || {}).ok ? "已齐备" : "存在阻断"],
                 ["交付门禁", wf.gateDelivery.ok ? "可生成" : "未满足"]
               ]), "不允许绕过阻断项") +
-              U.card("阻断提示", blockers.length ? U.notice(blockers.map(i => i.label + (i.note ? "（" + i.note + "）" : "")).join("；"), "bad") : U.notice(noteText, (dp && dp.status === "已交付") ? "info" : "ok"), "阻断项不进入交付包") +
-              U.card("冻结规则", U.listRows([["生成即冻结", "交付包不可修改"], ["新版本", "只能新建 V2，不覆盖 V1"], ["补交付", "新增文件进新版本链"], ["引用检查", "删除资产前先查引用"]]) , "历史版本永久可查") +
+              U.notice("口径与规则见《口径与规则汇总》§R-28：阻断提示", "info") +
+              U.notice("口径与规则见《口径与规则汇总》§R-29：冻结规则", "info") +
             "</div></div>")
           );
         }
@@ -274,7 +274,7 @@
             U.card("链路视图 · " + U.esc(p.name), chain, "箭头表示下游消费上游") +
             U.card("版本记录 · " + U.esc(p.name), U.table(["对象", "类型", "状态", "规模", "说明"], rows, "当前项目还没有版本记录")) +
             '<div class="grid grid-2 mt-4">' +
-              U.card("版本规则", U.listRows([["不覆盖", "同 ID 只增版本，不改历史"], ["标脏", "上游变更即标脏下游引用"], ["回指", "删除前必须查引用"], ["冻结", "交付后版本不可改"]]) , "违反即视为交付缺陷") +
+              U.notice("口径与规则见《口径与规则汇总》§R-31：版本规则", "info") +
               U.card("当前版本状态", U.listRows([["剧本", script ? script.id : "未锁定"], ["镜头", wf.shots.length + " 个（" + wf.passedShots.length + " 通过）"], ["时间线", wf.timelines.length + " 条"], ["字幕", wf.subs.filter(s => s.status === "已通过").length + " / " + p.episodes + " 集通过"], ["交付包", dp ? dp.id + " · " + dp.status : "未生成"]]) , "只读投影") +
             "</div>"
           );

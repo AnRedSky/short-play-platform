@@ -153,7 +153,7 @@
                 U.hbar("本项目执行中", active, Math.max(list.length, 1), " / " + list.length + " 个任务"),
                 (qOps ? "平台视频队列 " + qOps.concurrency + " · " + qOps.note : "未读取到平台视频队列") + "；并发与配额共同限制吞吐",
                 (App.can("models.own") || App.can("models.manage")) ? U.btn("去资源配置", "video.toModels", "sm") : "") +
-              U.card("成本提示", U.notice("当前项目任务预计 ¥" + DB.state.money(est) + "，实际已入账 ¥" + DB.state.money(cost) + (bg ? "；项目预算 ¥" + DB.state.money(bg.used) + " / ¥" + DB.state.money(bg.total) : "；尚未建立项目预算") + "。", "info")) +
+              U.notice("口径与规则见《口径与规则汇总》§R-41：成本提示", "info") +
             "</div></div>"
           );
         }

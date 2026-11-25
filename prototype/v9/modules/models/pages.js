@@ -51,7 +51,7 @@
             '</div><div class="stack">' +
               U.card("额度占用", bars.length ? U.bars(bars.map(x => x.label), bars.map(x => Number(x.value)), "%") : U.empty("没有个人资源", "当前身份没有个人自持资源。"), "个人额度按能力统计") +
               U.card("资源验证记录", mine.length ? U.listRows(mine.map(p => [p.id + " " + p.name, p.test + " · " + p.status])) : U.empty("没有验证记录", "个人资源接入后会在这里显示最近验证结果。"), "来自供应商真实验证状态") +
-              U.card("安全边界", U.notice("任何角色（含系统运维管理员）都不能读取凭据明文；运维只能重置或停用，不可导出。", "info")) +
+              U.notice("口径与规则见《口径与规则汇总》§R-17：安全边界", "info") +
             "</div></div>"
           );
         }
