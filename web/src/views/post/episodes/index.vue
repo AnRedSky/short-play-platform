@@ -28,7 +28,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { http } from '../../../api/client'
+import { postApi } from '../../../services/post'
 import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
@@ -58,18 +58,18 @@ const columns: Column[] = [
 ]
 
 async function load() {
-  const result = await http.list<Row>('/episodes', { project: projectStore.currentId, limit: 40 })
+  const result = await postApi.episodes(projectStore.currentId)
   episodes.value = result.rows.map((row, index) => ({ ...row, no: row.no ?? index + 1 }))
 }
 
 async function output(row: Row) {
-  await http.patch(`/episodes/${row.no}`, { status: '已输出' })
+  await postApi.outputEpisode(String(row.no))
   ui.toast(`第 ${row.no} 集已输出`)
   await load()
 }
 
 async function qc(row: Row) {
-  await http.post('/quality/run', { project: projectStore.currentId, ep: row.no, version: row.timeline })
+  await postApi.runQuality({ project: projectStore.currentId, ep: row.no, version: row.timeline })
   ui.toast(`第 ${row.no} 集质检已提交`)
   await load()
 }
@@ -77,7 +77,7 @@ async function qc(row: Row) {
 async function outputAll() {
   const yes = await ui.confirm('批量输出', `将输出当前项目的 ${episodes.value.length} 个分集（mock 逐集执行）。`)
   if (!yes) return
-  for (const row of episodes.value.slice(0, 12)) await http.patch(`/episodes/${row.no}`, { status: '已输出' })
+  for (const row of episodes.value.slice(0, 12)) await postApi.outputEpisode(String(row.no))
   ui.toast('批量输出完成（mock 上限 12 集）')
   await load()
 }

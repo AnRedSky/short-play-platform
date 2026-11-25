@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { http } from '../../../api/client'
+import { postApi } from '../../../services/post'
 import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
@@ -90,8 +90,8 @@ const checklistReady = computed(() => checklist.value.every((item) => item.statu
 
 async function load() {
   const [deliveryRows, checkRows] = await Promise.all([
-    http.list<Row>('/deliveries'),
-    http.list<Row>('/delivery-checklist'),
+    postApi.deliveries(),
+    postApi.deliveryChecklist(),
   ])
   deliveries.value = deliveryRows.rows
   checklist.value = checkRows.rows
@@ -104,7 +104,7 @@ async function deliver() {
   }
   const yes = await ui.confirm('生成并交付', `将为《${projectStore.current?.name}》生成 ${projectStore.current?.episodes} 集交付包并冻结版本 V1。交付后不可回退。`)
   if (!yes) return
-  await http.post('/deliveries', { project: projectStore.currentId, episodes: projectStore.current?.episodes, receiver: '企业内容库' })
+  await postApi.createDelivery({ project: projectStore.currentId, episodes: projectStore.current?.episodes, receiver: '企业内容库' })
   ui.toast('交付包已生成并冻结')
   await projectStore.load()
   await load()

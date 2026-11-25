@@ -68,7 +68,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { http } from '../../../api/client'
+import { postApi } from '../../../services/post'
 import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
@@ -91,8 +91,8 @@ const checklistReady = computed(() => checklist.value.every((item) => item.statu
 
 async function load() {
   const [checkRows, reviewRows] = await Promise.all([
-    http.list<Row>('/delivery-checklist'),
-    http.list<Row>('/reviews', { project: projectStore.currentId }),
+    postApi.deliveryChecklist(),
+    postApi.reviews(projectStore.currentId),
   ])
   checklist.value = checkRows.rows
   reviews.value = reviewRows.rows
@@ -105,7 +105,7 @@ async function decide(result: '通过' | '退回') {
   }
   const yes = await ui.confirm(`确认${result}`, result === '通过' ? '通过后进入「已完成」，可生成交付包。' : '退回后回到后期返工。', result === '退回')
   if (!yes) return
-  await http.post('/reviews', { project: projectStore.currentId, result, note: note.value })
+  await postApi.createReview({ project: projectStore.currentId, result, note: note.value })
   ui.toast(`终审已${result}`)
   await projectStore.load()
   await load()

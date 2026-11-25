@@ -66,15 +66,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { http } from '../../../api/client'
-import { useSessionStore } from '../../../stores/session'
-import { useProjectStore } from '../../../stores/project'
-import { useUiStore } from '../../../stores/ui'
-import type { Row } from '../../../mock/db'
-import PageHeader from '../../../components/ui/PageHeader.vue'
-import HeadActions from '../../../components/ui/HeadActions.vue'
-import AppDrawer from '../../../components/ui/AppDrawer.vue'
-import StatusPill from '../../../components/ui/StatusPill.vue'
+import { directorApi } from '../../services/director'
+import { useSessionStore } from '../../stores/session'
+import { useProjectStore } from '../../stores/project'
+import { useUiStore } from '../../stores/ui'
+import type { Row } from '../../mock/db'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import HeadActions from '../../components/ui/HeadActions.vue'
+import AppDrawer from '../../components/ui/AppDrawer.vue'
+import StatusPill from '../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()
 const projectStore = useProjectStore()
@@ -93,7 +93,7 @@ const visible = computed(() => shots.value.filter((row) => {
 }))
 
 async function load() {
-  const result = await http.list<Row>('/shots', { project: projectStore.currentId, limit: 60 })
+  const result = await directorApi.shots(projectStore.currentId)
   shots.value = result.rows
 }
 
@@ -102,7 +102,7 @@ function open(row: Row) {
 }
 
 async function submitOne(row: Row) {
-  await http.post('/generation/tasks', {
+  await directorApi.createTask({
     project: projectStore.currentId,
     ep: row.ep,
     scene: row.scene,
@@ -121,7 +121,7 @@ async function batchSubmit() {
   const yes = await ui.confirm('批量提交生成', `将为当前筛选出的 ${visible.value.length} 个镜头创建生成任务（每个镜头独立任务，可单独重试）。`)
   if (!yes) return
   for (const row of visible.value.slice(0, 10)) {
-    await http.post('/generation/tasks', { project: projectStore.currentId, ep: row.ep, scene: row.scene, shot: row.no, kind: '视频生成', model: row.model, input: row.refs })
+    await directorApi.createTask({ project: projectStore.currentId, ep: row.ep, scene: row.scene, shot: row.no, kind: '视频生成', model: row.model, input: row.refs })
   }
   ui.toast(`已提交 ${Math.min(10, visible.value.length)} 个镜头任务（mock 限额 10）`)
 }

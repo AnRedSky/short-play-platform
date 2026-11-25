@@ -48,15 +48,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { http } from '../../../api/client'
-import { useSessionStore } from '../../../stores/session'
-import { useProjectStore } from '../../../stores/project'
-import { useUiStore } from '../../../stores/ui'
-import type { Row } from '../../../mock/db'
-import PageHeader from '../../../components/ui/PageHeader.vue'
-import HeadActions from '../../../components/ui/HeadActions.vue'
-import DataTable, { type Column } from '../../../components/ui/DataTable.vue'
-import StatusPill from '../../../components/ui/StatusPill.vue'
+import { qualityApi } from '../../services/quality'
+import { useSessionStore } from '../../stores/session'
+import { useProjectStore } from '../../stores/project'
+import { useUiStore } from '../../stores/ui'
+import type { Row } from '../../mock/db'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import HeadActions from '../../components/ui/HeadActions.vue'
+import DataTable, { type Column } from '../../components/ui/DataTable.vue'
+import StatusPill from '../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()
 const projectStore = useProjectStore()
@@ -83,9 +83,9 @@ const visible = computed(() => reports.value.filter((row) => !level.value || row
 
 async function load() {
   const [reportRows, issueRows, levelList] = await Promise.all([
-    http.list<Row>('/quality-reports', { limit: 60 }),
-    http.list<Row>('/quality-issues'),
-    http.list<Row>('/quality-levels'),
+    qualityApi.reports(),
+    qualityApi.issues(),
+    qualityApi.levels(),
   ])
   reports.value = reportRows.rows
   levelRows.value = levelList.rows
@@ -93,7 +93,7 @@ async function load() {
 }
 
 function pick(row: Row) {
-  http.list<Row>('/quality-issues').then((result) => {
+  qualityApi.issues().then((result) => {
     issues.value = result.rows.filter((issue) => issue.report === row.id)
     ui.toast(`已载入 ${row.id} 的问题项`)
   })
@@ -102,7 +102,7 @@ function pick(row: Row) {
 async function runCheck() {
   const yes = await ui.confirm('执行质检', '按单集级规则检测当前项目最新成片；阻断项会退回后期。')
   if (!yes) return
-  await http.post('/quality/run', { project: projectStore.currentId, level: '单集级', version: 'EP17 v1' })
+  await qualityApi.run({ project: projectStore.currentId, level: '单集级', version: 'EP17 v1' })
   ui.toast('质检已执行，报告已写入')
   await load()
 }

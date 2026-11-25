@@ -73,14 +73,14 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import { http } from '../../../api/client'
-import { useSessionStore } from '../../../stores/session'
-import { useProjectStore } from '../../../stores/project'
-import { useUiStore } from '../../../stores/ui'
-import type { Row } from '../../../mock/db'
-import PageHeader from '../../../components/ui/PageHeader.vue'
-import HeadActions from '../../../components/ui/HeadActions.vue'
-import DataTable, { type Column } from '../../../components/ui/DataTable.vue'
+import { postApi } from '../../services/post'
+import { useSessionStore } from '../../stores/session'
+import { useProjectStore } from '../../stores/project'
+import { useUiStore } from '../../stores/ui'
+import type { Row } from '../../mock/db'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import HeadActions from '../../components/ui/HeadActions.vue'
+import DataTable, { type Column } from '../../components/ui/DataTable.vue'
 
 const session = useSessionStore()
 const projectStore = useProjectStore()
@@ -104,9 +104,9 @@ const columns: Column[] = [
 
 async function load() {
   const [timelineRows, trackRows, episodeRows] = await Promise.all([
-    http.list<Row>('/timelines', { project: projectStore.currentId, limit: 40 }),
-    http.list<Row>('/tracks'),
-    http.list<Row>('/episodes', { project: projectStore.currentId, limit: 40 }),
+    postApi.timelines(projectStore.currentId),
+    postApi.tracks(),
+    postApi.episodes(projectStore.currentId),
   ])
   timelines.value = timelineRows.rows
   tracks.value = trackRows.rows
@@ -127,7 +127,7 @@ function pick(row: Row) {
 async function toQc() {
   const yes = await ui.confirm('提交质量检测', '质检将按单集级与整剧级规则执行；存在阻断项时会退回后期。')
   if (!yes) return
-  await http.post('/quality/run', { project: projectStore.currentId, ep: ep.value, level: '单集级' })
+  await postApi.runQuality({ project: projectStore.currentId, ep: ep.value, level: '单集级' })
   ui.toast('质检任务已提交，报告可在质量报告页查看')
 }
 

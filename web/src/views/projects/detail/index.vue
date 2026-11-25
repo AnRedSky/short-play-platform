@@ -74,7 +74,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { http } from '../../../api/client'
+import { projectApi } from '../../../services/projects'
 import { useProjectStore } from '../../../stores/project'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
@@ -87,7 +87,7 @@ const projectStore = useProjectStore()
 const summary = ref<Record<string, any>>({})
 
 async function load() {
-  summary.value = await http.get<Record<string, any>>(`/projects/${projectStore.currentId}/summary`)
+  summary.value = await projectApi.summary(projectStore.currentId)
 }
 
 onMounted(load)

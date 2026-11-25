@@ -64,7 +64,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { http } from '../../../api/client'
+import { creationApi } from '../../../services/creation'
 import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
@@ -87,9 +87,9 @@ const reviewing = computed(() => projectStore.current?.status === '待剧本审�
 
 async function load() {
   const [scripts, reviews, groups] = await Promise.all([
-    http.list<Row>('/scripts', { project: projectStore.currentId }),
-    http.list<Row>('/reviews', { project: projectStore.currentId }),
-    http.list<Row>('/review-checklist'),
+    creationApi.scripts(projectStore.currentId),
+    creationApi.reviews(projectStore.currentId),
+    creationApi.reviewChecklist(),
   ])
   script.value = scripts.rows[0] ?? null
   history.value = reviews.rows
@@ -104,7 +104,7 @@ async function decide(result: '通过' | '退回') {
   }
   const yes = await ui.confirm(`确认${result}`, result === '通过' ? '通过后剧本锁定，项目进入生产准备中。' : '退回后项目回到剧本创作中。', result === '退回')
   if (!yes) return
-  await http.post(`/scripts/${script.value.id}/review`, { result, note: note.value, checklist: Object.keys(checked).filter((key) => checked[key]) })
+  await creationApi.reviewScript(String(script.value.id), { result, note: note.value, checklist: Object.keys(checked).filter((key) => checked[key]) })
   ui.toast(`已${result}`)
   await projectStore.load()
   await load()

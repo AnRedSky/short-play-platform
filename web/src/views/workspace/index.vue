@@ -69,15 +69,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { http } from '../../../api/client'
-import { useSessionStore } from '../../../stores/session'
-import { useProjectStore } from '../../../stores/project'
-import PageHeader from '../../../components/ui/PageHeader.vue'
-import HeadActions from '../../../components/ui/HeadActions.vue'
-import StatCards from '../../../components/ui/StatCards.vue'
-import DataTable, { type Column } from '../../../components/ui/DataTable.vue'
-import StageRail from '../../../components/ui/StageRail.vue'
-import StatusPill from '../../../components/ui/StatusPill.vue'
+import { workspaceApi } from '../../services/workspace'
+import { useSessionStore } from '../../stores/session'
+import { useProjectStore } from '../../stores/project'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import HeadActions from '../../components/ui/HeadActions.vue'
+import StatCards from '../../components/ui/StatCards.vue'
+import DataTable, { type Column } from '../../components/ui/DataTable.vue'
+import StageRail from '../../components/ui/StageRail.vue'
+import StatusPill from '../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()
 const project = useProjectStore()
@@ -109,7 +109,7 @@ function openProject(row: Record<string, any>) {
 async function load() {
   loading.value = true
   try {
-    data.value = await http.get<Record<string, any>>('/workspace/home')
+    data.value = await workspaceApi.home()
   } finally {
     loading.value = false
   }

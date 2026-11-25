@@ -19,17 +19,17 @@ const routes: RouteRecordRaw[] = [
   { path: '/', redirect: '/workspace/home' },
   { path: '/no-access', name: 'no-access', component: view('no-access') },
 
-  { path: '/workspace/home', name: 'workspace-home', component: view('workspace/home') },
+  { path: '/workspace/home', name: 'workspace-home', component: view('workspace') },
   { path: '/workspace/assistant', name: 'workspace-assistant', component: view('workspace/assistant') },
   { path: '/notify/inbox', name: 'notify-inbox', component: view('SpecPage') },
 
-  { path: '/projects/list', name: 'projects-list', component: view('projects/list') },
+  { path: '/projects/list', name: 'projects-list', component: view('projects') },
   { path: '/projects/workflow', name: 'projects-workflow', component: view('projects/workflow') },
   { path: '/projects/new', name: 'projects-new', component: view('projects/new') },
   { path: '/projects/detail', name: 'projects-detail', component: view('projects/detail') },
   { path: '/projects/lifecycle', name: 'projects-lifecycle', component: view('projects/lifecycle') },
 
-  { path: '/creation/brief', name: 'creation-brief', component: view('creation/brief') },
+  { path: '/creation/brief', name: 'creation-brief', component: view('creation') },
   { path: '/creation/plan', name: 'creation-plan', component: view('SpecPage') },
   { path: '/creation/script', name: 'creation-script', component: view('creation/script') },
   { path: '/creation/review', name: 'creation-review', component: view('creation/review') },
@@ -38,9 +38,9 @@ const routes: RouteRecordRaw[] = [
   { path: '/director/plan', name: 'director-plan', component: view('SpecPage') },
   { path: '/director/cast', name: 'director-cast', component: view('SpecPage') },
   { path: '/director/world', name: 'director-world', component: view('SpecPage') },
-  { path: '/director/shots', name: 'director-shots', component: view('director/shots') },
+  { path: '/director/shots', name: 'director-shots', component: view('director') },
 
-  { path: '/video/production', name: 'video-production', component: view('video/production') },
+  { path: '/video/production', name: 'video-production', component: view('video') },
   { path: '/video/preview', name: 'video-preview', component: view('SpecPage') },
 
   { path: '/audio/dialogue', name: 'audio-dialogue', component: view('SpecPage') },
@@ -48,20 +48,20 @@ const routes: RouteRecordRaw[] = [
   { path: '/audio/bgm', name: 'audio-bgm', component: view('SpecPage') },
   { path: '/audio/subtitle', name: 'audio-subtitle', component: view('SpecPage') },
 
-  { path: '/post/timeline', name: 'post-timeline', component: view('post/timeline') },
+  { path: '/post/timeline', name: 'post-timeline', component: view('post') },
   { path: '/post/episodes', name: 'post-episodes', component: view('post/episodes') },
   { path: '/post/review', name: 'post-review', component: view('post/review') },
   { path: '/post/delivery', name: 'post-delivery', component: view('post/delivery') },
   { path: '/post/versions', name: 'post-versions', component: view('SpecPage') },
 
-  { path: '/quality/reports', name: 'quality-reports', component: view('quality/reports') },
+  { path: '/quality/reports', name: 'quality-reports', component: view('quality') },
   { path: '/quality/rework', name: 'quality-rework', component: view('SpecPage') },
 
   { path: '/tasks/list', name: 'tasks-list', component: view('SpecPage') },
   { path: '/tasks/queue', name: 'tasks-queue', component: view('SpecPage') },
   { path: '/tasks/attempt', name: 'tasks-attempt', component: view('SpecPage') },
 
-  { path: '/assets/library', name: 'assets-library', component: view('assets/library') },
+  { path: '/assets/library', name: 'assets-library', component: view('assets') },
 
   { path: '/models/config', name: 'models-config', component: view('SpecPage') },
   { path: '/models/providers', name: 'models-providers', component: view('SpecPage') },
@@ -77,13 +77,13 @@ const routes: RouteRecordRaw[] = [
   { path: '/compliance/risks', name: 'compliance-risks', component: view('SpecPage') },
   { path: '/compliance/audit', name: 'compliance-audit', component: view('SpecPage') },
 
-  { path: '/ops/overview', name: 'ops-overview', component: view('ops/overview') },
+  { path: '/ops/overview', name: 'ops-overview', component: view('ops') },
   { path: '/ops/capabilities', name: 'ops-capabilities', component: view('SpecPage') },
   { path: '/ops/queue', name: 'ops-queue', component: view('SpecPage') },
   { path: '/ops/logs', name: 'ops-logs', component: view('SpecPage') },
   { path: '/ops/config', name: 'ops-config', component: view('ops/config') },
 
-  { path: '/orgs/enterprise', name: 'orgs-enterprise', component: view('orgs/enterprise') },
+  { path: '/orgs/enterprise', name: 'orgs-enterprise', component: view('orgs') },
   { path: '/orgs/departments', name: 'orgs-departments', component: view('SpecPage') },
   { path: '/orgs/members', name: 'orgs-members', component: view('SpecPage') },
   { path: '/orgs/member', name: 'orgs-member', component: view('SpecPage') },

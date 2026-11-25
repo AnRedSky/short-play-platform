@@ -74,13 +74,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { http } from '../../../api/client'
-import { useSessionStore } from '../../../stores/session'
-import type { Row } from '../../../mock/db'
-import PageHeader from '../../../components/ui/PageHeader.vue'
-import HeadActions from '../../../components/ui/HeadActions.vue'
-import DataTable from '../../../components/ui/DataTable.vue'
-import StatusPill from '../../../components/ui/StatusPill.vue'
+import { opsApi } from '../../services/ops'
+import { useSessionStore } from '../../stores/session'
+import type { Row } from '../../mock/db'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import HeadActions from '../../components/ui/HeadActions.vue'
+import DataTable from '../../components/ui/DataTable.vue'
+import StatusPill from '../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()
 const payload = ref<Record<string, any>>({})
@@ -92,7 +92,7 @@ const storage = computed<Record<string, string>>(() => payload.value.storage || 
 const incidents = computed<Row[]>(() => payload.value.incidents || [])
 
 async function load() {
-  payload.value = await http.get<Record<string, any>>('/ops/overview')
+  payload.value = await opsApi.overview()
 }
 
 onMounted(load)

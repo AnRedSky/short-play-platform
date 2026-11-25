@@ -68,15 +68,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { http } from '../../../api/client'
-import { useSessionStore } from '../../../stores/session'
-import { useProjectStore } from '../../../stores/project'
-import { useUiStore } from '../../../stores/ui'
-import type { Row } from '../../../mock/db'
-import PageHeader from '../../../components/ui/PageHeader.vue'
-import HeadActions from '../../../components/ui/HeadActions.vue'
-import AppDrawer from '../../../components/ui/AppDrawer.vue'
-import StatusPill from '../../../components/ui/StatusPill.vue'
+import { assetApi } from '../../services/assets'
+import { useSessionStore } from '../../stores/session'
+import { useProjectStore } from '../../stores/project'
+import { useUiStore } from '../../stores/ui'
+import type { Row } from '../../mock/db'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import HeadActions from '../../components/ui/HeadActions.vue'
+import AppDrawer from '../../components/ui/AppDrawer.vue'
+import StatusPill from '../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()
 const projectStore = useProjectStore()
@@ -98,8 +98,8 @@ const visible = computed(() => assets.value.filter((row) => {
 
 async function load() {
   const [assetRows, categoryRows] = await Promise.all([
-    http.list<Row>('/assets', { limit: 100 }),
-    http.list<Row>('/asset-categories'),
+    assetApi.list(),
+    assetApi.categories(),
   ])
   assets.value = assetRows.rows
   void categoryRows
@@ -126,7 +126,7 @@ function upload() {
     ],
     submitLabel: '登记',
     onSubmit: async (values) => {
-      await http.post('/assets', {
+      await assetApi.create({
         ...values,
         project: projectStore.currentId,
         version: 'v1',

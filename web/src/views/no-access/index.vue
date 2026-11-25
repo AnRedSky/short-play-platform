@@ -23,7 +23,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '../../stores/session'
 import { useProjectStore } from '../../stores/project'
 import { useUiStore } from '../../stores/ui'
-import { http } from '../../api/client'
+import { accessApi } from '../../services/access'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import HeadActions from '../../components/ui/HeadActions.vue'
 
@@ -43,7 +43,7 @@ const candidates = computed(() => session.identities.filter((identity) => {
 }))
 
 async function loadPermissions() {
-  const result = await http.list<{ id: string; permissions?: string[] }>('/identities')
+  const result = await accessApi.identities()
   const map: Record<string, string[]> = {}
   for (const row of result.rows) map[row.id] = row.permissions || []
   permissions.value = map

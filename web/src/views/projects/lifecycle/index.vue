@@ -52,7 +52,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { http } from '../../../api/client'
+import { projectApi } from '../../../services/projects'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
 import { GATE_ACTIONS } from '../../../mock/state'
@@ -97,7 +97,7 @@ async function run(action: any) {
     ? window.prompt(`${action.label} · 请填写原因`)
     : null
   if (action.needReason && !reason) return
-  await http.post(`/projects/${projectStore.currentId}/transitions`, { action: action.key, reason })
+  await projectApi.transition(projectStore.currentId, action.key, reason ?? undefined)
   ui.toast(`${action.label} 已完成`)
   await projectStore.load()
   await load()
@@ -105,9 +105,9 @@ async function run(action: any) {
 
 async function load() {
   const [stateRows, pipelineRows, workflow] = await Promise.all([
-    http.list<Row>('/project-states'),
-    http.list<Row>('/stage-pipeline'),
-    http.get<Record<string, any>>(`/projects/${projectStore.currentId}/workflow`),
+    projectApi.states(),
+    projectApi.pipeline(),
+    projectApi.workflow(projectStore.currentId),
   ])
   states.value = stateRows.rows
   pipeline.value = pipelineRows.rows

@@ -107,7 +107,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { http } from '../../../api/client'
+import { projectApi } from '../../../services/projects'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
 import PageHeader from '../../../components/ui/PageHeader.vue'
@@ -157,7 +157,7 @@ function next() {
 }
 
 async function bootstrap() {
-  const [depts, users] = await Promise.all([http.list<Row>('/departments'), http.list<Row>('/users')])
+  const [depts, users] = await Promise.all([projectApi.departments(), projectApi.users()])
   departments.value = depts.rows.map((row) => String(row.name))
   owners.value = users.rows.filter((row) => ['项目负责人', '制作员工'].includes(String(row.role)))
 }
@@ -170,7 +170,7 @@ async function submit() {
   }
   saving.value = true
   try {
-    const created = await http.post<Row>('/projects', {
+    const created = await projectApi.create({
       name: form.name,
       genre: form.genre,
       audience: form.audience,
@@ -198,7 +198,7 @@ async function submit() {
     })
     projectStore.select(String(created.id))
     if (form.startMode === 'start') {
-      await http.post(`/projects/${created.id}/transitions`, { action: 'start' })
+      await projectApi.transition(String(created.id), 'start')
     }
     await projectStore.load()
     ui.toast(`项目《${created.name}》已创建（${created.id}）`)

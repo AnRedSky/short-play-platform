@@ -60,7 +60,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { http } from '../../../api/client'
+import { opsApi } from '../../../services/ops'
 import { useSessionStore } from '../../../stores/session'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
@@ -73,7 +73,7 @@ const config = ref<Record<string, any>>({})
 const storage = computed<Record<string, string>>(() => config.value.storage || {})
 
 async function load() {
-  config.value = await http.get<Record<string, any>>('/ops/config')
+  config.value = await opsApi.config()
   if (!session.can('platform.config')) {
     config.value.platformConfig = []
   }

@@ -51,7 +51,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { http } from '../../../api/client'
+import { workspaceApi } from '../../../services/workspace'
 import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
@@ -95,13 +95,13 @@ async function run() {
   let result = ''
   try {
     if (/生成|镜头|任务/.test(text)) {
-      await http.post('/generation/tasks', { project: projectStore.currentId, kind: '视频生成', ep: 17, shot: 'SH-04', model: '视频模型 A' })
+      await workspaceApi.createTask({ project: projectStore.currentId, kind: '视频生成', ep: 17, shot: 'SH-04', model: '视频模型 A' })
       result = '已创建 1 个视频生成任务（第 17 集）'
     } else if (/预算|成本/.test(text)) {
-      const summary = await http.get<Record<string, any>>('/costs/summary')
+      const summary = await workspaceApi.costSummary()
       result = `当前成本合计 ¥${Number(summary.total || 0).toLocaleString('zh-CN')}，失败成本 ¥${Number(summary.failed || 0).toLocaleString('zh-CN')}`
     } else if (/审核|剧本/.test(text)) {
-      const notifications = await http.list<any>('/notifications', { limit: 50 })
+      const notifications = await workspaceApi.notifications()
       const pending = notifications.rows.filter((row) => String(row.type).includes('审核'))
       result = pending.length ? `有 ${pending.length} 条待审核：${pending.map((row) => row.title).join('；')}` : '当前没有待审核剧本'
       if (pending.length) router.push('/creation/review')

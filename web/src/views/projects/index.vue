@@ -74,15 +74,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { http } from '../../../api/client'
-import { useSessionStore } from '../../../stores/session'
-import { useProjectStore } from '../../../stores/project'
-import type { Row } from '../../../mock/db'
-import PageHeader from '../../../components/ui/PageHeader.vue'
-import HeadActions from '../../../components/ui/HeadActions.vue'
-import StatCards from '../../../components/ui/StatCards.vue'
-import DataTable, { type Column } from '../../../components/ui/DataTable.vue'
-import AppDrawer from '../../../components/ui/AppDrawer.vue'
+import { projectApi } from '../../services/projects'
+import { useSessionStore } from '../../stores/session'
+import { useProjectStore } from '../../stores/project'
+import type { Row } from '../../mock/db'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import HeadActions from '../../components/ui/HeadActions.vue'
+import StatCards from '../../components/ui/StatCards.vue'
+import DataTable, { type Column } from '../../components/ui/DataTable.vue'
+import AppDrawer from '../../components/ui/AppDrawer.vue'
 
 const session = useSessionStore()
 const projectStore = useProjectStore()
@@ -137,7 +137,7 @@ const visible = computed(() => projects.value.filter((row) => {
 async function load() {
   loading.value = true
   try {
-    const result = await http.list<Row>('/projects', { limit: 100 })
+    const result = await projectApi.list()
     projects.value = result.rows
   } finally {
     loading.value = false

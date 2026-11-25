@@ -61,18 +61,18 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { http } from '../../../api/client'
-import PageHeader from '../../../components/ui/PageHeader.vue'
-import HeadActions from '../../../components/ui/HeadActions.vue'
-import DataTable from '../../../components/ui/DataTable.vue'
-import StatusPill from '../../../components/ui/StatusPill.vue'
+import { orgApi } from '../../services/orgs'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import HeadActions from '../../components/ui/HeadActions.vue'
+import DataTable from '../../components/ui/DataTable.vue'
+import StatusPill from '../../components/ui/StatusPill.vue'
 
 const enterprise = ref<Record<string, any>>({})
 
 const usedRatio = computed(() => Math.min(100, Math.round((Number(enterprise.value.used || 0) / Math.max(1, Number(enterprise.value.budget || 1))) * 100)))
 
 async function load() {
-  enterprise.value = await http.get<Record<string, any>>('/orgs/enterprise')
+  enterprise.value = await orgApi.enterprise()
 }
 
 onMounted(load)

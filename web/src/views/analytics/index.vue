@@ -43,7 +43,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { http } from '../../api/client'
+import { analyticsApi } from '../../services/analytics'
 import type { Row } from '../../mock/db'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import HeadActions from '../../components/ui/HeadActions.vue'
@@ -84,7 +84,7 @@ function go(target: 'enterprise' | 'me') {
 }
 
 async function load() {
-  payload.value = await http.get<Record<string, any>>(`/analytics/${scope.value}`)
+  payload.value = await analyticsApi.get(scope.value)
 }
 
 watch(scope, load)

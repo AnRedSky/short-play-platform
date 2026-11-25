@@ -78,14 +78,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { http } from '../../../api/client'
-import { useSessionStore } from '../../../stores/session'
-import { useProjectStore } from '../../../stores/project'
-import { useUiStore } from '../../../stores/ui'
-import type { Row } from '../../../mock/db'
-import PageHeader from '../../../components/ui/PageHeader.vue'
-import HeadActions from '../../../components/ui/HeadActions.vue'
-import StatusPill from '../../../components/ui/StatusPill.vue'
+import { creationApi } from '../../services/creation'
+import { projectApi } from '../../services/projects'
+import { useSessionStore } from '../../stores/session'
+import { useProjectStore } from '../../stores/project'
+import { useUiStore } from '../../stores/ui'
+import type { Row } from '../../mock/db'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import HeadActions from '../../components/ui/HeadActions.vue'
+import StatusPill from '../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()
 const projectStore = useProjectStore()
@@ -107,8 +108,8 @@ function pick(row: Row) {
 
 async function load() {
   const [briefs, modeRows] = await Promise.all([
-    http.list<Row>('/briefs', { project: projectStore.currentId }),
-    http.list<Row>('/brief-modes'),
+    creationApi.briefs(projectStore.currentId),
+    creationApi.briefModes(),
   ])
   versions.value = briefs.rows
   modes.value = modeRows.rows
@@ -123,8 +124,8 @@ async function load() {
 }
 
 async function save() {
-  await http.patch(`/briefs/${current.value?.id}`, { note: form.note, status: '已确认', at: new Date().toISOString().slice(0, 16).replace('T', ' ') })
-  await http.patch(`/projects/${projectStore.currentId}`, { genre: form.genre, audience: form.audience, style: form.style, constraints: form.constraints })
+  await creationApi.updateBrief(String(current.value?.id), { note: form.note, status: '已确认', at: new Date().toISOString().slice(0, 16).replace('T', ' ') })
+  await projectApi.update(projectStore.currentId, { genre: form.genre, audience: form.audience, style: form.style, constraints: form.constraints })
   message.value = '设定已保存：题材、受众、风格与约束已同步到项目。'
   ui.toast('创意设定已保存')
   await load()
@@ -134,7 +135,7 @@ async function save() {
 async function confirmBrief() {
   const yes = await ui.confirm('确认创意方案', '确认后项目进入「剧本创作中」，创意设定成为下游唯一基准。')
   if (!yes) return
-  await http.post(`/projects/${projectStore.currentId}/transitions`, { action: 'confirmBrief' })
+  await projectApi.transition(projectStore.currentId, 'confirmBrief')
   ui.toast('创意方案已确认，项目进入剧本创作')
   await projectStore.load()
 }

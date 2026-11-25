@@ -75,7 +75,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { http } from '../../../api/client'
+import { creationApi } from '../../../services/creation'
+import { projectApi } from '../../../services/projects'
 import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
@@ -109,8 +110,8 @@ function select(row: Row) {
 
 async function load() {
   const [scriptRows, diffRows] = await Promise.all([
-    http.list<Row>('/scripts', { project: projectStore.currentId }),
-    http.list<Row>('/script-diffs'),
+    creationApi.scripts(projectStore.currentId),
+    creationApi.scriptDiffs(),
   ])
   versions.value = scriptRows.rows
   selected.value = scriptRows.rows[0] ?? null
@@ -128,7 +129,7 @@ function createVersion() {
     submitLabel: '创建版本',
     onSubmit: async (values) => {
       const base = selected.value
-      await http.post('/scripts', {
+      await creationApi.createScript({
         project: projectStore.currentId,
         version: values.version,
         status: '创作中',
@@ -150,7 +151,7 @@ function createVersion() {
 async function submitReview() {
   const yes = await ui.confirm('提交剧本审核', '项目将进入「待剧本审核」，由具备 script.review 权限的审核人裁决。')
   if (!yes) return
-  await http.post(`/projects/${projectStore.currentId}/transitions`, { action: 'submitScript' })
+  await projectApi.transition(projectStore.currentId, 'submitScript')
   ui.toast('已提交剧本审核')
   await projectStore.load()
 }

@@ -80,17 +80,17 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { http } from '../../../api/client'
-import { useSessionStore } from '../../../stores/session'
-import { useProjectStore } from '../../../stores/project'
-import { useUiStore } from '../../../stores/ui'
-import type { Row } from '../../../mock/db'
-import PageHeader from '../../../components/ui/PageHeader.vue'
-import HeadActions from '../../../components/ui/HeadActions.vue'
-import StatCards from '../../../components/ui/StatCards.vue'
-import DataTable, { type Column } from '../../../components/ui/DataTable.vue'
-import AppDrawer from '../../../components/ui/AppDrawer.vue'
-import StatusPill from '../../../components/ui/StatusPill.vue'
+import { videoApi } from '../../services/video'
+import { useSessionStore } from '../../stores/session'
+import { useProjectStore } from '../../stores/project'
+import { useUiStore } from '../../stores/ui'
+import type { Row } from '../../mock/db'
+import PageHeader from '../../components/ui/PageHeader.vue'
+import HeadActions from '../../components/ui/HeadActions.vue'
+import StatCards from '../../components/ui/StatCards.vue'
+import DataTable, { type Column } from '../../components/ui/DataTable.vue'
+import AppDrawer from '../../components/ui/AppDrawer.vue'
+import StatusPill from '../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()
 const projectStore = useProjectStore()
@@ -121,17 +121,17 @@ function count(status: string) {
 }
 
 async function load() {
-  const result = await http.list<Row>('/generation-tasks', { project: projectStore.currentId, limit: 100 })
+  const result = await videoApi.tasks(projectStore.currentId)
   tasks.value = result.rows
 }
 
 async function open(task: Row) {
   selected.value = task
-  attempts.value = await http.get<Row[]>(`/generation/tasks/${task.id}/attempts`)
+  attempts.value = await videoApi.attempts(String(task.id))
 }
 
 async function retry(task: Row) {
-  await http.post(`/generation/tasks/${task.id}/retry`)
+  await videoApi.retry(String(task.id))
   ui.toast(`任务 ${task.id} 已重试`)
   await load()
 }
@@ -139,7 +139,7 @@ async function retry(task: Row) {
 async function cancel(task: Row) {
   const yes = await ui.confirm('取消任务', `取消 ${task.id} 后该镜头需重新提交，已产生的成本不退回。`, true)
   if (!yes) return
-  await http.post(`/generation/tasks/${task.id}/cancel`)
+  await videoApi.cancel(String(task.id))
   ui.toast(`任务 ${task.id} 已取消`)
   await load()
 }
@@ -147,8 +147,8 @@ async function cancel(task: Row) {
 async function advance() {
   const queued = tasks.value.filter((row) => row.status === '排队中').slice(0, 2)
   const running = tasks.value.filter((row) => row.status === '执行中').slice(0, 2)
-  for (const task of running) await http.patch(`/generation-tasks/${task.id}`, { status: '已完成', actual: task.est, qc: 'PASS' })
-  for (const task of queued) await http.patch(`/generation-tasks/${task.id}`, { status: '执行中' })
+  for (const task of running) await videoApi.updateTask(String(task.id), { status: '已完成', actual: task.est, qc: 'PASS' })
+  for (const task of queued) await videoApi.updateTask(String(task.id), { status: '执行中' })
   ui.toast(`队列已推进：完成 ${running.length}，启动 ${queued.length}（mock 模拟）`)
   await load()
 }
@@ -166,7 +166,7 @@ function createTask() {
     ],
     submitLabel: '提交任务',
     onSubmit: async (values) => {
-      await http.post('/generation/tasks', { ...values, project: projectStore.currentId, ep: Number(values.ep), est: Number(values.est) })
+      await videoApi.createTask({ ...values, project: projectStore.currentId, ep: Number(values.ep), est: Number(values.est) })
       ui.toast('任务已提交')
       await load()
     },

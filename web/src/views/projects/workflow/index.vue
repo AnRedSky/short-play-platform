@@ -110,7 +110,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { http } from '../../../api/client'
+import { projectApi } from '../../../services/projects'
+import { workspaceApi } from '../../../services/workspace'
 import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
@@ -148,9 +149,9 @@ function go(path: string) {
 
 async function reload() {
   if (!projectStore.currentId) return
-  data.value = await http.get<Record<string, any>>(`/projects/${projectStore.currentId}/workflow`)
-  timeline.value = await http.get<any[]>(`/projects/${projectStore.currentId}/timeline`)
-  const notifications = await http.list<any>('/notifications', { project: projectStore.currentId, limit: 50 })
+  data.value = await projectApi.workflow(projectStore.currentId)
+  timeline.value = await projectApi.timeline(projectStore.currentId)
+  const notifications = await workspaceApi.notifications(50, projectStore.currentId)
   blockers.value = notifications.rows.filter((row) => row.unread)
 }
 
@@ -162,7 +163,7 @@ async function runAction(action: any) {
       fields: [{ key: 'reason', label: '原因', type: 'textarea', required: true, placeholder: '说明为什么执行该动作' }],
       submitLabel: '确认执行',
       onSubmit: async (values) => {
-        await http.post(`/projects/${projectStore.currentId}/transitions`, { action: action.key, reason: values.reason })
+        await projectApi.transition(projectStore.currentId, action.key, String(values.reason))
         ui.toast(`${action.label} 已完成`)
         await projectStore.load()
         await reload()
@@ -172,7 +173,7 @@ async function runAction(action: any) {
   }
   const yes = await ui.confirm(action.label, `将项目状态推进到「${action.next === '__prev__' ? '暂停前状态' : action.next}」。动作会写入审计日志。`)
   if (!yes) return
-  await http.post(`/projects/${projectStore.currentId}/transitions`, { action: action.key })
+  await projectApi.transition(projectStore.currentId, action.key)
   ui.toast(`${action.label} 已完成`)
   await projectStore.load()
   await reload()
