@@ -209,8 +209,9 @@
             '<div class="split"><div class="stack">' +
               U.card("待审对象", U.desc([["剧本版本", target.id], ["项目", target.project + " · " + (proj ? proj.name : "未知项目")], ["版本", target.version + "（" + target.status + "）"],
                 ["规模", target.episodes + " 集 / " + target.scenes + " 场 / " + target.lines + " 行对白"], ["提交人", target.by], ["提交时间", target.at],
-                ["上游引用", brief ? brief.id + " · " + brief.mode : "—"]]) +
-                U.notice(target.status === "待审核" ? "审核人只能看到被审版本，不能直接改动创作内容；需要修改时必须退回，由创作人产生新版本。" : "该版本当前为「" + target.status + "」，不可重复审核；如需修改请派生新版本。", target.status === "待审核" ? "info" : "warn")) +
+                ["上游引用", brief ? brief.id + " · " + brief.mode : "—"],
+                ["审核边界", "审核人只看被审版本，不可直接改动；修改须退回并由创作人派生新版本"]]) +
+                (target.status === "待审核" ? "" : U.notice("该版本当前为「" + target.status + "」，不可重复审核；如需修改请派生新版本。", "warn"))) +
               U.card("分集覆盖", U.table(["集", "标题", "场", "镜头", "状态"], previewRows.map(r =>
                 "<tr><td>" + r[0] + '</td><td class="cell-wrap">' + U.esc(r[1]) + '</td><td class="num">' + r[2] + '</td><td class="num">' + r[3] + '</td><td class="cell-wrap muted">' + U.esc(r[4]) + "</td></tr>").join("")), "只展示当前版本真实覆盖；拆解前不伪造场次") +
             '</div><div class="stack">' +
@@ -220,7 +221,7 @@
               U.card("审核结论", '<div class="btn-col">' + (target.status === "待审核"
                 ? U.btn("通过并锁定正式版本", "creation.approveScript", "primary", { id: target.id }) + U.btn("退回修改（指出位置）", "creation.rejectScript", "", { id: target.id }) + U.btn("局部修改", "creation.partialScript", "", { id: target.id }) + U.btn("终止项目", "creation.terminateScript", "", { id: target.id })
                 : U.btn("查看剧本", "creation.openScript", "primary", { id: target.id }) + U.btn("局部修改", "creation.partialScript", "", { id: target.id })) + "</div>" +
-                U.notice(target.status === "待审核" ? "通过后必须记录审核人、角色、时间、结论与依据；锁定后下游才可启动。审核结论共三种：通过 / 退回修改 / 终止项目。" : "已锁定版本只能派生新版本修改，不能覆盖。", "info"), "结论写入审核记录与项目生命周期") +
+                U.desc([["记录项", "通过后必须记录审核人、角色、时间、结论与依据"], ["结论", "通过 / 退回修改 / 终止项目 三选一"], ["锁定", "锁定后下游才可启动，改内容只能派生新版本"]]), "结论写入审核记录与项目生命周期") +
               U.card("变更影响分析（业务方案 §6.4）", (function () {
                 const imp = DB.state.impactAnalysis(projectId, target.id);
                 if (!imp.ok) return U.empty("无法执行影响分析", "项目不存在。");

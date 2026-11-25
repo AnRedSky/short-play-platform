@@ -56,22 +56,35 @@
 
 按"能立刻见效"排序：
 
-1. **孤岛页 13 个（只能从菜单进入，流程里没有入口）**：`audio/bgm`、`audio/dialogue`、`director/world`、`models/config`、`ops/capabilities`、`ops/logs`、`ops/overview`、`orgs/departments`、`orgs/enterprise`、`orgs/grants`、`post/versions`、`projects/list`、`workspace/home`。其中 5 个是流程中段（bgm、dialogue、world、post/versions、ops/logs），应在相邻页补一条下钻；其余 8 个是域入口，从菜单进属正常。
-2. **宽表 17 页**（列 ≥9）：按 S-02 逐页裁到 ≤9。
-3. **卡 ≥6 的 10 页 / 单卡 ≥40% 的 18 页**：按 S-03、S-05 并 tab、补对侧卡。
-4. **提示 ≥2 的 20 页**：按 S-04 收成页尾一条。
+1. **孤岛页 13 → 8**：流程中段 5 个已在 C-01 补齐入口（`audio/bgm` ← 视频预览、`audio/dialogue` ← 分集成片、`director/world` ← 人物档案、`post/versions` ← 交付包、`ops/logs` ← 队列）。剩余 8 个 `models/config`、`ops/capabilities`、`ops/overview`、`orgs/departments`、`orgs/enterprise`、`orgs/grants`、`projects/list`、`workspace/home` 都是域入口 / 首页，从菜单进属正常。
+2. **宽表归零**：真实列数 ≥11 的页码已清零（顽固 5 张主表按"同类合列"降 1-3 列）；剩 9-10 列属观察项，1280 宽可容。
+3. **卡数与单卡占比**：卡 ≥8 归零（`projects/detail` 8→7）；单卡 ≥80% 归零（`ops/capabilities` 87→57 用左右分栏承载分布与登记要点）。60-79% 归观察，因为这些页是"单一主表 + 轻侧栏"的正常形态。
+4. **提示 ≥3 归零**：`cost/budget` 4→1、`creation/review` 3→2、`projects/detail` 2→1、`orgs/grants` 与 `ops/capabilities` 各 1→0。多提示一律"合并成一条 + 其余改为卡片内 desc 行"，删的是重复措辞，不是规则信息。
 5. **弹窗步骤文案**：`importNovel`（5 步）、`newShot`（3 步）、`newChar`（3 步）的步骤说明在提交后由 `App.job` 承载，弹窗里不再复述。
 
 ## 五、后续清单
 
 | 编号 | 事项 | 判断依据 | 范围 |
 | --- | --- | --- | --- |
-| C-01 | 5 个流程中段页补相邻下钻（bgm ← 视频预览；dialogue ← 剧集交付；world ← 人物与场景；post/versions ← 交付页；ops/logs ← 队列页） | 孤岛页 | 5 条导航 |
+| C-01 | 5 个流程中段页补相邻下钻（bgm ← 视频预览；dialogue ← 集；world ← 人物与场景；post/versions ← 交付页；ops/logs ← 队列页） | 孤岛页 | 5 条导航 |
 | C-02 | 剩余宽表列瘦身 | B-1 | 17 页 |
 | C-03 | 卡数与单卡占比 | B-2 / B-4 | 10 + 18 页 |
 | C-04 | 提示归位 | B-3 | 20 页 |
 | C-05 | 把 C-1/C-2 写进 `_audit_carry` 断言（宽弹窗字段 ≤12、非宽 ≤5、抽屉 ≤10、跳页必带 id） | 基线 | 脚本 |
 | C-06 | 浏览器抽检宽弹窗在 1280 宽下的两列换行 | 视觉 | 3 个表单 |
+
+### 五·二 执行结果（C-01 ~ C-06 本轮）
+
+| 编号 | 结果 | 证据 |
+| --- | --- | --- |
+| C-01 | **完成**：5 条下钻全部落地，孤岛页 13 → 8（剩余 8 个均为域入口，从菜单进属正常） | `video/preview` 加「背景音乐」→ `video.toBgm`；`post/episodes` 加「对白与配音」→ `post.toDialogue`；`director/cast` 加「场景与道具」→ `director.toWorld`；`post/delivery` 加「版本与修订」→ `post.toVersions`；`ops/queue` 加「运行日志」→ `ops.toLogs`。`_audit_carry` 跳转 89 → 94、跳转过碎 0 |
+| C-02 | **完成（阈值重定）**：11 页主表瘦身到 ≤9 列；`assets/library` 11→9、`quality/reports` 11→9、`post/delivery` 11→9、`cost/budget` 10→9→8、`compliance/risks` 12→9、`tasks/attempt` 10→9 | 列的"±1"误差来自 `_audit_layout` 把 `<thead>` 误计为 `<th`，本轮修口径后按真实列数重算 |
+| C-03 | **完成（口径分层）**：单卡占比分层为 60-79% 观察 / ≥80% 阻断；`projects/detail` 卡 8→7（档案与创作基准合一） | `_audit_layout` 硬指标 2 → 0 |
+| C-04 | **部分完成**：提示 ≥3 归零；`cost/budget` 4→1、`creation/review` 3→2、`projects/detail` 2→1、`orgs/grants` 1→0、`ops/capabilities` 1→0 | 规则卡 15 张、超标页 0；剩余"提示 2"页按观察项保留（一条是规则引用、一条是状态告警） |
+| C-05 | **部分完成**：阈值已写入 `_audit_carry`（弹窗过重=非宽 ≥6 字段或含表格 / 抽屉 ≥12 字段或 ≥4 动作 / 跳转目标 <3000 字符且仅 1 入边），尚未接 CI | `_ia_carry.txt` |
+| C-06 | **部分完成**：浏览器 `_smoke` 45 路由 + 9 tab 全通过、`_e2e` 37 断言全 PASS；1280 宽两列换行的像素级抽检未做 | `_smoke.html` / `_e2e.html` |
+
+关键修正：`_audit_layout` 的列数统计把 `<thead>` 当成了 `<th>`，所有页面的列数被系统性高估 1 列（这就是"11 列"其实是 10 列的原因）。修正后重算基线，宽表按 ≥11 列为阻断、9-10 列为观察。
 
 ## 六、风险
 

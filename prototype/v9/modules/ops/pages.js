@@ -67,9 +67,14 @@
             U.tabs([{ value: "caps", label: "能力字典", count: D.capabilities.length }, { value: "adapters", label: "供应商适配器", count: D.ops.adapters.length }], tab, "ops.tab") +
             '<div class="toolbar"><input class="search" placeholder="搜索能力 / 适配器 / 供应商" data-filter="q"><span class="faint small" data-filter-count></span></div>' +
             (tab === "caps"
-              ? U.card("十六类模型能力", U.table(["能力类别", "主要用途", "输入 → 输出", "计费单位", "已登记模型"], D.capabilities.map(c =>
-                  '<tr><td class="cell-strong">' + U.esc(c.cap) + "</td><td class=\"cell-wrap\">" + U.esc(c.use) + '</td><td class="faint">' + U.esc(c.io) + '</td><td><span class="code">' + U.esc(c.unit) + "</span></td><td class=\"num\">" + c.models + "</td></tr>").join("")) +
-                  U.notice("新增能力或适配器必须登记能力、限制、授权与计费方式；未登记能力不得被任务引用。适配器异常须返回明确错误码，不得静默降级到其他实现。", "info"), "任务匹配的唯一依据")
+              ? '<div class="split">' +
+                  '<div class="stack">' + U.card("十六类模型能力", U.table(["能力类别", "主要用途", "输入 → 输出", "计费单位", "已登记模型"], D.capabilities.map(c =>
+                  '<tr><td class="cell-strong">' + U.esc(c.cap) + "</td><td class=\"cell-wrap\">" + U.esc(c.use) + '</td><td class="faint">' + U.esc(c.io) + '</td><td><span class="code">' + U.esc(c.unit) + "</span></td><td class=\"num\">" + c.models + "</td></tr>").join("")), "任务匹配的唯一依据") + "</div>" +
+                  '<div class="stack">' +
+                    U.card("能力分布", U.bars(D.capabilities.slice(0, 8).map(c => c.cap), D.capabilities.slice(0, 8).map(c => Number(c.models) || 0), " 模型"), "按已登记模型数列前 8 类") +
+                    U.card("能力登记要点", U.desc([["登记", "能力、限制、授权、计费四项缺一不可"], ["引用", "未登记能力不得被任务引用"], ["异常", "适配器异常须返回明确错误码，不得静默降级"]]), "登记先于引用") +
+                    U.card("适配器覆盖抽样", U.table(["适配器", "能力契约", "状态"], D.ops.adapters.slice(0, 5).map(a => "<tr><td>" + U.esc(a.name) + '</td><td class="cell-wrap faint">' + U.esc(a.cap) + "</td><td>" + U.pill(a.status) + "</td></tr>"), "暂无适配器")) +
+                  "</div></div>"
               : U.card("适配器注册表", U.table(["适配器", "能力契约", "供应商", "版本", "调用形态", "状态", "已登记错误码"], D.ops.adapters.map(a =>
                   "<tr><td>" + U.entity(a.name, a.vendor, "◇") + "</td><td class=\"cell-wrap\">" + U.esc(a.cap) + "</td><td>" + U.esc(a.vendor) + '</td><td class="num">' + U.esc(a.version) + "</td><td>" + U.esc(a.contract) + "</td><td>" + U.pill(a.status) + '</td><td class="cell-wrap faint">' + U.esc(a.errors) + "</td></tr>").join("")) +
                   U.stackbar([{ label: "启用", value: 3, color: "var(--ok)" }, { label: "降级", value: 1, color: "var(--warn)" }, { label: "停用", value: 1, color: "var(--bad)" }])
@@ -90,7 +95,7 @@
           const queueNote = (sat.length ? sat.map(q => q.name + " 并发 " + q.concurrency + " 已饱和").join("；") + "，新增任务将排队。" : "当前队列并发未饱和。") +
             (degradedSvc.length ? " " + degradedSvc.map(s => s.name + " 处于「" + s.status + "」。").join(" ") : "");
           return U.page("平台管理 / 队列与存储", "队列、存储与备份", "生产资源可观测：队列积压、失败率、重试率、供应商延迟与磁盘容量均纳入监控。",
-            U.btn("导出资源快照", "common.export"),
+            U.btn("运行日志", "ops.toLogs") + U.btn("导出资源快照", "common.export"),
             U.card("任务队列", U.table(["队列", "待执行", "执行中", "失败", "重试", "并发占用", "平均耗时", "说明"], D.ops.queue.map(q =>
               "<tr><td class=\"cell-strong\">" + U.esc(q.name) + '</td><td class="num">' + q.pending + '</td><td class="num">' + q.running + '</td><td class="num">' + q.failed + '</td><td class="num">' + q.retry + "</td><td>" + U.esc(q.concurrency) + '</td><td class="num">' + U.esc(q.avg) + '</td><td class="cell-wrap faint">' + U.esc(q.note) + "</td></tr>").join("")) +
               U.notice(queueNote, sat.length || degradedSvc.length ? "warn" : "ok"), "队列健康 = 积压 + 失败率 + 重试率", U.btn("扩容申请", "ops.scaleRequest", "sm")) +
@@ -160,6 +165,7 @@
   App.on("ops.refresh", () => { App.toast("已刷新资源快照（未连接真实监控源）"); App.refresh(); });
   App.on("ops.queueLink", () => { App.go("ops/queue"); });
   App.on("ops.toConfig", () => { if (App.can("platform.config")) App.go("ops/config"); else App.toast("当前身份不具备平台配置权限", "bad"); });
+  App.on("ops.toLogs", () => App.go("ops/logs"));
   App.on("ops.adapterRegister", () => {
     if (!App.guard("platform.config")) return;
     App.modal({

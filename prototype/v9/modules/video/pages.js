@@ -196,7 +196,7 @@
           ];
           const reviewCount = checks.filter(c => c[3] === "需人工判断").length;
           return U.page("视频生产 / 预览与校验", "预览与校验 · " + s.id, "以关键帧、时间线与契约逐项对照来评审；原型不加载真实成片，画面标注为静态关键帧。",
-            U.btn("重新生成", "video.regenShot", "primary", { id: s.id }),
+            U.btn("重新生成", "video.regenShot", "primary", { id: s.id }) + U.btn("背景音乐", "video.toBgm"),
             tabsBar +
             '<div class="review-studio">' +
               '<section class="review-left">' +
@@ -251,6 +251,7 @@
   });
   App.on("video.toStoryboard", (el) => { App.set("director", "view", "board"); App.go("director/shots", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }); });
   App.on("video.toModels", () => App.go(App.can("models.manage") ? "models/providers" : "models/config"));
+  App.on("video.toBgm", (el) => App.go("audio/bgm", { id: (el && el.dataset && el.dataset.id) || ((App.currentProject() || {}).id || "") }));
   App.on("video.selectTask", (el) => { App.set(SCOPE, "task", el.dataset.id); App.refresh(); });
   App.on("video.closeAndGoAttempts", (el) => { App.set("tasks", "task", (el && el.dataset && el.dataset.id) || ""); App.closeDrawer(); App.go("tasks/attempt"); });
   App.on("video.playPreview", () => App.toast("原型未接入真实视频流；当前展示关键帧、时间线与契约校验"));

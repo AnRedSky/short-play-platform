@@ -82,7 +82,7 @@ function assetReferences(a) {
             (!kw || (a.name + a.id + a.project + a.type).indexOf(kw) >= 0));
           const bad = list.find(a => String(a.status).indexOf("临时") >= 0 || String(a.qc).indexOf("FAIL") >= 0);
           const rows = list.map(a =>
-            '<tr><td>' + U.code(a.id) + '</td><td>' + U.entity(a.name, a.type, "▣") + '</td><td>' + U.esc(a.cat) + "</td><td>" + U.esc(a.project) + "</td><td>" + U.esc(a.version) + '<span class="faint small"> / ' + a.versions + "</span></td><td>" + U.esc(a.size) + '</td><td class="cell-wrap muted">' + U.esc(a.checksum) + "</td><td>" + U.pill(a.qc) + "</td><td>" + U.pill(a.status) + '</td><td class="num">' + a.refs + "</td><td>" +
+            '<tr><td>' + U.code(a.id) + '</td><td>' + U.entity(a.name, a.type, "▣") + '</td><td>' + U.esc(a.cat) + '<span class="faint small"> / ' + U.esc(a.project) + "</span></td><td>" + U.esc(a.version) + '<span class="faint small"> / ' + a.versions + "</span></td><td>" + U.esc(a.size) + '</td><td class="cell-wrap muted">' + U.esc(a.checksum) + '<div>' + U.pill(a.qc) + "</div></td><td>" + U.pill(a.status) + '</td><td class="num">' + a.refs + "</td><td>" +
             U.btn("详情", "assets.detail", "sm", { id: a.id }) + " " + U.btn("引用检查", "assets.refs", "sm", { id: a.id }) + "</td></tr>").join("");
           const toolbar = '<div class="toolbar"><span class="field-wrap"><input class="field" data-filter="assets.kw" name="kw" placeholder="搜索资产 / 项目 / 类型" value="' + U.esc(kw) + '"></span>' +
             U.seg(["全部"].concat(D.assetCategories), cat, "assets.cat") + '<span class="grow"></span>' + (frozen ? '<span class="faint small">项目已交付 · 资产只读</span>' : (App.can("asset.manage") ? U.btn("上传资产", "assets.upload", "", p ? { id: p.id } : {}) : "")) + U.btn("引用检查", "assets.toUsage", "primary", p ? { id: p.id } : {}) + "</div>";
@@ -94,7 +94,7 @@ function assetReferences(a) {
           ], tab, "assets.tab"));
           return U.page("资产 / 资产库", tab === "refs" ? "引用与使用关系" : "资产库", tab === "refs" ? "引用关系来自时间线、镜头契约、分镜板与交付包；引用必须在删除前逐条解除。" : "资产是生产的凭证：正式资产可被下游引用，临时素材不得进入交付。",
             (p ? (frozen ? "" : (App.can("asset.manage") ? U.btn("上传资产", "assets.upload", "primary", { id: p.id }) : "")) : "") + U.btn("导出清单", "common.export"),
-            tabsBar + (tab === "refs" ? usageBlock(p) : U.card("资产目录 · " + list.length + " 项" + (p ? " · " + U.esc(p.name) : " · 可见项目"), toolbar + U.table(["编号", "资产", "分类", "项目", "版本", "规格", "校验", "质检", "状态", "引用", "操作"], rows, "当前分类下暂无资产"), p ? "当前项目资产 · 版本不覆盖" : "可见项目资产 · 版本不覆盖") +
+            tabsBar + (tab === "refs" ? usageBlock(p) : U.card("资产目录 · " + list.length + " 项" + (p ? " · " + U.esc(p.name) : " · 可见项目"), toolbar + U.table(["编号", "资产", "分类 · 项目", "版本", "规格", "校验 · 质检", "状态", "引用", "操作"], rows, "当前分类下暂无资产"), p ? "当前项目资产 · 版本不覆盖" : "可见项目资产 · 版本不覆盖") +
             U.tableFoot("共 " + scoped.length + " 项资产 / 8 类" + (p ? " · 当前项目" : ""), "版本不覆盖，历史版本永久可查") +
             '<div class="grid grid-2 mt-4">' +
               U.card("八类资产", '<div class="chip-row">' + D.assetCategories.map(c => '<span class="chip">' + U.esc(c) + "</span>").join("") + "</div>" + U.listRows([["正式资产", "可被下游引用与交付"], ["临时素材", "不可进入交付包"], ["草稿资产", "仅本人与项目成员可见"]]) , "分类决定可用范围") +

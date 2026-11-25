@@ -271,13 +271,14 @@
             actions.join("") || '<span class="faint small">当前状态无可执行的项目级动作</span>',
             U.card("阶段进度", stageChain(p) + '<div class="mt-3">' + U.desc([["当前阶段", p.phase], ["项目状态", '<span class="pill ' + U.toneOf(p.status) + '">' + p.status + "</span>", true], ["已完成集数", DB.derived.progressOf(p).done + " / " + DB.derived.progressOf(p).total + "（" + DB.derived.progressOf(p).pct + "%）"], ["最近更新", p.updated]]) + "</div>", "阶段门禁不满足时任务保持待执行") +
             '<div class="split mt-4"><div class="stack">' +
-              U.card("项目档案", U.desc([
+              U.card("项目档案与创作基准", U.desc([
                 ["项目编号", p.id], ["题材 / 受众", p.genre + " · " + p.audience], ["计划集数 / 单集时长", p.episodes + " 集 / " + p.duration],
                 ["画幅与分辨率", p.ratio], ["语言", p.language], ["交付要求", p.delivery || "—"], ["风格要求", p.style], ["内容禁忌", p.constraints],
-                ["所属部门", p.dept], ["负责人", p.owner], ["创建时间", p.created]
-              ]), "项目档案是下游生成的输入，不允许页面直接改写") +
-              U.card("创作基准（下游唯一依据）", U.desc([["正式剧本版本", p.scriptVersion], ["时间线版本", p.timelineVersion], ["剧本锁定", p.scriptVersion.indexOf("锁定") >= 0 ? '<span class="pill ok">已锁定</span>' : '<span class="pill warn">未锁定</span>', true], ["引用规则", "下游必须锁定具体版本号，不得引用「当前最新」"]]) +
-                U.notice("已通过审核并锁定的正式版本不得静默覆盖；变更必须产生新版本并重新走审核。", "info"), "版本变更触发影响分析") +
+                ["所属部门", p.dept], ["负责人", p.owner], ["创建时间", p.created],
+                ["正式剧本版本", p.scriptVersion], ["时间线版本", p.timelineVersion],
+                ["剧本锁定", p.scriptVersion.indexOf("锁定") >= 0 ? '<span class="pill ok">已锁定</span>' : '<span class="pill warn">未锁定</span>', true]
+              ]) +
+                U.notice("下游必须锁定具体版本号，不得引用「当前最新」；已锁定的正式版本不得静默覆盖，变更需产生新版本并重走审核。", "info"), "档案是下游输入，不允许页面直接改写") +
               U.card("成员与授权", U.table(["成员", "项目角色", "部门", "操作"], members), "非成员即使持有功能权限码也不得访问项目内对象",
                 grantable ? U.btn("新增授权", "orgs.grantNew", "sm") : "") +
             '</div><div class="stack">' +

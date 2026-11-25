@@ -53,12 +53,12 @@
           const issues = D.qualityIssues.filter(i => reportIds.has(i.report));
           const tab = App.get(SCOPE, "tab", "reports");
           const rows = reports.map(r =>
-            '<tr><td>' + U.code(r.id) + "</td><td>" + U.esc(r.object) + "</td><td>" + U.esc(r.level) + "</td><td>" + U.esc(r.version) + "</td><td>" + U.pill(r.result) + '</td><td class="num">' + r.items + '</td><td class="num">' + r.issues + '</td><td class="num">' + r.review + '</td><td class="num">' + r.fail + '</td><td class="cell-wrap muted">' + U.esc(r.at) + "</td><td>" +
+            '<tr><td>' + U.code(r.id) + "</td><td>" + U.esc(r.object) + '<span class="faint small"> · ' + U.esc(r.level) + " · " + U.esc(r.version) + "</span></td><td>" + U.pill(r.result) + '</td><td class="num">' + r.items + '</td><td class="num">' + r.issues + '</td><td class="num">' + r.review + " / " + r.fail + '</td><td class="cell-wrap muted">' + U.esc(r.at) + "</td><td>" +
             U.btn("报告详情", "quality.reportDetail", "sm", { id: r.id }) + "</td></tr>").join("");
           const issueRows = issues.map(i =>
             '<tr><td>' + U.code(i.report) + "</td><td>" + U.esc(i.dim) + '</td><td class="cell-wrap">' + U.esc(i.where) + "</td><td>" + U.pill(i.level) + '</td><td class="cell-wrap">' + U.esc(i.action) + "</td><td>" + (i.auto === "是" ? U.pill("自动处理", "info") : U.pill("需人工", "outline")) + "</td></tr>").join("");
           const body = tab === "reports"
-            ? U.table(["报告", "对象", "级别", "版本", "结论", "检测项", "问题", "待审", "不通过", "时间", "操作"], rows, "当前范围暂无质量报告")
+            ? U.table(["报告", "对象 · 级别 · 版本", "结论", "检测项", "问题", "待审 / 不通过", "时间", "操作"], rows, "当前范围暂无质量报告")
             : tab === "gates"
               ? gatesBlock(p)
               : U.table(["报告", "维度", "定位", "严重度", "处理动作", "处理方式"], issueRows, "当前范围暂无问题项");

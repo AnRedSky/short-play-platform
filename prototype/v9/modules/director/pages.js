@@ -126,7 +126,7 @@
             '<tr><td>' + U.entity(c.name, c.id, String(c.name).slice(0, 1)) + "</td><td>" + U.esc(c.age) + '</td><td class="cell-wrap">' + U.esc(c.look) + '</td><td class="cell-wrap muted">' + U.esc(c.costume) + '</td><td class="cell-wrap">' + U.esc(c.forbid) + '</td><td class="num">' + (c.refs || 0) + "</td><td>" + U.code(c.version) + "</td><td>" + U.pill(c.status) + "</td><td>" +
             U.btn("档案", "director.charDetail", "sm", { id: c.id }) + "</td></tr>").join("");
           return U.page("导演规划 / 人物视觉档案", "人物视觉档案 · " + p.name, "人物一致性靠固定参考与禁用项约束，不靠每次重新描述；这里只显示当前项目的档案。",
-            U.btn("新建人物档案", "director.newChar", "primary", { pid: pid }) + U.btn("导出档案", "common.export"),
+            U.btn("新建人物档案", "director.newChar", "primary", { pid: pid }) + U.btn("场景与道具", "director.toWorld", "", { id: pid }) + U.btn("导出档案", "common.export"),
             U.card("人物档案表", U.table(["人物", "年龄", "外观特征", "造型", "禁用项", "参考", "版本", "状态", "操作"], rows, "当前项目还没有人物档案"), "档案版本变更需列出受影响镜头") +
             '<div class="split mt-4"><div class="stack">' +
               (sel
@@ -229,6 +229,7 @@
   App.on("director.boardShot", (el) => { App.set(SCOPE, "boardShot", el.dataset.id || ""); App.refresh(); });
   App.on("director.toShots", (el) => { App.set(SCOPE, "view", "table"); App.go("director/shots", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }); });
   App.on("director.toCast", (el) => App.go("director/cast", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }));
+  App.on("director.toWorld", (el) => App.go("director/world", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }));
   App.on("director.toVideo", (el) => App.go("video/production", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }));
   App.on("director.toQueue", (el) => App.go("video/production", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }));
   App.on("director.shotDetail", (el) => {

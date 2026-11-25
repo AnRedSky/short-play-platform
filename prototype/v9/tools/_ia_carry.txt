@@ -1,7 +1,7 @@
-## 承载核查 · 动作 325 条 · 路由 56 条
+## 承载核查 · 动作 330 条 · 路由 56 条
 
 ## 承载分布
-- 页面跳转：89 条
+- 页面跳转：94 条
 - 抽屉：46 条
 - 弹窗：124 条
 - 页面内切换：31 条
@@ -15,17 +15,12 @@
 ## 抽屉过载（字段 ≥12 或动作 ≥4）· 0 条
 
 ## 入边为 0 的页面（只能从菜单进入，下钻缺失）
-- audio/bgm · 4194 字符
-- audio/dialogue · 5280 字符
-- director/world · 2387 字符
 - models/config · 8073 字符
-- ops/capabilities · 3986 字符
-- ops/logs · 3404 字符
+- ops/capabilities · 6296 字符
 - ops/overview · 7609 字符
 - orgs/departments · 4185 字符
 - orgs/enterprise · 3679 字符
-- orgs/grants · 8924 字符
-- post/versions · 2809 字符
+- orgs/grants · 9215 字符
 - projects/list · 8577 字符
 - workspace/home · 4317 字符
 
@@ -139,6 +134,7 @@ director.boardState	页面内切换	0	0	0	—
 director.boardShot	页面内切换	0	0	0	—	
 director.toShots	页面跳转	0	0	0	director/shots	
 director.toCast	页面跳转	0	0	0	director/cast	
+director.toWorld	页面跳转	0	0	0	director/world	
 director.toVideo	页面跳转	0	0	0	video/production	
 director.toQueue	页面跳转	0	0	0	video/production	
 director.shotDetail	抽屉	0	9	0	—	
@@ -189,6 +185,7 @@ ops.tab	页面内切换	0	0	0	—
 ops.refresh	写入	0	0	0	—	
 ops.queueLink	页面跳转	0	0	0	ops/queue	
 ops.toConfig	页面跳转	0	0	0	ops/config	
+ops.toLogs	页面跳转	0	0	0	ops/logs	
 ops.adapterRegister	弹窗	5	0	0	—	
 ops.editConfig	弹窗	4	0	3	—	
 ops.saveConfig	弹窗	0	0	3	—	
@@ -220,6 +217,8 @@ orgs.grantNew	弹窗	3	0	3	—
 orgs.revokeGrant	弹窗	1	0	3	—	
 post.toEpisodes	页面跳转	0	0	0	post/episodes	
 post.toReview	页面跳转	0	0	0	post/review	
+post.toDialogue	页面跳转	0	0	0	audio/dialogue	
+post.toVersions	页面跳转	0	0	0	post/versions	
 post.toDelivery	页面跳转	0	0	0	post/delivery	
 post.tab	页面内切换	0	0	0	—	
 post.toAssets	页面跳转	0	0	0	assets/library	
@@ -308,6 +307,7 @@ video.toResults	页面跳转	0	0	0	video/preview
 video.toPreview	页面跳转	0	0	0	video/preview	
 video.toStoryboard	页面跳转	0	0	0	director/shots	
 video.toModels	页面跳转	0	0	0	—	
+video.toBgm	页面跳转	0	0	0	audio/bgm	
 video.selectTask	页面内切换	0	0	0	—	
 video.closeAndGoAttempts	页面跳转	0	0	0	tasks/attempt	
 video.playPreview	写入	0	0	0	—	

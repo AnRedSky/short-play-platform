@@ -90,7 +90,7 @@
           const rows = budgets.map(b => {
             const usedPct = b.total ? Math.round(b.used / b.total * 100) : 0;
             const epBudget = b.scope === "项目" ? Math.round(b.total / Math.max(1, (D.projects.find(p => String(b.name).indexOf(p.id) === 0) || {}).episodes || 1)) : null;
-            return "<tr><td>" + U.esc(b.scope) + '</td><td class="cell-strong">' + U.esc(b.name) + '</td><td class="num">' + money(b.total) + '</td><td class="num">' + money(b.used) + '</td><td class="num">' + money(b.reserve) + '</td><td class="num">' + (epBudget === null ? "—" : money(epBudget)) + '</td><td class="cell-wide">' + U.progress(usedPct, usedPct + "%", usedPct >= 85 ? "bad" : usedPct >= 70 ? "warn" : "") + '</td><td>' + U.pill(b.state) + "</td><td>" + U.esc(b.owner) + "</td><td>" +
+            return '<tr><td class="cell-strong">' + U.esc(b.name) + '<div class="faint small">' + U.esc(b.scope) + '</div></td><td class="num">' + money(b.total) + '</td><td class="num">' + money(b.used) + '<div class="faint small num">预留 ' + money(b.reserve) + '</div></td><td class="num">' + (epBudget === null ? "—" : money(epBudget)) + '</td><td class="cell-wide">' + U.progress(usedPct, usedPct + "%", usedPct >= 85 ? "bad" : usedPct >= 70 ? "warn" : "") + '</td><td>' + U.pill(b.state) + '<div class="faint small">' + U.esc(b.owner) + "</div></td><td>" +
               (App.can("cost.manage") ? U.btn("调整", "cost.adjustBudget", "sm", { name: b.name }) + " " +
                 (b.scope === "项目" ? U.btn(b.state === "已冻结" ? "解冻" : "冻结", "cost.freeze", "sm", { name: b.name }) : "") : '<span class="faint small">按权限只读</span>') + "</td></tr>";
           }).join("");
@@ -100,18 +100,20 @@
           const hotPct = hot ? Math.round(hot.used / hot.total * 100) : 0;
           return U.page("成本与预算 / 预算与阈值", "预算与阈值", "预算超限不是「提醒一下」：受影响任务必须暂停并给出阻塞原因，恢复需负责人确认。",
             U.btn("成本台账", "cost.toLedger", "", p ? { id: p.id } : {}) + (App.can("cost.manage") ? U.btn("调整阈值", "cost.setThreshold", "primary") : ""),
-            U.card("预算表 · " + (p ? U.esc(p.name) : "可见 " + budgets.length + " 项"), U.table(["层级", "名称", "总额", "已用", "预留", "单集预算（总额 ÷ 集数）", "使用率", "状态", "负责人", "操作"], rows, p ? "当前项目未建立独立预算" : "当前可见范围内没有预算记录"), p && !budgets.length ? "该项目未建立项目预算，成本只能按企业 / 部门额度归集" : "按项目、部门、企业三级展示；预算状态五态：未设置 / 正常 / 接近阈值 / 已超限 / 已冻结") +
+            U.card("预算表 · " + (p ? U.esc(p.name) : "可见 " + budgets.length + " 项"), U.table(["名称 · 层级", "总额", "已用 · 预留", "单集预算", "使用率", "状态 · 负责人", "操作"], rows, p ? "当前项目未建立独立预算" : "当前可见范围内没有预算记录"), p && !budgets.length ? "该项目未建立项目预算，成本只能按企业 / 部门额度归集" : "按项目、部门、企业三级展示；预算状态五态：未设置 / 正常 / 接近阈值 / 已超限 / 已冻结") +
             U.tableFoot("可见范围：" + DB.derived.scopeLabel(), "口径：总额 − 已用 − 预留 = 可用余额") +
             '<div class="split mt-4"><div class="stack">' +
-              U.notice("口径与规则见《口径与规则汇总》§R-12：预算规则（6 条）", "info") +
-              U.card("预检与阻塞", U.notice("任务提交前先估算并做预算预检；超限任务保持「待执行」并写明阻塞原因（预算超限 / 单集超限 / 需负责人审批）。", "info")) +
+              U.card("预检与阻塞", U.desc([
+                ["预检", "任务提交前先估算并做预算预检"],
+                ["阻塞", "超限任务保持「待执行」并写明阻塞原因（预算超限 / 单集超限 / 需负责人审批）"],
+                ["口径", "预算规则见《口径与规则汇总》§R-12；阈值口径见 §R-13"]
+              ]), "超限不派发，只挂起") +
             '</div><div class="stack">' +
               (hot
                 ? U.card(hot.name + " 预算告警", U.notice("已用 " + hotPct + "%（" + money(hot.used) + " / " + money(hot.total) + "），扣除预留 " + money(hot.reserve) + " 后可用余额 " + money(hot.total - hot.used - hot.reserve) + "。达到暂停阈值时受影响任务必须暂停，恢复需负责人确认或追加预算。", hotPct >= 90 ? "bad" : "warn") +
                   '<div class="btn-row-inline">' + (App.can("cost.manage") ? U.btn("追加预算", "cost.addBudget", "sm", { name: hot.name }) + U.btn("恢复任务", "cost.resume", "sm") : "") + "</div>", "接近阈值不等于可继续")
                 : U.card("预算告警", U.empty("当前可见范围内没有接近阈值的预算", "使用率超过 85% 会在这里显示并阻止继续派发。"), "阈值可配置")) +
               U.card("使用率分布", labels.length ? U.bars(labels, values, "%") : U.empty("没有可用预算", "预算台账为空时无法绘制分布。"), "按当前可见层级展示，数值来自预算表") +
-              U.notice("口径与规则见《口径与规则汇总》§R-13：阈值口径", "info") +
             "</div></div>"
           );
         }

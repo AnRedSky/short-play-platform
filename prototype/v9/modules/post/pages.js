@@ -106,7 +106,7 @@
             '<tr><td class="num">E' + String(e.no).padStart(2, "0") + '</td><td class="cell-strong">' + U.esc(e.title) + '</td><td class="num">' + e.scenes + '</td><td class="num">' + e.shots + "</td><td>" + U.esc(e.duration) + "</td><td>" + U.pill(e.qc) + "</td><td>" + U.pill(e.status) + "</td><td>" +
             U.btn("镜头与报告", "projects.wfEpDetail", "sm", { pid: p.id, ep: e.no }) + "</td></tr>").join("");
           return U.page("后期与剪辑 / 分集成片", "分集成片", "整剧交付前每一集都要有质检结论；缺一集即视为集数不完整。",
-            U.btn("制作流水线", "projects.wfOpen", "primary", { pid: p.id }) + U.btn("进入终审", "post.toReview", "", { id: p.id }),
+            U.btn("制作流水线", "projects.wfOpen", "primary", { pid: p.id }) + U.btn("对白与配音", "post.toDialogue", "", { id: p.id }) + U.btn("进入终审", "post.toReview", "", { id: p.id }),
             '<div class="grid grid-4">' +
               U.metric("目标集数", String(p.episodes), U.esc(p.duration), "▤") +
               U.metric("已通过", String(wf.passEps.length), "含整集质检 PASS", "✓") +
@@ -184,7 +184,7 @@
           const wf = DB.derived.workflow(p);
           const list = D.deliveries.filter(x => x.project === p.id);
           const rows = list.map(x =>
-            '<tr><td>' + U.code(x.id) + "</td><td>" + U.esc(x.project) + "</td><td>" + U.esc(x.version) + '</td><td class="num">' + x.episodes + '</td><td class="num">' + x.files + "</td><td>" + U.esc(x.size) + '</td><td class="cell-wrap">' + U.esc(x.checksum) + "</td><td>" + U.esc(x.reviewer) + "</td><td>" + U.esc(x.at) + "</td><td>" + U.pill(x.status) + "</td><td>" +
+            '<tr><td>' + U.code(x.id) + '</td><td>' + U.esc(x.project) + '</td><td>' + U.esc(x.version) + '<span class="faint small"> · ' + x.episodes + ' 集</span></td><td class="num">' + x.files + '<span class="faint small"> · ' + U.esc(x.size) + '</span></td><td class="cell-wrap">' + U.esc(x.checksum) + '</td><td>' + U.esc(x.reviewer) + '</td><td>' + U.esc(x.at) + '</td><td>' + U.pill(x.status) + '</td><td>' +
             U.btn("交付清单", "post.deliveryDetail", "sm", { id: x.id }) + "</td></tr>").join("");
           const dp = list.slice(-1)[0];
           const rightsOk = (wf.gateDelivery.items.find(i => i.key === "rights") || {}).ok;
@@ -214,13 +214,14 @@
             : p.status === "待最终审核"
               ? U.btn("进入终审", "projects.wfFinal", "primary", { pid: p.id })
               : U.btn("制作流水线", "projects.wfOpen", "primary", { pid: p.id });
+          const ctaAll = cta + U.btn("版本与修订", "post.toVersions", "", { id: p.id });
           const tab = App.get(SCOPE, "tab", "delivery");
           const tabsBar = U.card("", U.tabs([
             { value: "delivery", label: "交付包", count: list.length },
             { value: "works", label: "作品", count: D.works.filter(w => w.project === p.id).length }
           ], tab, "post.tab"));
           return U.page("审核与交付 / 交付包", "交付包", "生成交付包是流程终点：集数不齐、授权不齐、质检未过一律不允许生成。",
-            cta,
+            ctaAll,
             tabsBar + (tab === "works" ? worksBlock(p) : '<div class="grid grid-4">' +
               U.metric("已交付", String(delivered), U.esc(p.name), "✓") +
               U.metric("待核验", String(pending), "确认后冻结", "○") +
@@ -228,7 +229,7 @@
               U.metric("阻断项", String(blockers.length), blockers.length ? blockers.map(i => i.label).join("、") : "无阻断", "!") +
             "</div>" +
             '<div class="split"><div class="stack-wide">' +
-              U.card("交付包清单 · " + U.esc(p.name), U.table(["交付包", "项目", "版本", "集数", "文件", "体积", "校验", "审核人", "时间", "状态", "操作"], rows, "当前项目还没有生成交付包")) +
+              U.card("交付包清单 · " + U.esc(p.name), U.table(["交付包", "项目", "版本 · 集数", "文件 · 体积", "校验", "审核人", "时间", "状态", "操作"], rows, "当前项目还没有生成交付包")) +
               U.card("交付内容模板（9 类）", U.table(["内容项", "要求", "状态"], chk), "具体项目按清单逐项核验") +
             '</div><div class="stack">' +
               U.card("生成前检查", U.listRows([
@@ -271,6 +272,12 @@
           ].map(r => "<tr><td>" + U.code(r[0]) + "</td><td>" + U.esc(r[1]) + "</td><td>" + U.pill(r[2]) + '</td><td class="num">' + U.esc(r[3]) + '</td><td class="cell-wrap muted">' + U.esc(r[4]) + "</td></tr>").join("");
           return U.page("后期与剪辑 / 版本链", "版本链", "版本号是唯一身份：改内容不改版本是禁止的。",
             U.btn("回指引用检查", "post.refCheck", "primary", { pid: p.id }) + U.btn("资产库", "post.toAssets", "", { id: p.id }) + (["已交付", "已归档"].indexOf(p.status) >= 0 && App.can("project.create") ? U.btn("新建 V2 版本链", "post.newVersion", "", { id: p.id }) : ""),
+            '<div class="grid grid-4">' +
+              U.metric("版本对象", "4", "剧本 / 时间线 / 字幕 / 交付包", "▤") +
+              U.metric("镜头版本", String(wf.shots.length), "已通过 " + wf.passedShots.length + " 个", "✓") +
+              U.metric("标脏段落", String(tl && tl.stale ? tl.stale : 0), tl && tl.stale ? "改上游需重出时间线" : "无标脏", tl && tl.stale ? "!" : "·") +
+              U.metric("交付绑定", dp ? dp.id : "未生成", dp ? dp.status : "交付门禁未满足", "→") +
+            "</div>" +
             U.card("链路视图 · " + U.esc(p.name), chain, "箭头表示下游消费上游") +
             U.card("版本记录 · " + U.esc(p.name), U.table(["对象", "类型", "状态", "规模", "说明"], rows, "当前项目还没有版本记录")) +
             '<div class="grid grid-2 mt-4">' +
@@ -286,6 +293,8 @@
   /* ---------- 动作 ---------- */
   App.on("post.toEpisodes", (el) => App.go("post/episodes", { id: (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || ((App.currentProject() || {}).id || "") }));
   App.on("post.toReview", (el) => App.go("post/review", { id: (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || ((App.currentProject() || {}).id || "") }));
+  App.on("post.toDialogue", (el) => App.go("audio/dialogue", { id: (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || ((App.currentProject() || {}).id || "") }));
+  App.on("post.toVersions", (el) => App.go("post/versions", { id: (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || ((App.currentProject() || {}).id || "") }));
   App.on("post.toDelivery", (el) => App.go("post/delivery", { id: (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || ((App.currentProject() || {}).id || "") }));
   App.on("post.tab", (el) => { App.set(SCOPE, "tab", el.dataset.value); App.refresh(); });
   App.on("post.toAssets", (el) => { const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id; App.go("assets/library", pid ? { id: pid } : undefined); });

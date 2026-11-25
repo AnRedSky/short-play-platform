@@ -12,7 +12,7 @@
     const incProjects = [...new Set(inc.map(i => i.project))];
     const rows = inc.map(i => {
       const pj = D.projects.find(x => x.id === i.project);
-      return '<tr><td>' + U.code(i.id) + "</td><td>" + U.esc(i.project) + '</td><td class="cell-wrap">' + U.esc(i.type) + '</td><td class="idx">' + U.esc(i.first) + "<br>" + U.esc(i.last) + '</td><td class="idx">' + U.esc(String(i.handled || 0)) + ' 次</td><td class="cell-wrap">' + U.esc(i.action) + '</td><td class="cell-wrap muted">' + U.esc(i.decision) + "</td><td class=\"cell-wrap\">" + U.esc(i.next) + "</td><td>" + U.pill(i.result) + "</td><td>" + U.pill(pj ? pj.status : "待确认") + "</td><td>" + U.pill(i.level, i.level.indexOf("企业") >= 0 ? "bad" : "info") + "</td><td>" +
+      return '<tr><td>' + U.code(i.id) + "</td><td>" + U.esc(i.project) + '</td><td class="cell-wrap">' + U.esc(i.type) + '<div class="faint small">' + U.pill(i.level, i.level.indexOf("企业") >= 0 ? "bad" : "info") + '</div></td><td class="idx">' + U.esc(i.first) + "<br>" + U.esc(i.last) + '<div class="faint small">' + U.esc(String(i.handled || 0)) + ' 次</div></td><td class="cell-wrap">' + U.esc(i.action) + '</td><td class="cell-wrap muted">' + U.esc(i.decision) + "</td><td class=\"cell-wrap\">" + U.esc(i.next) + '<div class="faint small">结果：' + U.esc(i.result) + "</div></td><td>" + U.pill(pj ? pj.status : "待确认") + "</td><td>" +
         U.btn("处置", "notify.incidentAction", "sm", { id: i.id }) + "</td></tr>";
     }).join("");
     return '<div class="grid grid-4">' +
@@ -21,7 +21,7 @@
         U.metric("已升级", String(escalatedInc.length), "超出项目内处置范围", "↑") +
         U.metric("涉及项目", String(incProjects.length), "非成员项目异常不展示", "▤") +
       "</div>" +
-      U.card("异常台账", U.table(["异常", "项目", "类型", "首次 / 最近", "处理次数", "处置动作", "决策与责任人", "下一步", "结果", "最终状态", "级别", "操作"], rows, "异常关闭需回写结果与验证方式")) +
+      U.card("异常台账", U.table(["异常", "项目", "类型 · 级别", "首次 / 最近 · 次数", "处置动作", "决策与责任人", "下一步 · 结果", "项目状态", "操作"], rows, "异常关闭需回写结果与验证方式"), "级别并入类型、处理次数并入时间、结果并入下一步") +
       '<div class="grid grid-2 mt-4">' +
         U.card("处置原则", U.listRows([
           ["局部优先", "仅暂停受影响镜头 / 任务链路，其余镜头继续生产"],

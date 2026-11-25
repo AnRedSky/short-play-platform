@@ -130,11 +130,11 @@
           const atRows = at.map(a =>
             '<tr><td>' + U.code(a.id) + "</td><td>" + U.code(a.task) + "</td><td>" + U.esc(a.at) + "</td><td>" + U.pill(a.status) + '</td><td class="cell-wrap">' + U.esc(a.model) + '</td><td class="cell-wrap muted">' + U.esc(a.reason) + '</td><td class="num">¥' + a.cost.toFixed(1) + "</td></tr>").join("");
           const invRows = inv.map(x =>
-            '<tr><td>' + U.code(x.id) + "</td><td>" + U.code(x.task) + "</td><td>" + U.esc(x.provider) + '</td><td class="cell-wrap">' + U.esc(x.model) + '<span class="faint small"> · ' + U.esc(x.vendorTask) + '</span></td><td>' + U.esc(x.cap) + '</td><td class="cell-wrap muted">' + U.esc(x.input) + '</td><td>' + U.esc(x.usage) + '</td><td class="num">¥' + x.cost.toFixed(1) + "</td><td>" + U.pill(x.status) + "</td><td>" + U.esc(x.at) + "</td></tr>").join("");
+            '<tr><td>' + U.code(x.id) + "</td><td>" + U.code(x.task) + "</td><td>" + U.esc(x.provider) + '<div class="faint small">' + U.esc(x.model) + " · " + U.esc(x.vendorTask) + '</div></td><td>' + U.esc(x.cap) + '</td><td class="cell-wrap muted">' + U.esc(x.input) + '</td><td>' + U.esc(x.usage) + '</td><td class="num">¥' + x.cost.toFixed(1) + "</td><td>" + U.pill(x.status) + "</td><td>" + U.esc(x.at) + "</td></tr>").join("");
           return U.page("任务与队列 / 尝试与调用", "尝试与调用记录", "每次失败都保留：原因分类决定是否可重试，计费说明决定成本归属。",
             (tid ? U.btn("清除筛选", "tasks.clearTask") : "") + U.btn("生产任务", "tasks.toList") + U.btn("导出记录", "common.export"),
             U.card("尝试记录" + (tid ? " · " + tid : ""), U.table(["Attempt", "任务", "时间", "结果", "模型", "原因", "计费"], atRows)) +
-            U.card("模型调用记录", U.table(["调用", "任务", "供应商", "模型 / 上游任务", "能力", "输入摘要", "用量", "成本", "状态", "时间"], invRows)) +
+            U.card("模型调用记录", U.table(["调用", "任务", "供应商 · 模型", "能力", "输入摘要", "用量", "成本", "状态", "时间"], invRows)) +
             '<div class="split mt-4"><div class="stack">' +
               U.card(sample ? sample.id + " · " + sampleAttempts.length + " 次尝试 / 上限 " + sample.maxAttempts : "尝试记录为空", sampleAttempts.length ? U.timeline(sampleAttempts.map((a, i) => ({ time: U.esc(a.at).slice(-5), title: "第 " + (i + 1) + " 次 · " + a.status, desc: (a.reason || "—") + "；计费 ¥" + Number(a.cost || 0).toFixed(1) }))) : U.empty(tid ? "该任务暂无尝试记录" : "当前可见任务暂无尝试记录", "提交生产任务后，每次调用都会保留 Attempt 与计费"), sampleAttempts.length ? "失败成本全部入账" : "尚无失败记录") +
               U.card("失败分类", U.table(["原因", "可重试", "处理"], [

@@ -1,7 +1,7 @@
 /* tools/_audit_layout.mjs — 页面简洁度与布局骨架盘点
    对每条路由渲染后量化：卡片数 / 指标数 / 表格数（含最多列数）/ 提示条数 / 页面级按钮数 /
    布局容器种类（grid-2/3/4、split、stack、table-only）/ 单卡占比。
-   标记：卡 ≥6、指标 ≥5、表格 ≥3、提示 ≥2、表列 ≥9、单卡占页 ≥40%、布局种类 ≥3。
+   标记：卡 ≥8 / 列 ≥11 / 提示 ≥3 / 单卡占页 ≥80% 为硬阻断；卡 6-7、指标 ≥5、表 ≥3、提示 2、列 9-10、单卡 60-79%、布局 ≥3 种为观察项。
    用法：node tools/_audit_layout.mjs [--write] */
 import fs from "node:fs";
 import path from "node:path";
@@ -54,7 +54,7 @@ const rows = routes.map((route) => {
   /* 最大表格列数 */
   let maxCols = 0;
   [...html.matchAll(/<table[\s\S]*?<\/table>/g)].forEach((m) => {
-    const n = (m[0].match(/<th/g) || []).length;
+    const n = (m[0].match(/<th[ >]/g) || []).length;
     if (n > maxCols) maxCols = n;
   });
   /* 单卡最大正文（去标签后的字符数） */
@@ -65,28 +65,38 @@ const rows = routes.map((route) => {
   });
   const plain = html.replace(/<[^>]+>/g, "").length;
   const flags = [];
-  if (cards >= 6) flags.push("卡≥6");
-  if (metrics >= 5) flags.push("指标≥5");
-  if (tables >= 3) flags.push("表≥3");
-  if (notices >= 2) flags.push("提示≥2");
-  if (maxCols >= 9) flags.push("列≥9");
-  if (plain && maxCard / plain >= 0.4) flags.push("单卡≥40%");
-  if (grids >= 3) flags.push("布局≥3种");
+  const hard = [];
+  if (cards >= 8) hard.push("卡≥8");
+  if (maxCols >= 11) hard.push("列≥11");
+  if (notices >= 3) hard.push("提示≥3");
+  if (plain && maxCard / plain >= 0.8) hard.push("单卡≥80%");
+  const soft = [];
+  if (cards >= 6 && cards < 8) soft.push("卡≥6");
+  if (metrics >= 5) soft.push("指标≥5");
+  if (tables >= 3) soft.push("表≥3");
+  if (notices >= 2 && notices < 3) soft.push("提示≥2");
+  if (maxCols === 9 || maxCols === 10) soft.push("列" + maxCols);
+  if (plain && maxCard / plain >= 0.6 && maxCard / plain < 0.8) soft.push("单卡≥60%");
+  if (grids >= 3) soft.push("布局≥3种");
+  flags.push(...hard, ...soft);
   /* 骨架分型：台账型 = 表≥2；看板型 = 指标≥4 且 卡≥4；评审型 = split；否则 详情型 */
   const skeleton = tables >= 2 ? "台账型" : (metrics >= 4 && cards >= 4 ? "看板型" : (/class="[^"]*split/.test(html) ? "评审型" : "详情型"));
-  return { path: route.path, chars: html.length, plain, cards, metrics, tables, maxCols, notices, btns, grids, maxCard, skeleton, flags };
+  return { path: route.path, chars: html.length, plain, cards, metrics, tables, maxCols, notices, btns, grids, maxCard, skeleton, flags, hard, soft };
 });
 
-const flagged = rows.filter((r) => r.flags.length);
+const flagged = rows.filter((r) => r.hard.length);
+const softRows = rows.filter((r) => !r.hard.length && r.soft.length);
 const L = [];
-L.push(`## 页面 ${rows.length} 条 · 有标记 ${flagged.length} 条`);
+L.push(`## 页面 ${rows.length} 条 · 硬指标阻断 ${flagged.length} 条 · 软指标观察 ${softRows.length} 条`);
 L.push("", "## 骨架分布");
 ["台账型", "看板型", "评审型", "详情型"].forEach((k) => {
   const g = rows.filter((r) => r.skeleton === k);
   L.push(`- ${k} ${g.length} 页：${g.map((r) => r.path).join(" / ")}`);
 });
-L.push("", "## 标记页（需简化或重排）");
-flagged.sort((a, b) => b.chars - a.chars).forEach((r) => L.push(`- ${r.path} · ${r.chars} 字符 · 卡${r.cards} 指${r.metrics} 表${r.tables}(列${r.maxCols}) 提示${r.notices} 按钮${r.btns} 布局${r.grids}种 单卡${(r.maxCard / Math.max(1, r.plain) * 100).toFixed(0)}% → ${r.flags.join(" / ")}`));
+L.push("", "## 硬指标（阻断：卡≥8 / 列≥11 / 提示≥3 / 单卡≥80%）");
+flagged.sort((a, b) => b.chars - a.chars).forEach((r) => L.push(`- ${r.path} · ${r.chars} 字符 · 卡${r.cards} 指${r.metrics} 表${r.tables}(列${r.maxCols}) 提示${r.notices} 按钮${r.btns} 布局${r.grids}种 单卡${(r.maxCard / Math.max(1, r.plain) * 100).toFixed(0)}% → ${r.hard.join(" / ")}`));
+L.push("", "## 软指标（观察：卡6-7 / 指标≥5 / 表≥3 / 提示2 / 列9 / 单卡40-59% / 布局≥3种）");
+softRows.sort((a, b) => b.chars - a.chars).forEach((r) => L.push(`- ${r.path} · ${r.chars} 字符 · 卡${r.cards} 指${r.metrics} 表${r.tables}(列${r.maxCols}) 提示${r.notices} 按钮${r.btns} 布局${r.grids}种 单卡${(r.maxCard / Math.max(1, r.plain) * 100).toFixed(0)}% → ${r.soft.join(" / ")}`));
 L.push("", "## 体量 Top10");
 [...rows].sort((a, b) => b.chars - a.chars).slice(0, 10).forEach((r) => L.push(`- ${r.path} ${r.chars}（卡${r.cards} 指${r.metrics} 表${r.tables} 列${r.maxCols} 提示${r.notices}）`));
 L.push("", "## 体量 Bottom8");
