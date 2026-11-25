@@ -1,68 +1,35 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { http } from '../api/client'
+import type { Row } from '../mock/db'
 
-export interface ProjectRequestContext {
-  signal: AbortSignal
-  isCurrent: () => boolean
-  abort: () => void
-  release: () => void
-}
+const STORAGE_KEY = 'sp_studio_project'
 
 export const useProjectStore = defineStore('project', () => {
-  const currentProjectId = ref<string | null>(null)
-  const contextVersion = ref(0)
-  const controllers = new Set<AbortController>()
-  const cleanups = new Set<() => void>()
+  const projects = ref<Row[]>([])
+  const currentId = ref<string>(localStorage.getItem(STORAGE_KEY) ?? 'SP-26031')
+  const loading = ref(false)
 
-  function invalidateProjectContext() {
-    contextVersion.value += 1
-    for (const controller of controllers) controller.abort()
-    controllers.clear()
-    for (const cleanup of cleanups) {
-      try {
-        cleanup()
-      } catch {
-        // A failing subscriber must not prevent other project-scoped resources from clearing.
+  const current = computed(() => projects.value.find((row) => row.id === currentId.value) ?? projects.value[0])
+  const options = computed(() => projects.value.map((row) => ({ value: String(row.id), label: `${row.name} · ${row.status}` })))
+
+  async function load() {
+    loading.value = true
+    try {
+      const result = await http.list<Row>('/projects', { limit: 100 })
+      projects.value = result.rows
+      if (!projects.value.some((row) => row.id === currentId.value) && projects.value[0]) {
+        select(String(projects.value[0].id))
       }
-    }
-    cleanups.clear()
-  }
-
-  function setCurrentProject(projectId: string) {
-    if (currentProjectId.value === projectId) return
-    invalidateProjectContext()
-    currentProjectId.value = projectId
-  }
-
-  function clearCurrentProject() {
-    if (currentProjectId.value === null) return
-    invalidateProjectContext()
-    currentProjectId.value = null
-  }
-
-  function createRequestContext(): ProjectRequestContext {
-    const version = contextVersion.value
-    const controller = new AbortController()
-    controllers.add(controller)
-    return {
-      signal: controller.signal,
-      isCurrent: () => version === contextVersion.value && !controller.signal.aborted,
-      abort: () => controller.abort(),
-      release: () => controllers.delete(controller),
+    } finally {
+      loading.value = false
     }
   }
 
-  function registerCleanup(cleanup: () => void) {
-    cleanups.add(cleanup)
-    return () => cleanups.delete(cleanup)
+  function select(id: string) {
+    currentId.value = id
+    localStorage.setItem(STORAGE_KEY, id)
   }
 
-  return {
-    currentProjectId,
-    contextVersion,
-    setCurrentProject,
-    clearCurrentProject,
-    createRequestContext,
-    registerCleanup,
-  }
+  return { projects, currentId, current, options, loading, load, select }
 })

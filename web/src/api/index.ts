@@ -27,6 +27,15 @@ type MockHandler = (path: string, init: RequestInit) => Promise<unknown>
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '/api/v1').replace(/\/$/, '')
 
+/**
+ * 数据源开关：mock = 走本地 mock API；real = 走真实后端。
+ * 页面与 api 层代码不区分两者，切换只改环境变量，不需要改任何调用点。
+ */
+export type DataMode = 'mock' | 'real'
+const configuredMode = (import.meta.env.VITE_DATA_MODE ?? 'mock') as DataMode
+export const dataMode: DataMode = configuredMode === 'real' ? 'real' : 'mock'
+export const isMockMode = dataMode === 'mock'
+
 let mockHandler: MockHandler | undefined
 let tokenProvider: (() => string | null) | undefined
 
@@ -60,7 +69,7 @@ async function parseError(response: Response) {
 }
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { mock = false, auth = true, ...init } = options
+  const { mock = isMockMode, auth = true, ...init } = options
   if (mock) {
     if (!mockHandler) throw new Error('Mock mode was requested but no mock adapter is configured.')
     const result = await mockHandler(path, init)
