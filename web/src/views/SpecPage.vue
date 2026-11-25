@@ -74,7 +74,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { http } from '../api/client'
+import { specApi } from '../services/spec'
 import type { Row } from '../mock/db'
 import { useSessionStore } from '../stores/session'
 import { useProjectStore } from '../stores/project'
@@ -119,7 +119,7 @@ async function reload() {
     if (spec.value.scoped && project.currentId) params.project = project.currentId
     if (search.value) params.q = search.value
     for (const [key, value] of Object.entries(filterValues)) if (value) params[key] = value
-    const result = await http.list<Row>(spec.value.table.endpoint, params)
+    const result = await specApi.list(spec.value.table.endpoint, params)
     rows.value = result.rows
     total.value = result.total
   } catch (err) {
