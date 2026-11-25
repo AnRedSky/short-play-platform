@@ -76,15 +76,15 @@
                 : U.notice("当前项目没有 FAIL 报告；仍需按报告结论逐项复核。", "ok"), "阻断项不接受「人工确认继续」") +
               U.card("报告可信口径", U.listRows([["检测项", "逐项列出结论，不汇总成一句"], ["定位", "集 / 场 / 镜头 / 时间码"], ["能力标注", "写明使用的检测能力"], ["人工结论", "必须记录理由与操作者"]]) , "报告进入交付包") +
             '</div><div class="stack">' +
-              U.card("检测结果分布", U.donut([
+              U.card("检测结果分布与趋势", U.donut([
                 { label: "PASS", value: passN, color: "var(--ok)" },
                 { label: "REVIEW_REQUIRED", value: reviewN, color: "var(--warn)" },
                 { label: "FAIL", value: failN, color: "var(--bad)" }
-              ], "报告", String(reports.length)), p ? U.esc(p.name) + " · 当前报告" : "全库报告") +
-              U.card("报告趋势", U.bars(reports.slice(-6).map(r => r.version), reports.slice(-6).map(r => {
-                const denom = Number(r.items) || 1;
-                return Math.max(0, Math.round((denom - Number(r.fail || 0) - Number(r.review || 0)) / denom * 100));
-              }), "%"), "以单份报告直接通过项占比计量") +
+              ], "报告", String(reports.length)) +
+                '<div class="mt-3">' + U.bars(reports.slice(-6).map(r => r.version), reports.slice(-6).map(r => {
+                  const denom = Number(r.items) || 1;
+                  return Math.max(0, Math.round((denom - Number(r.fail || 0) - Number(r.review || 0)) / denom * 100));
+                }), "%") + "</div>", "趋势以单份报告直接通过项占比计量") +
               U.card("报告有效期", U.notice("报告仅对当次对象与版本有效；重新生成或替换版本后必须重跑检测，旧报告自动失效。", "warn")) +
             "</div></div>"
           );
@@ -99,7 +99,7 @@
           const pid = p.id;
           const ledger = D.reworkLedger.filter(r => r.project === pid);
           const rows = ledger.map(r =>
-            '<tr><td>' + U.code(r.id) + "</td><td>" + U.esc(r.project) + "</td><td>" + U.code(r.target) + "</td><td>" + U.esc(r.type) + '</td><td class="num">第 ' + r.round + ' 轮</td><td class="num">¥' + r.cost.toFixed(1) + "</td><td>" + U.esc(r.old) + "</td><td>" + U.esc(r.at) + "</td><td>" + U.pill(r.status) + "</td><td>" +
+            '<tr><td>' + U.code(r.id) + '<div class="faint small">' + U.esc(r.at) + "</div></td><td>" + U.esc(r.project) + "</td><td>" + U.code(r.target) + "</td><td>" + U.esc(r.type) + '</td><td class="num">第 ' + r.round + ' 轮</td><td class="num">¥' + r.cost.toFixed(1) + "</td><td>" + U.esc(r.old) + "</td><td>" + U.pill(r.status) + "</td><td>" +
             U.btn("详情", "quality.reworkDetail", "sm", { id: r.id }) + " " + U.btn("重跑", "quality.rerun", "sm", { id: r.id }) + "</td></tr>").join("");
           const totalCost = ledger.reduce((n, r) => n + Number(r.cost || 0), 0);
           const avgRound = ledger.length ? (ledger.reduce((n, r) => n + Number(r.round || 0), 0) / ledger.length).toFixed(1) : "0";
@@ -116,7 +116,7 @@
               U.metric("平均轮次", avgRound + " 轮", "单镜头上限 3 轮", "↻") +
               U.metric("转人工", String(manual) + " 条", "合规类不可自动", "!") +
             "</div>" +
-            U.card("返工台账", U.table(["记录", "项目", "对象", "类型", "轮次", "成本", "旧版本", "时间", "状态", "操作"], rows, "当前范围暂无返工记录")) +
+            U.card("返工台账", U.table(["记录 · 时间", "项目", "对象", "类型", "轮次", "成本", "旧版本", "状态", "操作"], rows, "当前范围暂无返工记录")) +
             '<div class="split mt-4"><div class="stack">' +
               U.notice("口径与规则见《口径与规则汇总》§R-36：返工规则", "info") +
               U.card("自动 vs 人工", U.table(["类型", "处理方式", "原因"], [

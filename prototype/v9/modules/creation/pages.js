@@ -24,10 +24,10 @@
             (frozen ? U.btn("查看方案", "creation.toPlan", "", { id: pid }) + U.btn("新建 V2 版本链", "post.newVersion", "primary", { pid: pid }) : editable ? U.btn("新建创意设定", "creation.newBrief", "primary", { id: pid }) + U.btn("派生新版本", "creation.deriveBrief", "", { id: pid }) + U.btn("查看方案", "creation.toPlan", "", { id: pid }) : U.btn("查看方案", "creation.toPlan", "", { id: pid })) + U.btn("导入小说另立项目", "creation.importNovel"),
             '<div class="brief-layout"><div class="stack">' +
               U.card("当前项目 · " + U.esc(p ? p.name : pid), U.desc([["项目", pid], ["状态", p ? p.status : "—"], ["集数", (p ? p.episodes : 0) + " 集"], ["单集时长", p ? p.duration : "—"], ["预算", "¥" + Number(p ? DB.derived.budgetOfProject(p).total : 0).toLocaleString("zh-CN")], ["创意设定", cur ? cur.id + " · " + cur.version + "（" + cur.status + "）" : "尚未建立"]]), "创意设定只对当前项目生效；需要另立项目请使用导入小说入口") +
-              U.card("创意设定台账 · " + U.esc(p ? p.name : pid), rows || U.empty("当前项目还没有创意设定", "新建创意设定并提交后，系统会生成可比较的创意方案"), "草稿不进入下游生产") +
+              U.card("创意设定台账 · " + U.esc(p ? p.name : pid), (rows || U.empty("当前项目还没有创意设定", "新建创意设定并提交后，系统会生成可比较的创意方案")) +
+                '<div class="mt-3">' + (briefs.length ? U.timeline(briefs.slice(0, 5).map(b => ({ time: b.at, title: b.version + " · " + b.status, desc: b.mode + " · " + b.by }))) : U.empty("暂无版本记录", "提交创意设定后按版本留痕")) + "</div>", "草稿不进入下游生产；版本不覆盖，旧版可随时回看") +
               U.card("当前创意设定 · " + (cur ? cur.id : "尚无"), cur ? U.desc([["输入方式", cur.mode], ["创作意图", cur.note, true], ["版本 / 状态", cur.version + " · " + cur.status], ["操作者 / 时间", cur.by + " · " + cur.at], ["项目", cur.project]]) +
                 '<div class="btn-row-inline">' + (editable ? U.btn("派生新版本", "creation.deriveBrief", "sm", { id: pid }) : "") + U.btn("与下游剧本比对", "creation.briefTrace", "sm", { id: cur.id }) + "</div>" : U.empty("尚无已确认创意设定", "先提交创作意图，再生成创意方案"), "资料授权不明确时不得进入生成") +
-              U.card("版本记录", briefs.length ? U.timeline(briefs.slice(0, 5).map(b => ({ time: b.at, title: b.version + " · " + b.status, desc: b.mode + " · " + b.by }))) : U.empty("暂无版本记录", "提交创意设定后按版本留痕"), "版本不覆盖，旧版可随时回看") +
             '</div><aside class="stack">' +
               U.card("输入方式（七选一）", '<div class="brief-mode-grid">' + D.briefModes.map((m, i) => '<button type="button" class="brief-mode' + (mode === m.mode ? " on" : "") + '" data-action="creation.modeSet" data-value="' + U.esc(m.mode) + '">' +
                 '<span class="mode-no">' + String(i + 1).padStart(2, "0") + '</span><span><b>' + U.esc(m.mode) + "</b><small>" + U.esc(m.input) + "</small></span>" + (mode === m.mode ? U.pill("当前", "accent") : "") + "</button>").join("") + "</div>" +
@@ -211,9 +211,9 @@
                 ["规模", target.episodes + " 集 / " + target.scenes + " 场 / " + target.lines + " 行对白"], ["提交人", target.by], ["提交时间", target.at],
                 ["上游引用", brief ? brief.id + " · " + brief.mode : "—"],
                 ["审核边界", "审核人只看被审版本，不可直接改动；修改须退回并由创作人派生新版本"]]) +
-                (target.status === "待审核" ? "" : U.notice("该版本当前为「" + target.status + "」，不可重复审核；如需修改请派生新版本。", "warn"))) +
-              U.card("分集覆盖", U.table(["集", "标题", "场", "镜头", "状态"], previewRows.map(r =>
-                "<tr><td>" + r[0] + '</td><td class="cell-wrap">' + U.esc(r[1]) + '</td><td class="num">' + r[2] + '</td><td class="num">' + r[3] + '</td><td class="cell-wrap muted">' + U.esc(r[4]) + "</td></tr>").join("")), "只展示当前版本真实覆盖；拆解前不伪造场次") +
+                (target.status === "待审核" ? "" : U.notice("该版本当前为「" + target.status + "」，不可重复审核；如需修改请派生新版本。", "warn")) +
+                '<div class="mt-3">' + U.table(["集", "标题", "场", "镜头", "状态"], previewRows.map(r =>
+                "<tr><td>" + r[0] + '</td><td class="cell-wrap">' + U.esc(r[1]) + '</td><td class="num">' + r[2] + '</td><td class="num">' + r[3] + '</td><td class="cell-wrap muted">' + U.esc(r[4]) + "</td></tr>").join("")) + "</div>", "只展示当前版本真实覆盖；拆解前不伪造场次") +
             '</div><div class="stack">' +
               U.card("审核清单（7 项）", D.reviewChecklist[0].items.map((it, i) =>
                 '<label class="check-line"><input type="checkbox"' + (i < 5 ? " checked" : "") + "><span>" + U.esc(it) + (i === 4 ? ' <span class="pill warn">待确认</span>' : "") + "</span></label>").join("") +
@@ -276,7 +276,13 @@
           const firstShots = firstEp ? shots.filter(s => s.ep === firstEp.no).slice(0, 2) : [];
           return U.page("创意与剧本 / 剧本拆解", "剧本拆解 · " + p.name, "拆解不是切分文本：每个对象都有独立 ID、版本与引用，镜头契约从这里生成。",
             (canBreak ? U.btn(eps.length ? "重新拆解" : "执行拆解", "creation.rerunBreakdown", "", { id: pid }) : U.btn("制作流水线", "projects.wfOpen", "primary", { pid: pid })) + U.btn("进入导演规划", "creation.toDirector", canBreak ? "primary" : "", { id: pid }),
-            U.card("拆解结果 · " + (script ? script.id : "尚无锁定剧本"), '<div class="kv-grid">' + U.kv("集", eps.length) + U.kv("场", totalScenes) + U.kv("人物", chars.length) + U.kv("场景", locs.length) + U.kv("道具", props.length) + U.kv("镜头", shots.length) + "</div>", "引用对象版本，不引用自由文本；数据来自当前项目 " + pid) +
+            U.card("拆解结果 · " + (script ? script.id : "尚无锁定剧本"), '<div class="kv-grid">' + U.kv("集", eps.length) + U.kv("场", totalScenes) + U.kv("人物", chars.length) + U.kv("场景", locs.length) + U.kv("道具", props.length) + U.kv("镜头", shots.length) + "</div>" +
+              '<div class="mt-3">' + (script && firstEp && firstShots.length ? U.chain([
+                { label: script.id, meta: "锁定剧本", state: "done" },
+                { label: "E" + firstEp.no + " " + (firstShots[0].scene ? "S" + firstShots[0].scene : "场"), meta: firstEp.title, state: "done" },
+                { label: firstShots.map(s => s.no).join(" · "), meta: "镜头 " + firstShots.length + " 个", state: "now" },
+                { label: firstShots[0].refs, meta: "对象引用", state: "" }
+              ]) : U.empty("尚无拆解对象", "锁定剧本并拆解后显示引用链")) + "</div>", "引用对象版本，不引用自由文本；数据来自当前项目 " + pid) +
             '<div class="split mt-4"><div class="stack">' +
               U.card("集 / 场", U.table(["集", "标题", "场", "镜头", "时长", "状态"], eps.map(e =>
                 '<tr><td class="num">E' + e.no + '</td><td>' + U.esc(e.title) + '</td><td class="num">' + e.scenes + '</td><td class="num">' + e.shots + '</td><td class="num">' + U.esc(e.duration) + "</td><td>" + U.pill(e.status) + "</td></tr>").join("")), "集状态由生产进度回写") +
@@ -285,14 +291,8 @@
               U.card("场景 / 道具", U.table(["对象", "类型", "布局 / 外观", "引用镜头", "版本", "状态"], locs.concat(props).map(o =>
                 '<tr><td>' + U.entity(o.name, o.id, "景") + '</td><td>' + U.esc(o.type) + '</td><td class="cell-wrap muted">' + U.esc(o.layout || o.look) + '</td><td class="num">' + shots.filter(s => String(s.refs).indexOf(o.id) >= 0).length + "</td><td>" + U.code(o.version) + "</td><td>" + U.pill(o.status || o.consistency) + "</td></tr>").join("")), "道具状态变化需标注在集次") +
             '</div><div class="stack">' +
-              U.card("引用关系", (script && firstEp && firstShots.length ? U.chain([
-                { label: script.id, meta: "锁定剧本", state: "done" },
-                { label: "E" + firstEp.no + " " + (firstShots[0].scene ? "S" + firstShots[0].scene : "场"), meta: firstEp.title, state: "done" },
-                { label: firstShots.map(s => s.no).join(" · "), meta: "镜头 " + firstShots.length + " 个", state: "now" },
-                { label: firstShots[0].refs, meta: "对象引用", state: "" }
-              ]) : U.empty("尚无拆解对象", "锁定剧本并拆解后显示引用链")) + U.notice("修改任一被引用对象版本，系统需列出受影响镜头与已生成资产，交由人决定是否重生成。", "info"), "影响分析而非自动重跑") +
-              U.card("拆解待处理", pendingRows.length ? U.table(["事项", "位置", "影响"], pendingRows.map(r => "<tr><td class=\"cell-wrap\">" + U.esc(r[0]) + '</td><td class="idx">' + U.esc(r[1]) + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("")) : U.empty("暂无待处理项", "资产确认、镜头契约与时间线均无未决项"), "待处理项必须能定位到对象") +
-              U.card("拆解质量自检", U.table(["检查", "结论", "依据"], selfCheck.map(r => "<tr><td>" + U.esc(r[0]) + "</td><td>" + (r[1] ? U.pill("通过") : U.pill("不通过")) + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("")), "自检不通过不进入镜头契约固化") +
+              U.card("拆解待处理与自检", (pendingRows.length ? U.table(["事项", "位置", "影响"], pendingRows.map(r => "<tr><td class=\"cell-wrap\">" + U.esc(r[0]) + '</td><td class="idx">' + U.esc(r[1]) + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("")) : U.empty("暂无待处理项", "资产确认、镜头契约与时间线均无未决项")) +
+                '<div class="mt-3">' + U.table(["检查", "结论", "依据"], selfCheck.map(r => "<tr><td>" + U.esc(r[0]) + "</td><td>" + (r[1] ? U.pill("通过") : U.pill("不通过")) + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("")) + "</div>", "待处理项必须能定位到对象；自检不通过不进入镜头契约固化") +
             "</div></div>"
           );
         }

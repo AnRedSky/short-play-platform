@@ -258,4 +258,27 @@ B6 文档版本（R-28/R-31/R-32）        门禁：全套回归 + _e2e 37 断�
 | D-03 | 列 10 的 6 页降到 9（`tasks/list`、`post/timeline`、`audio/bgm`、`audio/subtitle`、`director/cast`、`director/world`） | 软指标 | 6 页 |
 | D-04 | 1280 / 1440 两档像素级抽检（宽弹窗两列、9 列表格横滚、抽屉贴边） | C-06 | 6 张快照 |
 | D-05 | 17 个审计脚本接 GitHub Actions（先解决 develop 推送策略） | 用户工作流偏好 | CI |
-| D-06 | 版本号 9.7.0 → 9.7.1（同步 `index.html`、`_smoke/_e2e` 的 `?v=`、侧栏与 README / PLAN 标题） | 发布口径 | 一次
+| D-06 | 版本号 9.7.0 → 9.7.1（同步 `index.html`、`_smoke/_e2e` 的 `?v=`、侧栏与 README / PLAN 标题） | 发布口径 | 一次 |
+
+## 十二、D 系列执行结果（2026-11-25 · 9.7.1）
+
+**已完成**
+
+| 编号 | 结果 | 手段 |
+| --- | --- | --- |
+| D-01 | **卡 6-7 全部清零**：`models/config`、`models/routing`、`post/timeline`、`creation/brief`、`creation/review`、`creation/breakdown`、`director/plan`、`quality/reports`、`audio/bgm`、`projects/detail` 共 10 页 → 全站无卡 ≥6 | 一律"同主题并卡、信息不删"：`models/config` 额度与验证合一 / 归属与异常合一；`models/routing` 剪辑能力并入能力清单、路由原则并入可用性；`post/timeline` 删「标脏片段」卡（与同页标脏提示重复），提示改为"有无标脏"双态；`creation/brief` 版本记录并入台账；`creation/review` 分集覆盖并入待审对象；`creation/breakdown` 引用关系并入拆解结果、待处理与自检合一；`director/plan` 规划口径并入必填字段；`quality/reports` 分布与趋势合一；`audio/bgm` 授权类型与使用建议合一；`projects/detail` 生命周期并入阶段进度、质量审核与风险合一 |
+| D-03 | **列 10 清零**：`tasks/list` 11→9、`compliance/risks` 风险表 10→8 与异常台账 10→8、`quality/rework` 10→9 | 失败类型并入尝试；风险等级并入类型、状态并入发现时间；返工时间并入记录 |
+| D-06 | **版本号 9.7.1** | `index.html` 标题与全部 `?v=`、`_smoke/_e2e` 的 iframe 与刷新参数、`app.js` 侧栏版本、README 标题 |
+
+**口径再定**（同步进 `_audit_layout`）：每页最多 2 条提示，且两条不得同为规则引用——一条规则引用 + 一条状态告警是允许形态（`workspace/home` 的"链路状态 + 待办"即属此类）。因此 `提示 2` 由缺陷降为观察项，只有 `提示 ≥3` 阻断。规则卡从 15 张降到 **14 张**（并卡后自然收敛，仍单页 ≤1）。
+
+**回归证据**：24 个 js `node --check` 全通过；`regress`、`_audit_links`、`_audit_actions`（330 注册 / 0 未注册）、`_audit_perms`、`_audit_kpi` 127 项、`_audit_dups`、`_audit_project_guard` 23、`_audit_naming` 56、`_audit_buttons`、`_audit_rules`、`_audit_labels`、`_audit_density` 0 过薄、`_audit_overlap`（真双入口 0 / 写操作跨页 0 / 相似度 0）、`_audit_layout` 硬阻断 0、`_audit_ux`、`_audit_carry`（弹窗过重 0 / 抽屉过载 0 / 跳转过碎 0）、`flow` 18、`_journey` 22 全通过；浏览器 `_smoke`（17 域 + 9 tab + 3 身份）与 `_e2e`（37 断言 / FAIL 0）在 9.7.1 上重跑通过。
+
+**后续（仍未做）**
+
+| 编号 | 事项 | 为什么还没做 |
+| --- | --- | --- |
+| D-02 | 提示 2 的页继续收成 1 条 | 复核后判定多数属"规则引用 + 状态告警"的合法组合，硬收会丢状态可见性；只对"两条都是规则引用"的页再收（当前扫描为 0 页） |
+| D-04 | 1280 / 1440 像素级抽检 | 需截图流程，本轮只做了 DOM 级验收 |
+| D-05 | 17 个审计脚本接 GitHub Actions | 卡在 develop 推送策略未定（origin 仍停在 `fb36f1e`） |
+| D-07 | `tools/_cols.mjs` 写进 README 回归清单 | 单页逐表列数诊断工具已落地，尚未进标准序列 |

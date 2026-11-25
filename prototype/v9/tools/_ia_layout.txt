@@ -1,69 +1,67 @@
-## 页面 56 条 · 硬指标阻断 0 条 · 软指标观察 43 条
+## 页面 56 条 · 硬指标阻断 0 条 · 软指标观察 41 条
 
 ## 骨架分布
-- 台账型 29 页：analytics/enterprise / audio/bgm / audio/dialogue / audio/subtitle / compliance/audit / compliance/risks / creation/breakdown / creation/review / director/shots / director/world / models/config / models/providers / models/routing / notify/inbox / ops/capabilities / ops/config / ops/queue / orgs/departments / orgs/roles / post/delivery / post/episodes / post/review / post/timeline / projects/lifecycle / quality/rework / tasks/attempt / tasks/list / tasks/queue / workspace/assistant
+- 台账型 28 页：analytics/enterprise / audio/bgm / audio/dialogue / audio/subtitle / compliance/audit / compliance/risks / creation/breakdown / creation/review / director/shots / director/world / models/config / models/providers / models/routing / notify/inbox / ops/capabilities / ops/config / ops/queue / orgs/departments / orgs/roles / post/delivery / post/episodes / post/review / projects/lifecycle / quality/rework / tasks/attempt / tasks/list / tasks/queue / workspace/assistant
 - 看板型 4 页：compliance/rights / cost/ledger / director/plan / ops/overview
-- 评审型 9 页：analytics/me / audio/voice / cost/budget / director/cast / orgs/enterprise / projects/detail / projects/new / quality/reports / video/production
+- 评审型 10 页：analytics/me / audio/voice / cost/budget / director/cast / orgs/enterprise / post/timeline / projects/detail / projects/new / quality/reports / video/production
 - 详情型 14 页：assets/library / creation/brief / creation/plan / creation/script / ops/logs / orgs/grants / orgs/handover / orgs/member / orgs/members / post/versions / projects/list / projects/workflow / video/preview / workspace/home
 
 ## 硬指标（阻断：卡≥8 / 列≥11 / 提示≥3 / 单卡≥80%）
 
 ## 软指标（观察：卡6-7 / 指标≥5 / 表≥3 / 提示2 / 列9 / 单卡40-59% / 布局≥3种）
 - analytics/enterprise · 11134 字符 · 卡4 指12 表2(列9) 提示1 按钮1 布局1种 单卡33% → 指标≥5 / 列9
-- orgs/grants · 9212 字符 · 卡3 指0 表1(列6) 提示0 按钮2 布局1种 单卡77% → 单卡≥60%
+- orgs/grants · 9215 字符 · 卡3 指0 表1(列6) 提示0 按钮2 布局1种 单卡76% → 单卡≥60%
 - models/providers · 8431 字符 · 卡4 指0 表3(列9) 提示0 按钮2 布局1种 单卡58% → 表≥3 / 列9
-- orgs/roles · 8121 字符 · 卡3 指0 表2(列5) 提示2 按钮2 布局1种 单卡51% → 提示≥2
-- models/config · 8073 字符 · 卡6 指4 表3(列9) 提示2 按钮2 布局3种 单卡45% → 卡≥6 / 表≥3 / 提示≥2 / 列9 / 布局≥3种
-- projects/new · 8034 字符 · 卡5 指0 表0(列0) 提示2 按钮1 布局2种 单卡31% → 提示≥2
-- tasks/list · 7823 字符 · 卡5 指0 表3(列10) 提示1 按钮2 布局2种 单卡27% → 表≥3 / 列10
-- models/routing · 7612 字符 · 卡6 指4 表3(列5) 提示1 按钮2 布局3种 单卡38% → 卡≥6 / 表≥3 / 布局≥3种
-- ops/overview · 7609 字符 · 卡4 指6 表1(列6) 提示2 按钮2 布局3种 单卡33% → 指标≥5 / 提示≥2 / 布局≥3种
-- ops/queue · 7116 字符 · 卡4 指0 表2(列8) 提示2 按钮2 布局2种 单卡31% → 提示≥2
-- workspace/assistant · 7069 字符 · 卡5 指0 表2(列4) 提示2 按钮3 布局2种 单卡46% → 提示≥2
+- orgs/roles · 8121 字符 · 卡3 指0 表2(列5) 提示2 按钮2 布局1种 单卡51% → 提示2
+- projects/new · 8034 字符 · 卡5 指0 表0(列0) 提示2 按钮1 布局2种 单卡31% → 提示2
+- tasks/list · 7839 字符 · 卡5 指0 表3(列9) 提示1 按钮2 布局2种 单卡27% → 表≥3 / 列9
+- models/config · 7763 字符 · 卡4 指4 表3(列9) 提示1 按钮2 布局3种 单卡46% → 表≥3 / 列9 / 布局≥3种
+- ops/overview · 7609 字符 · 卡4 指6 表1(列6) 提示2 按钮2 布局3种 单卡33% → 指标≥5 / 提示2 / 布局≥3种
+- models/routing · 7397 字符 · 卡4 指4 表3(列5) 提示1 按钮2 布局3种 单卡45% → 表≥3 / 布局≥3种
+- ops/queue · 7116 字符 · 卡4 指0 表2(列8) 提示2 按钮2 布局2种 单卡31% → 提示2
+- workspace/assistant · 7069 字符 · 卡5 指0 表2(列4) 提示2 按钮3 布局2种 单卡46% → 提示2
 - notify/inbox · 6954 字符 · 卡3 指4 表2(列7) 提示0 按钮2 布局2种 单卡61% → 单卡≥60%
 - compliance/rights · 6434 字符 · 卡5 指4 表1(列9) 提示1 按钮3 布局3种 单卡42% → 列9 / 布局≥3种
-- projects/detail · 6108 字符 · 卡7 指0 表1(列4) 提示2 按钮3 布局2种 单卡27% → 卡≥6 / 提示≥2
 - post/review · 5733 字符 · 卡5 指4 表3(列8) 提示0 按钮2 布局3种 单卡31% → 表≥3 / 布局≥3种
-- post/timeline · 5319 字符 · 卡6 指0 表2(列9) 提示0 按钮1 布局2种 单卡21% → 卡≥6 / 列9
+- projects/detail · 5563 字符 · 卡5 指0 表1(列4) 提示2 按钮3 布局2种 单卡33% → 提示2
 - audio/dialogue · 5280 字符 · 卡4 指4 表2(列9) 提示1 按钮2 布局3种 单卡27% → 列9 / 布局≥3种
-- video/production · 5075 字符 · 卡4 指0 表0(列0) 提示2 按钮3 布局2种 单卡18% → 提示≥2
-- creation/review · 5018 字符 · 卡6 指0 表3(列5) 提示2 按钮2 布局2种 单卡26% → 卡≥6 / 表≥3 / 提示≥2
+- video/production · 5075 字符 · 卡4 指0 表0(列0) 提示2 按钮3 布局2种 单卡18% → 提示2
+- post/timeline · 4964 字符 · 卡5 指0 表1(列9) 提示1 按钮1 布局2种 单卡24% → 列9
 - assets/library · 4954 字符 · 卡4 指0 表1(列9) 提示1 按钮2 布局1种 单卡49% → 列9
-- tasks/attempt · 4849 字符 · 卡5 指0 表3(列9) 提示2 按钮2 布局2种 单卡42% → 表≥3 / 提示≥2 / 列9
-- creation/brief · 4682 字符 · 卡6 指0 表0(列0) 提示1 按钮2 布局1种 单卡27% → 卡≥6
+- creation/review · 4907 字符 · 卡5 指0 表3(列5) 提示2 按钮2 布局2种 单卡35% → 表≥3 / 提示2
+- tasks/attempt · 4849 字符 · 卡5 指0 表3(列9) 提示2 按钮2 布局2种 单卡42% → 表≥3 / 提示2 / 列9
 - cost/ledger · 4516 字符 · 卡4 指4 表1(列9) 提示1 按钮1 布局2种 单卡38% → 列9
-- director/plan · 4474 字符 · 卡6 指4 表1(列7) 提示1 按钮2 布局3种 单卡20% → 卡≥6 / 布局≥3种
 - orgs/members · 4473 字符 · 卡1 指3 表1(列7) 提示0 按钮2 布局1种 单卡65% → 单卡≥60%
-- quality/reports · 4440 字符 · 卡6 指0 表1(列8) 提示2 按钮1 布局2种 单卡28% → 卡≥6 / 提示≥2
-- tasks/queue · 4380 字符 · 卡3 指4 表2(列8) 提示2 按钮2 布局3种 单卡36% → 提示≥2 / 布局≥3种
+- tasks/queue · 4380 字符 · 卡3 指4 表2(列8) 提示2 按钮2 布局3种 单卡36% → 提示2 / 布局≥3种
 - post/delivery · 4377 字符 · 卡4 指4 表2(列9) 提示1 按钮2 布局3种 单卡32% → 列9 / 布局≥3种
-- workspace/home · 4317 字符 · 卡2 指3 表0(列0) 提示2 按钮2 布局1种 单卡34% → 提示≥2
-- audio/bgm · 4194 字符 · 卡6 指0 表2(列9) 提示1 按钮2 布局2种 单卡24% → 卡≥6 / 列9
-- orgs/departments · 4185 字符 · 卡2 指0 表2(列9) 提示2 按钮1 布局1种 单卡41% → 提示≥2 / 列9
-- compliance/risks · 4064 字符 · 卡4 指4 表2(列10) 提示1 按钮2 布局2种 单卡41% → 列10
-- creation/breakdown · 3898 字符 · 卡7 指0 表4(列6) 提示1 按钮2 布局2种 单卡21% → 卡≥6 / 表≥3
+- workspace/home · 4317 字符 · 卡2 指3 表0(列0) 提示2 按钮2 布局1种 单卡34% → 提示2
+- quality/reports · 4295 字符 · 卡5 指0 表1(列8) 提示2 按钮1 布局2种 单卡29% → 提示2
+- director/plan · 4287 字符 · 卡5 指4 表1(列7) 提示0 按钮2 布局3种 单卡24% → 布局≥3种
+- orgs/departments · 4185 字符 · 卡2 指0 表2(列9) 提示2 按钮1 布局1种 单卡41% → 提示2 / 列9
+- audio/bgm · 4011 字符 · 卡5 指0 表2(列9) 提示1 按钮2 布局2种 单卡24% → 列9
 - post/episodes · 3808 字符 · 卡5 指4 表2(列8) 提示0 按钮3 布局3种 单卡21% → 布局≥3种
 - analytics/me · 3777 字符 · 卡3 指4 表1(列5) 提示1 按钮2 布局3种 单卡37% → 布局≥3种
-- quality/rework · 3690 字符 · 卡4 指4 表2(列10) 提示2 按钮2 布局3种 单卡24% → 提示≥2 / 列10 / 布局≥3种
-- ops/config · 3586 字符 · 卡2 指0 表2(列4) 提示2 按钮2 布局0种 单卡44% → 提示≥2
-- creation/plan · 3279 字符 · 卡2 指0 表1(列3) 提示2 按钮2 布局1种 单卡28% → 提示≥2
-- audio/voice · 2958 字符 · 卡4 指0 表1(列9) 提示2 按钮2 布局2种 单卡27% → 提示≥2 / 列9
-- orgs/handover · 2559 字符 · 卡3 指0 表1(列7) 提示2 按钮2 布局1种 单卡39% → 提示≥2
+- quality/rework · 3706 字符 · 卡4 指4 表2(列9) 提示2 按钮2 布局3种 单卡24% → 提示2 / 列9 / 布局≥3种
+- ops/config · 3586 字符 · 卡2 指0 表2(列4) 提示2 按钮2 布局0种 单卡44% → 提示2
+- creation/breakdown · 3541 字符 · 卡5 指0 表4(列6) 提示0 按钮2 布局2种 单卡32% → 表≥3
+- creation/plan · 3279 字符 · 卡2 指0 表1(列3) 提示2 按钮2 布局1种 单卡28% → 提示2
+- audio/voice · 2958 字符 · 卡4 指0 表1(列9) 提示2 按钮2 布局2种 单卡27% → 提示2 / 列9
+- orgs/handover · 2559 字符 · 卡3 指0 表1(列7) 提示2 按钮2 布局1种 单卡39% → 提示2
 - director/world · 2387 字符 · 卡4 指0 表2(列9) 提示1 按钮2 布局1种 单卡27% → 列9
 - audio/subtitle · 2259 字符 · 卡2 指0 表2(列9) 提示1 按钮2 布局1种 单卡38% → 列9
 - director/cast · 1919 字符 · 卡3 指0 表1(列9) 提示1 按钮3 布局2种 单卡43% → 列9
 
 ## 体量 Top10
 - analytics/enterprise 11134（卡4 指12 表2 列9 提示1）
-- orgs/grants 9212（卡3 指0 表1 列6 提示0）
+- orgs/grants 9215（卡3 指0 表1 列6 提示0）
 - projects/list 8577（卡1 指0 表0 列0 提示1）
 - models/providers 8431（卡4 指0 表3 列9 提示0）
 - orgs/roles 8121（卡3 指0 表2 列5 提示2）
-- models/config 8073（卡6 指4 表3 列9 提示2）
 - projects/new 8034（卡5 指0 表0 列0 提示2）
-- tasks/list 7823（卡5 指0 表3 列10 提示1）
-- models/routing 7612（卡6 指4 表3 列5 提示1）
+- tasks/list 7839（卡5 指0 表3 列9 提示1）
+- models/config 7763（卡4 指4 表3 列9 提示1）
 - ops/overview 7609（卡4 指6 表1 列6 提示2）
+- models/routing 7397（卡4 指4 表3 列5 提示1）
 
 ## 体量 Bottom8
 - orgs/member 369（卡0 指0 表0）
@@ -80,36 +78,36 @@ path	chars	卡	指标	表	列	提示	按钮	布局种	单卡占比	骨架
 analytics/enterprise	11134	4	12	2	9	1	1	1	33%	台账型
 analytics/me	3777	3	4	1	5	1	2	3	37%	评审型
 assets/library	4954	4	0	1	9	1	2	1	49%	详情型
-audio/bgm	4194	6	0	2	9	1	2	2	24%	台账型
+audio/bgm	4011	5	0	2	9	1	2	2	24%	台账型
 audio/dialogue	5280	4	4	2	9	1	2	3	27%	台账型
 audio/subtitle	2259	2	0	2	9	1	2	1	38%	台账型
 audio/voice	2958	4	0	1	9	2	2	2	27%	评审型
 compliance/audit	4144	2	0	2	6	1	2	1	52%	台账型
 compliance/rights	6434	5	4	1	9	1	3	3	42%	看板型
-compliance/risks	4064	4	4	2	10	1	2	2	41%	台账型
+compliance/risks	4142	4	4	2	8	1	2	2	42%	台账型
 cost/budget	2829	4	0	1	7	1	2	2	30%	评审型
 cost/ledger	4516	4	4	1	9	1	1	2	38%	看板型
-creation/breakdown	3898	7	0	4	6	1	2	2	21%	台账型
-creation/brief	4682	6	0	0	0	1	2	1	27%	详情型
+creation/breakdown	3541	5	0	4	6	0	2	2	32%	台账型
+creation/brief	4544	5	0	0	0	1	2	1	27%	详情型
 creation/plan	3279	2	0	1	3	2	2	1	28%	详情型
-creation/review	5018	6	0	3	5	2	2	2	26%	台账型
+creation/review	4907	5	0	3	5	2	2	2	35%	台账型
 creation/script	1740	3	0	0	0	0	2	0	36%	详情型
 director/cast	1919	3	0	1	9	1	3	2	43%	评审型
-director/plan	4474	6	4	1	7	1	2	3	20%	看板型
+director/plan	4287	5	4	1	7	0	2	3	24%	看板型
 director/shots	4102	5	0	2	8	0	2	2	28%	台账型
 director/world	2387	4	0	2	9	1	2	1	27%	台账型
-models/config	8073	6	4	3	9	2	2	3	45%	台账型
+models/config	7763	4	4	3	9	1	2	3	46%	台账型
 models/providers	8431	4	0	3	9	0	2	1	58%	台账型
-models/routing	7612	6	4	3	5	1	2	3	38%	台账型
+models/routing	7397	4	4	3	5	1	2	3	45%	台账型
 notify/inbox	6954	3	4	2	7	0	2	2	61%	台账型
-ops/capabilities	6294	4	0	2	5	0	2	2	57%	台账型
+ops/capabilities	6296	4	0	2	5	0	2	2	57%	台账型
 ops/config	3586	2	0	2	4	2	2	0	44%	台账型
 ops/logs	3404	3	4	1	4	1	1	2	45%	详情型
 ops/overview	7609	4	6	1	6	2	2	3	33%	看板型
 ops/queue	7116	4	0	2	8	2	2	2	31%	台账型
 orgs/departments	4185	2	0	2	9	2	1	1	41%	台账型
 orgs/enterprise	3679	4	0	1	3	1	3	2	30%	评审型
-orgs/grants	9212	3	0	1	6	0	2	1	77%	详情型
+orgs/grants	9215	3	0	1	6	0	2	1	76%	详情型
 orgs/handover	2559	3	0	1	7	2	2	1	39%	详情型
 orgs/member	369	0	0	0	0	0	1	0	0%	详情型
 orgs/members	4473	1	3	1	7	0	2	1	65%	详情型
@@ -117,17 +115,17 @@ orgs/roles	8121	3	0	2	5	2	2	1	51%	台账型
 post/delivery	4377	4	4	2	9	1	2	3	32%	台账型
 post/episodes	3808	5	4	2	8	0	3	3	21%	台账型
 post/review	5733	5	4	3	8	0	2	3	31%	台账型
-post/timeline	5319	6	0	2	9	0	1	2	21%	台账型
+post/timeline	4964	5	0	1	9	1	1	2	24%	评审型
 post/versions	3646	3	4	1	5	1	2	2	33%	详情型
-projects/detail	6108	7	0	1	4	2	3	2	27%	评审型
+projects/detail	5563	5	0	1	4	2	3	2	33%	评审型
 projects/lifecycle	5544	3	0	2	6	1	3	1	50%	台账型
 projects/list	8577	1	0	0	0	1	2	1	11%	详情型
 projects/new	8034	5	0	0	0	2	1	2	31%	评审型
 projects/workflow	5164	3	0	1	5	0	2	0	9%	详情型
-quality/reports	4440	6	0	1	8	2	1	2	28%	评审型
-quality/rework	3690	4	4	2	10	2	2	3	24%	台账型
+quality/reports	4295	5	0	1	8	2	1	2	29%	评审型
+quality/rework	3706	4	4	2	9	2	2	3	24%	台账型
 tasks/attempt	4849	5	0	3	9	2	2	2	42%	台账型
-tasks/list	7823	5	0	3	10	1	2	2	27%	台账型
+tasks/list	7839	5	0	3	9	1	2	2	27%	台账型
 tasks/queue	4380	3	4	2	8	2	2	3	36%	台账型
 video/preview	4526	5	0	0	0	1	2	0	25%	详情型
 video/production	5075	4	0	0	0	2	3	2	18%	评审型

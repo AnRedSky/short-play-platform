@@ -73,7 +73,7 @@
             U.card("时间线清单", U.table(["项目", "集", "版本", "轨 / 段", "时长", "时基", "标脏", "状态", "操作"], rows), "按集分列，标脏片段会在输出前阻断") +
             '<div class="split mt-4"><div class="stack-wide">' +
               U.card("E" + cur + " 时间线 · " + (tl ? tl.version : "未创建"), trackHtml +
-                (tl && tl.stale ? U.notice("有 " + tl.stale + " 段片段被上游版本标脏：需替换片段后重新输出，否则成片与镜头库不一致。", "warn") : ""),
+                (tl && tl.stale ? U.notice("有 " + tl.stale + " 段片段被上游版本标脏：替换片段后重新输出，否则成片与镜头库不一致。", "warn") : U.notice("当前集无标脏片段，可直接输出。", "ok")),
                 "轨内时长按 PTS 对齐，不按秒取整") +
               U.card("剪辑要点", U.listRows([["入轨门禁", "镜头质量 PASS 才可入轨"], ["钩子前置", "前 3 秒必须出现冲突或悬念"], ["节奏", "单集 90±5 秒，无超过 3 秒的空镜"], ["转场", "同场景用硬切，跨场用雨雾 / 闪白特效"], ["字幕", "与时间线同版本，不单独替换"]]), "剪辑决策写入版本记录") +
             '</div><div class="stack">' +
@@ -83,7 +83,6 @@
                 { label: "音乐轨", value: tl ? 2 : 0, color: "var(--info)" },
                 { label: "音效轨", value: epShots.filter(s => s.sfx || s.sound).length, color: "var(--warn)" }
               ], "镜头", epShots.length + " 镜"), "按当前集镜头类型统计") +
-              U.card("标脏片段", U.table(["片段", "原因", "处理"], (tl && tl.stale ? [["当前集片段", "上游镜头新版本未采用", "替换后重出"]] : []).map(r => "<tr><td>" + U.code(r[0]) + '</td><td class="cell-wrap">' + r[1] + '</td><td class="cell-wrap muted">' + r[2] + "</td></tr>").join(""), "无标脏片段")) +
               U.card("输出规格", U.desc([["画幅", "1080×1920 · 9:16"], ["编码", "H.264 · 8 Mbps"], ["音频", "AAC 48k · 立体声"], ["时基", "PTS + 1/25"], ["命名", pid + "_E" + cur + "_V" + (tl ? String(tl.version).match(/V(\d+)/)?.[1] || "1" : "1") + ".mp4"]]) , "输出即冻结该版本，不覆盖") +
             "</div></div>"
           );

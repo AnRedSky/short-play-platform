@@ -12,7 +12,7 @@
     const incProjects = [...new Set(inc.map(i => i.project))];
     const rows = inc.map(i => {
       const pj = D.projects.find(x => x.id === i.project);
-      return '<tr><td>' + U.code(i.id) + "</td><td>" + U.esc(i.project) + '</td><td class="cell-wrap">' + U.esc(i.type) + '<div class="faint small">' + U.pill(i.level, i.level.indexOf("企业") >= 0 ? "bad" : "info") + '</div></td><td class="idx">' + U.esc(i.first) + "<br>" + U.esc(i.last) + '<div class="faint small">' + U.esc(String(i.handled || 0)) + ' 次</div></td><td class="cell-wrap">' + U.esc(i.action) + '</td><td class="cell-wrap muted">' + U.esc(i.decision) + "</td><td class=\"cell-wrap\">" + U.esc(i.next) + '<div class="faint small">结果：' + U.esc(i.result) + "</div></td><td>" + U.pill(pj ? pj.status : "待确认") + "</td><td>" +
+      return '<tr><td>' + U.code(i.id) + "</td><td>" + U.esc(i.project) + '<div class="faint small">' + U.pill(pj ? pj.status : "待确认") + '</div></td><td class="cell-wrap">' + U.esc(i.type) + '<div class="faint small">' + U.pill(i.level, i.level.indexOf("企业") >= 0 ? "bad" : "info") + '</div></td><td class="idx">' + U.esc(i.first) + "<br>" + U.esc(i.last) + '<div class="faint small">' + U.esc(String(i.handled || 0)) + ' 次</div></td><td class="cell-wrap">' + U.esc(i.action) + '</td><td class="cell-wrap muted">' + U.esc(i.decision) + "</td><td class=\"cell-wrap\">" + U.esc(i.next) + '<div class="faint small">结果：' + U.esc(i.result) + "</div></td><td>" +
         U.btn("处置", "notify.incidentAction", "sm", { id: i.id }) + "</td></tr>";
     }).join("");
     return '<div class="grid grid-4">' +
@@ -21,7 +21,7 @@
         U.metric("已升级", String(escalatedInc.length), "超出项目内处置范围", "↑") +
         U.metric("涉及项目", String(incProjects.length), "非成员项目异常不展示", "▤") +
       "</div>" +
-      U.card("异常台账", U.table(["异常", "项目", "类型 · 级别", "首次 / 最近 · 次数", "处置动作", "决策与责任人", "下一步 · 结果", "项目状态", "操作"], rows, "异常关闭需回写结果与验证方式"), "级别并入类型、处理次数并入时间、结果并入下一步") +
+      U.card("异常台账", U.table(["异常", "项目 · 状态", "类型 · 级别", "首次 / 最近 · 次数", "处置动作", "决策与责任人", "下一步 · 结果", "操作"], rows, "异常关闭需回写结果与验证方式"), "级别并入类型、处理次数并入时间、项目状态并入项目") +
       '<div class="grid grid-2 mt-4">' +
         U.card("处置原则", U.listRows([
           ["局部优先", "仅暂停受影响镜头 / 任务链路，其余镜头继续生产"],
@@ -128,7 +128,7 @@
           const risks = pid ? D.risks.filter(r => r.project === pid) : D.risks.filter(r => visPids.indexOf(r.project) >= 0);
           const incidents = pid ? D.incidents.filter(i => i.project === pid) : D.incidents.filter(i => visPids.indexOf(i.project) >= 0);
           const rows = risks.map(r =>
-            '<tr><td>' + U.code(r.id) + "</td><td>" + U.esc(r.project) + "</td><td>" + U.esc(r.type) + '</td><td class="cell-wrap">' + U.esc(r.where) + "</td><td>" + U.pill(r.level) + '</td><td class="cell-wrap">' + U.esc(r.action) + "</td><td>" + U.esc(r.owner) + "</td><td>" + U.pill(r.status) + "</td><td>" + U.esc(r.at) + "</td><td>" +
+            '<tr><td>' + U.code(r.id) + "</td><td>" + U.esc(r.project) + "</td><td>" + U.esc(r.type) + '<div class="faint small">' + U.pill(r.level) + '</div></td><td class="cell-wrap">' + U.esc(r.where) + "</td><td>" + U.pill(r.status) + '<div class="faint small">' + U.esc(r.at) + '</div></td><td class="cell-wrap">' + U.esc(r.action) + "</td><td>" + U.esc(r.owner) + "</td><td>" +
             U.btn("详情", "compliance.riskDetail", "sm", { id: r.id }) + "</td></tr>").join("");
           const openRisks = risks.filter(r => String(r.status).indexOf("已") < 0);
           const high = risks.filter(r => r.level === "高");
@@ -143,7 +143,7 @@
               U.metric("异常事件", String(incidents.length), openInc ? "含未闭环事件" : "全部已闭环", "◐") +
               U.metric("升级规则", "4 小时", "未处理自动升级", "⏱") +
             "</div>" +
-            U.card("风险清单 · " + risks.length + " 项" + (p ? " · " + U.esc(p.name) : ""), U.table(["风险", "项目", "类型", "定位", "等级", "处置动作", "负责人", "状态", "时间", "操作"], rows, "当前项目没有风险记录")) +
+            U.card("风险清单 · " + risks.length + " 项" + (p ? " · " + U.esc(p.name) : ""), U.table(["风险", "项目", "类型 · 等级", "定位", "状态 · 发现时间", "处置动作", "负责人", "操作"], rows, "当前项目没有风险记录")) +
             '<div class="grid grid-2 mt-4">' +
               U.card("等级与处置", U.table(["等级", "处置", "是否阻断"], [
                 ["高", "阻断下游全部动作", "是"],

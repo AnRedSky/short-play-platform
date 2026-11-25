@@ -45,12 +45,11 @@
                 ["个人自持", "仅本人可见脱敏值", "计入个人额度", "员工 / 负责人"],
                 ["企业托管", "全员仅见脱敏", "按部门分配", "部门 / 企业管理员"],
                 ["运维域", "不可见（独立安全域）", "平台级", "系统运维管理员"]
-              ].map(r => '<tr><td class="cell-strong">' + r[0] + '</td><td class="cell-wrap">' + r[1] + '</td><td class="cell-wrap muted">' + r[2] + "</td><td>" + r[3] + "</td></tr>").join("")), "凭据永不明文展示") +
-              U.card("PRV 资源异常" + (bad.length ? " · " + bad.length + " 项" : ""), bad.length ? U.notice(bad.map(p => p.id + " " + p.name + " 停用： " + p.test).join("；") + "。停用状态下引用它的任务会直接失败，不会静默回退。", "bad") : U.notice("当前身份名下资源全部启用。", "ok")) +
+              ].map(r => '<tr><td class="cell-strong">' + r[0] + '</td><td class="cell-wrap">' + r[1] + '</td><td class="cell-wrap muted">' + r[2] + "</td><td>" + r[3] + "</td></tr>").join("")), "凭据永不明文展示；安全边界见《口径与规则汇总》§R-17") +
+                U.notice(bad.length ? bad.map(p => p.id + " " + p.name + " 停用：" + p.test).join("；") + "。停用状态下引用它的任务会直接失败，不会静默回退。" : "当前身份名下资源全部启用。", bad.length ? "bad" : "ok") +
             '</div><div class="stack">' +
-              U.card("额度占用", bars.length ? U.bars(bars.map(x => x.label), bars.map(x => Number(x.value)), "%") : U.empty("没有个人资源", "当前身份没有个人自持资源。"), "个人额度按能力统计") +
-              U.card("资源验证记录", mine.length ? U.listRows(mine.map(p => [p.id + " " + p.name, p.test + " · " + p.status])) : U.empty("没有验证记录", "个人资源接入后会在这里显示最近验证结果。"), "来自供应商真实验证状态") +
-              U.notice("口径与规则见《口径与规则汇总》§R-17：安全边界", "info") +
+              U.card("额度占用与验证记录", (bars.length ? U.bars(bars.map(x => x.label), bars.map(x => Number(x.value)), "%") : U.empty("没有个人资源", "当前身份没有个人自持资源。")) +
+                '<div class="mt-3">' + (mine.length ? U.listRows(mine.map(p => [p.id + " " + p.name, p.test + " · " + p.status])) : U.empty("没有验证记录", "个人资源接入后会在这里显示最近验证结果。")) + "</div>", "额度按能力统计，验证结果取自供应商真实状态") +
             "</div></div>"
           );
         }
@@ -99,11 +98,11 @@
               (noCompat.length ? U.notice("备用模型 " + noCompat.length + " 项兼容不满足（" + noCompatText + "）：切换到备用会产生画质与一致性降级，必须人工确认。", "warn") : U.notice("备用模型兼容校验全部通过。", "ok")), "策略与兼容结论一起固化") +
             U.card("备用切换兼容校验", U.table(["兼容项", "主模型", "备用模型", "结论"], compatRows), "无兼容校验") +
             '<div class="split mt-4"><div class="stack">' +
-              U.card("能力清单", U.table(["能力", "典型用途", "输入 / 输出", "计价单位", "模型数"], capRows)) +
-              U.card("剪辑与后期能力", '<div class="chip-row">' + D.postCapabilities.map(x => '<span class="chip">' + U.esc(x) + "</span>").join("") + "</div>", "后期能力由转码与合成能力组合实现") +
+              U.card("能力清单", U.table(["能力", "典型用途", "输入 / 输出", "计价单位", "模型数"], capRows) +
+                '<div class="mt-3"><div class="faint small" style="margin-bottom:6px">剪辑与后期能力（由转码与合成能力组合实现）</div><div class="chip-row">' + D.postCapabilities.map(x => '<span class="chip">' + U.esc(x) + "</span>").join("") + "</div></div>") +
             '</div><div class="stack">' +
-              U.card("视频能力可用性", U.table(["能力", "状态", "说明"], vc.map(x => '<tr><td>' + U.esc(x.item) + "</td><td>" + U.pill(x.status) + '</td><td class="cell-wrap muted">' + U.esc(x.note) + "</td></tr>").join(""), "暂无能力记录")) +
-              U.card("路由原则", U.listRows([["主模型", "默认质量优先，预算内"], ["辅助", "只做校验类调用，不产出正式资产"], ["备用", "仅故障时启用，需兼容校验"], ["记录", "每次切换写审计与成本归因"]]) , "路由变更需留痕") +
+              U.card("视频能力可用性", U.table(["能力", "状态", "说明"], vc.map(x => '<tr><td>' + U.esc(x.item) + "</td><td>" + U.pill(x.status) + '</td><td class="cell-wrap muted">' + U.esc(x.note) + "</td></tr>").join(""), "暂无能力记录") +
+                U.listRows([["主模型", "默认质量优先，预算内"], ["辅助", "只做校验类调用，不产出正式资产"], ["备用", "仅故障时启用，需兼容校验"], ["记录", "每次切换写审计与成本归因"]]), "路由变更需留痕") +
             "</div></div>"
           );
         }

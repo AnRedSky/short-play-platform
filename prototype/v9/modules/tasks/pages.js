@@ -34,7 +34,7 @@
           const rows = list.map(t => {
             const steps = t.steps || { vendor: "未开始", download: "未开始", persist: "未开始", qc: "未开始" };
             return '<tr><td>' + U.code(t.id) + '<div class="faint small">' + U.esc(t.kind) + "</div></td><td>" + U.esc(t.project) + '<div class="faint small">E' + t.ep + " / S" + t.scene + " · " + U.esc(t.shot) + "</div></td><td>" +
-            U.pill(t.status) + "</td><td>" + U.esc(t.priority) + '</td><td class="cell-wrap muted">' + U.esc(t.model) + " · " + U.esc(t.config) + '</td><td class="idx">' + U.pill(steps.vendor) + " " + U.pill(steps.download) + " " + U.pill(steps.persist) + " " + U.pill(steps.qc) + '</td><td class="num">' + t.attempt + " / " + t.maxAttempts + "</td><td>" + (t.failType && t.failType !== "—" ? U.pill(t.failType, FAIL_TYPES[t.failType] && FAIL_TYPES[t.failType].retryable ? "warn" : "bad") : "—") + '</td><td class="num">¥' + t.est + " / ¥" + t.actual + "</td><td>" +
+            U.pill(t.status) + "</td><td>" + U.esc(t.priority) + '</td><td class="cell-wrap muted">' + U.esc(t.model) + " · " + U.esc(t.config) + '</td><td class="idx">' + U.pill(steps.vendor) + " " + U.pill(steps.download) + " " + U.pill(steps.persist) + " " + U.pill(steps.qc) + '</td><td class="num">' + t.attempt + " / " + t.maxAttempts + '<div class="faint small">' + (t.failType && t.failType !== "—" ? U.pill(t.failType, FAIL_TYPES[t.failType] && FAIL_TYPES[t.failType].retryable ? "warn" : "bad") : "—") + '</div></td><td class="num">¥' + t.est + " / ¥" + t.actual + "</td><td>" +
             U.btn("详情", "tasks.detail", "sm", { id: t.id }) + " " + U.btn("尝试与调用记录", "tasks.toAttempts", "sm", { id: t.id }) + "</td></tr>";
           }).join("");
           const toolbar = '<div class="toolbar"><span class="field-wrap"><input class="field" data-filter="tasks.kw" name="kw" placeholder="搜索任务 / 项目 / 执行人" value="' + U.esc(kw) + '"></span>' +
@@ -45,7 +45,7 @@
             '<span class="faint small">' + (scopedProject ? "只显示《" + U.esc(scopedProject.name) + "》的任务；切回全部不会改变任务状态" : "聚合 " + projects.length + " 个可见项目的任务") + "</span></div>";
           return U.page("任务与队列 / 生产任务", "生产任务", "任务、尝试、调用三层记录；失败成本与重试成本一律入账。",
             U.btn("资源池与队列", "tasks.toQueue") + U.btn("尝试与调用记录", "tasks.toAttempts"),
-            U.card("任务列表 · 当前 " + list.length + " 条", toolbar + U.table(["任务", "项目 · 集 · 镜头", "状态", "优先级", "模型 · 配置", "四状态（供应商 / 下载 / 持久化 / 质检）", "尝试", "失败类型", "预计 / 实际", "操作"], rows, "当前筛选条件下没有任务"), list.length ? "筛选只影响当前视图，不改变任务状态；提交时间等明细在「详情」抽屉" : "当前筛选条件下没有任务") +
+            U.card("任务列表 · 当前 " + list.length + " 条", toolbar + U.table(["任务", "项目 · 集 · 镜头", "状态", "优先级", "模型 · 配置", "四状态（供应商 / 下载 / 持久化 / 质检）", "尝试 · 失败类型", "预计 / 实际", "操作"], rows, "当前筛选条件下没有任务"), list.length ? "筛选只影响当前视图，不改变任务状态；提交时间等明细在「详情」抽屉" : "当前筛选条件下没有任务") +
             U.tableFoot("共 " + D.tasks.filter(visTask).length + " 条可见任务 · 当前视图 " + list.length + " 条", "筛选只影响当前视图，不改变任务状态；非成员项目任务不可见") +
             '<div class="split mt-4"><div class="stack">' +
               U.card("任务状态（业务方案 §12.2 · " + STATE_DESC.length + " 类）", U.table(["状态", "含义", "可执行操作"], STATE_DESC.map(s => {

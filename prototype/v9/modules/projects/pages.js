@@ -269,7 +269,8 @@
             .concat([{ time: p.updated, title: "当前状态 · " + p.status, desc: p.phase + " · 更新人 " + p.owner }]);
           return U.page("项目中心 / " + p.id, p.name, "项目归属企业，由员工独立推进；协作是授权行为。动作按「权限 + 状态 + 前置条件」渲染，不可用动作不显示。",
             actions.join("") || '<span class="faint small">当前状态无可执行的项目级动作</span>',
-            U.card("阶段进度", stageChain(p) + '<div class="mt-3">' + U.desc([["当前阶段", p.phase], ["项目状态", '<span class="pill ' + U.toneOf(p.status) + '">' + p.status + "</span>", true], ["已完成集数", DB.derived.progressOf(p).done + " / " + DB.derived.progressOf(p).total + "（" + DB.derived.progressOf(p).pct + "%）"], ["最近更新", p.updated]]) + "</div>", "阶段门禁不满足时任务保持待执行") +
+            U.card("阶段进度与生命周期", stageChain(p) + '<div class="mt-3">' + U.desc([["当前阶段", p.phase], ["项目状态", '<span class="pill ' + U.toneOf(p.status) + '">' + p.status + "</span>", true], ["已完成集数", DB.derived.progressOf(p).done + " / " + DB.derived.progressOf(p).total + "（" + DB.derived.progressOf(p).pct + "%）"], ["最近更新", p.updated]]) + "</div>" +
+              '<div class="mt-4">' + U.timeline(events) + "</div>", "阶段门禁不满足时任务保持待执行；状态迁移保留前后状态、触发动作、操作者与关联任务") +
             '<div class="split mt-4"><div class="stack">' +
               U.card("项目档案与创作基准", U.desc([
                 ["项目编号", p.id], ["题材 / 受众", p.genre + " · " + p.audience], ["计划集数 / 单集时长", p.episodes + " 集 / " + p.duration],
@@ -285,22 +286,19 @@
               U.card("预算与成本", U.progress(pct(p), "已用 " + budgetText(p), pct(p) > (D.pricing ? D.pricing.budgetWarnRate * 100 : 85) ? "warn" : "") +
                 U.listRows([["预计成本", "¥" + p.estimated.toLocaleString()], ["实际成本", "¥" + DB.derived.budgetOfProject(p).used.toLocaleString()], ["预算状态", '<span class="pill ' + U.toneOf(DB.derived.budgetOfProject(p).state) + '">' + DB.derived.budgetOfProject(p).state + "</span>", true], ["计费依据", "供应商用量或账单，不用估算替代实际"]]) +
                 '<div class="mt-3">' + U.btn("成本明细", "cost.ledgerLink", "sm", { project: p.id }) + "</div>", "预计与实际分栏展示") +
-              U.card("质量与审核", U.desc([
+              U.card("质量、审核与风险", U.desc([
                 ["项目质量", '<span class="pill ' + U.toneOf(p.quality) + '">' + p.quality + "</span>", true],
                 ["质量报告", q.reports.length ? q.reports.length + " 份 · PASS " + q.pass + " · 待人工 " + q.review + (q.fail ? " · FAIL " + q.fail : "") : "尚无报告"],
                 ["最近报告", q.last ? q.last.id + " · " + q.last.result : "—"],
-                ["审核记录", sum.reviews.length ? sum.reviews.length + " 条 · 最近 " + reviewLatest.result : "尚无审核记录"]
-              ]) +
-                '<div class="mt-3">' + U.btn("质量报告", "projects.qcLink", "sm", { id: p.id }) + "</div>", "质量报告绑定被检对象版本") +
-              U.card("风险与待办", U.listRows([
+                ["审核记录", sum.reviews.length ? sum.reviews.length + " 条 · 最近 " + reviewLatest.result : "尚无审核记录"],
                 ["未闭环风险", sum.risks.length ? sum.risks.length + " 项 · " + riskLatest.type : "无"],
                 ["待审核", p.status.indexOf("待") >= 0 ? "1 项" : "无"],
                 ["交付包", deliveryLatest ? deliveryLatest.id + " · " + deliveryLatest.status : "未生成"],
                 ["待办归属", p.owner]
               ]) +
-                U.notice("项目进入异常时只暂停受影响链路，不整项目全停；通知到项目负责人与资源配置人。", "warn"), "异常处理需形成闭环记录") +
-            "</div></div>" +
-            U.card("生命周期记录", U.timeline(events), "状态迁移保留前后状态、触发动作、操作者与关联任务")
+                U.notice("项目进入异常时只暂停受影响链路，不整项目全停；通知到项目负责人与资源配置人。", "warn") +
+                '<div class="mt-3">' + U.btn("质量报告", "projects.qcLink", "sm", { id: p.id }) + "</div>", "报告绑定被检对象版本；异常处理需形成闭环记录") +
+            "</div></div>"
           );
         }
       },

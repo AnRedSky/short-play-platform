@@ -74,7 +74,7 @@ const rows = routes.map((route) => {
   if (cards >= 6 && cards < 8) soft.push("卡≥6");
   if (metrics >= 5) soft.push("指标≥5");
   if (tables >= 3) soft.push("表≥3");
-  if (notices >= 2 && notices < 3) soft.push("提示≥2");
+  if (notices >= 2 && notices < 3) soft.push("提示2");
   if (maxCols === 9 || maxCols === 10) soft.push("列" + maxCols);
   if (plain && maxCard / plain >= 0.6 && maxCard / plain < 0.8) soft.push("单卡≥60%");
   if (grids >= 3) soft.push("布局≥3种");
