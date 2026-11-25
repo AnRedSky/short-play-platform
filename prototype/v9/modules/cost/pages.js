@@ -45,7 +45,7 @@
           const proj = requested || (projIds.indexOf(saved) >= 0 ? saved : "全部");
           const list = all.filter(c => proj === "全部" || c.project === proj);
           const rows = list.map(c =>
-            '<tr><td>' + U.code(c.id) + "</td><td>" + U.esc(c.project) + '</td><td class="num">E' + c.ep + "</td><td>" + U.esc(c.shot) + "</td><td>" + U.code(c.task) + "</td><td>" + U.esc(c.cap) + '</td><td class="num">¥' + c.est.toFixed(1) + '</td><td class="num">¥' + c.actual.toFixed(1) + '</td><td class="num">' + (c.failed ? '<span class="text-bad">¥' + c.failed.toFixed(1) + "</span>" : "—") + "</td><td>" + U.esc(c.bearer) + "</td><td>" + U.esc(c.source) + "</td><td>" + U.esc(c.resourceOwner || "—") + "</td><td>" + U.esc(c.executor || "—") + "</td><td>" + U.esc(c.dept || "—") + "</td><td>" + U.pill(c.status) + "</td><td>" + U.esc(c.bill) + "</td><td>" +
+            '<tr><td>' + U.code(c.id) + "</td><td>" + U.esc(c.project) + " · E" + c.ep + " · " + U.esc(c.shot) + "</td><td>" + U.esc(c.cap) + '</td><td class="num">¥' + c.est.toFixed(1) + '</td><td class="num">¥' + c.actual.toFixed(1) + '</td><td class="num">' + (c.failed ? '<span class="text-bad">¥' + c.failed.toFixed(1) + "</span>" : "—") + "</td><td>" + U.esc(c.bearer + " · " + c.source) + "</td><td>" + U.pill(c.status) + "</td><td>" +
             (App.can("cost.manage") ? U.btn("核验", "cost.verify", "sm", { id: c.id }) + " " + U.btn("费用调整", "cost.adjust", "sm", { id: c.id }) : U.btn("核验", "cost.verify", "sm", { id: c.id })) + "</td></tr>").join("");
           const toolbar = '<div class="toolbar"><span class="faint small">可见范围：' + U.esc(DB.derived.scopeLabel()) + " · " + (projIds.length - 1) + " 个项目</span><span class=\"grow\"></span>" + U.seg(projIds, proj, "cost.proj") + U.btn("导出明细", "common.export") + "</div>";
           const est = list.reduce((s, c) => s + c.est, 0);
@@ -67,7 +67,7 @@
               U.metric("失败成本", money(fail), "不摊入成功项", "×") +
               U.metric("个人承担", personal + " 笔", "员工个人账户扣费", "人") +
             "</div>" +
-            U.card("成本明细 · " + list.length + " 笔", toolbar + U.table(["成本号", "项目", "集", "镜头", "任务", "能力", "预计", "实际", "失败", "费用承担方", "费用来源", "资源配置人", "实际执行人", "部门归属", "状态", "账单", "操作"], rows), "按项目筛选；失败与重试单列显示；归属七维分别记录（业务方案 §15.2）") +
+            U.card("成本明细 · " + list.length + " 笔", toolbar + U.table(["成本号", "项目 · 集 · 镜头", "能力", "预计", "实际", "失败", "承担方 · 来源", "状态", "操作"], rows), "列表只留金额与定位；归属七维（资源配置人 / 执行人 / 部门 / 供应商 / 账单 / 调整记录）在「核验」抽屉里逐项留痕，不进表格") +
             U.tableFoot("共 " + all.length + " 笔 · 当前筛选 " + list.length + " 笔", "可见范围：" + DB.derived.scopeLabel() + "；预计 / 实际 / 失败三列并列，不合并展示") +
             '<div class="grid grid-2 mt-4">' +
               U.card("十维成本口径", '<div class="chip-row">' + D.costDimensions.map(x => '<span class="chip">' + U.esc(x) + "</span>").join("") + "</div>" + U.listRows([["项目 / 单集 / 单镜头", "按结构逐层汇总"], ["能力维度", "图像 / 视频 / 音频 / 后期"], ["失败与重试", "单列，不回填到成功项"], ["存储与转码", "按体积与时长计量"]]) , "统计按维度可下钻") +

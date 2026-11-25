@@ -63,13 +63,13 @@
         desc: "供应商与模型档案：接入方式、区域、能力、单价与许可都要登记，才允许被路由选中。",
         render() {
           const prow = D.providers.map(p =>
-            '<tr><td>' + U.code(p.id) + '</td><td class="cell-strong">' + U.esc(p.name) + '<div class="faint small">' + U.esc(p.kind) + '</div></td><td>' + U.esc(p.owner) + '</td><td class="cell-wrap muted">' + U.esc(p.endpoint) + '</td><td>' + U.esc(p.auth) + '</td><td>' + U.esc(p.region) + '</td><td class="cell-wrap">' + U.esc(p.capabilities) + '</td><td>' + U.masked(p.masked) + "</td><td>" + U.esc(p.test) + "</td><td>" + U.pill(p.status) + "</td><td>" +
+            '<tr><td>' + U.code(p.id) + '</td><td class="cell-strong">' + U.esc(p.name) + '<div class="faint small">' + U.esc(p.kind) + " · " + U.esc(p.owner) + '</div></td><td class="cell-wrap muted">' + U.esc(p.endpoint) + '</td><td>' + U.esc(p.auth) + '<div class="faint small">' + U.esc(p.region) + '</div></td><td class="cell-wrap">' + U.esc(p.capabilities) + '</td><td>' + U.masked(p.masked) + "</td><td>" + U.esc(p.test) + "</td><td>" + U.pill(p.status) + "</td><td>" +
             U.btn("测试", "models.test", "sm", { id: p.id }) + "</td></tr>").join("");
           const mrow = D.modelProfiles.map(m =>
             '<tr><td>' + U.code(m.id) + '</td><td>' + U.code(m.provider) + '</td><td class="cell-strong">' + U.esc(m.model) + '</td><td>' + U.esc(m.cap) + '</td><td class="cell-wrap">' + U.esc(m.io) + '</td><td class="cell-wrap muted">' + U.esc(m.limits) + '</td><td>' + U.esc(m.price) + '</td><td class="cell-wrap">' + U.esc(m.license) + "</td></tr>").join("");
           return U.page("模型与资源 / 供应商与模型", "供应商与模型", "接入失败不是「模型不行」：必须区分鉴权、限流、参数不支持与上游故障。",
             U.btn("新增资源", "models.newProvider", "primary") + U.btn("查看调用日志", "models.toLogs"),
-            U.card("供应商（" + D.providers.length + " 家）", U.table(["编号", "供应商", "归属人", "端点", "鉴权方式", "区域", "能力", "凭据", "验证", "状态", "操作"], prow)) +
+            U.card("供应商（" + D.providers.length + " 家）", U.table(["编号", "供应商 · 归属人", "端点", "鉴权 · 区域", "能力", "凭据", "验证", "状态", "操作"], prow), "归属人与区域并入列；凭据只显示脱敏串") +
             U.card("模型能力档案（" + D.modelProfiles.length + " 个）", U.table(["档案", "供应商", "模型", "能力", "输入 / 输出", "限制", "单价", "许可"], mrow)) +
             '<div class="grid grid-2 mt-4">' +
               U.card("接入方式", U.listRows([["内置适配器", "平台维护、开箱即用"], ["兼容接口", "标准 OpenAI 兼容协议"], ["自定义 HTTP", "需登记签名与重试规则"]]) , "自定义接入需运维审批") +

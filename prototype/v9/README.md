@@ -27,6 +27,7 @@ B2 收盘后在同版内继续做了五类整改，均以脚本断言落地：
 - **规则卡收敛（R-17）**：`tools/_audit_rules.mjs` 盘出 43 张规则/口径卡（10 页各 2 张）。每个域只留 1 张（共 **15 张**，单页 ≤1），其余 28 张条文由 `tools/_dump_rules.mjs` 渲染抽取进 `docs/RULES-V9.7.0.md`（§R-01…§R-43 按域分节），页面对应位置折叠为一行 `U.notice("口径与规则见《口径与规则汇总》§R-xx：…")`。折叠由 `tools/_fold_rules.mjs` 做括号配对替换，信息不丢、可回查。
 - **密度修补（R-17 收尾）**：折叠后 `tools/_audit_density.mjs` 报出 5 个过薄页。处理：①同页并排的两条折叠提示合并为一条带结论的口径行（`ops/logs` §R-21+R-22、`audio/voice` §R-08+R-09、`audio/subtitle` §R-06+R-07、`post/delivery` §R-28+R-29、`analytics/me` §R-02+R-03），不再出现"两行空提示"的视觉空洞；②`ops/logs` 补两张**真实派生**卡（来源分布按日志表实时统计、队列积压/失败/重试按 `DB.ops.queue` 投影）；③`creation/script` 无正文样本时补「剧本流转与当前位置」卡（四步流转 + 当前停在哪一步），不再只有空态。判定口径同步收紧为「<1400 字符，或 卡≤1 无表且 <3000 字符」，`orgs/member`（下钻缺 query 的空态）白名单。结果：**过薄 0 页 / 56 页**，规则卡仍 15 张、单页 ≤1。
 - **按钮文案收口（R-19）**：新增 `tools/_audit_labels.mjs`（按 `U.btn("<文案>","<动作>")` 整对扫描 244 个动作），同动作多文案 **12 组 → 0 组**——`projects.wfOpen` / `projects.detail` / `compliance.toAudit` / `post.newVersion` / `director.check` / `director.regenerate` / `director.shotDetail` / `video.regenShot` / `creation.toPlan` / `creation.toScript` 统一为单一文案；`video/preview` 里「采用该版本」与「接受并记录理由」指向同一动作（同一行重复决策入口），删前者、只留强制写理由的那颗。白名单收敛为 3 条并写明理由：`common.export`（按对象命名）、`quality.judge`（判罚选项）、`projects.wfDelivery`（交付状态互斥 CTA）。
+- **布局简洁度（S-01）**：新增 `tools/_audit_layout.mjs` 量化 56 页骨架（台账 28 / 详情 15 / 评审 9 / 看板 4）与六个密度指标；首批把 4 张最宽的表裁到 ≤10 列：`cost/ledger` 18→9（归属七维移入「核验」抽屉）、`compliance/rights` 14→9、`tasks/list` 13→10、`models/providers` 11→9。方向与后续清单见 `docs/REVIEW-SIMPLIFY-V9.7.0.md`（列 ≤9 / 卡 ≤5 / 提示 ≤1 / 容器 ≤2 四条基线）。
 - **重复功能复核（R-35）**：新增 `tools/_audit_overlap.mjs`，56 路由（菜单 53 + 下钻 3）逐页渲染后按四个维度比对：同名卡片 0、真双入口写动作 0（改前 `director.check` 在 cast/world 两页）、页面相似度 ≥0.5 为 0 对。据此修掉 4 处残留：`projects/workflow` 去掉暂停入口（归 `projects/detail` 单项目 / `projects/lifecycle` 批量）、`projects/detail`「发起移交」改为跳 `orgs/handover`（新增 `orgs.toHandover` + `orgs.handoverProject` 预选）、`projects/lifecycle` 删掉与项目列表重复的「可见项目状态分布」、`director/cast` 与 `director/world` 去掉项目级「一致性抽检」（只留 `director/shots`）。另把 `models/config` 的「新增资源」按权限分流（管理员→`models/providers`，无管理权限员工才见新增）。允许重复只留三类：导航到同一目的地、页面本地导出、首页全局创建入口。
 - **E2E 稳定性**：`_e2e.html` 里 5 处 `App.job` 等待由 3200ms 放宽到 5200ms。此前偶发 4 条误报（质量裁决 / 通知闭环），根因是作业动画与断言赛跑，不是功能回归；连跑两次均 **37/37**。
 - **浏览器验收（R-28）**：`_smoke.html` 56 路由 + 9 条合并页 tab 断言 + 3 身份拦截 → **Smoke OK**；`_e2e.html` 断言 **28 → 37**（新增交付包 / 成本台账 / 分镜板三页的「切 tab 后内容正常 + `App.refresh()` 后仍停在该 tab」）→ **E2E OK**。
@@ -377,6 +378,7 @@ node tools/_audit_rules.mjs      # 规则/口径卡分布：全站 ≤17 张且�
 node tools/_audit_density.mjs    # 页面密度：<1400 字符、或 卡≤1 无表且 <3000 字符 视为过薄（R-17 折叠后遗症复核）
 node tools/_audit_labels.mjs     # 同一动作只允许 1 个文案（白名单 3 条各写明理由），R-19 门禁
 node tools/_audit_overlap.mjs    # 重复功能复核：同名卡片 / 同名指标 / 真双入口写动作 / 页面相似度（可写 --write 存 _ia_overlap.txt）
+node tools/_audit_layout.mjs     # 布局简洁度：列 ≥9、卡 ≥6、提示 ≥2、单卡 ≥40%、容器 ≥3 种（改表格/卡片后必跑，--write 存 _ia_layout.txt）
 node tools/_audit_project_guard.mjs  # 项目页阻断
 node tools/_probe_tab.mjs video/preview versions   # 单 tab 渲染探针（合并页必跑）
 ```
