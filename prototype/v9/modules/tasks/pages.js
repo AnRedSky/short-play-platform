@@ -13,7 +13,7 @@
     group: "tasks", label: "任务与队列", icon: "list", order: 9, end: "workspace",
     routes: [
       {
-        path: "tasks/list", title: "生产任务", icon: "list", permission: ["task.operate", "audit.read"],
+        path: "tasks/list", title: "生产任务", icon: "list", permission: "task.read",
         desc: "任务是最小执行记录：一次失败产生新的 Attempt，任务本身不被覆盖；重试、取消、切换备用模型都要留痕。",
         render(query) {
           const kw = App.get(SCOPE, "kw", "");
@@ -23,7 +23,7 @@
           const scopedProject = projects.find(p => p.id === pid) || null;
           if (pid && !scopedProject) {
             return U.page("任务与队列 / 生产任务", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看。",
-              U.btn("查看全部任务", "tasks.toList", "primary"),
+              U.btn("生产任务", "tasks.toList", "primary"),
               U.empty("无法读取任务", "请从项目或任务列表重新进入，系统不会回退到其他项目的任务。"));
           }
           const exhausted = D.tasks.filter(visTask).filter(t => !pid || t.project === pid).find(t => t.status === "待人工处理" && t.attempt >= t.maxAttempts) || null;
@@ -35,7 +35,7 @@
             const steps = t.steps || { vendor: "未开始", download: "未开始", persist: "未开始", qc: "未开始" };
             return '<tr><td>' + U.code(t.id) + '<div class="faint small">' + U.esc(t.kind) + "</div></td><td>" + U.esc(t.project) + '<div class="faint small">E' + t.ep + " / S" + t.scene + "</div></td><td>" + U.esc(t.shot) + "</td><td>" +
             U.pill(t.status) + "</td><td>" + U.esc(t.priority) + '</td><td class="cell-wrap muted">' + U.esc(t.model) + " · " + U.esc(t.config) + '</td><td class="idx">' + U.pill(steps.vendor) + " " + U.pill(steps.download) + " " + U.pill(steps.persist) + " " + U.pill(steps.qc) + '</td><td class="num">' + t.attempt + " / " + t.maxAttempts + '</td><td class="cell-wrap">' + (t.failType && t.failType !== "—" ? U.pill(t.failType, FAIL_TYPES[t.failType] && FAIL_TYPES[t.failType].retryable ? "warn" : "bad") : "—") + '</td><td class="num">¥' + t.est + '</td><td class="num">¥' + t.actual + "</td><td>" + U.esc(t.submitAt) + "</td><td>" +
-            U.btn("详情", "tasks.detail", "sm", { id: t.id }) + " " + U.btn("尝试", "tasks.toAttempts", "sm", { id: t.id }) + "</td></tr>";
+            U.btn("详情", "tasks.detail", "sm", { id: t.id }) + " " + U.btn("尝试与调用记录", "tasks.toAttempts", "sm", { id: t.id }) + "</td></tr>";
           }).join("");
           const toolbar = '<div class="toolbar"><span class="field-wrap"><input class="field" data-filter="tasks.kw" name="kw" placeholder="搜索任务 / 项目 / 执行人" value="' + U.esc(kw) + '"></span>' +
             U.seg(["全部"].concat(STATES), st, "tasks.st") +
@@ -44,7 +44,7 @@
             U.seg([{ value: "", label: "全部可见项目" }].concat(projects.map(p => ({ value: p.id, label: p.name }))), pid, "tasks.scope") +
             '<span class="faint small">' + (scopedProject ? "只显示《" + U.esc(scopedProject.name) + "》的任务；切回全部不会改变任务状态" : "聚合 " + projects.length + " 个可见项目的任务") + "</span></div>";
           return U.page("任务与队列 / 生产任务", "生产任务", "任务、尝试、调用三层记录；失败成本与重试成本一律入账。",
-            U.btn("资源池与队列", "tasks.toQueue") + U.btn("尝试与调用", "tasks.toAttempts"),
+            U.btn("资源池与队列", "tasks.toQueue") + U.btn("尝试与调用记录", "tasks.toAttempts"),
             U.card("任务列表 · 当前 " + list.length + " 条", toolbar + U.table(["任务", "项目 / 集", "镜头", "状态", "优先级", "模型 / 配置", "四状态（供应商 / 下载 / 持久化 / 质检）", "尝试", "失败类型", "预计", "实际", "提交", "操作"], rows, "当前筛选条件下没有任务"), list.length ? "筛选只影响当前视图，不改变任务状态" : "当前筛选条件下没有任务") +
             U.tableFoot("共 " + D.tasks.filter(visTask).length + " 条可见任务 · 当前视图 " + list.length + " 条", "筛选只影响当前视图，不改变任务状态；非成员项目任务不可见") +
             '<div class="split mt-4"><div class="stack">' +
@@ -61,14 +61,14 @@
                 "<tr><td>" + U.pill(k, FAIL_TYPES[k].retryable ? "warn" : "bad") + '</td><td>' + U.esc(FAIL_TYPES[k].retryable ? "可重试" : "不可重试") + '</td><td class="cell-wrap muted">' + U.esc(FAIL_TYPES[k].strategy) + "</td></tr>").join("")), "不同失败类型采取不同策略，不得统一盲重试") +
             '</div><div class="stack">' +
               U.card(exhausted ? exhausted.id + " · 已用尽尝试" : "待人工处理", exhausted ? U.notice("该任务 " + exhausted.attempt + " / " + exhausted.maxAttempts + " 次尝试全部失败：" + (exhausted.failReason || "—") + "。失败成本 ¥" + Number(exhausted.failedCost || 0).toFixed(1) + " 已入账。", "bad") +
-                '<div class="btn-row-inline">' + U.btn("查看尝试", "tasks.toAttempts", "sm", { id: exhausted.id }) + U.btn("人工决策", "tasks.decide", "sm", { id: exhausted.id }) + "</div>" : U.empty(scopedProject ? "《" + scopedProject.name + "》没有待人工任务" : "当前可见范围没有待人工任务", "轮次用尽或合规阻断的任务会出现在这里"), exhausted ? "轮次用尽必须人工决策" : "按项目范围实时计算") +
+                '<div class="btn-row-inline">' + U.btn("尝试与调用记录", "tasks.toAttempts", "sm", { id: exhausted.id }) + (App.can("task.operate") ? U.btn("人工决策", "tasks.decide", "sm", { id: exhausted.id }) : "") + "</div>" : U.empty(scopedProject ? "《" + scopedProject.name + "》没有待人工任务" : "当前可见范围没有待人工任务", "轮次用尽或合规阻断的任务会出现在这里"), exhausted ? "轮次用尽必须人工决策" : "按项目范围实时计算") +
               U.card("重试规则", U.listRows([["Attempt", "每次重试新建 Attempt，不覆盖历史"], ["轮次", "默认上限 3 次"], ["可重试", "超时 / 供应商 5xx / 质量不合格"], ["不可重试", "合规阻断 / 输入非法"], ["备用模型", "切换前必须做兼容校验"]]) , "重试不改变原任务记录") +
             "</div></div>"
           );
         }
       },
       {
-        path: "tasks/queue", title: "资源池与队列", icon: "board", permission: ["task.operate", "audit.read"],
+        path: "tasks/queue", title: "资源池与队列", icon: "board", permission: "task.read",
         desc: "队列按资源池划分：谁持有资源、当前并发多少、谁在等待。资源不足时排队而非失败。",
         render() {
           const q = D.ops.queue;
@@ -81,7 +81,7 @@
             { title: "待人工", items: D.tasks.filter(visTask).filter(t => t.status === "待人工处理").map(t => ({ title: t.id + " · 合规阻断", sub: t.failReason, tags: ["人工"] })) }
           ];
           return U.page("任务与队列 / 资源池与队列", "资源池与队列", "资源池按能力划分且为平台级；任务看板与等待原因只统计当前身份可见项目，两者口径在卡片上分别标注。",
-            U.btn("任务列表", "tasks.toList", "primary") + (App.can("task.operate") ? U.btn("调整并发", "tasks.setConcurrency") : '<span class="faint small">并发配置需任务操作权限</span>'),
+            U.btn("生产任务", "tasks.toList", "primary") + (App.can("task.operate") ? U.btn("调整并发", "tasks.setConcurrency") : '<span class="faint small">并发配置需任务操作权限</span>'),
             '<div class="grid grid-4">' +
               U.metric("执行中", String(D.tasks.filter(visTask).filter(t => t.status === "执行中").length), "当前可见项目", "◐") +
               U.metric("排队中", String(D.tasks.filter(visTask).filter(t => t.status === "排队中").length), "当前可见项目", "○") +
@@ -113,14 +113,14 @@
         }
       },
       {
-        path: "tasks/attempt", title: "尝试与调用记录", icon: "chain", permission: ["task.operate", "audit.read"],
+        path: "tasks/attempt", title: "尝试与调用记录", icon: "chain", permission: "task.read",
         desc: "Attempt 与模型调用是两层证据：Attempt 说明重试过程，调用说明实际消耗与计费。",
         render() {
           const tid = App.get(SCOPE, "task", "");
           const visibleIds = D.tasks.filter(visTask).map(t => t.id);
           if (tid && visibleIds.indexOf(tid) < 0) {
             return U.page("任务与队列 / 尝试与调用", "任务不在可见范围", "该任务不存在或所属项目不在当前身份可见范围。",
-              U.btn("清除任务筛选", "tasks.clearTask", "primary"),
+              U.btn("清除筛选", "tasks.clearTask", "primary"),
               U.empty("无法读取尝试记录", "任务级记录不会回退显示其他任务的数据。"));
           }
           const at = D.attempts.filter(a => visibleIds.indexOf(a.task) >= 0 && (!tid || a.task === tid));
@@ -132,7 +132,7 @@
           const invRows = inv.map(x =>
             '<tr><td>' + U.code(x.id) + "</td><td>" + U.code(x.task) + "</td><td>" + U.esc(x.provider) + '</td><td class="cell-wrap">' + U.esc(x.model) + '<span class="faint small"> · ' + U.esc(x.vendorTask) + '</span></td><td>' + U.esc(x.cap) + '</td><td class="cell-wrap muted">' + U.esc(x.input) + '</td><td>' + U.esc(x.usage) + '</td><td class="num">¥' + x.cost.toFixed(1) + "</td><td>" + U.pill(x.status) + "</td><td>" + U.esc(x.at) + "</td></tr>").join("");
           return U.page("任务与队列 / 尝试与调用", "尝试与调用记录", "每次失败都保留：原因分类决定是否可重试，计费说明决定成本归属。",
-            (tid ? U.btn("清除筛选", "tasks.clearTask") : "") + U.btn("任务列表", "tasks.toList") + U.btn("导出记录", "common.export"),
+            (tid ? U.btn("清除筛选", "tasks.clearTask") : "") + U.btn("生产任务", "tasks.toList") + U.btn("导出记录", "common.export"),
             U.card("尝试记录" + (tid ? " · " + tid : ""), U.table(["Attempt", "任务", "时间", "结果", "模型", "原因", "计费"], atRows)) +
             U.card("模型调用记录", U.table(["调用", "任务", "供应商", "模型 / 上游任务", "能力", "输入摘要", "用量", "成本", "状态", "时间"], invRows)) +
             '<div class="split mt-4"><div class="stack">' +
@@ -183,10 +183,12 @@
     if (!t) return;
     shotOf(t);
     const acts = [];
-    if (["排队中", "待执行", "待质检"].indexOf(t.status) >= 0) acts.push(U.btn("执行任务", "tasks.execute", "primary", { id: t.id }));
-    if (t.status === "失败" || t.status === "待人工处理") acts.push(U.btn("人工决策", "tasks.decide", "primary", { id: t.id }));
-    if (t.status !== "成功" && t.status !== "已取消") acts.push(U.btn("取消任务", "tasks.cancel", "sm", { id: t.id }));
-    if (t.status !== "成功" && t.status !== "已取消") acts.push(U.btn("切换模型", "tasks.switchModel", "sm", { id: t.id }));
+    if (App.can("task.operate")) {
+      if (["排队中", "待执行", "待质检"].indexOf(t.status) >= 0) acts.push(U.btn("执行任务", "tasks.execute", "primary", { id: t.id }));
+      if (t.status === "失败" || t.status === "待人工处理") acts.push(U.btn("人工决策", "tasks.decide", "primary", { id: t.id }));
+      if (t.status !== "成功" && t.status !== "已取消") acts.push(U.btn("取消任务", "tasks.cancel", "sm", { id: t.id }));
+      if (t.status !== "成功" && t.status !== "已取消") acts.push(U.btn("切换模型", "tasks.switchModel", "sm", { id: t.id }));
+    }
     const steps = t.steps || { vendor: "未开始", download: "未开始", persist: "未开始", qc: "未开始" };
     const fc = t.fileCheck;
     /* 生产衔接门禁（业务方案 §12.7）：四条条件逐条可见，不满足时给出具体阻塞原因 */
@@ -221,7 +223,7 @@
       U.card("生产衔接门禁（业务方案 §12.7）", U.table(["门禁条件", "判定", "阻塞说明"], gateRows.map(r =>
         "<tr><td class=\"cell-wrap\">" + r[0] + '</td><td>' + U.pill(r[1], r[1] === "满足" ? "ok" : r[1] === "不满足" ? "bad" : "warn") + '</td><td class="cell-wrap muted">' + U.esc(r[2]) + "</td></tr>").join("")), "门禁不满足时任务保持待执行，并给出具体阻塞原因") +
       (t.failReason && t.failReason !== "—" ? U.notice(t.failReason, "bad") : "") +
-      '<div class="btn-row-inline">' + acts.join("") + U.btn("查看尝试记录", "tasks.toAttempts", "sm", { id: t.id }) + "</div>");
+      '<div class="btn-row-inline">' + acts.join("") + U.btn("尝试与调用记录", "tasks.toAttempts", "sm", { id: t.id }) + "</div>");
   });
 
   App.on("tasks.execute", (el) => {

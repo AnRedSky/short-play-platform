@@ -39,11 +39,11 @@ const routes = new Map();
 for (const cfg of registered) for (const r of cfg.routes || []) routes.set(r.path, r);
 const scoped = [
   "creation/brief", "creation/plan", "creation/script", "creation/review", "creation/breakdown",
-  "director/plan", "director/cast", "director/world", "director/shots", "director/storyboard",
-  "video/production", "video/results", "video/preview",
+  "director/plan", "director/cast", "director/world", "director/shots",
+  "video/production", "video/preview",
   "audio/dialogue", "audio/voice", "audio/bgm", "audio/subtitle",
   "post/timeline", "post/episodes", "post/review", "post/delivery", "post/versions",
-  "quality/gates", "quality/reports", "quality/rework",
+  "quality/reports", "quality/rework",
   "projects/workflow"
 ];
 let pass = 0;

@@ -82,7 +82,7 @@
             U.card("声音档案 · " + U.esc(p ? p.name : pid), U.table(["档案", "角色 / 语言", "音色", "语速", "情绪范围", "权利来源", "覆盖集次", "状态", "操作"], rows, "当前项目还没有声音档案"), voices.length ? "每个角色一份档案，版本变更需列出受影响对白" : "当前项目还没有声音档案") +
             '<div class="split mt-4"><div class="stack">' +
               (risk ? U.card("授权风险 · " + risk.id, U.desc([["角色", risk.char], ["语言", risk.lang], ["权利来源", risk.rights], ["覆盖", risk.coverage], ["状态", risk.status], ["影响", "未解除前相关对白不可进入交付"]]) +
-                '<div class="btn-row-inline">' + (canEdit ? U.btn("续期登记", "audio.renew", "primary", { id: risk.id, pid: pid }) + U.btn("替换音色", "audio.replaceVoice", "", { id: risk.id, pid: pid }) : U.btn("查看授权台账", "audio.toRights", "", { pid: pid })) + "</div>", "授权到期前必须续期或替换") :
+                '<div class="btn-row-inline">' + (canEdit ? U.btn("续期登记", "audio.renew", "primary", { id: risk.id, pid: pid }) + U.btn("替换音色", "audio.replaceVoice", "", { id: risk.id, pid: pid }) : U.btn("授权台账", "audio.toRights", "", { pid: pid })) + "</div>", "授权到期前必须续期或替换") :
                 U.card("授权状态", U.notice("当前项目没有授权临期或停用的声音档案；交付前仍会按项目授权台账复核。", "ok"), "按项目复核")) +
               U.card("试听占位", U.notice("静态原型不内置媒体文件：试听入口展示音色参数与波形结构，不播放音频。", "info") +
                 '<div class="wave-box"><span class="wave-line"></span><span class="faint small">48kHz · 单声道 · −16 LUFS（参数取自最近一次生成记录）</span></div>', "不伪造音频内容") +
@@ -107,7 +107,7 @@
           const canEdit = !!p && ["已交付", "已归档"].indexOf(p.status) < 0;
           const rows = assets.map(a =>
             '<tr><td>' + U.entity(a.name, a.id, "♫") + '</td><td>' + U.esc(a.project) + '</td><td>' + U.esc(a.type) + '</td><td class="cell-wrap muted">' + U.esc(a.source) + '</td><td class="cell-wrap">' + U.esc(a.rights) + '</td><td>' + U.esc(a.used) + '</td><td class="cell-wrap">' + U.esc(a.mix) + "</td><td>" + U.pill(a.status) + "</td><td>" +
-            U.btn("详情", "audio.assetDetail", "sm", { id: a.id }) + (canEdit ? " " + U.btn("替换", "audio.replaceAsset", "sm", { id: a.id }) : "") + "</td></tr>").join("");
+            U.btn("详情", "audio.assetDetail", "sm", { id: a.id }) + (canEdit ? " " + U.btn("替换素材", "audio.replaceAsset", "sm", { id: a.id }) : "") + "</td></tr>").join("");
           const blocked = assets.filter(a => /阻断|待复检/.test(String(a.status)));
           const first = blocked[0];
           return U.page("音频与字幕 / 配乐与音效", "配乐与音效", "素材入库时登记来源、授权与使用范围；交付前按授权再次校验。",
@@ -116,7 +116,7 @@
             '<div class="split mt-4"><div class="stack">' +
               (first ? U.card("授权阻断 · " + first.id, U.notice(first.name + " 的授权为「" + first.rights + "」，在补授权或替换前不得进入交付。", "bad") +
                 U.desc([["素材", first.name], ["使用位置", first.used], ["授权状态", first.rights], ["处置选项", "补授权 / 替换 / 删除该处"]]) +
-                '<div class="btn-row-inline">' + (canEdit ? U.btn("补登记授权", "audio.fixRights", "primary", { id: first.id, pid: pid }) + U.btn("替换素材", "audio.replaceAsset", "", { id: first.id }) : U.btn("查看授权台账", "audio.toRights", "", { pid: pid })) + "</div>", "阻断项不进入交付包") :
+                '<div class="btn-row-inline">' + (canEdit ? U.btn("补登记授权", "audio.fixRights", "primary", { id: first.id, pid: pid }) + U.btn("替换素材", "audio.replaceAsset", "", { id: first.id }) : U.btn("授权台账", "audio.toRights", "", { pid: pid })) + "</div>", "阻断项不进入交付包") :
                 U.card("授权状态", U.notice("当前项目没有阻断或待复检的音频素材。", "ok"), "交付前仍会再次校验授权")) +
               U.card("混音标准", U.table(["项目", "标准", "说明"], [
                 ["对白", "−16 LUFS ± 2", "主声道基准"],
@@ -155,7 +155,7 @@
           const subBad = subs.filter(s => s.status !== "已通过");
           const lipBad = lips.filter(l => l.status !== "已通过");
           return U.page("音频与字幕 / 字幕与口型", "字幕与口型", "字幕错字、时间轴重叠与口型错位都会进入质量门禁；不靠人工目测「差不多」。",
-            (canEdit ? U.btn("生成字幕", "audio.genSub", "primary", { pid: pid }) + U.btn("批量口型对齐", "audio.batchLip", "", { pid: pid }) : U.btn("查看授权台账", "audio.toRights", "", { pid: pid })),
+            (canEdit ? U.btn("生成字幕", "audio.genSub", "primary", { pid: pid }) + U.btn("批量口型对齐", "audio.batchLip", "", { pid: pid }) : U.btn("授权台账", "audio.toRights", "", { pid: pid })),
             U.card("", U.tabs([{ value: "sub", label: "字幕版本", count: subs.length }, { value: "lip", label: "口型对齐", count: lips.length }], tab, "audio.subTab") + body, "按集校验，不整剧一次性声称通过") +
             '<div class="grid grid-2 mt-4">' +
               U.card("字幕校验项 · " + U.esc(p ? p.name : pid), U.table(["项", "标准", "当前问题"], [
@@ -189,7 +189,7 @@
     if (!d) return;
     App.drawer("对白回听 · " + d.id, U.notice("原型不加载真实音频文件：以下为对齐与元信息，实际系统在此播放并提供逐字时间轴。", "info") +
       U.desc([["角色 / 集", d.char + " · E" + d.ep], ["台词", d.text], ["音色档案", d.voice], ["情绪", d.emotion], ["音频状态", d.audio], ["ASR 回听", d.asr], ["计费", "¥" + d.cost]])
-      + '<div class="btn-row-inline">' + U.btn("重生成此句", "audio.regenLine", "primary", { id: d.id }) + "</div>");
+      + '<div class="btn-row-inline">' + U.btn("重生成", "audio.regenLine", "primary", { id: d.id }) + "</div>");
   });
 
   App.on("audio.regenLine", (el) => {
@@ -261,7 +261,7 @@
     const v = D.voiceProfiles.find(p => p.id === el.dataset.id);
     if (!v) return;
     App.drawer("声音档案 · " + v.id, U.desc([["角色", v.char], ["语种", v.lang], ["音色", v.timbre], ["语速", v.rate], ["情绪区间", v.emotion], ["权利依据", v.rights], ["覆盖集次", v.coverage], ["状态", v.status]]) +
-      '<div class="btn-row-inline">' + U.btn("试听参数", "audio.previewVoice", "sm", { id: v.id }) +
+      '<div class="btn-row-inline">' + U.btn("试听", "audio.previewVoice", "sm", { id: v.id }) +
       (v.status === "启用" ? U.btn("停用档案", "audio.disableVoice", "sm", { id: v.id }) : U.btn("启用档案", "audio.enableVoice", "sm", { id: v.id })) + "</div>");
   });
 
@@ -542,7 +542,7 @@
             if (!shots.length) return { ok: false, msg: "E" + ep + " 还没有镜头，不能生成字幕" };
             let s = D.subtitles.find(x => x.project === pid && x.ep === ep);
             const lines = s && s.lines ? s.lines : Math.max(12, Math.min(120, shots.length * 3));
-            const cost = Math.round(lines * 0.3 * 10) / 10;
+            const cost = Math.round(lines * (D.pricing ? D.pricing.subtitlePerLine : 0.3) * 10) / 10;
             if (!s) {
               s = { project: pid, ep: ep, version: "SUB-" + String(ep).padStart(2, "0") + " v1", lines: lines, timeline: "整数毫秒 · 待复核", asr: "错字 2 · 待校对", style: d.style, status: "处理中" };
               D.subtitles.push(s);

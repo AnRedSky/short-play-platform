@@ -11,14 +11,16 @@
     group: "workspace", label: "我的工作台", icon: "home", order: 1, end: "workspace",
     routes: [
       {
-        path: "workspace/home", title: "工作台首页", icon: "home", permission: "analytics.own",
+        path: "workspace/home", title: "工作台首页", icon: "home", permission: ["project.read", "platform.read"],
         desc: "一名员工可独立完成整部短剧：从创意到交付的全部入口都在这里，跨部门协作是可选的授权行为。",
         render() {
           const mine = myProjects();
           const h = DB.derived.home(me());
           const ids = DB.derived.visibleProjects(me()).map(p => p.id);
           const actor = DB.derived.actorUser(me()) || {};
-          const todos = D.notifications.filter(n => n.owner === actor.name && (n.unread || n.state === "待处理" || n.state === "处理中") && (!n.project || ids.indexOf(n.project) >= 0)).slice(0, 5);
+          /* 待我处理：唯一取数口（通知表）。禁止再按 owner 姓名或 type 各过滤一遍。 */
+          const duty = DB.derived.duties(me());
+          const todos = duty.items.slice(0, 5);
           const risks = D.risks.filter(r => ids.indexOf(r.project) >= 0 && r.status !== "已闭环").slice(0, 2);
           const blocked = D.tasks.filter(t => ids.indexOf(t.project) >= 0 && t.status === "待人工处理").slice(0, 2);
           const ctxProject = App.currentProject();
@@ -28,7 +30,7 @@
           const selNo = Number(App.get(SCOPE, "ep", (eps.find(e => e.qc !== "PASS") || eps[0] || {}).no || 0));
           const selEp = eps.find(e => e.no === selNo) || eps[0];
           const mineShots = wf ? wf.shots : [];
-          const hot = mine.filter(p => p.budget && p.actual / p.budget >= 0.85)[0] || null;
+          const hot = mine.filter(p => { const b = DB.derived.budgetOfProject(p); return b.set && b.pct >= (D.pricing ? D.pricing.budgetWarnRate * 100 : 85); })[0] || null;
           const u = DB.derived.actorUser(me());
           const badProviders = D.providers.filter(x => x.status !== "启用" && u && x.ownerId === u.id).slice(0, 1);
           const pct = wf ? wf.pct : 0;
@@ -37,7 +39,7 @@
           const suggestions = []
             .concat(blocked.map(t => [t.id + " · " + t.kind, "待人工处理：" + t.failReason]))
             .concat(risks.map(r => [r.project, r.type + "（" + r.status + "）→ " + (r.action || "需确认处置")]))
-            .concat(hot ? [[hot.id, "已用 " + Math.round(hot.actual / hot.budget * 100) + "%，需负责人确认或追加预算"]] : [])
+            .concat(hot ? [[hot.id, "已用 " + DB.derived.budgetOfProject(hot).pct + "%，需负责人确认或追加预算"]] : [])
             .concat(badProviders.length ? [[badProviders[0].name, "状态 " + badProviders[0].status + "，相关任务已暂停"]] : []);
           if (!suggestions.length) suggestions.push(["暂无", "没有需要立即处置的质量、风险或预算事项"]);
           const activity = mineShots
@@ -49,17 +51,19 @@
           const heroShot = feat ? D.shots.find(s => s.project === feat.id && s.ep === selNo) : null;
           const heroImg = (heroShot && U.storyFrame(heroShot)) || (selEp ? epCover(selEp) : cover);
           const q = feat ? DB.derived.qualityOf(feat) : { pass: 0, review: 0, fail: 0 };
-          /* 待审核事项：剧本审核（节点 A）、最终成片审核（节点 B）与质量待人工判断 */
-          const reviewOpenList = D.notifications.filter(n => ids.indexOf(n.project) >= 0 &&
-            ["待剧本审核", "待最终审核", "质量待判断", "剧本退回", "终审通过"].indexOf(n.type) >= 0 &&
-            String(n.state).indexOf("已完成") < 0).slice(0, 8);
-          const reviewOpen = reviewOpenList.length;
+          /* 待我处理：与上方待办卡、mini-kpi 共用同一份列表（DB.derived.duties），禁止各算一遍 */
+          const reviewOpenList = duty.items.slice(0, 8);
+          const reviewOpen = duty.total;
           /* 最近交付作品：仅终审通过并确认交付的作品计入有效产出 */
           const deliveries = D.deliveries.filter(d => ids.indexOf(d.project) >= 0 && ["已交付", "已归档"].indexOf(d.status) >= 0).slice(0, 6);
           /* 个人资源可用状态：本人名下配置（企业托管资源单列） */
           const ownProviders = D.providers.filter(x => u && x.ownerId === u.id);
+          /* R-21：链路只留一行摘要，逐阶段明细属于制作流水线 */
+          const pipeDone = wf ? wf.stages.filter(s => s.state === "done").length : 0;
+          const pipeTotal = wf ? wf.stages.length : 0;
+          const pipeNow = (wf && (wf.stages.find(s => s.state === "now") || {}).label) || "未开始";
           return U.page("工作台 / 今日制作台", "今天继续把这部戏做完", "从「下一步」直接进入制作，不用先翻一遍后台数据；待决策、阻塞与预算风险统一收在这一页。",
-            U.btn("新建项目", "workspace.newProject") + U.btn("全部项目", "workspace.toProjects", "primary"),
+            U.btn("新建项目", "projects.new") + U.btn("制作流水线", "projects.wfOpen", "primary", { pid: feat ? feat.id : "" }),
             '<div class="studio-desk">' +
               '<section class="work-hero">' +
                 (heroImg ? '<img src="' + U.esc(heroImg) + '" alt="' + U.esc(feat ? feat.name : "项目主视觉") + '">' : "") +
@@ -70,8 +74,8 @@
                   '<div class="hero-title">' + U.esc(selEp ? selEp.title : "还没有正在制作的项目") + "</div>" +
                   '<div class="hero-ep"><b>第 ' + (selEp ? selEp.no : "—") + " 集</b><span>" + (selEp ? selEp.scenes + " 场 · " + selEp.shots + " 镜 · " + selEp.duration : "") + "</span><span>已通过 " + (wf ? wf.passEps.length : 0) + " / " + (feat ? feat.episodes : 0) + " 集</span></div>" +
                   '<div class="hero-actions">' + U.btn("继续这一集", "workspace.openEp", "primary", { ep: selEp ? selEp.no : 0, pid: feat ? feat.id : "" }) +
-                    U.btn("查看生成结果", "workspace.toVideo", "", { pid: feat ? feat.id : "" }) + U.btn("剧本与分镜", "workspace.toDirector", "", { pid: feat ? feat.id : "" }) + "</div>" +
-                  '<div class="hero-scrub"><div class="bar"><i style="width:' + pct + '%"></i></div><div class="meta"><span>全剧进度 ' + pct + "%</span><span>预算已用 " + (feat ? Math.round(feat.actual / feat.budget * 100) : 0) + "% · 质检 " + q.pass + " 项通过</span></div></div>" +
+                    U.btn("生产队列", "workspace.toVideo", "", { pid: feat ? feat.id : "" }) + U.btn("镜头计划", "workspace.toDirector", "", { pid: feat ? feat.id : "" }) + "</div>" +
+                  '<div class="hero-scrub"><div class="bar"><i style="width:' + pct + '%"></i></div><div class="meta"><span>全剧进度 ' + pct + "%</span><span>预算已用 " + (feat ? DB.derived.budgetOfProject(feat).pct : 0) + "% · 质检 " + q.pass + " 项通过</span></div></div>" +
                 "</div>" +
               "</section>" +
               '<aside class="next-panel"><div class="np-head"><div><b>下一步</b><small>按状态机、门禁与阻塞实时计算</small></div>' + U.pill((wf ? wf.next.length : 0) + " 项", "accent") + "</div>" +
@@ -80,62 +84,22 @@
                     '<div class="next-item' + (i === 0 ? " on" : "") + '"><span class="no">' + (i + 1) + "</span><div><b>" + U.esc(x.title) + "</b><small>" + U.esc(x.why) + "</small></div>" +
                     U.btn(x.cta, x.action, "sm", { pid: feat.id }) + "</div>").join("") : U.empty("暂无项目", "先新建一个项目。")) +
                 "</div>" +
-                '<div class="next-foot">' + U.btn("打开制作流水线", "projects.wfOpen", "primary", { pid: feat ? feat.id : "" }) + U.btn("查看全部待办", "workspace.toNotify") + "</div>" +
+                '<div class="next-foot">' + U.btn("查看全部待办", "workspace.toNotify") + "</div>" +
               "</aside>" +
             "</div>" +
-            U.card("生产链路", '<div class="pipeline">' + pipe.map((x, i) => '<a class="pipe-step ' + x[2] + '" href="#/' + U.esc(x[3]) + '?id=' + encodeURIComponent(feat ? feat.id : "") + '" title="进入' + U.esc(x[0]) + '阶段"><div class="ps-top"><span class="ps-no">' + String(i + 1).padStart(2, "0") + "</span><span class=\"dot\" style=\"color:" + (x[2] === "done" ? "#61d3a3" : x[2] === "now" ? "#eda45c" : "#3a4350") + '"></span></div><b>' + U.esc(x[0]) + "</b><small>" + U.esc(x[1]) + "</small></a>").join("") + "</div>",
-              "完成度取自项目状态与任务事实；点击任意阶段进入该阶段页面") +
-            /* 工作台入口九模块（业务方案 §20.2）：按当前身份权限过滤后展示 */
-            U.card("工作台入口（业务方案 §20.2 · 九模块）", '<div class="chip-row">' + [
-              { key: "创作项目", path: "workspace/projects", perm: "project.read" },
-              { key: "创意与剧本", path: "creation/brief", perm: "creation.write" },
-              { key: "导演与视觉", path: "director/plan", perm: "director.write" },
-              { key: "视频与音频", path: "video/production", perm: "production.write" },
-              { key: "后期与交付", path: "post/timeline", perm: "post.write" },
-              { key: "生产监控", path: "tasks/list", perm: "task.operate" },
-              { key: "素材中心", path: "assets/library", perm: "asset.read" },
-              { key: "个人模型资源", path: "models/config", perm: "models.own" },
-              { key: "个人统计", path: "analytics/me", perm: "analytics.own" }
-            ].filter(e => App.can(e.perm)).map(e => '<a class="chip" href="#/' + U.esc(e.path) + '">' + U.esc(e.key) + "</a>").join("") + "</div>",
-              "入口按当前身份权限过滤；无权限模块不展示入口") +
+            U.notice('<b>制作链路</b> ' + pipeDone + " / " + pipeTotal + " 阶段完成 · 当前阶段：" + U.esc(pipeNow) + "。阶段逐项状态、闸门与集级明细在制作流水线查看。", "info") +
             '<div class="mt-4">' + U.card("分集", '<div class="ep-strip">' + eps.map(e => '<button type="button" class="ep-card' + (e.no === (selEp ? selEp.no : 0) ? " on" : "") + '" data-action="workspace.viewEp" data-ep="' + e.no + '">' +
               '<span class="ep-thumb">' + '<img src="' + U.esc(epCover(e)) + '" alt="">' + '<span class="ep-no">E' + String(e.no).padStart(2, "0") + '</span><span class="ep-state">' + U.esc(e.status) + "</span></span>" +
               '<span class="ep-body"><b>' + U.esc(e.title) + "</b><small>" + e.scenes + " 场 · " + e.shots + " 镜 · " + U.esc(e.duration) + "</small></span></button>").join("") +
               '<button type="button" class="tile-add" style="flex:0 0 130px;min-height:0" data-action="post.toEpisodes" data-id="' + U.esc(feat ? feat.id : "") + '"><b class="ta-num">' + (feat ? feat.episodes : 0) + '</b><span>全部集数</span><small>打开分集生产板 →</small></button></div>', "点击集卡切换上方预览") + "</div>" +
-            '<div class="desk-bottom mt-4">' +
-              U.card("待我决策", todos.length ? todos.slice(0, 4).map(n => '<div class="decision-row"><div><b>' + U.esc(n.title) + '</b><small>' + U.esc(n.type) + " · " + U.esc(n.impact || n.reason || "") + '</small></div><button class="btn sm" data-action="notify.handle" data-id="' + U.esc(n.id) + '">处理</button></div>').join("") : U.empty("今天没有待我决策事项", "负责人是本人的审核、阻塞与风险通知都为空。"),
-                "按阻塞影响排序，不按时间倒序") +
-              U.card("最近产出", '<div class="asset-strip">' + (activity.length ? activity.map(s => '<div class="asset-thumb">' + (U.storyFrame(s) ? '<img src="' + U.esc(U.storyFrame(s)) + '" alt="">' : "") + '<span>E' + s.ep + " " + U.esc(s.no) + "</span></div>").join("") : U.empty("暂无产出", "本集生成后将出现在这里。")) + "</div>" +
-                '<div class="btn-row-inline">' + U.btn("查看本集结果", "workspace.toVideo", "sm", { pid: feat ? feat.id : "", ep: selEp ? selEp.no : 0 }) + U.btn("全部分镜", "workspace.toDirector", "sm", { pid: feat ? feat.id : "" }) + "</div>", "只展示当前项目最近生成") + "</div>" +
-              U.card("成本与风险", '<div class="mini-kpis">' +
-                '<div class="mini-kpi"><span>可见项目成本</span><b>¥' + h.cost.toLocaleString("zh-CN") + "</b><small>预算 ¥" + h.budget.toLocaleString("zh-CN") + " · 已用 " + h.budgetPct + "%</small></div>" +
-                '<div class="mini-kpi"><span>进行中任务</span><b>' + h.tasks + "</b><small>排队 " + h.queued + " · 执行 " + h.running + "</small></div>" +
-                '<div class="mini-kpi"><span>待我决策</span><b>' + todos.length + "</b><small>负责人是本人的待办通知</small></div>" +
-                '<div class="mini-kpi"><span>质量通过</span><b>' + (q.pass + q.review + q.fail) + "</b><small>通过 " + q.pass + " · 需判 " + q.review + " · 未通过 " + q.fail + "</small></div></div>" +
-                U.notice(suggestions[0][1], "info"), "口径与页脚一致，不做预测") +
-            "</div>" +
+            U.card("今日待办", U.notice(suggestions[0][1], "warn") + (todos.length ? todos.map(n => '<div class="decision-row"><div><b>' + U.esc(n.title) + '</b><small>' + U.esc(n.type) + " · " + U.esc(n.impact || n.reason || "") + '</small></div><button class="btn sm" data-action="notify.handle" data-id="' + U.esc(n.id) + '">处理</button></div>').join("") : U.empty("今天没有待我处理事项", "负责人是本人的审核、阻塞与风险通知都为空。")),
+              "按阻塞影响排序，不按时间倒序；计数与指标同一份 duties", U.pill(reviewOpen + " 件", "accent")) +
             /* 工作台信息展示十项（业务方案 §20.3）：待审核事项 / 最近交付作品 / AI 生成消耗 / 个人资源可用状态 */
-            '<div class="grid grid-4 mt-4">' +
-              U.metric("待审核事项", String(reviewOpen), "剧本审核 + 终审 + 质量待判断", "审") +
+            '<div class="grid grid-3 mt-4">' +
               U.metric("最近交付作品", String(h.deliveries), "已交付 / 已归档 " + h.deliveredEpisodes + " 集", "交") +
-              U.metric("AI 生成消耗", "¥" + h.cost.toLocaleString("zh-CN"), "失败与重试费用同样入账", "¥") +
+              U.metric("AI 生成消耗", "¥" + h.cost.toLocaleString("zh-CN"), "预算 ¥" + h.budget.toLocaleString("zh-CN") + " · 已用 " + h.budgetPct + "%", "¥") +
               U.metric("个人资源可用", String(ownProviders.length) + " / " + String(ownProviders.length + badProviders.length), badProviders.length ? "失效 " + badProviders.length + " 项，任务已暂停" : "全部通过连通性测试", "⚙") +
-            "</div>" +
-            '<div class="split mt-4"><div class="stack">' +
-              U.card("待审核事项", reviewOpenList.length ? U.table(["事项", "对象", "类型", "时间", "操作"], reviewOpenList.map(n =>
-                "<tr><td class=\"cell-wrap\">" + U.esc(n.title) + '</td><td>' + U.esc(n.project) + '</td><td>' + U.esc(n.type) + '</td><td class="idx">' + U.esc(n.at) + "</td><td>" + U.btn("处理", "notify.handle", "sm", { id: n.id }) + "</td></tr>").join(""), "当前范围没有待审核事项") : U.empty("当前没有待审核事项", "剧本审核与终审节点出现时会在这里列出。"), "审核结论直接决定能否进入下游") +
-              U.card("最近交付作品", deliveries.length ? U.table(["项目", "作品", "集数", "交付版本", "交付时间"], deliveries.map(dp =>
-                "<tr><td>" + U.esc(dp.project) + '</td><td class="cell-wrap">' + U.esc(dp.name || "") + '</td><td class="num">' + U.esc(String(dp.episodes || "—")) + '</td><td>' + U.esc(dp.version) + '</td><td class="idx">' + U.esc(dp.delivered || "—") + "</td></tr>").join(""), "暂无交付记录") : U.empty("还没有交付作品", "终审通过并确认交付后，作品会出现在这里。"), "只有终审通过并交付的作品计入有效产出") +
-            '</div><div class="stack">' +
-              U.card("AI 生成消耗（业务方案 §15.3）", U.listRows([
-                ["预计成本", "¥" + h.budget.toLocaleString("zh-CN") + "（项目预算合计）"],
-                ["实际成本", "¥" + h.cost.toLocaleString("zh-CN") + "（含失败与重试费用）"],
-                ["待核实部分", "以供应商账单为准，未取得可靠账单前标记为待核实"],
-                ["费用承担方", "按个人自持 / 企业承担分别记录，不混为一项"]
-              ]), "预计与实际分栏，不以估算替代实际") +
-              U.card("个人资源可用状态", ownProviders.length ? U.table(["配置", "供给模式", "状态", "测试"], ownProviders.map(p =>
-                "<tr><td>" + U.esc(p.name) + '</td><td>' + U.esc(p.mode || "个人自持") + '</td><td>' + U.pill(p.status) + '</td><td class="cell-wrap muted">' + U.esc(p.test) + "</td></tr>").join(""), "尚未配置个人模型资源") : U.empty("尚未配置可用模型资源", "未配置可用能力时无法启动生成；请到「个人模型资源」配置并测试。"), "凭据仅显示脱敏信息，任何角色不可读明文") +
-            "</div></div>"
+            "</div>"
           );
         }
       },
@@ -160,7 +124,7 @@
                   '<div class="btn-row-inline">' + U.btn("指定项目并重新解析", "workspace.pickTarget", "primary") + "</div>"
                   : '<div class="btn-row-inline">' + U.btn(parsed.confirm ? "确认执行（高风险）" : "执行", "workspace.run", "primary") + U.btn("修改参数", "workspace.editParams") + "</div>"),
                 "解析不等于执行")
-                : U.empty("尚未解析指令", "输入一句话或点选上方示例，静态原型会按关键词识别目标类型并展示抽取结果。", U.btn("解析示例指令", "workspace.parse"))) +
+                : U.empty("尚未解析指令", "输入一句话或点选上方示例，静态原型会按关键词识别目标类型并展示抽取结果。")) +
               U.card("可识别的目标类型（业务方案 §20.4）", U.table(["目标类型", "触发词示例", "落到的业务流程", "风险等级"], [
                 ["新建项目", "新建 / 创建一部…短剧", "项目创建 → 创意设定", "低"],
                 ["生成候选剧本", "生成完整剧本 / 根据当前创意生成剧本", "剧本生成 → 待剧本审核", "低"],
@@ -194,48 +158,11 @@
             "</div></div>"
           );
         }
-      },
-      {
-        path: "workspace/projects", title: "我的项目", icon: "folder", permission: "project.read",
-        desc: "按「我负责 / 我参与 / 待我审核」三种关系组织，避免把授权参与等同于负责。",
-        render() {
-          const tab = App.get(SCOPE, "projTab", "own");
-          const me = App.identity();
-          const uid = me.userId;
-          const visible = D.projects.filter(DB.derived.canViewProject);
-          const own = visible.filter(p => p.ownerId === uid);
-          const joined = visible.filter(p => p.ownerId !== uid && (p.members || []).some(m => m.userId === uid));
-          const review = visible.filter(p => p.status.indexOf("待") >= 0 && (p.ownerId === uid || (p.members || []).some(m => m.userId === uid && m.role === "审核")));
-          const list = tab === "own" ? own : tab === "join" ? joined : review;
-          const roleOf = (p) => {
-            if (p.ownerId === uid) return "负责人";
-            const m = (p.members || []).find(x => x.userId === uid);
-            return m ? m.role : "—";
-          };
-          return U.page("工作台 / 我的项目", "我的项目", "同一名员工可同时是某项目的负责人、另一项目的审核人；权限按项目独立判定。",
-            U.btn("新建项目", "workspace.newProject", "primary"),
-            U.card("", U.tabs([
-              { value: "own", label: "我负责", count: own.length },
-              { value: "join", label: "我参与", count: joined.length },
-              { value: "review", label: "待我审核", count: review.length }
-            ], tab, "workspace.tab") +
-              U.table(["项目", "负责人", "我的角色", "阶段", "集数", "预算使用", "状态", "更新", "操作"], list.map(p =>
-                '<tr><td>' + U.entity(p.name, p.id, "剧") + "</td><td>" + U.esc(p.owner) + '</td><td>' + U.pill(roleOf(p), p.ownerId === uid ? "accent" : "info") + "</td><td>" + U.esc(p.phase) + '</td><td class="num">' + p.done + " / " + p.episodes + "</td><td>" + U.miniBar(p.actual, p.budget) + '</td><td>' + U.pill(p.status) + '</td><td class="idx">' + U.esc(p.updated) + "</td><td>" + U.btn("打开", "projects.detail", "sm", { id: p.id }) + "</td></tr>").join(""), "该分类下暂无项目。"),
-              "关系不同，操作权限不同") +
-            '<div class="grid grid-3 mt-4">' +
-              U.metric("我负责", String(own.length), "可编辑、可返还工、可发起交付", "▦") +
-              U.metric("我参与", String(joined.length), "仅按授予的项目角色操作", "◇") +
-              U.metric("待我审核", String(review.length), "审核结论留痕，不覆盖历史", "!") +
-            "</div>"
-          );
-        }
       }
     ]
   });
 
   /* ---------- 动作 ---------- */
-  App.on("workspace.newProject", () => App.go("projects/new"));
-  App.on("workspace.toProjects", () => App.go("projects/list"));
   App.on("workspace.viewEp", (el) => {
     if (el && el.dataset && el.dataset.ep) App.set(SCOPE, "ep", Number(el.dataset.ep));
     App.refresh();
@@ -262,7 +189,6 @@
   App.on("workspace.toCast", (el) => App.go("director/cast", { id: (el && el.dataset && el.dataset.pid) || ((App.currentProject() || {}).id || "") }));
   App.on("workspace.toQuality", (el) => App.go("quality/reports", { id: (el && el.dataset && el.dataset.pid) || ((App.currentProject() || {}).id || "") }));
   App.on("workspace.toCost", (el) => App.go("cost/ledger", { id: (el && el.dataset && el.dataset.pid) || ((App.currentProject() || {}).id || "") }));
-  App.on("workspace.tab", (el) => { App.set(SCOPE, "projTab", el.dataset.value); App.refresh(); });
 
   App.on("workspace.sample", (el) => {
     App.set(SCOPE, "cmd", el.dataset.value);
@@ -347,7 +273,8 @@
         scope = "整剧 " + target.episodes + " 集，执行前会重新校验交付门禁";
         note = "高风险动作：交付后版本冻结，新版本只能追加链，不能覆盖。";
       } else if (hit.intent === "查询成本") {
-        note = "项目已入账 ¥" + DB.state.money(target.actual) + "，预算 ¥" + DB.state.money(target.budget) + "；失败任务成本同样入账。";
+        const tb = target ? DB.derived.budgetOfProject(target) : null;
+        note = tb ? "项目已入账 ¥" + DB.state.money(tb.used) + "，预算 ¥" + DB.state.money(tb.total) + "；失败任务成本同样入账。" : "项目尚未建立预算账本。";
       } else if (hit.intent === "暂停任务") {
         const queued = D.tasks.filter(t => t.project === target.id && ["待执行", "排队中"].indexOf(t.status) >= 0);
         scope = queued.length ? "《" + target.name + "》待执行 / 排队中 " + queued.length + " 个任务，执行中任务不强制中断" : "《" + target.name + "》当前没有待执行或排队中任务";
@@ -599,8 +526,9 @@
       }
       if (p.intent === "查询进度") {
         App.set(SCOPE, "parsed", null);
-        recordCmd(p.intent, text, "已查询 " + pj.name + "：" + pj.done + " / " + pj.episodes + " 集");
-        App.drawer("进度查询 · " + pj.name, U.desc([["项目", pj.id + " · " + pj.name], ["状态", pj.status], ["阶段", pj.phase], ["集进度", pj.done + " / " + pj.episodes], ["预算", "¥" + pj.budget + "（已用 ¥" + pj.actual + "）"], ["更新时间", String(pj.updated)]]) +
+        recordCmd(p.intent, text, "已查询 " + pj.name + "：" + DB.derived.progressOf(pj).done + " / " + DB.derived.progressOf(pj).total + " 集");
+        const pb = DB.derived.budgetOfProject(pj);
+        App.drawer("进度查询 · " + pj.name, U.desc([["项目", pj.id + " · " + pj.name], ["状态", pj.status], ["阶段", pj.phase], ["集进度", DB.derived.progressOf(pj).done + " / " + DB.derived.progressOf(pj).total], ["预算", "¥" + pb.total + "（已用 ¥" + pb.used + " · " + pb.pct + "%）"], ["更新时间", String(pj.updated)]]) +
           '<div class="btn-row-inline">' + U.btn("进入项目", "projects.detail", "primary", { id: pj.id }) + "</div>");
         DB.state.log("指令助手", "查询进度：" + text, "成功", "cmd");
         return;

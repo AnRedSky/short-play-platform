@@ -2,6 +2,16 @@
 (function () {
   const U = UI, D = DB, SCOPE = "orgs";
   const roleName = (codes) => (codes || []).map(c => (D.roles.find(r => r.code === c) || {}).name || c).join("、");
+  const budgetOf = (p) => D.derived.budgetOfProject(p);
+  const progressOf = (p) => D.derived.progressOf(p);
+  const leftOf = (p) => { const b = budgetOf(p); return b.total - b.used; };
+  /* 企业预算以 DB.budgets 的「企业」记录为准，D.enterprise 上的字段仅作回落 */
+  const entBudget = () => {
+    const e = D.enterprise, led = D.budgets.find(b => b.scope === "企业");
+    const total = Number((led ? led.total : e.budget) || 0);
+    const used = Number((led ? led.used : e.used) || 0);
+    return { total: total, used: used, pct: total ? Math.round(used / total * 100) : 0, state: (led && led.state) || "" };
+  };
 
   function memberRows(list) {
     return list.map(u => '<tr><td>' + U.entity(u.name, u.email, u.name.slice(0, 1)) + '</td><td>' + U.esc(u.dept) + '</td><td>' + U.esc(u.role) + '</td><td>' + U.pill(u.status) + '</td><td class="num">' + u.projects + '</td><td class="num">' + u.delivered + "</td><td>" +
@@ -22,7 +32,7 @@
               U.card("企业档案", U.desc([
                 ["企业名称", e.name], ["企业标识", e.code], ["企业简介", e.intro], ["企业状态", '<span class="pill ok"><i class="dot"></i>' + e.status + "</span>", true],
                 ["企业管理员", e.admin], ["成员数量", e.members + " 人"], ["部门数量", e.depts + " 个"], ["项目总数", e.projects + " 个"],
-                ["企业预算", "¥" + e.budget.toLocaleString()], ["已用", "¥" + e.used.toLocaleString() + "（" + Math.round(e.used / e.budget * 100) + "%）"]
+                ["企业预算", "¥" + entBudget().total.toLocaleString()], ["已用", "¥" + entBudget().used.toLocaleString() + "（" + entBudget().pct + "%）"]
               ]), "企业状态变更保留全部项目、资产、交付与历史记录",
                 App.can("enterprise.edit") ? U.btn("停用企业（保留数据）", "orgs.disable", "sm") : "") +
               U.card("统一治理范围", U.listRows([
@@ -32,8 +42,7 @@
               ]), "不代替员工配置个人凭据") +
             '</div><div class="stack">' +
               U.card("企业策略", U.table(["策略项", "取值", "说明"], e.policies.map(p =>
-                '<tr><td class="cell-strong">' + U.esc(p.name) + '</td><td><span class="code">' + U.esc(p.value) + '</td><td class="cell-wrap muted">' + U.esc(p.note) + "</td></tr>").join("")), "企业可定义策略与白名单，但不得导出或读取个人凭据",
-                App.can("enterprise.edit") ? U.btn("调整策略", "orgs.editPolicy", "sm") : "") +
+                '<tr><td class="cell-strong">' + U.esc(p.name) + '</td><td><span class="code">' + U.esc(p.value) + '</td><td class="cell-wrap muted">' + U.esc(p.note) + "</td></tr>").join("")), "企业可定义策略与白名单，但不得导出或读取个人凭据") +
               U.card("治理边界", U.notice("<b>企业与个人之间：</b>企业制定预算、合规与资源范围，但不得代替员工配置凭据，也不得读取任何 API Key 明文。个人凭据属于独立安全域。", "info") +
                 U.listRows([["企业根边界", "跨企业数据不共享、不检索、不导出"], ["个人配置归属", "归属员工账号，不归属项目，不随项目移交"], ["原型说明", "企业信息为虚构主体，全部数值为虚构示例数据"]])
                 , "凭据隔离是硬约束") +
@@ -126,7 +135,7 @@
               U.card("基础信息", U.desc([["姓名", u.name], ["企业账号", u.email], ["所属部门", u.dept], ["角色", u.role + "（" + roleName(u.roles) + "）"], ["账号状态", '<span class="pill ' + U.toneOf(u.status) + '">' + u.status + "</span>", true], ["加入时间", u.joined], ["资源归属", u.resources], ["凭据", "仅显示脱敏元数据，任何角色不可读明文"]]) +
                 U.notice("账号停用立即失效登录与会话；历史执行记录保留并标注状态。企业不得代替员工创建个人凭据。", "info")) +
               U.card("负责与参与项目", U.table(["项目", "角色", "阶段", "进度", "成本"], projects.concat(grants).map(p =>
-                '<tr><td>' + U.entity(p.name, p.id, "剧") + "</td><td>" + (p.ownerId === u.id ? U.pill("负责人", "accent") : U.pill((p.members.find(m => m.userId === u.id) || {}).role || "成员", "info")) + "</td><td>" + U.esc(p.phase) + '</td><td class="num">' + p.done + " / " + p.episodes + '</td><td class="num">¥' + p.actual.toLocaleString() + "</td></tr>").join("")) +
+                '<tr><td>' + U.entity(p.name, p.id, "剧") + "</td><td>" + (p.ownerId === u.id ? U.pill("负责人", "accent") : U.pill((p.members.find(m => m.userId === u.id) || {}).role || "成员", "info")) + "</td><td>" + U.esc(p.phase) + '</td><td class="num">' + progressOf(p).done + " / " + progressOf(p).total + '</td><td class="num">¥' + budgetOf(p).used.toLocaleString() + "</td></tr>").join("")) +
                 (projects.length + grants.length === 0 ? U.empty("暂无项目", "该员工尚未被授权参与任何项目。") : ""), "项目是授权与协作边界") +
             '</div><div class="stack">' +
               U.card("个人产出", '<div class="kv-grid">' + U.kv("创建项目", u.projects) + U.kv("交付作品", u.delivered) + U.kv("完成集数", u.episodes) + U.kv("AI 成本", "¥" + u.cost.toLocaleString()) + U.kv("质量评分", u.quality || "—") + U.kv("资源状态", u.resources.split("·")[0]) + "</div>" +
@@ -184,7 +193,7 @@
                 ["凭据", "协作不等于共享个人凭据或模型配额"],
                 ["通知与待办", "成员变更影响待办与通知接收对象"]
               ]), "成员变更写审计事件")
-              + U.card("待处理授权申请", U.empty("暂无待处理申请", "静态原型不接收真实申请；授权动作由具备权限的身份直接执行。", U.btn("新增授权", "orgs.grantNew")) , "申请流为 R5 范围") +
+              + U.card("待处理授权申请", U.empty("暂无待处理申请", "静态原型不接收真实申请；授权动作由具备权限的身份直接执行。") , "申请流为 R5 范围") +
             "</div>"
           );
         }
@@ -205,9 +214,9 @@
           return U.page("组织与权限 / 离职与移交", "离职与移交", "移交保留原创建人、历史负责人、执行人、调用配置引用与费用归属；项目归属企业不变。",
             U.btn("发起移交", "orgs.transfer", "primary") + U.btn("移交历史", "orgs.history"),
             U.card("待移交项目", U.table(["项目", "当前负责人", "阶段", "进行中任务", "待审 / 异常", "预算余额", "移交建议"], candidates.map(p =>
-              '<tr><td>' + U.entity(p.name, p.id, "剧") + "</td><td>" + U.esc(p.owner) + "</td><td>" + U.esc(p.phase) + '</td><td class="num">' + activeTask(p.id) + "</td><td>" + U.pill(p.status) + '</td><td class="num">¥' + (p.budget - p.actual).toLocaleString() + "</td><td>" + U.esc(p.status === "异常中" ? "先闭环合规阻断，再移交" : "可直接移交，历史记录保留") + "</td><td>" + U.btn("移交预览", "orgs.preview", "sm", { id: p.id }) + "</td></tr>").join("")) +
+              '<tr><td>' + U.entity(p.name, p.id, "剧") + "</td><td>" + U.esc(p.owner) + "</td><td>" + U.esc(p.phase) + '</td><td class="num">' + activeTask(p.id) + "</td><td>" + U.pill(p.status) + '</td><td class="num">¥' + leftOf(p).toLocaleString() + "</td><td>" + U.esc(p.status === "异常中" ? "先闭环合规阻断，再移交" : "可直接移交，历史记录保留") + "</td><td>" + U.btn("移交预览", "orgs.preview", "sm", { id: p.id }) + "</td></tr>").join("")) +
               U.notice("停用员工名下项目、历史集数与已发生费用全部保留，不随人员变动删除。", "warn"), "移交不等于删除") +
-            (hp ? U.card("移交预览要素 · " + U.esc(hp.name), '<div class="kv-grid">' + U.kv("进行中任务", hpTasks.length + " 项") + U.kv("待审 / 异常", hp.status) + U.kv("资产清单", hpAssets.length + " 项") + U.kv("交付状态", hp.delivered + " / " + hp.episodes + " 集已交付") + U.kv("预算余额", "¥" + (hp.budget - hp.actual).toLocaleString() + "（" + Math.round(hp.actual / hp.budget * 100) + "% 已用）") + U.kv("风险项", "风险 " + hpOpenRisk + " · 授权阻断 " + hpBlockRight) + "</div>" +
+            (hp ? U.card("移交预览要素 · " + U.esc(hp.name), '<div class="kv-grid">' + U.kv("进行中任务", hpTasks.length + " 项") + U.kv("待审 / 异常", hp.status) + U.kv("资产清单", hpAssets.length + " 项") + U.kv("交付状态", hp.delivered + " / " + hp.episodes + " 集已交付") + U.kv("预算余额", "¥" + leftOf(hp).toLocaleString() + "（" + budgetOf(hp).pct + "% 已用）") + U.kv("风险项", "风险 " + hpOpenRisk + " · 授权阻断 " + hpBlockRight) + "</div>" +
               U.listRows([["任务处理", "未完成任务按策略暂停；接手人确认后恢复，不得用原负责人配置发起新调用"], ["接手人自检", "账号状态、项目访问权限、个人资源配置与预算预检重新执行"], ["历史归属", "创建人、历史负责人、执行人、配置引用与费用归属保持原样"]])
               , "移交前必须完成资源可用性与预算预检") : U.card("移交预览", U.empty("没有待移交项目", "停用账号或标记异常的项目会出现在待移交列表。"), "移交前必须完成资源可用性与预算预检")) +
             '<div class="grid grid-2 mt-4">' +
@@ -322,7 +331,7 @@
     const activeStatuses = ["排队中", "执行中", "待执行", "待质检", "待人工处理", "失败", "重试中", "已暂停"];
     const tasks = D.tasks.filter(t => t.project === p.id && activeStatuses.indexOf(t.status) >= 0);
     const assets = D.assets.filter(a => a.project === p.id);
-    App.drawer("移交预览 · " + p.name, U.desc([["项目编号", p.id], ["当前负责人", p.owner], ["阶段", p.phase], ["进行中任务", tasks.length + " 项"], ["待审 / 异常", p.status], ["预算余额", "¥" + (p.budget - p.actual).toLocaleString()], ["资产", assets.length + " 项"]]));
+    App.drawer("移交预览 · " + p.name, U.desc([["项目编号", p.id], ["当前负责人", p.owner], ["阶段", p.phase], ["进行中任务", tasks.length + " 项"], ["待审 / 异常", p.status], ["预算余额", "¥" + leftOf(p).toLocaleString()], ["资产", assets.length + " 项"]]));
   });
   App.on("orgs.history", () => {
     const rows = D.audits.filter(a => /成员|账号|移交|授权|停用/.test(a.object + " " + a.action));

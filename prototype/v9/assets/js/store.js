@@ -99,27 +99,56 @@ DB.state = (function () {
   }
   function money(n) { return Math.round(n * 100) / 100; }
 
+  /* 预算状态只有一个判定口：正常 / 接近阈值 / 已超限 / 已冻结 / 未设置（业务方案 §15.5）。
+     阈值取自 DB.pricing.budgetWarnRate，页面与动作不得各写一份 85%。 */
+  function budgetStateFor(used, total, frozen) {
+    if (frozen) return "已冻结";
+    if (!total) return "未设置";
+    if (used >= total) return "已超限";
+    if (used >= total * (DB.pricing ? DB.pricing.budgetWarnRate : 0.85)) return "接近阈值";
+    return "正常";
+  }
+
+  /* 项目账本：单一金额源。缺失时按项目台账补建，存在时以账本为准回写项目字段，
+     消除「同一项目两个已用金额」的历史数据漂移（旧 localStorage 也会在此被修复）。 */
+  function ensureProjectBudget(p) {
+    if (!p || !p.id) return null;
+    let bg = D.budgets.find(b => b.scope === "项目" && String(b.name).indexOf(p.id) === 0);
+    if (!bg) {
+      bg = { scope: "项目", name: p.id + " " + p.name, total: Number(p.budget || 0), used: Number(p.actual || 0), reserve: 0, state: budgetStateFor(Number(p.actual || 0), Number(p.budget || 0), false), owner: p.owner };
+      D.budgets.push(bg);
+    }
+    p.budget = Number(bg.total || 0);
+    p.actual = Number(bg.used || 0);
+    p.budgetState = bg.state || budgetStateFor(p.actual, p.budget, false);
+    return bg;
+  }
+
   function budgetOf(projectId) {
+    const p = prj(projectId);
+    if (p) return ensureProjectBudget(p);
     return D.budgets.find(b => b.scope === "项目" && String(b.name).indexOf(projectId) === 0);
   }
   function spend(projectId, amount, meta) {
     const m = meta || {};
     const p = prj(projectId);
     if (!p || !amount) return null;
-    p.actual = money(p.actual + amount);
     const bg = budgetOf(projectId);
+    const nextUsed = money((bg ? bg.used : Number(p.actual || 0)) + amount);
+    p.actual = nextUsed;
     if (bg) {
-      bg.used = money(bg.used + amount);
-      /* 预算状态五态：未设置 / 正常 / 接近阈值 / 已超限 / 已冻结（业务方案 §15.5） */
-      if (bg.state !== "已冻结") {
-        bg.state = bg.used >= bg.total ? "已超限" : bg.used >= bg.total * 0.85 ? "接近阈值" : "正常";
-      }
+      bg.used = nextUsed;
+      if (bg.state !== "已冻结") bg.state = budgetStateFor(bg.used, bg.total, false);
       p.budgetState = bg.state;
+    } else {
+      p.budgetState = budgetStateFor(p.actual, p.budget, false);
     }
     const dept = D.budgets.find(b => b.scope === "部门" && b.name === p.dept);
     if (dept) dept.used = money(dept.used + amount);
     const ent = D.budgets.find(b => b.scope === "企业");
     if (ent) ent.used = money(ent.used + amount);
+    /* R-32：账本变动后立即回写部门/企业的投影字段，避免两个来源各自漂移 */
+    if (D.derived && D.derived.syncScopeBudgets) D.derived.syncScopeBudgets();
     const row = {
       id: nid("CR"), project: projectId, ep: m.ep || "—", shot: m.shot || "—", task: m.task || "—",
       cap: m.cap || "视频生成", est: money(m.est || amount), actual: money(m.actual || 0), failed: money(m.failed || 0),
@@ -1278,7 +1307,7 @@ DB.state = (function () {
     if (w) { w.status = "已交付"; w.episodes = p.episodes + " / " + p.episodes; w.delivered = CLOCK.day; w.version = "交付 " + d.version + " · 冻结"; w.next = "可新建 V2，不覆盖历史"; }
     else D.works.unshift({ project: d.project, name: p.name, status: "已交付", episodes: p.episodes + " / " + p.episodes, duration: "—", delivered: CLOCK.day, version: "交付 " + d.version + " · 冻结", next: "可新建 V2，不覆盖历史" });
     log("交付 " + d.id, "执行交付并冻结版本", "成功", d.id);
-    notify({ type: "交付完成", project: d.project, title: "《" + p.name + "》交付包 " + d.id + " 已确认", reason: "终审通过且集数完整", impact: "交付 V1 已冻结，历史不可覆盖", state: "已完成", action: "查看交付包与校验摘要", owner: p.owner, link: "post/works" });
+    notify({ type: "交付完成", project: d.project, title: "《" + p.name + "》交付包 " + d.id + " 已确认", reason: "终审通过且集数完整", impact: "交付 V1 已冻结，历史不可覆盖", state: "已完成", action: "查看交付包与校验摘要", owner: p.owner, link: "post/delivery" });
     return { ok: true, msg: "交付完成，版本已冻结", data: d };
   }
 
@@ -1424,7 +1453,7 @@ DB.state = (function () {
     if (n < bg.used) return { ok: false, msg: "新预算低于已用金额（¥" + bg.used + "）", fields: { total: "不得低于已用 ¥" + bg.used } };
     if (!reason || reason.length < 8) return { ok: false, msg: "调整预算必须记录理由", fields: { reason: "至少 8 字" } };
     bg.total = n;
-    bg.state = bg.used >= n ? "已超限" : bg.used >= n * 0.85 ? "接近阈值" : "正常";
+    bg.state = budgetStateFor(bg.used, n, false);
     const p = prj(projectId);
     if (p) { p.budget = n; p.budgetState = bg.state; }
     log("预算 " + projectId, "调整项目预算至 ¥" + n + "（" + reason + "）", "成功", projectId);
@@ -1445,7 +1474,7 @@ DB.state = (function () {
       notify({ type: "预算提醒", project: projectId, title: "《" + (prj(projectId) || {}).name + "》预算已冻结", reason: reason, impact: "禁止派发新任务；已发生费用仍正常入账", state: "待处理", action: "追加预算或缩减范围后解冻", owner: (prj(projectId) || {}).owner || "项目负责人", link: "cost/budget" });
       return { ok: true, msg: "预算已冻结，未完成任务的派发已暂停" };
     }
-    bg.state = bg.used >= bg.total ? "已超限" : bg.used >= bg.total * 0.85 ? "接近阈值" : "正常";
+    bg.state = budgetStateFor(bg.used, bg.total, false);
     bg.frozenReason = "";
     const p = prj(projectId);
     if (p) p.budgetState = bg.state;
@@ -1564,8 +1593,12 @@ DB.state = (function () {
           }
         }
       }
-      p.done = D.episodes.filter(e => e.project === p.id && e.qc === "PASS").length;
+      const covered = D.episodes.filter(e => e.project === p.id).length;
+      /* 仅当分集明细完整覆盖项目集数时才回写汇总，避免"抽样分集"把台账集数改小 */
+      if (covered >= (p.episodes || 0)) p.done = D.episodes.filter(e => e.project === p.id && e.qc === "PASS").length;
     });
+    /* 预算账本补齐：所有项目都必须有唯一金额源，历史 localStorage 的缺失记录在此修复 */
+    D.projects.forEach(function (p) { ensureProjectBudget(p); });
   }
   normalizeActiveProjects();
 
@@ -1600,6 +1633,7 @@ DB.state = (function () {
   const API = {
     at: at, time: time, actor: actor, log: log, notify: notify, spend: spend, money: money,
     prj: prj, canMove: canMove, moveTo: moveTo, gate: gate, budgetOf: budgetOf,
+    budgetStateFor: budgetStateFor, ensureProjectBudget: ensureProjectBudget,
     reset: reset, save: persist, bind: bind, identity: currentIdentity, role: currentRole
   };
   Object.keys(RAW_OPS).forEach(function (k) {

@@ -87,10 +87,23 @@ window.UI = (function () {
   }
 
   /* ---------- 页面与卡片 ---------- */
+  /* 页眉章节不再由各页手写：按当前路由在 DB.menu 中查二级菜单名（branch）。
+     全站只有一套名称来源，页眉 / 面包屑 / 菜单三处必然一致；取不到时回退调用方传入值。 */
+  function chapterOf(fallback) {
+    try {
+      const D = window.DB;
+      const App = window.App;
+      let path = App && App.current ? (App.current() || {}).path : "";
+      if (!path && window.location && window.location.hash) path = String(window.location.hash).replace(/^#\//, "").split("?")[0];
+      if (!path || !D || !D.menu) return fallback;
+      for (const g of D.menu) for (const b of (g.children || [])) for (const it of (b.items || [])) if (it.path === path) return b.label;
+      return fallback;
+    } catch (e) { return fallback; }
+  }
   function page(kicker, title, desc, actions, body) {
     const raw = String(actions || "").trim();
     const actionsHtml = !raw ? "" : (/^<div class="head-actions"/.test(raw) ? raw : '<div class="head-actions">' + raw + "</div>");
-    return '<section class="page"><header class="page-head"><div><div class="kicker">' + esc(kicker) + "</div><h1>" + esc(title) + '</h1><p>' + esc(desc) + "</p></div>" + actionsHtml + "</header>" + body + "</section>";
+    return '<section class="page"><header class="page-head"><div><div class="kicker">' + esc(chapterOf(kicker)) + "</div><h1>" + esc(title) + '</h1><p>' + esc(desc) + "</p></div>" + actionsHtml + "</header>" + body + "</section>";
   }
   function card(title, body, sub, tools) {
     const head = title ? '<div class="card-head"><div><div class="card-title">' + esc(title) + "</div>" + (sub ? '<div class="card-sub">' + esc(sub) + "</div>" : "") + "</div>" + (tools ? '<div class="card-tools">' + tools + "</div>" : "") + "</div>" : "";

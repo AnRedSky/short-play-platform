@@ -6,7 +6,7 @@
     group: "models", label: "模型与资源", icon: "cpu", order: 11, end: "workspace",
     routes: [
       {
-        path: "models/config", title: "资源配置", icon: "cpu", permission: "models.own",
+        path: "models/config", title: "资源配置", icon: "cpu", permission: ["models.own", "models.manage"],
         desc: "资源归属分「个人自持」与「企业托管」：个人自持使用本人凭据与额度，企业托管由企业统一分配配额。",
         render() {
           const me = App.identity();
@@ -19,6 +19,12 @@
             return sum + (m ? Number(m[1]) : 0);
           }, 0) / selfP.length) : 0;
           const bars = selfP.slice(0, 4).map(p => ({ label: String(p.capabilities).split(" / ")[0], value: (String(p.quota).match(/(\d+)%/) || [0, "0"])[1] }));
+          /* 管理员视图（R-27）：企业托管资源的分配与额度，不是「我的资源」的另一份复制 */
+          const entList = D.providers.filter(p => p.mode === "企业托管" || String(p.quota).indexOf("企业配额") >= 0);
+          const entBlock = App.can("models.manage")
+            ? U.card("企业托管资源与额度（管理员视图）", U.table(["资源", "归属", "能力", "额度归属", "状态", "凭据可见性"], entList.map(p =>
+              '<tr><td class="cell-strong">' + U.esc(p.name) + '<div class="faint small">' + U.esc(p.id) + '</div></td><td>' + U.esc(p.owner) + '</td><td class="cell-wrap">' + U.esc(p.capabilities) + '</td><td class="cell-wrap">' + U.esc(p.quota) + '</td><td>' + U.pill(p.status) + '</td><td class="cell-wrap muted">全员仅见脱敏值，管理员也不得读取明文</td></tr>').join("")), "分配对象与额度来自企业托管配置，不与个人自持混算")
+            : "";
           const rows = mine.map(p =>
             '<tr><td>' + U.entity(p.name, p.id, "◉") + '</td><td>' + U.pill(p.mode || "个人自持", p.mode === "企业托管" ? "info" : "accent") + '</td><td class="cell-wrap">' + U.esc(p.kind) + '</td><td class="cell-wrap">' + U.esc(p.capabilities) + '</td><td class="cell-wrap muted">' + U.esc(p.endpoint) + '</td><td>' + U.esc(p.quota) + "</td><td>" + U.masked(p.masked) + "</td><td>" + U.pill(p.status) + "</td><td>" +
             U.btn("测试", "models.test", "sm", { id: p.id }) + " " + U.btn("设为默认", "models.setDefault", "sm", { id: p.id }) + " " +
@@ -29,11 +35,12 @@
             U.btn("新增资源", "models.newProvider", "primary") + (App.can("models.manage") ? U.btn("路由策略", "models.toRouting") : ""),
             '<div class="grid grid-4">' +
               U.metric("个人自持", String(selfP.length), "使用本人凭据与个人额度", "◉") +
-              U.metric("企业分配", String(allocated.length), allocated.length ? allocated.map(p => p.name).join(" / ") : "当前无企业分配资源", "◇") +
+              U.metric("企业托管资源", String(allocated.length), allocated.length ? allocated.map(p => p.name).join(" / ") : "当前无企业分配资源", "◇") +
               U.metric("已用额度", usedPct + "%", "个人额度平均占用", "▮") +
               U.metric("异常资源", String(bad.length), bad.length ? bad.map(p => p.id + " " + p.status).join(" / ") : "当前无异常", "!") +
             "</div>" +
             U.card("我的资源配置", U.table(["供应商", "供给模式", "类型", "能力", "端点", "额度", "凭据（脱敏）", "状态", "操作"], rows)) +
+            (entBlock ? '<div class="mt-4">' + entBlock + "</div>" : "") +
             '<div class="split mt-4"><div class="stack">' +
               U.card("资源归属与可见性", U.table(["归属", "凭据可见性", "额度归属", "适用角色"], [
                 ["个人自持", "仅本人可见脱敏值", "计入个人额度", "员工 / 负责人"],
@@ -55,11 +62,11 @@
         render() {
           const prow = D.providers.map(p =>
             '<tr><td>' + U.code(p.id) + '</td><td class="cell-strong">' + U.esc(p.name) + '<div class="faint small">' + U.esc(p.kind) + '</div></td><td>' + U.esc(p.owner) + '</td><td class="cell-wrap muted">' + U.esc(p.endpoint) + '</td><td>' + U.esc(p.auth) + '</td><td>' + U.esc(p.region) + '</td><td class="cell-wrap">' + U.esc(p.capabilities) + '</td><td>' + U.masked(p.masked) + "</td><td>" + U.esc(p.test) + "</td><td>" + U.pill(p.status) + "</td><td>" +
-            U.btn("测试连接", "models.test", "sm", { id: p.id }) + "</td></tr>").join("");
+            U.btn("测试", "models.test", "sm", { id: p.id }) + "</td></tr>").join("");
           const mrow = D.modelProfiles.map(m =>
             '<tr><td>' + U.code(m.id) + '</td><td>' + U.code(m.provider) + '</td><td class="cell-strong">' + U.esc(m.model) + '</td><td>' + U.esc(m.cap) + '</td><td class="cell-wrap">' + U.esc(m.io) + '</td><td class="cell-wrap muted">' + U.esc(m.limits) + '</td><td>' + U.esc(m.price) + '</td><td class="cell-wrap">' + U.esc(m.license) + "</td></tr>").join("");
           return U.page("模型与资源 / 供应商与模型", "供应商与模型", "接入失败不是「模型不行」：必须区分鉴权、限流、参数不支持与上游故障。",
-            U.btn("新增供应商", "models.newProvider", "primary") + U.btn("查看调用日志", "models.toLogs"),
+            U.btn("新增资源", "models.newProvider", "primary") + U.btn("查看调用日志", "models.toLogs"),
             U.card("供应商（" + D.providers.length + " 家）", U.table(["编号", "供应商", "归属人", "端点", "鉴权方式", "区域", "能力", "凭据", "验证", "状态", "操作"], prow)) +
             U.card("模型能力档案（" + D.modelProfiles.length + " 个）", U.table(["档案", "供应商", "模型", "能力", "输入 / 输出", "限制", "单价", "许可"], mrow)) +
             '<div class="grid grid-2 mt-4">' +
@@ -95,7 +102,7 @@
               U.card("能力清单", U.table(["能力", "典型用途", "输入 / 输出", "计价单位", "模型数"], capRows)) +
               U.card("剪辑与后期能力", '<div class="chip-row">' + D.postCapabilities.map(x => '<span class="chip">' + U.esc(x) + "</span>").join("") + "</div>", "后期能力由转码与合成能力组合实现") +
             '</div><div class="stack">' +
-              U.card("视频能力状态", U.table(["能力", "状态", "说明"], vc.map(x => '<tr><td>' + U.esc(x.item) + "</td><td>" + U.pill(x.status) + '</td><td class="cell-wrap muted">' + U.esc(x.note) + "</td></tr>").join(""), "暂无能力记录")) +
+              U.card("视频能力可用性", U.table(["能力", "状态", "说明"], vc.map(x => '<tr><td>' + U.esc(x.item) + "</td><td>" + U.pill(x.status) + '</td><td class="cell-wrap muted">' + U.esc(x.note) + "</td></tr>").join(""), "暂无能力记录")) +
               U.card("路由原则", U.listRows([["主模型", "默认质量优先，预算内"], ["辅助", "只做校验类调用，不产出正式资产"], ["备用", "仅故障时启用，需兼容校验"], ["记录", "每次切换写审计与成本归因"]]) , "路由变更需留痕") +
             "</div></div>"
           );

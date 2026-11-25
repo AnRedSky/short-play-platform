@@ -1,6 +1,44 @@
 /* 模块：compliance 授权、风险与审计 */
 (function () {
   const U = UI, D = DB, SCOPE = "compliance";
+
+  /* ---------- 处置（原 notify/incidents，B2·M8 并入风险与异常的「处置」tab） ----------
+     异常按影响范围局部暂停，不整项目静默全停；处理必须留下决策、责任人与下一步。 */
+  const incidentBlock = (p) => {
+    const visPids = DB.derived.visibleProjects().map(x => x.id);
+    const inc = p ? D.incidents.filter(i => i.project === p.id) : D.incidents.filter(i => visPids.indexOf(i.project) >= 0);
+    const open = inc.filter(i => i.result !== "已闭环");
+    const escalatedInc = inc.filter(i => String(i.level).indexOf("升级") >= 0);
+    const incProjects = [...new Set(inc.map(i => i.project))];
+    const rows = inc.map(i => {
+      const pj = D.projects.find(x => x.id === i.project);
+      return '<tr><td>' + U.code(i.id) + "</td><td>" + U.esc(i.project) + '</td><td class="cell-wrap">' + U.esc(i.type) + '</td><td class="idx">' + U.esc(i.first) + "<br>" + U.esc(i.last) + '</td><td class="idx">' + U.esc(String(i.handled || 0)) + ' 次</td><td class="cell-wrap">' + U.esc(i.action) + '</td><td class="cell-wrap muted">' + U.esc(i.decision) + "</td><td class=\"cell-wrap\">" + U.esc(i.next) + "</td><td>" + U.pill(i.result) + "</td><td>" + U.pill(pj ? pj.status : "待确认") + "</td><td>" + U.pill(i.level, i.level.indexOf("企业") >= 0 ? "bad" : "info") + "</td><td>" +
+        U.btn("处置", "notify.incidentAction", "sm", { id: i.id }) + "</td></tr>";
+    }).join("");
+    return '<div class="grid grid-4">' +
+        U.metric("未闭环", String(open.length), "可见异常 " + inc.length + " 项", "!") +
+        U.metric("处理中", String(inc.filter(i => i.result === "处理中").length), "已派发处置动作", "+") +
+        U.metric("已升级", String(escalatedInc.length), "超出项目内处置范围", "↑") +
+        U.metric("涉及项目", String(incProjects.length), "非成员项目异常不展示", "▤") +
+      "</div>" +
+      U.card("异常台账", U.table(["异常", "项目", "类型", "首次 / 最近", "处理次数", "处置动作", "决策与责任人", "下一步", "结果", "最终状态", "级别", "操作"], rows, "异常关闭需回写结果与验证方式")) +
+      '<div class="grid grid-2 mt-4">' +
+        U.card("处置原则", U.listRows([
+          ["局部优先", "仅暂停受影响镜头 / 任务链路，其余镜头继续生产"],
+          ["不静默", "任何暂停、降级、切换模型都必须通知到责任人与配置人"],
+          ["不覆盖", "返工产生新尝试与新资产版本，原结果保留可追溯"],
+          ["费用", "失败、重试与取消均入账，不因异常而丢失成本记录"],
+          ["闭环", "关闭异常需给出验证方式与验证结果"]
+        ]), "异常处理结果进入项目生命周期记录") +
+        U.card("高频异常与处置口径", U.table(["异常类型", "建议处置"], [
+          ["合规高风险", "阻断下游 → 替换素材 / 调整提示词 → 重生成 → 抽检"],
+          ["人物严重不一致", "重建参考资产 → 局部重生成 → 与相邻镜头比对"],
+          ["模型不可用 / 鉴权失败", "暂停依赖任务 → 配置人更新凭据 → 重做可用性检查"],
+          ["预算触发", "暂停高成本任务 → 调整预算或缩减范围 → 记录决策"],
+          ["质量阻断", "按镜头返工，不整集重跑；保留原报告"]
+        ].map(r => "<tr><td class=\"cell-strong\">" + r[0] + '</td><td class="cell-wrap muted">' + r[1] + "</td></tr>").join("")), "处置建议不等于自动执行") +
+      "</div>";
+  };
   function auditTokens(pids) {
     const tokens = [];
     const add = (v) => { const s = String(v || ""); if (s && tokens.indexOf(s) < 0) tokens.push(s); };
@@ -44,7 +82,7 @@
         render(query) {
           const pid = (query && query.id) || "";
           const p = pid ? (D.projects.find(x => x.id === pid) || null) : null;
-          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("合规与审计 / 权利与授权", "项目授权不在可见范围", "只能查看自己负责、参与或经授权项目的授权台账；跨项目授权不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取授权台账", "项目不存在或当前身份不可见。"));
+          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("合规与审计 / 权利与授权", "项目授权不在可见范围", "只能查看自己负责、参与或经授权项目的授权台账；跨项目授权不渲染。", U.btn("返回项目列表", "common.projects", "primary"), U.empty("无法读取授权台账", "项目不存在或当前身份不可见。"));
           const visPids = DB.derived.visibleProjects().map(x => x.id);
           const scoped = pid ? D.rights.filter(r => r.project === pid || !r.project) : D.rights.filter(r => !r.project || visPids.indexOf(r.project) >= 0);
           const rows = scoped.map(r =>
@@ -67,12 +105,12 @@
             U.card("授权台账 · " + scoped.length + " 项" + (p ? " · " + U.esc(p.name) : ""), U.table(["编号", "项目", "对象", "类型", "权利人", "证明", "使用范围", "区域", "期限", "商用性", "复核", "状态", "操作"], rows, "当前项目没有授权记录")) +
             '<div class="split mt-4"><div class="stack">' +
               (bad ? U.card(bad.id + " · 阻断交付", U.notice(bad.subject + "：来源或证明缺失，当前项目交付已被阻断；补授权或替换素材后才能解除。", "bad") +
-                '<div class="btn-row-inline">' + U.btn("补登记授权", "compliance.renew", "sm", { id: bad.id }) + U.btn("替换素材", "compliance.replace", "sm", { id: bad.id }) + "</div>", "来源不明不得交付")
+                '<div class="btn-row-inline">' + U.btn("登记续期", "compliance.renew", "sm", { id: bad.id }) + U.btn("替换素材", "compliance.replace", "sm", { id: bad.id }) + "</div>", "来源不明不得交付")
                 : U.card("交付阻断", U.notice("当前范围没有阻断交付的授权记录。", "ok"), "按项目实时计算")) +
               U.card("授权有效期规则", U.listRows([["复核周期", "长期授权每 12 个月复核一次"], ["到期提醒", "到期前 30 天提醒权利人使用者"], ["到期后果", "阻止新生成，已交付内容不受影响"], ["续期", "登记新证明后解除阻断"]]) , "到期不等于自动失效") +
             '</div><div class="stack">' +
               (soon ? U.card(soon.id + " · 快到期的授权", U.desc([["对象", soon.subject], ["证明", soon.proof], ["期限", soon.term], ["商用性", soon.commercial], ["限制", soon.limit], ["状态", soon.status]]) +
-                '<div class="btn-row-inline">' + U.btn("登记续期", "compliance.renew", "sm", { id: soon.id }) + U.btn("停用音色", "compliance.disable", "sm", { id: soon.id }) + "</div>", "到期前必须续期或替换")
+                '<div class="btn-row-inline">' + U.btn("登记续期", "compliance.renew", "sm", { id: soon.id }) + U.btn("停用", "compliance.disable", "sm", { id: soon.id }) + "</div>", "到期前必须续期或替换")
                 : U.card("到期提醒", U.notice("当前范围没有 30 天内到期的授权。", "ok"), "按项目实时计算")) +
               U.card("权利类型分布", U.donut(Object.keys(typeCounts).map((k, i) => ({ label: k, value: typeCounts[k], color: i % 3 === 0 ? "var(--accent)" : i % 3 === 1 ? "var(--warn)" : "var(--info)" })), "记录", String(scoped.length)), "按权利类型计") +
             "</div></div>"
@@ -85,28 +123,27 @@
         render(query) {
           const pid = (query && query.id) || "";
           const p = pid ? (D.projects.find(x => x.id === pid) || null) : null;
-          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("合规与审计 / 风险与异常", "项目风险不在可见范围", "只能查看自己负责、参与或经授权项目的风险与异常；跨项目记录不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取风险记录", "项目不存在或当前身份不可见。"));
+          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("合规与审计 / 风险与异常", "项目风险不在可见范围", "只能查看自己负责、参与或经授权项目的风险与异常；跨项目记录不渲染。", U.btn("返回项目列表", "common.projects", "primary"), U.empty("无法读取风险记录", "项目不存在或当前身份不可见。"));
           const visPids = DB.derived.visibleProjects().map(x => x.id);
           const risks = pid ? D.risks.filter(r => r.project === pid) : D.risks.filter(r => visPids.indexOf(r.project) >= 0);
           const incidents = pid ? D.incidents.filter(i => i.project === pid) : D.incidents.filter(i => visPids.indexOf(i.project) >= 0);
           const rows = risks.map(r =>
             '<tr><td>' + U.code(r.id) + "</td><td>" + U.esc(r.project) + "</td><td>" + U.esc(r.type) + '</td><td class="cell-wrap">' + U.esc(r.where) + "</td><td>" + U.pill(r.level) + '</td><td class="cell-wrap">' + U.esc(r.action) + "</td><td>" + U.esc(r.owner) + "</td><td>" + U.pill(r.status) + "</td><td>" + U.esc(r.at) + "</td><td>" +
             U.btn("详情", "compliance.riskDetail", "sm", { id: r.id }) + "</td></tr>").join("");
-          const incRows = incidents.map(i =>
-            '<tr><td>' + U.code(i.id) + "</td><td>" + U.esc(i.project) + "</td><td>" + U.esc(i.type) + '</td><td class="cell-wrap">' + U.esc(i.action) + "</td><td>" + U.esc(i.decision) + "</td><td>" + U.pill(i.result) + '</td><td class="cell-wrap muted">' + U.esc(i.next) + "</td><td>" + U.esc(i.level) + "</td></tr>").join("");
           const openRisks = risks.filter(r => String(r.status).indexOf("已") < 0);
           const high = risks.filter(r => r.level === "高");
           const openInc = incidents.find(i => String(i.result).indexOf("已") < 0);
-          return U.page("合规与审计 / 风险与异常" + (p ? " · " + p.name : ""), "风险与异常", "异常事件保留处理轮次与决策人；升级规则明确（4 小时未处理自动升级）。",
+          const tab = App.get(SCOPE, "tab", "risks");
+          const tabsBar = U.card("", U.tabs([{ value: "risks", label: "风险清单", count: risks.length }, { value: "dispose", label: "处置", count: incidents.filter(i => String(i.result) !== "已闭环").length }], tab, "compliance.tab"));
+          return U.page("合规与审计 / 风险与异常" + (p ? " · " + p.name : ""), tab === "dispose" ? "异常处置" : "风险与异常", tab === "dispose" ? "异常来源：重试达上限、资源不可用、预算触发、合规高风险、质量阻断。" : "异常事件保留处理轮次与决策人；升级规则明确（4 小时未处理自动升级）。",
             (App.can("compliance.write") ? U.btn("登记风险", "compliance.newRisk", "primary", p ? { id: p.id } : {}) : "") + U.btn("审计日志", "compliance.toAudit", "", p ? { id: p.id } : {}),
-            '<div class="grid grid-4">' +
+            tabsBar + (tab === "dispose" ? incidentBlock(p) : '<div class="grid grid-4">' +
               U.metric("未闭环风险", String(openRisks.length), p ? "当前项目" : "全库", "!") +
               U.metric("高风险", String(high.length), high.length ? "阻断下游" : "当前没有高风险", "×") +
               U.metric("异常事件", String(incidents.length), openInc ? "含未闭环事件" : "全部已闭环", "◐") +
               U.metric("升级规则", "4 小时", "未处理自动升级", "⏱") +
             "</div>" +
             U.card("风险清单 · " + risks.length + " 项" + (p ? " · " + U.esc(p.name) : ""), U.table(["风险", "项目", "类型", "定位", "等级", "处置动作", "负责人", "状态", "时间", "操作"], rows, "当前项目没有风险记录")) +
-            U.card("异常事件（局部暂停原则）", U.table(["事件", "项目", "类型", "处置", "决策", "结果", "下一步", "升级层级"], incRows, "当前项目没有异常事件")) +
             '<div class="grid grid-2 mt-4">' +
               U.card("等级与处置", U.table(["等级", "处置", "是否阻断"], [
                 ["高", "阻断下游全部动作", "是"],
@@ -115,7 +152,7 @@
               ].map(r => "<tr><td>" + U.pill(r[0]) + '</td><td class="cell-wrap">' + r[1] + '</td><td>' + U.pill(r[2], r[2] === "是" ? "bad" : "ok") + "</td></tr>").join("")), "阻断范围要写清") +
               (openInc ? U.card(openInc.id + " · 未闭环", U.notice(openInc.project + " " + openInc.type + "：" + openInc.action + "，当前结果为「" + openInc.result + "」。", "bad") + U.listRows([["首次", openInc.at || "未记录"], ["处理轮次", String(openInc.rounds || 1) + " 次"], ["最近更新", openInc.updated || "未记录"], ["下一步", openInc.next]]) , "未闭环事件每日跟踪")
                 : U.card("未闭环事件", U.notice("当前范围没有未闭环异常事件。", "ok"), "按项目实时计算")) +
-            "</div>"
+            "</div>)")
           );
         }
       },
@@ -125,7 +162,7 @@
         render(query) {
           const pid = (query && query.id) || "";
           const p = pid ? (D.projects.find(x => x.id === pid) || null) : null;
-          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("合规与审计 / 审计日志", "项目日志不在可见范围", "只能查看自己负责、参与或经授权项目的审计日志；跨项目日志不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取审计日志", "项目不存在或当前身份不可见。"));
+          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("合规与审计 / 审计日志", "项目日志不在可见范围", "只能查看自己负责、参与或经授权项目的审计日志；跨项目日志不渲染。", U.btn("返回项目列表", "common.projects", "primary"), U.empty("无法读取审计日志", "项目不存在或当前身份不可见。"));
           const allScope = App.can("audit.read");
           const pids = pid ? [pid] : (allScope ? null : DB.derived.visibleProjects().map(x => x.id));
           const tokens = pids ? auditTokens(pids) : null;
@@ -172,6 +209,7 @@
   App.on("compliance.toRights", (el) => { const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id; App.go("compliance/rights", pid ? { id: pid } : undefined); });
   App.on("compliance.toRisks", (el) => { const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id; App.go("compliance/risks", pid ? { id: pid } : undefined); });
   App.on("compliance.toAudit", (el) => { const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id; App.go("compliance/audit", pid ? { id: pid } : undefined); });
+  App.on("compliance.tab", (el) => { App.set(SCOPE, "tab", el.dataset.value || "risks"); App.refresh(); });
   App.on("compliance.etype", (el) => { App.set(SCOPE, "etype", el.dataset.value); App.refresh(); });
   /* 审计导出：导出行为本身也是审计事件（业务方案 §16.8） */
   App.on("compliance.exportAudit", (el) => {
@@ -230,7 +268,7 @@
     const r = rightById(el.dataset.id);
     if (!r) { App.toast("该授权记录不在当前可见范围", "bad"); return; }
     App.drawer("授权 · " + r.id, U.desc([["对象", r.subject], ["项目", r.project || "平台级"], ["类型", r.type], ["权利方", r.owner], ["使用范围", r.use], ["地域", r.region], ["期限", r.term], ["商用", r.commercial], ["限制", r.limit], ["凭证", r.proof], ["复核", r.review], ["状态", r.status]]) +
-      '<div class="btn-row-inline">' + U.btn("续期", "compliance.renew", "primary", { id: r.id }) + U.btn("替换素材", "compliance.replace", "", { id: r.id }) +
+      '<div class="btn-row-inline">' + U.btn("登记续期", "compliance.renew", "primary", { id: r.id }) + U.btn("替换素材", "compliance.replace", "", { id: r.id }) +
       (r.status === "有效" ? U.btn("停用", "compliance.disable", "sm", { id: r.id }) : "") + "</div>");
   });
 

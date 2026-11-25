@@ -91,10 +91,32 @@ window.App = (function () {
     });
     return { path, query };
   }
+  /* 已合并路由的旧地址（B2 归并台账 M1–M9）：老链接不报 404，直接落到新归属页。
+     只做转发，不做兼容页——避免又长出一份重复实现。 */
+  const LEGACY = {
+    "workspace/projects": "projects/list",
+    "quality/gates": "quality/reports",
+    "post/works": "post/delivery",
+    "video/results": "video/preview",
+    "director/storyboard": "director/shots",
+    "assets/usage": "assets/library",
+    "cost/usage": "cost/ledger",
+    "notify/incidents": "compliance/risks",
+    "analytics/departments": "analytics/enterprise",
+    "analytics/employees": "analytics/enterprise"
+  };
   function current() {
     const { path, query } = parseHash();
-    const route = S.routes.find(r => r.path === path);
-    return route ? { route, query, path } : { route: null, query, path };
+    const target = LEGACY[path] || path;
+    const route = S.routes.find(r => r.path === target);
+    return route ? { route, query, path: target } : { route: null, query, path };
+  }
+  /* 名称唯一来源：一级 / 二级 / 三级全部取 DB.menu，模块注册的 label 只作内部 key */
+  function menuPathOf(path) {
+    for (const g of DB.menu) for (const b of (g.children || [])) for (const it of (b.items || [])) {
+      if (it.path === path) return { group: g.label, branch: b.label, item: it.label };
+    }
+    return null;
   }
   function go(path, query) {
     const qs = query ? "?" + Object.keys(query).map(k => encodeURIComponent(k) + "=" + encodeURIComponent(query[k])).join("&") : "";
@@ -146,7 +168,10 @@ window.App = (function () {
   function shell() {
     const me = identity();
     const cur = current();
-    const groupLabel = cur.route ? (S.groups.find(g => g.key === cur.route.group) || {}).label || "工作空间" : "工作空间";
+    const mp = cur.route ? menuPathOf(cur.route.path) : null;
+    const crumbGroup = mp ? mp.group : (cur.route ? (S.groups.find(g => g.key === cur.route.group) || {}).label || "工作空间" : "工作空间");
+    const crumbBranch = mp ? mp.branch : "";
+    const crumbItem = cur.route ? (mp ? mp.item : cur.route.title) : "页面不存在";
     const app = document.getElementById("app");
     const qid = cur.query && cur.query.id;
     const qProject = qid ? DB.projects.find(p => p.id === qid) : null;
@@ -161,14 +186,14 @@ window.App = (function () {
     app.innerHTML =
       '<div class="shell">' +
         '<aside class="sidebar' + (S.menuOpen ? " open" : "") + '" id="sidebar">' +
-          '<div class="sidebar-brand"><span class="mark">FR</span><div><b>FRAME 短剧工场</b><small>AI 短剧创作工作台 · 第 9.6.0 版</small></div></div>' +
+          '<div class="sidebar-brand"><span class="mark">FR</span><div><b>FRAME 短剧工场</b><small>AI 短剧创作工作台 · 第 9.7.0 版</small></div></div>' +
           '<nav class="nav" id="menu-root" aria-label="主导航"></nav>' +
           '<div class="sidebar-foot">一人一部戏 · 从创意到交付<br>静态原型 · 全部数据为虚构演示</div>' +
         "</aside>" +
         '<main class="main">' +
           '<header class="topbar"><div style="display:flex;align-items:center;gap:10px;min-width:0">' +
             '<div class="crumb"><button type="button" class="btn ghost" data-action="common.menu" aria-label="切换导航">☰</button>' +
-            "<span>" + esc(groupLabel) + "</span><span class=\"faint\">/</span><b>" + esc(cur.route ? cur.route.title : "页面不存在") + "</b></div>" +
+            "<span>" + esc(crumbGroup) + "</span><span class=\"faint\">/</span>" + (crumbBranch ? "<span>" + esc(crumbBranch) + "</span><span class=\"faint\">/</span>" : "") + "<b>" + esc(crumbItem) + "</b></div>" +
             (proj ? projCtx : "") +
             "</div>" +
             '<div class="top-actions"><span class="pill info" title="主线：一名项目负责人 + AI 独立跑完整部短剧">单人主线</span><span class="pill">本地演示</span>' +
@@ -215,11 +240,11 @@ window.App = (function () {
     if (qid && /^SP-\d{5}$/.test(String(qid))) {
       const target = DB.projects.find(p => p.id === qid);
       if (!target) {
-        view.innerHTML = UI.page("项目不存在", "项目不存在", "该链接指向的项目已不存在或已被清理。", UI.btn("返回项目列表", "projects.listLink", "primary"), UI.empty("没有可展示的业务数据", "请从项目列表重新进入；不存在项目不会被其他项目内容替代。"));
+        view.innerHTML = UI.page("项目不存在", "项目不存在", "该链接指向的项目已不存在或已被清理。", UI.btn("返回项目列表", "common.projects", "primary"), UI.empty("没有可展示的业务数据", "请从项目列表重新进入；不存在项目不会被其他项目内容替代。"));
         return;
       }
       if (!DB.derived.canViewProject(target)) {
-        view.innerHTML = UI.page("项目不在可见范围", "无权查看该项目", "当前身份「" + role().name + "」不是该项目负责人或项目成员，项目内的剧本、任务、成本与授权均不展示。", UI.btn("返回项目列表", "projects.listLink", "primary") + UI.btn("切换身份查看", "common.focusIdentity"), UI.empty("项目不在可见范围", "如需查看，请由该项目的负责人或管理员把当前账号加入项目成员，或切换到具备权限的身份。"));
+        view.innerHTML = UI.page("项目不在可见范围", "无权查看该项目", "当前身份「" + role().name + "」不是该项目负责人或项目成员，项目内的剧本、任务、成本与授权均不展示。", UI.btn("返回项目列表", "common.projects", "primary") + UI.btn("切换身份查看", "common.focusIdentity"), UI.empty("项目不在可见范围", "如需查看，请由该项目的负责人或管理员把当前账号加入项目成员，或切换到具备权限的身份。"));
         return;
       }
     }
@@ -308,16 +333,28 @@ window.App = (function () {
   }
   function closeDrawer() { const root = document.getElementById("drawer-root"); if (root) root.innerHTML = ""; S.drawerOpen = false; }
 
+  /* 导出文件名由「当前页面标题 + 项目编号 + 日期」派生，同名按钮不再共用固定文件名 */
+  function exportFileName() {
+    const cur = current();
+    const qid = cur.query && cur.query.id;
+    const p = qid ? DB.projects.find(x => x.id === qid) : null;
+    const d = new Date();
+    const stamp = String(d.getFullYear()) + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
+    const title = String((cur.route && cur.route.title) || "导出").replace(/[\\/:*?"<>|\s]/g, "-");
+    return title + (p ? "-" + p.id : "") + "-" + stamp + ".csv";
+  }
+
   function exportCsv(name) {
     const table = document.querySelector("#view .table-wrap table");
     if (!table) { toast("当前页面没有可导出的表格"); return; }
+    const file = name || exportFileName();
     const rows = Array.from(table.querySelectorAll("tr")).map(tr => Array.from(tr.querySelectorAll("th,td")).map(td => '"' + td.innerText.replace(/"/g, '""') + '"').join(","));
     const blob = new Blob(["\uFEFF" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url; link.download = name || "prototype-export.csv"; link.click();
+    link.href = url; link.download = file; link.click();
     URL.revokeObjectURL(url);
-    toast("已导出当前表格为 CSV（演示数据，不含真实账单与凭据）");
+    toast("已导出「" + file + "」（演示数据，不含真实账单与凭据）");
   }
 
   /* ---------- 表单校验（字段级 + 表单级）与异步作业 ---------- */
@@ -479,7 +516,7 @@ window.App = (function () {
   on("common.closeDrawer", () => { closeDrawer(); });
   on("common.backdrop", (el, e) => { if (e.target.classList.contains("modal-backdrop")) closeModal(); });
   on("common.focusIdentity", () => { const sel = document.getElementById("identity-switch"); if (sel) { sel.focus(); } });
-  on("common.export", () => { exportCsv("prototype-export.csv"); });
+  on("common.export", () => { exportCsv(); });
   on("common.noop", () => { toast("该入口在原型中为只读展示，不执行真实动作。"); });
   on("common.tab", (el) => { const scope = el.dataset.scope || "tab"; set(scope, "tab", el.dataset.value); refresh(); });
   on("common.filter", (el) => { set(el.dataset.scope || "filter", el.dataset.filter, el.value); });

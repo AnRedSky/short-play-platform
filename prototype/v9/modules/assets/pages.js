@@ -20,6 +20,48 @@ function assetReferences(a) {
 (function () {
   const U = UI, D = DB, SCOPE = "assets";
 
+  /* ---------- 引用（原 assets/usage，B2·M5 并入资产库的「引用」tab） ----------
+     删除或替换任何资产前必须查引用：引用未清理就删除会造成时间线与交付包断链。 */
+  const usageOf = (p) => {
+    const pid = p ? p.id : "";
+    const visPids = DB.derived.visibleProjects().map(x => x.id);
+    const pool = pid ? D.assets.filter(a => a.project === pid) : D.assets.filter(a => visPids.indexOf(a.project) >= 0);
+    /* 引用关系来自真实下游对象（镜头契约 / 时间线 / 交付包），不按分类拼造（业务方案 §14.4） */
+    const usage = [];
+    pool.forEach(a => {
+      assetReferences(a).forEach(r => usage.push({ asset: a.id, kind: r.kind, target: r.target, where: r.where, count: 1, deletable: false }));
+    });
+    return usage;
+  };
+
+  const usageBlock = (p) => {
+    const frozen = p && ["已交付", "已归档"].indexOf(p.status) >= 0;
+    const usage = usageOf(p);
+    const rows = usage.map(x =>
+      '<tr><td>' + U.code(x.asset) + "</td><td>" + U.esc(x.kind) + '</td><td class="cell-wrap">' + U.esc(x.target) + '</td><td class="idx">' + U.esc(x.where) + '</td><td>' + U.pill("被引用 · 不可删除", "bad") + "</td><td>" +
+      U.btn("查看链路", "assets.trace", "sm", { id: x.asset }) + "</td></tr>").join("");
+    const blocked = usage[0];
+    return U.card("引用关系表" + (p ? " · " + U.esc(p.name) : " · 可见项目"), U.table(["资产", "引用类型", "引用对象", "引用位置", "可删除性", "操作"], rows, "当前范围没有资产引用"), p ? "当前项目引用 · 来自镜头 / 时间线 / 交付包" : "可见项目引用 · 来自镜头 / 时间线 / 交付包") +
+      '<div class="split mt-4"><div class="stack">' +
+        U.card("删除前检查流程", U.chain([
+          { label: "发起删除", meta: "资产 ID", state: "done" },
+          { label: "列引用", meta: "时间线 / 镜头 / 交付", state: "now" },
+          { label: "解除引用", meta: "替换或下线", state: "" },
+          { label: "执行删除", meta: "写审计", state: "" }
+        ]), "有引用即阻断删除") +
+        (blocked ? U.card("删除阻断 · " + blocked.asset, U.notice(blocked.asset + " 存在 " + usage.filter(x => x.asset === blocked.asset).length + " 处引用（" + usage.filter(x => x.asset === blocked.asset).map(x => x.kind).join("、") + "），删除会直接造成下游断链：必须先替换引用对象。", "bad") + U.desc([["资产", blocked.asset], ["引用", usage.filter(x => x.asset === blocked.asset).length + " 处"], ["结论", "不可删除"], ["替代方案", "新建版本，保留原版本"]]) , "不允许强制删除")
+          : U.card("删除阻断", U.notice("当前项目没有带引用的资产，可按流程删除并写审计。", "ok"), "删除仍须留痕")) +
+      '</div><div class="stack">' +
+        U.card("引用统计", U.donut([
+          { label: "镜头契约引用", value: usage.filter(x => x.kind === "镜头契约引用").length, color: "var(--accent)" },
+          { label: "时间线引用", value: usage.filter(x => x.kind === "时间线引用").length, color: "var(--info)" },
+          { label: "交付包引用", value: usage.filter(x => x.kind === "交付包引用").length, color: "var(--line-strong)" }
+        ], "引用条目", String(usage.length)), "按引用类型计") +
+        U.card("资产可见性", U.listRows([["正式资产", "项目成员可见、可引用"], ["临时素材", "仅创建者可用"], ["交付资产", "只读，随交付冻结"], ["删除", "仅管理员可在无引用时执行"]]) , "可见性随角色变化") +
+        (frozen ? '<span class="faint small">项目已交付 · 删除检查只读</span>' : (p ? '<div class="btn-row-inline">' + U.btn("删除前检查", "assets.deleteCheck", "", { id: p.id }) + "</div>" : '<span class="faint small">从单个项目进入后可执行删除检查</span>')) +
+      "</div></div>";
+  };
+
   AppModule.register({
     group: "assets", label: "资产库", icon: "box", order: 10, end: "workspace",
     routes: [
@@ -41,60 +83,24 @@ function assetReferences(a) {
           const bad = list.find(a => String(a.status).indexOf("临时") >= 0 || String(a.qc).indexOf("FAIL") >= 0);
           const rows = list.map(a =>
             '<tr><td>' + U.code(a.id) + '</td><td>' + U.entity(a.name, a.type, "▣") + '</td><td>' + U.esc(a.cat) + "</td><td>" + U.esc(a.project) + "</td><td>" + U.esc(a.version) + '<span class="faint small"> / ' + a.versions + "</span></td><td>" + U.esc(a.size) + '</td><td class="cell-wrap muted">' + U.esc(a.checksum) + "</td><td>" + U.pill(a.qc) + "</td><td>" + U.pill(a.status) + '</td><td class="num">' + a.refs + "</td><td>" +
-            U.btn("详情", "assets.detail", "sm", { id: a.id }) + " " + U.btn("引用", "assets.refs", "sm", { id: a.id }) + "</td></tr>").join("");
+            U.btn("详情", "assets.detail", "sm", { id: a.id }) + " " + U.btn("引用检查", "assets.refs", "sm", { id: a.id }) + "</td></tr>").join("");
           const toolbar = '<div class="toolbar"><span class="field-wrap"><input class="field" data-filter="assets.kw" name="kw" placeholder="搜索资产 / 项目 / 类型" value="' + U.esc(kw) + '"></span>' +
             U.seg(["全部"].concat(D.assetCategories), cat, "assets.cat") + '<span class="grow"></span>' + (frozen ? '<span class="faint small">项目已交付 · 资产只读</span>' : (App.can("asset.manage") ? U.btn("上传资产", "assets.upload", "", p ? { id: p.id } : {}) : "")) + U.btn("引用检查", "assets.toUsage", "primary", p ? { id: p.id } : {}) + "</div>";
-          return U.page("资产 / 资产库", "资产库", "资产是生产的凭证：正式资产可被下游引用，临时素材不得进入交付。",
-            U.btn("引用与使用关系", "assets.toUsage", "", p ? { id: p.id } : {}) + U.btn("导出清单", "common.export"),
-            U.card("资产目录 · " + list.length + " 项" + (p ? " · " + U.esc(p.name) : " · 可见项目"), toolbar + U.table(["编号", "资产", "分类", "项目", "版本", "规格", "校验", "质检", "状态", "引用", "操作"], rows, "当前分类下暂无资产"), p ? "当前项目资产 · 版本不覆盖" : "可见项目资产 · 版本不覆盖") +
+          const tab = App.get(SCOPE, "tab", "list");
+          const refCount = usageOf(p).length;
+          const tabsBar = U.card("", U.tabs([
+            { value: "list", label: "资产目录", count: scoped.length },
+            { value: "refs", label: "引用", count: refCount }
+          ], tab, "assets.tab"));
+          return U.page("资产 / 资产库", tab === "refs" ? "引用与使用关系" : "资产库", tab === "refs" ? "引用关系来自时间线、镜头契约、分镜板与交付包；引用必须在删除前逐条解除。" : "资产是生产的凭证：正式资产可被下游引用，临时素材不得进入交付。",
+            (p ? (frozen ? "" : (App.can("asset.manage") ? U.btn("上传资产", "assets.upload", "primary", { id: p.id }) : "")) : "") + U.btn("导出清单", "common.export"),
+            tabsBar + (tab === "refs" ? usageBlock(p) : U.card("资产目录 · " + list.length + " 项" + (p ? " · " + U.esc(p.name) : " · 可见项目"), toolbar + U.table(["编号", "资产", "分类", "项目", "版本", "规格", "校验", "质检", "状态", "引用", "操作"], rows, "当前分类下暂无资产"), p ? "当前项目资产 · 版本不覆盖" : "可见项目资产 · 版本不覆盖") +
             U.tableFoot("共 " + scoped.length + " 项资产 / 8 类" + (p ? " · 当前项目" : ""), "版本不覆盖，历史版本永久可查") +
             '<div class="grid grid-2 mt-4">' +
               U.card("八类资产", '<div class="chip-row">' + D.assetCategories.map(c => '<span class="chip">' + U.esc(c) + "</span>").join("") + "</div>" + U.listRows([["正式资产", "可被下游引用与交付"], ["临时素材", "不可进入交付包"], ["草稿资产", "仅本人与项目成员可见"]]) , "分类决定可用范围") +
               (bad ? U.card(bad.id + " · 不可交付资产", U.notice("该资产为「" + bad.status + "」（质检 " + bad.qc + "），引用数 " + bad.refs + "，不可进入交付；替换后才允许继续引用。", "bad") + U.desc([["资产", bad.id + " · " + bad.name], ["状态", bad.status], ["质检", bad.qc], ["引用", bad.refs + " 处"], ["处理", "替换后重新生成"]]) , "临时素材不进交付")
                 : U.card("不可交付资产", U.empty("当前范围没有不可交付资产", "临时素材或质检 FAIL 的资产会在这里显示。"), "只显示真实资产状态")) +
-            "</div>"
-          );
-        }
-      },
-      {
-        path: "assets/usage", title: "引用与使用关系", icon: "chain", permission: "asset.read",
-        desc: "删除或替换任何资产前必须查引用：引用未清理就删除会造成时间线与交付包断链。",
-        render(query) {
-          const pid = (query && query.id) || "";
-          const p = pid ? (D.projects.find(x => x.id === pid) || null) : null;
-          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("资产 / 引用关系", "项目不在可见范围", "请从项目列表进入可见项目，或由负责人授权后再查看引用关系。", U.btn("返回资产库", "assets.toLibrary", "primary"), U.empty("无法读取项目", "跨项目或不存在项目不渲染引用记录。"));
-          const frozen = p && ["已交付", "已归档"].indexOf(p.status) >= 0;
-          const visPids = DB.derived.visibleProjects().map(x => x.id);
-          const pool = pid ? D.assets.filter(a => a.project === pid) : D.assets.filter(a => visPids.indexOf(a.project) >= 0);
-          /* 引用关系来自真实下游对象（镜头契约 / 时间线 / 交付包），不按分类拼造（业务方案 §14.4） */
-          const usage = [];
-          pool.forEach(a => {
-            assetReferences(a).forEach(r => usage.push({ asset: a.id, kind: r.kind, target: r.target, where: r.where, count: 1, deletable: false }));
-          });
-          const rows = usage.map(x =>
-            '<tr><td>' + U.code(x.asset) + "</td><td>" + U.esc(x.kind) + '</td><td class="cell-wrap">' + U.esc(x.target) + '</td><td class="idx">' + U.esc(x.where) + '</td><td>' + U.pill("被引用 · 不可删除", "bad") + "</td><td>" +
-            U.btn("查看链路", "assets.trace", "sm", { id: x.asset }) + "</td></tr>").join("");
-          const blocked = usage[0];
-          return U.page("资产 / 引用关系", "引用与使用关系", "引用关系来自时间线、镜头契约、分镜板与交付包；引用必须在删除前逐条解除。",
-            U.btn("资产库", "assets.toLibrary", "primary", p ? { id: p.id } : {}) + (frozen ? '<span class="faint small">项目已交付 · 删除检查只读</span>' : (p ? U.btn("删除前检查", "assets.deleteCheck", "", { id: p.id }) : '<span class="faint small">从单个项目进入后可执行删除检查</span>')),
-            U.card("引用关系表" + (p ? " · " + U.esc(p.name) : " · 可见项目"), U.table(["资产", "引用类型", "引用对象", "引用位置", "可删除性", "操作"], rows, "当前范围没有资产引用"), p ? "当前项目引用 · 来自镜头 / 时间线 / 交付包" : "可见项目引用 · 来自镜头 / 时间线 / 交付包") +
-            '<div class="split mt-4"><div class="stack">' +
-              U.card("删除前检查流程", U.chain([
-                { label: "发起删除", meta: "资产 ID", state: "done" },
-                { label: "列引用", meta: "时间线 / 镜头 / 交付", state: "now" },
-                { label: "解除引用", meta: "替换或下线", state: "" },
-                { label: "执行删除", meta: "写审计", state: "" }
-              ]), "有引用即阻断删除") +
-              (blocked ? U.card("删除阻断 · " + blocked.asset, U.notice(blocked.asset + " 存在 " + usage.filter(x => x.asset === blocked.asset).length + " 处引用（" + usage.filter(x => x.asset === blocked.asset).map(x => x.kind).join("、") + "），删除会直接造成下游断链：必须先替换引用对象。", "bad") + U.desc([["资产", blocked.asset], ["引用", usage.filter(x => x.asset === blocked.asset).length + " 处"], ["结论", "不可删除"], ["替代方案", "新建版本，保留原版本"]]) , "不允许强制删除")
-                : U.card("删除阻断", U.notice("当前项目没有带引用的资产，可按流程删除并写审计。", "ok"), "删除仍须留痕")) +
-            '</div><div class="stack">' +
-              U.card("引用统计", U.donut([
-                { label: "镜头契约引用", value: usage.filter(x => x.kind === "镜头契约引用").length, color: "var(--accent)" },
-                { label: "时间线引用", value: usage.filter(x => x.kind === "时间线引用").length, color: "var(--info)" },
-                { label: "交付包引用", value: usage.filter(x => x.kind === "交付包引用").length, color: "var(--line-strong)" }
-              ], "引用条目", String(usage.length)), "按引用类型计") +
-              U.card("资产可见性", U.listRows([["正式资产", "项目成员可见、可引用"], ["临时素材", "仅创建者可用"], ["交付资产", "只读，随交付冻结"], ["删除", "仅管理员可在无引用时执行"]]) , "可见性随角色变化") +
-            "</div></div>"
+            "</div>)")
           );
         }
       }
@@ -108,8 +114,10 @@ function assetReferences(a) {
   });
   App.on("assets.toUsage", (el) => {
     const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id;
-    App.go("assets/usage", pid ? { id: pid } : undefined);
+    App.set(SCOPE, "tab", "refs");
+    App.go("assets/library", pid ? { id: pid } : undefined);
   });
+  App.on("assets.tab", (el) => { App.set(SCOPE, "tab", el.dataset.value || "list"); App.refresh(); });
   App.on("assets.cat", (el) => { App.set(SCOPE, "cat", el.dataset.value); App.refresh(); });
   App.on("assets.trace", (el) => {
     const a = D.assets.find(x => x.id === el.dataset.id);

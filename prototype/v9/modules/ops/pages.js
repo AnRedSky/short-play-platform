@@ -50,8 +50,7 @@
                 { label: "备份副本", value: stBackup, color: "var(--info)" },
                 { label: "审计与日志", value: stAudit, color: "var(--line-strong)" }
               ], "TB / 共 " + tb(st.total) + " TB", st.used.replace(/[^\d.]/g, "")) + U.listRows([["校验失败对象", st.checksumFail + " 个（已标记重取）"], ["清理策略", "临时素材 30 天自动清理"]]) ) +
-              U.card("任务队列", D.ops.queue.map(q => '<div class="list-row"><span class="k">' + U.esc(q.name) + '</span><span class="v">' + U.pill(q.pending + " 待执行", "warn") + " " + U.pill(q.running + " 执行中", "info") + "</span></div>").join("") +
-                '<div class="mt-3">' + U.btn("进入队列视图", "ops.queueLink", "sm") + "</div>", "并发与积压实时快照") +
+              U.notice("<b>任务队列</b> " + D.ops.queue.length + " 条 · 待执行 " + D.ops.queue.reduce((n, q) => n + (Number(q.pending) || 0), 0) + " · 执行中 " + D.ops.queue.reduce((n, q) => n + (Number(q.running) || 0), 0) + "。积压、重试与单任务明细在「队列与存储」查看，本页不重复列表。", "info") +
               U.card("按角色可见范围", U.listRows([["系统运维管理员", "平台资源与参数（不含业务内容、不含凭据明文）"], ["企业管理员", "企业域全部管理与经营视图"], ["审计与经营管理", "只读汇总与审计检索"]])
                 , "角色不以传统制作岗位划分") +
             "</div></div>"

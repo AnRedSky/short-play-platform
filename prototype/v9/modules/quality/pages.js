@@ -2,58 +2,51 @@
 (function () {
   const U = UI, D = DB, SCOPE = "quality";
 
+  /* 门禁主体（原 quality/gates，B2·M7 并入质量报告的「门禁」tab）：
+     四级 × 十维矩阵、放行结论、门禁链路与阻断项必须与报告同源，不允许两页各算一套。 */
+  function gatesBlock(p) {
+    const wf = DB.derived.workflow(p);
+    const reports = D.qualityReports.filter(r => String(r.object).indexOf(p.id) >= 0);
+    const failing = reports.filter(r => r.fail > 0 || r.result === "未通过" || r.result === "FAIL");
+    const latest = reports.slice(-1)[0];
+    const cols = [{ key: "asset", label: "资产级" }, { key: "shot", label: "镜头级" }, { key: "ep", label: "单集级" }, { key: "all", label: "整剧级" }];
+    return '<div class="grid grid-4">' +
+        U.metric("检测级别", "4 级", "资产 / 镜头 / 单集 / 整剧", "▤") +
+        U.metric("检测维度", "10 维", "剧本到成片全覆盖", "▦") +
+        U.metric("当前项目结论", latest ? latest.result : "尚无报告", p.name + " · " + reports.length + " 份报告", "!") +
+        U.metric("阻断报告", String(failing.length), failing.length ? failing.map(r => r.id).join("、") : "无硬性阻断", "×") +
+      "</div>" +
+      U.card("四级 × 十维矩阵（" + U.esc(p.name) + "）", U.matrix(D.qualityMatrix, cols), "「—」表示该维度在此级别不检测") +
+      '<div class="split mt-4"><div class="stack">' +
+        U.card("四级检测范围", U.table(["级别", "对象", "检测内容"], D.qualityLevels.map(l => "<tr><td class=\"cell-strong\">" + U.esc(l.level) + "</td><td>" + U.esc(l.object) + '</td><td class="cell-wrap muted">' + U.esc(l.check) + "</td></tr>").join("")), "级别不可跳级") +
+        U.card("结论与放行", U.table(["结论", "含义", "放行条件"], [
+          ["PASS", "全部检测项通过", "直接放行"],
+          ["REVIEW_REQUIRED", "存在需人工判断项", "人工结论记录理由后放行"],
+          ["FAIL", "存在硬性不通过项", "阻断，必须返工"]
+        ].map(r => "<tr><td>" + U.pill(r[0]) + '</td><td class="cell-wrap">' + r[1] + '</td><td class="cell-wrap muted">' + r[2] + "</td></tr>").join("")), "人工结论必须留理由") +
+      '</div><div class="stack">' +
+        U.card("门禁链路", U.chain([
+          { label: "资产", meta: wf.pendingAssets.length ? wf.pendingAssets.length + " 待确认" : "已确认", state: wf.pendingAssets.length ? "wait" : "done" },
+          { label: "镜头", meta: wf.passedShots.length + " / " + wf.shots.length + " 通过", state: wf.shots.length && wf.passedShots.length === wf.shots.length ? "done" : "now" },
+          { label: "单集", meta: wf.passEps.length + " / " + wf.total + " 集 PASS", state: wf.total && wf.passEps.length === wf.total ? "done" : (wf.passEps.length ? "now" : "wait") },
+          { label: "整剧", meta: wf.gateDelivery.ok ? "可交付" : "未满足", state: wf.gateDelivery.ok ? "done" : "wait" }
+        ]), "上一级 FAIL 时不进入下一级") +
+        U.card("系统自动进出状态", U.notice("「质量检测中」与「待最终审核」由系统自动进入和退出，人工不得直接设置；人工节点只有剧本审核（A）与成片审核（B）。", "info")) +
+        U.card("当前阻断项", failing.length
+          ? U.notice(failing.map(r => r.id + "（" + r.object + "）" + r.result).join("；"), "bad") + U.listRows([["阻断对象", failing[0].object], ["报告", failing[0].id], ["不通过项", String(failing[0].fail)], ["处置", "按报告定位返工并重跑该级检测"]])
+          : U.notice("当前项目没有硬性阻断报告。", "ok") , "阻断期间不得交付") +
+      "</div></div>";
+  }
+
   AppModule.register({
     group: "quality", label: "质量与返工", icon: "check", order: 8, end: "workspace",
     routes: [
-      {
-        path: "quality/gates", title: "质量门禁", icon: "check", permission: "quality.read",
-        desc: "质量分四级（资产 / 镜头 / 单集 / 整剧）× 十维矩阵，结论只有 PASS / REVIEW_REQUIRED / FAIL 三种，门禁按级别逐层放行。",
-        render(query) {
-          const p = App.currentProject(query);
-          if (!p || !DB.derived.canViewProject(p)) return U.page("质量与返工 / 质量门禁", "项目不在可见范围", "请从项目列表进入可见项目，或由负责人授权后再查看质量门禁。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目", "跨项目或不存在项目不渲染检测内容。"));
-          const pid = p.id;
-          const wf = DB.derived.workflow(p);
-          const reports = D.qualityReports.filter(r => String(r.object).indexOf(p.id) >= 0);
-          const failing = reports.filter(r => r.fail > 0 || r.result === "未通过" || r.result === "FAIL");
-          const latest = reports.slice(-1)[0];
-          const cols = [{ key: "asset", label: "资产级" }, { key: "shot", label: "镜头级" }, { key: "ep", label: "单集级" }, { key: "all", label: "整剧级" }];
-          return U.page("质量与返工 / 质量门禁", "质量门禁", "门禁不是「检测完就通过」：未通过阻断下游，需人工判断必须给出人工结论后才能放行。",
-            U.btn("质量报告", "quality.toReports", "primary", { id: p.id }) + U.btn("返工台账", "quality.toRework", "", { id: p.id }),
-            '<div class="grid grid-4">' +
-              U.metric("检测级别", "4 级", "资产 / 镜头 / 单集 / 整剧", "▤") +
-              U.metric("检测维度", "10 维", "剧本到成片全覆盖", "▦") +
-              U.metric("当前项目结论", latest ? latest.result : "尚无报告", p.name + " · " + reports.length + " 份报告", "!") +
-              U.metric("阻断报告", String(failing.length), failing.length ? failing.map(r => r.id).join("、") : "无硬性阻断", "×") +
-            "</div>" +
-            U.card("四级 × 十维矩阵（" + U.esc(p.name) + "）", U.matrix(D.qualityMatrix, cols), "「—」表示该维度在此级别不检测") +
-            '<div class="split mt-4"><div class="stack">' +
-              U.card("四级检测范围", U.table(["级别", "对象", "检测内容"], D.qualityLevels.map(l => "<tr><td class=\"cell-strong\">" + U.esc(l.level) + "</td><td>" + U.esc(l.object) + '</td><td class="cell-wrap muted">' + U.esc(l.check) + "</td></tr>")), "级别不可跳级") +
-              U.card("结论与放行", U.table(["结论", "含义", "放行条件"], [
-                ["PASS", "全部检测项通过", "直接放行"],
-                ["REVIEW_REQUIRED", "存在需人工判断项", "人工结论记录理由后放行"],
-                ["FAIL", "存在硬性不通过项", "阻断，必须返工"]
-              ].map(r => "<tr><td>" + U.pill(r[0]) + '</td><td class="cell-wrap">' + r[1] + '</td><td class="cell-wrap muted">' + r[2] + "</td></tr>").join("")), "人工结论必须留理由") +
-            '</div><div class="stack">' +
-              U.card("门禁链路", U.chain([
-                { label: "资产", meta: wf.pendingAssets.length ? wf.pendingAssets.length + " 待确认" : "已确认", state: wf.pendingAssets.length ? "wait" : "done" },
-                { label: "镜头", meta: wf.passedShots.length + " / " + wf.shots.length + " 通过", state: wf.shots.length && wf.passedShots.length === wf.shots.length ? "done" : "now" },
-                { label: "单集", meta: wf.passEps.length + " / " + wf.total + " 集 PASS", state: wf.total && wf.passEps.length === wf.total ? "done" : (wf.passEps.length ? "now" : "wait") },
-                { label: "整剧", meta: wf.gateDelivery.ok ? "可交付" : "未满足", state: wf.gateDelivery.ok ? "done" : "wait" }
-              ]), "上一级 FAIL 时不进入下一级") +
-              U.card("系统自动进出状态", U.notice("「质量检测中」与「待最终审核」由系统自动进入和退出，人工不得直接设置；人工节点只有剧本审核（A）与成片审核（B）。", "info")) +
-              U.card("当前阻断项", failing.length
-                ? U.notice(failing.map(r => r.id + "（" + r.object + "）" + r.result).join("；"), "bad") + U.listRows([["阻断对象", failing[0].object], ["报告", failing[0].id], ["不通过项", String(failing[0].fail)], ["处置", "按报告定位返工并重跑该级检测"]])
-                : U.notice("当前项目没有硬性阻断报告。", "ok") , "阻断期间不得交付") +
-            "</div></div>"
-          );
-        }
-      },
       {
         path: "quality/reports", title: "质量报告", icon: "doc", permission: "quality.read",
         desc: "报告可追溯到检测项、检测能力与结论；报告是交付包中的必需内容，不允许手写替代。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p || !DB.derived.canViewProject(p)) return U.page("质量与返工 / 质量报告", "项目不在可见范围", "请从项目列表进入可见项目，或由负责人授权后再查看检测报告。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目", "跨项目或不存在项目不渲染检测报告。"));
+          if (!p || !DB.derived.canViewProject(p)) return U.page("质量与返工 / 质量报告", "项目不在可见范围", "请从项目列表进入可见项目，或由负责人授权后再查看检测报告。", U.btn("返回项目列表", "common.projects", "primary"), U.empty("无法读取项目", "跨项目或不存在项目不渲染检测报告。"));
           const pid = p.id;
           const reports = D.qualityReports.filter(r => String(r.object).indexOf(pid) >= 0);
           const reportIds = new Set(reports.map(r => r.id));
@@ -66,14 +59,16 @@
             '<tr><td>' + U.code(i.report) + "</td><td>" + U.esc(i.dim) + '</td><td class="cell-wrap">' + U.esc(i.where) + "</td><td>" + U.pill(i.level) + '</td><td class="cell-wrap">' + U.esc(i.action) + "</td><td>" + (i.auto === "是" ? U.pill("自动处理", "info") : U.pill("需人工", "outline")) + "</td></tr>").join("");
           const body = tab === "reports"
             ? U.table(["报告", "对象", "级别", "版本", "结论", "检测项", "问题", "待审", "不通过", "时间", "操作"], rows, "当前范围暂无质量报告")
-            : U.table(["报告", "维度", "定位", "严重度", "处理动作", "处理方式"], issueRows, "当前范围暂无问题项");
+            : tab === "gates"
+              ? gatesBlock(p)
+              : U.table(["报告", "维度", "定位", "严重度", "处理动作", "处理方式"], issueRows, "当前范围暂无问题项");
           const passN = reports.filter(r => r.result === "通过" || r.result === "PASS").length;
           const reviewN = reports.filter(r => r.result === "需人工判断" || r.result === "REVIEW_REQUIRED").length;
           const failN = reports.filter(r => r.result === "未通过" || r.result === "FAIL").length;
           const latestFail = reports.filter(r => r.fail > 0 || r.result === "未通过" || r.result === "FAIL")[0];
           return U.page("质量与返工 / 质量报告", "质量报告", "检测项、检测能力、定位与处理动作必须写清；结论不接受「整体感觉良好」。",
-            U.btn("质量门禁", "quality.toGates", "", p ? { id: p.id } : {}) + U.btn("返工台账", "quality.toRework", "", p ? { id: p.id } : {}),
-            U.card("", U.tabs([{ value: "reports", label: "报告", count: reports.length }, { value: "issues", label: "问题项", count: issues.length }], tab, "quality.tab") + body, p ? U.esc(p.name) + " · 按对象与级别检索" : "全库范围 · 按对象与级别检索") +
+            U.btn("返工台账", "quality.toRework", "", p ? { id: p.id } : {}),
+            U.card("", U.tabs([{ value: "reports", label: "报告", count: reports.length }, { value: "issues", label: "问题项", count: issues.length }, { value: "gates", label: "门禁", count: failN }], tab, "quality.tab") + body, p ? U.esc(p.name) + " · 按对象与级别检索" : "全库范围 · 按对象与级别检索") +
             '<div class="split mt-4"><div class="stack">' +
               U.card(latestFail ? latestFail.id + " · FAIL" : "当前范围无 FAIL 报告", latestFail
                 ? U.desc([["对象", latestFail.object], ["级别", latestFail.level], ["结论", latestFail.result], ["检测项", latestFail.items + "（不通过 " + latestFail.fail + " / 待审 " + latestFail.review + "）"], ["检测能力", "质检模型 + 视觉模型"], ["阻断", "是 · 下游全部暂停"]]) +
@@ -100,7 +95,7 @@
         desc: "返工按最小单元执行：能只重做一个镜头就不整场重跑；旧版本一律保留，成本单独入账。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p || !DB.derived.canViewProject(p)) return U.page("质量与返工 / 返工台账", "项目不在可见范围", "请从项目列表进入可见项目，或由负责人授权后再查看返工台账。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目", "跨项目或不存在项目不渲染返工记录。"));
+          if (!p || !DB.derived.canViewProject(p)) return U.page("质量与返工 / 返工台账", "项目不在可见范围", "请从项目列表进入可见项目，或由负责人授权后再查看返工台账。", U.btn("返回项目列表", "common.projects", "primary"), U.empty("无法读取项目", "跨项目或不存在项目不渲染返工记录。"));
           const pid = p.id;
           const ledger = D.reworkLedger.filter(r => r.project === pid);
           const rows = ledger.map(r =>
@@ -145,10 +140,6 @@
   App.on("quality.toReports", (el) => {
     const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id;
     App.go("quality/reports", pid ? { id: pid } : undefined);
-  });
-  App.on("quality.toGates", (el) => {
-    const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id;
-    App.go("quality/gates", pid ? { id: pid } : undefined);
   });
   App.on("quality.toRework", (el) => {
     const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id;

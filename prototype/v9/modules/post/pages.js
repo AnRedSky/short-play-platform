@@ -2,10 +2,37 @@
 (function () {
   const U = UI, D = DB, SCOPE = "post";
   const epOf = (p) => D.episodes.filter(e => e.project === p);
-  const pct = (p) => (p.episodes ? Math.round((p.done / p.episodes) * 100) : 0);
+  const pct = (p) => D.derived.progressOf(p).pct;
   const frozenOf = (pid) => {
     const p = D.projects.find(x => x.id === pid);
     return p && ["已交付", "已归档"].indexOf(p.status) >= 0 ? p : null;
+  };
+
+  /* ---------- 作品（原 post/works，B2·M2 并入交付包的「作品」tab） ----------
+     作品是交付后的外部形态：与交付包绑定、版本冻结，后续改动一律走新版本链。
+     作品清单、状态口径、交付摘要、新版本链规则全部按单一项目投影。 */
+  const worksBlock = (p) => {
+    const works = D.works.filter(w => w.project === p.id);
+    const rows = works.map(w =>
+      '<tr><td>' + U.entity(w.name, w.project, "▣") + "</td><td>" + U.pill(w.status) + '</td><td class="num">' + U.esc(w.episodes) + "</td><td>" + U.esc(w.duration) + "</td><td>" + U.esc(w.delivered) + "</td><td>" + U.esc(w.version) + '</td><td class="cell-wrap muted">' + U.esc(w.next) + "</td><td>" +
+      U.btn("版本链", "post.versionChain", "sm", { p: w.project }) + " " + U.btn("详情", "post.workDetail", "sm", { p: w.project }) + (w.status === "已交付" && App.can("project.create") ? " " + U.btn("新建 V2", "post.newVersion", "sm", { id: w.project }) : "") + "</td></tr>").join("");
+    const dps = D.deliveries.filter(x => x.project === p.id).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    const dp = dps[0];
+    const rv = D.reviews.filter(r => r.project === p.id).slice(-1)[0];
+    return U.card("作品清单 · " + U.esc(p.name), U.table(["作品", "状态", "集数", "时长", "交付日", "版本", "后续", "操作"], rows, "当前项目还没有已登记的作品"), "仅显示所选项目的作品") +
+      '<div class="split mt-4"><div class="stack">' +
+        U.card("作品状态口径", U.table(["状态", "含义", "可做操作"], [
+          ["制作中", "生产未完成", "推进生产"],
+          ["已交付", "已生成交付包", "可新建版本"],
+          ["返工中", "指定镜头返工", "只处理返工项"],
+          ["已归档", "长期只读", "只读可查"]
+        ].map(r => '<tr><td class="cell-strong">' + r[0] + '</td><td class="cell-wrap">' + r[1] + '</td><td class="cell-wrap muted">' + r[2] + "</td></tr>").join("")), "状态由系统推进，人工不可直接改") +
+        U.card("交付后可发生的变更", U.listRows([["新版本", "新建 V2，不覆盖 V1"], ["补交付", "追加文件进新版本链"], ["下线", "只改状态，不删文件"], ["撤回", "需审计留痕"]]) , "不允许原地修改已交付文件") +
+      '</div><div class="stack">' +
+        U.card("交付摘要 · " + U.esc(p.name), dp ? U.desc([["项目", dp.project + " " + p.name], ["交付包", dp.id + " " + dp.version], ["集数", dp.episodes + " / " + (p.episodes || "—")], ["交付时间", dp.at], ["审核人", dp.reviewer], ["校验", dp.checksum], ["状态", dp.status + (dp.frozen ? " · 冻结" : "")]]) : U.empty("尚无交付包", "当前项目还没有生成交付包；交付摘要会在确认接收后写入。"), dp ? "交付摘要不随新版本改变" : "交付后生成") +
+        U.card("新版本链规则", U.notice(dp ? "交付后如出现新素材或新集次，必须新建版本链并在作品详情标注差异；不得覆盖历史交付包。" : "交付包生成并确认后，作品才进入交付状态；历史版本永久可查。", "info")) +
+        U.card("最近审核", rv ? U.desc([["记录", rv.id], ["项目", rv.project], ["对象", rv.object], ["结论", rv.result], ["审核人", rv.auditor], ["时间", rv.at]]) : U.notice("当前项目还没有成片审核记录。", "warn"), "审核记录来自真实项目") +
+      "</div></div>";
   };
 
   AppModule.register({
@@ -146,7 +173,7 @@
         }
       },
       {
-        path: "post/delivery", title: "交付包", icon: "archive", permission: "delivery.execute",
+        path: "post/delivery", title: "交付包", icon: "archive", permission: ["delivery.read", "delivery.execute"],
         group: "delivery", groupLabel: "审核与交付", groupOrder: 8.5, groupIcon: "check",
         desc: "交付包是冻结产物：9 类内容逐项核验、附校验摘要，生成后不接受修改，只能新建下一版本。",
         render(query) {
@@ -175,7 +202,9 @@
               : wf.gateDelivery.ok
                 ? "当前项目交付门禁已满足，可按流程生成交付包。"
                 : "当前项目交付门禁未满足，暂不可生成交付包。";
-          const cta = p.status === "已完成"
+          const cta = !App.can("delivery.execute")
+            ? U.btn("返回项目列表", "common.projects") + '<span class="faint small" style="margin-left:8px">当前身份只读：交付记录可查，生成/确认需交付执行权限</span>'
+            : p.status === "已完成"
             ? (dp && ["待确认", "待核验"].indexOf(dp.status) >= 0
               ? U.btn("确认交付并冻结", "projects.wfDelivery", "primary", { pid: p.id })
               : wf.gateDelivery.ok
@@ -184,9 +213,14 @@
             : p.status === "待最终审核"
               ? U.btn("进入终审", "projects.wfFinal", "primary", { pid: p.id })
               : U.btn("打开制作流水线", "projects.wfOpen", "primary", { pid: p.id });
+          const tab = App.get(SCOPE, "tab", "delivery");
+          const tabsBar = U.card("", U.tabs([
+            { value: "delivery", label: "交付包", count: list.length },
+            { value: "works", label: "作品", count: D.works.filter(w => w.project === p.id).length }
+          ], tab, "post.tab"));
           return U.page("审核与交付 / 交付包", "交付包", "生成交付包是流程终点：集数不齐、授权不齐、质检未过一律不允许生成。",
-            cta + U.btn("作品视图", "post.toWorks", "", { id: p.id }),
-            '<div class="grid grid-4">' +
+            cta,
+            tabsBar + (tab === "works" ? worksBlock(p) : '<div class="grid grid-4">' +
               U.metric("已交付", String(delivered), U.esc(p.name), "✓") +
               U.metric("待核验", String(pending), "确认后冻结", "○") +
               U.metric("交付内容项", D.deliveryChecklist.length + " 类", "按清单逐项核验", "▤") +
@@ -205,47 +239,7 @@
               ]), "不允许绕过阻断项") +
               U.card("阻断提示", blockers.length ? U.notice(blockers.map(i => i.label + (i.note ? "（" + i.note + "）" : "")).join("；"), "bad") : U.notice(noteText, (dp && dp.status === "已交付") ? "info" : "ok"), "阻断项不进入交付包") +
               U.card("冻结规则", U.listRows([["生成即冻结", "交付包不可修改"], ["新版本", "只能新建 V2，不覆盖 V1"], ["补交付", "新增文件进新版本链"], ["引用检查", "删除资产前先查引用"]]) , "历史版本永久可查") +
-            "</div></div>"
-          );
-        }
-      },
-      {
-        path: "post/works", title: "作品库", icon: "archive", permission: "delivery.execute",
-        group: "delivery", groupLabel: "审核与交付", groupOrder: 8.5, groupIcon: "check",
-        desc: "作品是交付后的外部形态：与交付包绑定、版本冻结，后续改动一律通过新版本链。",
-        render(query) {
-          const requested = !!(query && query.id);
-          const scopedProject = requested ? App.currentProject(query) : null;
-          if (requested && !scopedProject) {
-            return U.page("审核与交付 / 作品库", "作品库", "该项目不在当前可见范围，作品与交付摘要均不展示。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取作品", "请从作品库或项目列表进入可见项目。"));
-          }
-          const projects = requested ? [scopedProject] : DB.derived.visibleProjects();
-          const pids = projects.map(p => p.id);
-          const scopeName = requested ? scopedProject.name : "可见项目 " + projects.length + " 个";
-          const works = D.works.filter(w => pids.indexOf(w.project) >= 0);
-          const rows = works.map(w =>
-            '<tr><td>' + U.entity(w.name, w.project, "▣") + "</td><td>" + U.pill(w.status) + '</td><td class="num">' + U.esc(w.episodes) + "</td><td>" + U.esc(w.duration) + "</td><td>" + U.esc(w.delivered) + "</td><td>" + U.esc(w.version) + '</td><td class="cell-wrap muted">' + U.esc(w.next) + "</td><td>" +
-            U.btn("版本链", "post.versionChain", "sm", { p: w.project }) + " " + U.btn("详情", "post.workDetail", "sm", { p: w.project }) + (w.status === "已交付" && App.can("project.create") ? " " + U.btn("新建 V2", "post.newVersion", "sm", { id: w.project }) : "") + "</td></tr>").join("");
-          const dps = D.deliveries.filter(x => pids.indexOf(x.project) >= 0).sort((a, b) => String(b.at).localeCompare(String(a.at)));
-          const dp = dps[0];
-          const rv = D.reviews.filter(r => pids.indexOf(r.project) >= 0).slice(-1)[0];
-          const dpProject = dp ? (D.projects.find(x => x.id === dp.project) || {}) : null;
-          return U.page("审核与交付 / 作品库", "作品库", "作品状态六类：制作中 / 待审核 / 已交付 / 返工中 / 已归档 / 已下线（不新建状态）。",
-            U.btn("导出作品清单", "common.export") + (requested ? U.btn("交付包", "post.toDelivery", "", { id: scopedProject.id }) : ""),
-            U.card("作品清单 · " + U.esc(scopeName), U.table(["作品", "状态", "集数", "时长", "交付日", "版本", "后续", "操作"], rows, requested ? "当前项目还没有已登记的作品" : "可见项目暂无已登记作品"), requested ? "仅显示所选项目的作品" : "默认聚合当前身份可见项目；进入项目内可查看单项目作品") +
-            '<div class="split mt-4"><div class="stack">' +
-              U.card("作品状态口径", U.table(["状态", "含义", "可做操作"], [
-                ["制作中", "生产未完成", "推进生产"],
-                ["已交付", "已生成交付包", "可新建版本"],
-                ["返工中", "指定镜头返工", "只处理返工项"],
-                ["已归档", "长期只读", "只读可查"]
-              ].map(r => '<tr><td class="cell-strong">' + r[0] + '</td><td class="cell-wrap">' + r[1] + '</td><td class="cell-wrap muted">' + r[2] + "</td></tr>").join("")), "状态由系统推进，人工不可直接改") +
-              U.card("交付后可发生的变更", U.listRows([["新版本", "新建 V2，不覆盖 V1"], ["补交付", "追加文件进新版本链"], ["下线", "只改状态，不删文件"], ["撤回", "需审计留痕"]]) , "不允许原地修改已交付文件") +
-            '</div><div class="stack">' +
-              U.card("交付摘要 · " + U.esc(requested ? scopedProject.name : "最近交付"), dp ? U.desc([["项目", dp.project + " " + (dpProject.name || "")], ["交付包", dp.id + " " + dp.version], ["集数", dp.episodes + " / " + (dpProject.episodes || "—")], ["交付时间", dp.at], ["审核人", dp.reviewer], ["校验", dp.checksum], ["状态", dp.status + (dp.frozen ? " · 冻结" : "")]]) : U.empty("尚无交付包", requested ? "当前项目还没有生成交付包；交付摘要会在确认接收后写入。" : "可见项目还没有生成交付包。"), dp ? "交付摘要不随新版本改变" : "交付后生成") +
-              U.card("新版本链规则", U.notice(dp ? "交付后如出现新素材或新集次，必须新建版本链并在作品详情标注差异；不得覆盖历史交付包。" : "交付包生成并确认后，作品才进入交付状态；历史版本永久可查。", "info")) +
-              U.card("最近审核", rv ? U.desc([["记录", rv.id], ["项目", rv.project], ["对象", rv.object], ["结论", rv.result], ["审核人", rv.auditor], ["时间", rv.at]]) : U.notice(requested ? "当前项目还没有成片审核记录。" : "可见项目还没有成片审核记录。", "warn"), "审核记录来自真实项目") +
-            "</div></div>"
+            "</div></div>")
           );
         }
       },
@@ -292,8 +286,8 @@
   /* ---------- 动作 ---------- */
   App.on("post.toEpisodes", (el) => App.go("post/episodes", { id: (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || ((App.currentProject() || {}).id || "") }));
   App.on("post.toReview", (el) => App.go("post/review", { id: (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || ((App.currentProject() || {}).id || "") }));
-  App.on("post.toWorks", (el) => App.go("post/works", { id: (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || ((App.currentProject() || {}).id || "") }));
   App.on("post.toDelivery", (el) => App.go("post/delivery", { id: (el && el.dataset && el.dataset.id) || (App.current().query || {}).id || ((App.currentProject() || {}).id || "") }));
+  App.on("post.tab", (el) => { App.set(SCOPE, "tab", el.dataset.value); App.refresh(); });
   App.on("post.toAssets", (el) => { const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id; App.go("assets/library", pid ? { id: pid } : undefined); });
   App.on("post.openTimeline", (el) => {
     const ep = Number(el.dataset.ep) || 17;
@@ -525,7 +519,7 @@
       title: "新建 V2 版本链", sub: "新版本以新项目建立，复制设定与规模后重新走剧本审核；V1 交付包与历史记录不变",
       body: U.fField("新版本名称", "name", { value: baseName + " · V" + n, required: true }) +
         U.fField("集数", "episodes", { value: String(src.episodes), required: true, type: "number" }) +
-        U.fField("预算", "budget", { value: String(src.budget), required: true, type: "number" }) +
+        U.fField("预算", "budget", { value: String(DB.derived.budgetOfProject(src).total), required: true, type: "number" }) +
         U.fTextarea("版本说明", "note", { required: true, minlen: 8, rows: 2, value: "基于 " + src.id + " 交付版本建立 " + "V" + n + "，保留原交付包" }) +
         U.notice("新版本不会复制镜头、时间线与交付包；这些对象必须在新项目中重新生产与质检。", "info"),
       submitText: "建立版本链",

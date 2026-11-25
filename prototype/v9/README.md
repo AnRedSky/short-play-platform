@@ -1,4 +1,4 @@
-# FRAME 短剧工场 · 第 9.6.0 版静态交互原型
+# FRAME 短剧工场 · 第 9.7.0 版静态交互原型
 
 单一企业内部 AI 短剧制作平台的静态交互原型。**全部数据为虚构示例数据**，不连接任何真实模型、存储、任务调度或账单系统；但业务流程按真实系统执行：状态机、门禁、表单校验、权限拦截、成败反馈与数据联动都是真实逻辑，不是占位 Toast。
 
@@ -13,6 +13,75 @@
 1. 默认视角是项目负责人（`i-owner`）；工作台、项目、生产域都以「我负责 / 被我授权的项目」为数据范围。
 2. 审批节点 A/B 保留，但负责人可以自己完成确认（同一人既是制作人也是审核人），不强制第二人。
 3. 顶栏身份切换冻结为**评审模式**：只用于让评审者查看其他角色的权限与数据范围，不作为产品功能。
+
+#### 9.7.0 · B3–B7 补记（骨架、按钮密度、权限与账本）
+
+B2 收盘后在同版内继续做了五类整改，均以脚本断言落地：
+
+- **命名派生（B3）**：页眉章节不再手写——`ui.js` 的 `chapterOf()` 按当前路由在 `DB.menu` 里取二级菜单名，56 个调用点零改动；面包屑改三级（一级 / 二级 / 三级），全部由 `DB.menu` 派生；模块注册的 `label` 降级为内部 key。新增 `tools/_audit_naming.mjs`，56 路由断言 0 失败。
+- **导航动作收口（R-10）**：全站的「返回项目列表」统一为 `common.projects`（删掉 `projects.listLink` / `director.toProjects` 两个动作），文案一致。
+- **首页瘦身（R-21）**：`workspace/home` 从 13 区块压到 hero + 下一步 + 链路一行摘要 + 分集卡 + 3 KPI + 今日待办，共 6 个页面级操作；链路明细只在 `projects/workflow`。
+- **按钮密度与体量（R-18 / R-22 / R-23）**：新增 `tools/_audit_buttons.mjs`（按 tab 渲染 76 个快照，口径为"表格行内、带 `data-value`/`data-id`/`data-pid` 的按钮随数据重复，不算页面操作"）。结果：同页重复动作 0、动作 >6 的页 0、≥12KB 的页 0；`analytics/enterprise` 14929 → 10989 字符（口径表 25 行 → 10 行核心指标 + 指向规范 §19.3–§19.5），`ops/overview` 的队列明细改为一行摘要、明细归 `ops/queue`。
+- **权限对齐（B5）**：新增 `delivery.read` / `task.read`；`workspace/home` 改 `project.read|platform.read`（六身份全可达）；`post/delivery` 读走 `delivery.read`、执行走 `delivery.execute`；`tasks/*` 路由 `task.read`、写按钮 `task.operate`；`models/config` 改 `models.own|models.manage`，管理员多一张「企业托管资源与额度」。
+- **预算单账本（R-32）**：`DB.analytics.depts` 与 `DB.enterprise` 的预算字段降级为 `DB.budgets` 的投影，由 `derived.syncScopeBudgets()` 在账本变动后回写；补齐「短剧二组」「经营管理部」两条部门账本；`_audit_kpi` 112 → 127 项（新增"部门/企业已用 = 账本 used"断言）。
+- **冒烟与回归**：`_smoke.html` 路由遍历自适应 `App.routes()`（当前 56），并新增 9 条合并页 tab 断言（点击 `data-value` 后断言非空、无 `undefined/NaN`）。`_e2e.html` 计数断言尚未补齐。
+
+> 施工纪律（事故后写入）：**不要用 PowerShell 对 `modules/*/pages.js` 批量 `.Replace`**。本版曾因 `$map` 被展平导致 4 个文件的全部双引号被替换成中文字符（director→`进`、post→`处`、projects→`打`、video→`去`），已按"两侧皆为非 ASCII 视为正文"的邻接规则逐字符恢复并有全量 `node --check` 与回归证据。改文案一律用编辑器逐处替换，或写 `.mjs` 用 Node 读写。
+
+
+
+一批「同一实体两份实现」的重复页全部收敛为一个宿主页 + tab/视图，**没有删除任何业务能力**，只是把入口从 9 个页面变成 9 个 tab：
+
+| 原路由 | 并入 | 形态 | 旧链接 |
+| --- | --- | --- | --- |
+| `workspace/projects`（我的项目） | `projects/list` | 「关系筛选」全部 / 我负责 / 我参与 / 待我审核 + 卡片「我的角色」 | 转发 |
+| `quality/gates`（质量门禁） | `quality/reports` | 「门禁」tab（四级 × 十维矩阵、三态结论、阻断与豁免） | 转发 |
+| `post/works`（作品库） | `post/delivery` | 「作品」tab（作品清单 / 状态口径 / 交付摘要 / 新版本链） | 转发 |
+| `video/results`（生成结果） | `video/preview` | 「版本列表」tab（多版本并存、设为采用） | 转发 |
+| `director/storyboard`（分镜板） | `director/shots` | 「分镜视图」（列表 / 分镜双视图，筛选不丢） | 转发 |
+| `assets/usage`（引用关系） | `assets/library` | 「引用」tab（引用表、删除阻断、引用统计） | 转发 |
+| `cost/usage`（用量与计量） | `cost/ledger` | 「用量」tab（计量差异、按能力用量、计费口径） | 转发 |
+| `notify/incidents`（异常中心） | `compliance/risks` | 「处置」tab（异常台账、处置原则、高频处置口径） | 转发 |
+| `analytics/departments` + `analytics/employees` | `analytics/enterprise` | 「部门对比」「员工对比」两个 tab；删除「对比入口」卡 | 转发 |
+
+配套约定：
+
+- 合并后统一 `X.tab` 动作族（`post/assets/cost/compliance/analytics/director.view/video.tab`），页面主体写成 `xxxBlock(p)` 纯函数，宿主页只做 `tabsBar + (tab === ... ? block : ...)`。
+- 旧地址一律经 `app.js` 的 `LEGACY` 转发到新宿主页，不报 404；跨项目聚合视图统一交给工作台首页与项目列表，页内只按单一项目投影。
+- 路由 65 → 56、动作注册 324、失效内链 0；`tools/_probe_tab.mjs` 逐 tab 渲染断言（避免出现「合并了但 tab 空白」）。
+- `tools/_audit_links.mjs` 新增 LEGACY 断言（从 `app.js` 解析映射表，验证旧地址已下线、目标存在、宿主页渲染非空），10 条 100% 通过；同时补齐项目上下文桩，链接/动作覆盖由 242 提升到 1468。
+- 未做、且刻意不做：M10–M13（`projects/detail`、`tasks/attempt`、`models/routing`、`orgs/member`）是**下钻层级**，不是重复实体，合并只会丢上下文。
+
+### 9.6.4：作品库并入交付包（B2 · M2）
+
+- 删除 `post/works` 路由与 `o-works` 菜单项：作品清单、作品状态口径、交付后可变更、交付摘要、新版本链规则、最近审核抽为 `worksBlock(p)`，成为 `post/delivery` 的**「作品」tab**（与「交付包」并列）。
+- 作品视图不再提供「可见项目聚合」：跨项目交付概览由工作台首页「最近交付作品」承担；`post/delivery` 只按单一项目投影，「新建 V2」「版本链」「详情」仍在作品 tab 内完成。
+- 删除自指的「作品视图」按钮与 `post.toWorks` 动作；新增 `post.tab`；`LEGACY` 追加 `#/post/works → post/delivery`；交付完成通知链接改指 `post/delivery`。
+- 合并后 63 路由 / 318 动作；`_probe_tab` 实测作品 tab 3703 字符 · 7 卡 · 0 指标，交付包 tab 5095 字符不变。
+
+### 9.6.3：质量门禁并入质量报告（B2 · M7）
+
+- 删除 `quality/gates` 路由与 `q-gates` 菜单项：「四级检测范围 / 十维矩阵 / 三态结论 / 阻断与豁免」抽为 `gatesBlock(p)`，成为 `quality/reports` 的**「门禁」tab**（与「报告」「返工台账」并列）。
+- 门禁页头的「质量门禁」自指按钮删除；`quality.toGates` 动作删除，全站无残留引用；`LEGACY` 追加 `#/quality/gates → quality/reports`，旧链接不 404。
+- 合并后 64 路由 / 318 动作；`tools/_probe_tab.mjs` 新增（按 tab 渲染探针，用于验证并入的 tab 真的出内容：门禁 tab 10043 字符 · 12 卡 · 16 指标，无 undefined/NaN）。
+
+### 9.6.2：项目清单唯一化（B2 · M1）
+
+- 删除 `workspace/projects`（我的项目）路由与 `w-projects` 菜单项：项目清单全站只剩 `projects/list` 一处。
+- 原「我负责 / 我参与 / 待我审核」三 tab 变为 `projects/list` 的关系筛选（`projects.setRel`），卡片新增「我的角色」标记；关系判定与负责人列同源，管理员看到空关系是正确结果。
+- 首页入口卡里的「创作项目」改为「项目列表」并指向 `projects/list`；「新建项目 / 全部项目」两个同义动作合并为 `projects.new` / `projects.listLink`，删除 `workspace.newProject`、`workspace.toProjects`、`workspace.tab`。
+- `app.js` 新增 `LEGACY` 路由转发：`#/workspace/projects` 落到 `projects/list`，老链接不报 404。
+- 回归：65 路由全渲染、319 动作 0 未注册、失效内链 0、`_audit_perms` 0 missing、口径回归 112 项通过。
+
+### 9.6.1：口径收口（B1）
+
+- 预算收敛为**单一账本**：`DB.budgets` 项目记录是唯一金额源，`store.js` 内新增 `ensureProjectBudget()`（缺失补建、存在则回写项目字段），修复 `SP-26015 / SP-26007` 与账本不一致、4 个项目无账本的漂移；`p.actual / p.budget` 降级为账本投影。
+- 预算状态判定收敛为 `budgetStateFor(used, total, frozen)` 一处，85% 阈值移入 `DB.pricing.budgetWarnRate`，删除三处重复判断。
+- `DB.derived` 新增五个单一口：`budgetOfProject / progressOf / taskStats / deliveryStats / duties`；`home()` 改为 `scope: "mine"`、成本预算来自单项目账本之和，并删除从未渲染的 `decisions`。
+- 工作台首页统一口径：hero 预算百分比改用账本、`可见项目成本`更正为`我负责项目成本（合计）`、待办卡 / 指标 / 明细表全部取自 `duties()`（此前三处各算一遍）。
+- 删除两处系数造假：字幕单价、抽检比例与每镜均价移入 `DB.pricing`；分镜抽检样本改为读取常量并在报告里注明比例与下限。
+- `common.export` 文件名改为「页面标题 + 项目编号 + 日期」派生，20 个"导出 X"入口不再共用 `prototype-export.csv`。
+- 新增 `tools/_audit_kpi.mjs`（106 项口径断言）与 `tools/_audit_ia2.mjs` / `_audit_ia3.mjs`（命名与按钮落点盘点），纳入交付前回归。
 
 ### 9.5.0：全链路 1:1 落地、菜单跳转收口与体验优化
 
@@ -146,7 +215,7 @@ v9/
 ├─ docs/TRACEABILITY.md    页面 ↔ 业务方案对应关系
 ├─ docs/DESIGN-REVIEW-V9.1.md 产品经理视角评审与整改口径
 ├─ docs/AUDIT-V9.6.0.md  本轮对齐业务方案 V3.0 与通用静态原型开发规范的逐项记录
-├─ _smoke.html             浏览器巡检页（66 路由 + 角色权限）
+├─ _smoke.html             浏览器巡检页（56 路由 + 角色权限）
 ├─ _e2e.html               浏览器真实点击链路（28 条断言）
 └─ tools/                  回归与业务流断言脚本
 ```
@@ -182,27 +251,29 @@ Menu.on('change', (state, reason) => {});   // 统一事件通知
 - 菜单数据 `DB.menu` 与路由注册表的一致性由 `tools/regress.mjs` 交叉校验：每条路由必须且只能出现一次，权限码必须一致，避免两处口径漂移。
 - 菜单层级：短剧制作整体流程收在「短剧制作」一个一级菜单下，其二级菜单即生产流程节点（立项与项目 → 创意与剧本 → 导演与视觉 → 视频生产 → 音频与字幕 → 后期与交付 → 质量与返工），三级为各节点下的具体操作。
 
-## 路由清单（17 域 / 66 条）
+## 路由清单（17 域 / 56 条）
+
+> B2 归并进行中（已并入 3 条）：`workspace/projects`（我的项目）→ `projects/list` 的「关系筛选」；`quality/gates`（质量门禁）→ `quality/reports` 的「门禁」tab；`post/works`（作品库）→ `post/delivery` 的「作品」tab。三者都用 `app.js` 的 `LEGACY` 转发保活旧链接。其余合并见 `docs/PLAN-IA-REMEDIATION-V9.7.0.md`。
 
 | 域 | 路由 |
 | --- | --- |
 | ops 平台管理 | `ops/overview` `ops/capabilities` `ops/queue` `ops/logs` `ops/config` |
 | orgs 企业与组织 | `orgs/enterprise` `orgs/departments` `orgs/members` `orgs/member` `orgs/roles` `orgs/grants` `orgs/handover` |
 | projects 项目 | `projects/list` `projects/workflow` `projects/new` `projects/detail` `projects/lifecycle` |
-| workspace 工作台 | `workspace/home` `workspace/assistant` `workspace/projects` |
-| notify 通知 | `notify/inbox` `notify/incidents` |
+| workspace 工作台 | `workspace/home` `workspace/assistant` |
+| notify 通知 | `notify/inbox` |
 | creation 创意与剧本 | `creation/brief` `creation/plan` `creation/script` `creation/review` `creation/breakdown` |
-| director 导演规划 | `director/plan` `director/cast` `director/world` `director/shots` `director/storyboard` |
-| video 视频生产 | `video/production` `video/results` `video/preview` |
+| director 导演规划 | `director/plan` `director/cast` `director/world` `director/shots`（含「分镜视图」） |
+| video 视频生产 | `video/production` `video/preview`（含「版本列表」） |
 | audio 音频与字幕 | `audio/dialogue` `audio/voice` `audio/bgm` `audio/subtitle` |
-| post 后期与交付 | `post/timeline` `post/episodes` `post/review` `post/delivery` `post/works` `post/versions` |
-| quality 质量与返工 | `quality/gates` `quality/reports` `quality/rework` |
+| post 后期与交付 | `post/timeline` `post/episodes` `post/review` `post/delivery`（含「作品」tab） `post/versions` |
+| quality 质量与返工 | `quality/reports`（含「门禁」tab） `quality/rework` |
 | tasks 任务队列 | `tasks/list` `tasks/queue` `tasks/attempt` |
 | models 模型资源 | `models/config` `models/providers` `models/routing` |
-| assets 资产 | `assets/library` `assets/usage` |
-| cost 成本预算 | `cost/ledger` `cost/budget` `cost/usage` |
-| analytics 经营分析 | `analytics/enterprise` `analytics/departments` `analytics/employees` `analytics/me` |
-| compliance 合规审计 | `compliance/rights` `compliance/risks` `compliance/audit` |
+| assets 资产 | `assets/library`（含「引用」tab） |
+| cost 成本预算 | `cost/ledger`（含「用量」tab） `cost/budget` |
+| analytics 经营分析 | `analytics/enterprise`（tab：企业整体 / 部门对比 / 员工对比） `analytics/me` |
+| compliance 合规审计 | `compliance/rights` `compliance/risks`（含「处置」tab） `compliance/audit` |
 
 ## 六个身份与可见范围
 
@@ -229,11 +300,23 @@ Menu.on('change', (state, reason) => {});   // 统一事件通知
 
 ### 派生数据（唯一计算口）
 
-`assets/js/derived.js`（导出为 `DB.derived`）提供 `visibleProjects / canViewProject / visibleMembers / visibleCosts / visibleBudgets / scopeLabel / home / myProjects / qualityOf / reviewsOf / deliveriesOf / risksOf / projectSummary / workflow`。规则：
+`assets/js/derived.js`（导出为 `DB.derived`）提供 `visibleProjects / canViewProject / visibleMembers / visibleCosts / visibleBudgets / scopeLabel / projectsOf / myProjects / budgetOfProject / progressOf / taskStats / deliveryStats / duties / home / qualityOf / reviewsOf / deliveriesOf / risksOf / projectSummary / workflow`。规则：
 
 - 页面不得再用 `Math.round(p.done * 0.75)` 这类系数、`p.id === "SP-260xx"` 这类对象 ID 分支生成事实。
 - 「我的项目」= 本人负责或被授权，不等于「可见项目」；管理员可见全量但个人视图为空是正确结果。
 - 跨页同一指标必须来自同一个函数，避免首页、列表、详情三处口径打架。
+
+#### 五个强制单一口（v9.6.1 起，`tools/_audit_kpi.mjs` 守护）
+
+| 指标 | 唯一入口 | 禁止的做法 |
+| --- | --- | --- |
+| 预算金额与百分比 | `budgetOfProject(p)`（读 `DB.budgets` 项目账本） | 直接算 `p.actual / p.budget`；再写第二份 85% 阈值 |
+| 集进度 | `progressOf(p)`（以项目台账 `done / episodes` 为准） | 用抽样分集条数当分母或通过数 |
+| 任务数 | `taskStats(me)`（排队 + 执行 + 待人工 + 失败四类） | 页面各自 `D.tasks.filter(...).length` |
+| 待我处理 | `duties(me)`（通知表唯一事实源，owner 兼容两种写法） | 首页待办卡、指标卡、明细表各过滤一遍 |
+| 首页与多项目汇总 | `home(me)`（`scope: "mine"`，成本与预算来自单项目账本之和） | 把「我负责」的合计标成「可见范围」 |
+
+单价、抽检比例、预警阈值集中在 `DB.pricing`（`subtitlePerLine / voicePerSecond / videoPerShot / qcSampleRate / qcMinSample / qcItemsPerShot / budgetWarnRate`），页面不得写魔法数字。预算状态判定只允许走 `DB.state` 内的 `budgetStateFor(used, total, frozen)`。
 
 ## 单一立项入口（v9.1 起）
 
@@ -277,11 +360,20 @@ node tools/flow.mjs
 node tools/_journey.mjs
 node tools/_audit_actions.mjs
 node tools/_audit_perms.mjs
+node tools/_audit_kpi.mjs        # 口径单一口（预算/进度/任务/待办/首页汇总）
+node tools/_audit_ia2.mjs        # 命名、卡片、指标、取数口、权限码的静态盘点
+node tools/_audit_ia3.mjs        # 按钮文案 → 动作 → 落点路由
+node tools/_audit_links.mjs      # 失效内链（含 LEGACY 旧地址转发）
+node tools/_audit_dups.mjs       # 动作重复
+node tools/_audit_naming.mjs     # 页眉/标题/章节唯一性，面包屑必须由 DB.menu 派生
+node tools/_audit_buttons.mjs    # 按钮密度（同页同动作 ≤1、页面级动作 ≤6）与 ≥12KB 体量
+node tools/_audit_project_guard.mjs  # 项目页阻断
+node tools/_probe_tab.mjs video/preview versions   # 单 tab 渲染探针（合并页必跑）
 ```
 
 浏览器侧（4190 服务在线）：
 
-- `http://localhost:4190/_smoke.html`：66 路由渲染 + 3 个身份权限拦截 + 全局 JS 错误巡检。
+- `http://localhost:4190/_smoke.html`：56 路由渲染 + 9 条合并页 tab 断言 + 3 个身份权限拦截 + 全局 JS 错误巡检。
 - `http://localhost:4190/_e2e.html`：真实点击链路 27 条断言（新建项目校验与创建、前置依赖拦截、终审门禁、交付说明与分批交付、质量理由校验与裁决写回、通知闭环、项目暂停、预算低于已用、供应商连通性失败、合规类返工禁止重跑、重复邮箱占用）。
 
 ## 与《通用静态原型开发规范》的符合性说明
@@ -292,7 +384,7 @@ node tools/_audit_perms.mjs
 | --- | --- |
 | §三 全局只暴露 DB / UI / App 三个核心对象 | 状态层并入数据层命名空间 `DB.ops`、派生层为 `DB.derived`；`store.js` / `derived.js` 不再反向调用 `App` |
 | §四 分层与职责边界、依赖方向单向 | `DB.ops`（状态机 + 副作用）、`DB.derived`（唯一计算口）、`UI`（纯渲染）、`App`（路由 / 权限 / 反馈）、`modules/*`（业务页面）单向依赖；运行时上下文由 `App.start()` 注入 |
-| §五 路由与模块注册 | 17 域 / 66 条路由全部由 `AppModule.register` 登记，前缀与目录名一致；404 与 403 文案与返回入口分开，回归脚本增加边界断言 |
+| §五 路由与模块注册 | 17 域 / 56 条路由全部由 `AppModule.register` 登记，前缀与目录名一致；404 与 403 文案与返回入口分开，回归脚本增加边界断言 |
 | §六 页面渲染规范 | 表格列定义与行数据分离；图表显式传序列 / 标签 / 配色并支持双轴；事件全部挂全局动作对象，无内联多层引号 |
 | §七 Mock 数据规范 | 字典集中于 `data.js`；补齐供应商供给模式 `mode`、资产 `origin` / `creator` / `executor` / `storage` 字段，字段口径全项目一致 |
 | §八 样式规范 | 令牌集中在 `base.css`，组件只引用变量；三档断点保持不变 |
@@ -311,7 +403,7 @@ node tools/_audit_perms.mjs
 - 剧本审核三结论（通过 / 退回修改 / 终止项目）与退回位置定位（§6.3）；剧本变更影响分析八维度 + 镜头级清单（§6.4）。
 - 视频生产四状态分离、失败类型分类与差异化重试策略（§8.2 / §12.5）。
 - 任务十一种状态、生产衔接门禁四条逐条可见（§12.2 / §12.7）。
-- 质量门禁 PASS / 需人工判断 / 未通过；高危与合规项禁止人工接受现状；存在返工项时报告保持未通过（§11.3 / §11.5）。
+- 门禁结论 PASS / 需人工判断 / 未通过；高危与合规项禁止人工接受现状；存在返工项时报告保持未通过（§11.3 / §11.5）。
 - 终审四结论与被审版本锁定（§16.3 / §16.4）。
 - 集数完整性核对（计划 / 已生产 / 已通过 / 已交付 + 缺集 / 重复集 / 错序拦截）（§10.5）。
 - 预算五态（未设置 / 正常 / 接近阈值 / 已超限 / 已冻结），冻结时禁止派发新任务、已发生费用仍入账；费用调整保留原值、调整人、原因与凭据（§15.3 / §15.5）。

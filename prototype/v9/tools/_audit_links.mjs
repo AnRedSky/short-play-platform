@@ -8,6 +8,7 @@ import vm from "node:vm";
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "..");
 const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
+const CURRENT = { id: "" };
 const sandbox = { console };
 sandbox.window = sandbox;
 sandbox.location = { hash: "#/" };
@@ -23,15 +24,12 @@ sandbox.window.App = {
   identity() { return sandbox.window.DB.identities.find(i => i.id === "i-owner"); },
   role() { return sandbox.window.DB.roles.find(r => r.code === "owner"); },
   home() { return "workspace/home"; },
-  current() { return { path: "", query: {}, route: null }; },
+  current() { return { path: "", query: CURRENT, route: null }; },
   currentProject(q) {
     const db = sandbox.window.DB;
-    const qid = q && q.id;
-    if (qid) {
-      const p = db.projects.find(x => x.id === qid);
-      return p && sandbox.window.DB.derived.canViewProject(p) ? p : null;
-    }
-    return sandbox.window.DB.derived.visibleProjects()[0] || null;
+    const id = (q && q.id) || CURRENT.id;
+    if (id) { const p = db.projects.find(x => x.id === id); return p && db.derived.canViewProject(p) ? p : null; }
+    return db.derived.visibleProjects()[0] || null;
   },
   routes() { return []; }, groups() { return []; }
 };
@@ -42,6 +40,7 @@ sandbox.window.DB.state.bind({
   role: () => sandbox.window.DB.roles.find(r => r.code === "owner")
 });
 vm.runInContext(read("assets/js/derived.js"), sandbox, { filename: "derived.js" });
+sandbox.window.DB.derived.bind({ identity: () => sandbox.window.DB.identities.find(i => i.id === "i-owner") });
 for (const m of fs.readdirSync(path.join(root, "modules")).filter(d => fs.statSync(path.join(root, "modules", d)).isDirectory())) {
   vm.runInContext(read(`modules/${m}/pages.js`), sandbox, { filename: `${m}/pages.js` });
 }
@@ -69,3 +68,23 @@ for (const r of routes) {
 console.log(`路由 ${routes.length} · 内链 ${links} · 动作 ${actions} · 失效内链 ${problems.length}`);
 for (const p of problems) console.log("  ✗ " + p);
 console.log("无跳转且无动作的页面：" + (noAction.length ? "\n  " + noAction.join("\n  ") : "无"));
+
+/* LEGACY 转发校验：被并掉的旧地址必须映射到一个仍然存在、且能渲染出内容的宿主页 */
+const appSrc = read("assets/js/app.js");
+const legacyBlock = appSrc.match(/LEGACY\s*=\s*\{([\s\S]*?)\}/);
+if (!legacyBlock) {
+  console.log("  ✗ 未找到 LEGACY 映射表");
+} else {
+  const pairs = [...legacyBlock[1].matchAll(/["']?([\w/-]+)["']?\s*:\s*["']([\w/-]+)["']/g)].map(m => [m[1], m[2]]);
+  let ok = 0;
+  for (const [from, to] of pairs) {
+    if (routeSet.has(from)) { console.log(`  ✗ 旧地址仍在路由表：${from}`); continue; }
+    if (!routeSet.has(to)) { console.log(`  ✗ 转发目标不存在：${from} → ${to}`); continue; }
+    const host = routes.find(r => r.path === to);
+    let html = "";
+    try { html = host.render({ id: "SP-26031", ep: "17", shot: "SH-26031-E17-03" }); } catch (e) { console.log(`  ✗ 宿主页渲染失败：${to}（${e.message}）`); continue; }
+    if (html.length < 500) { console.log(`  ✗ 宿主页渲染过短：${from} → ${to}（${html.length} 字符）`); continue; }
+    ok++;
+  }
+  console.log(`LEGACY 转发 ${pairs.length} 条 · 通过 ${ok} · 异常 ${pairs.length - ok}`);
+}

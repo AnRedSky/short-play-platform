@@ -1,0 +1,179 @@
+# 信息架构整改清单与施工计划（v9.6.1 → v9.7.0）
+
+本文是《全站信息架构深度核查与整体调整方案》（`docs/REVIEW-IA-FULL-V9.7.0.md`）的执行版：**已做的记为事实，待做的记为可勾选条目**。每条都带落点文件与可测验收，不写"建议优化"这类无法验收的条目。
+
+当前基线（v9.7.0）：**56 条路由 / 17 个域 / 6 个一级菜单 / 324 个已注册动作 / 6 个身份**。审计快照随时可重跑：
+
+```
+node tools/_audit_ia2.mjs > tools/_ia_report.txt
+node tools/_audit_ia3.mjs > tools/_ia_btn.txt
+node tools/_audit_kpi.mjs
+node tools/_probe_tab.mjs <route> <tab> [projectId] [stateKey] [keyword]
+```
+
+| 审计维度（判定口径见脚本段号） | v9.6.2 基线 | v9.7.0 现状 | 目标（B3–B6 后） |
+| --- | --- | --- | --- |
+| 路由数 | 65 | **56 ✅** | 56 |
+| 页眉首参 ≠ 二级菜单名（§3b） | 63/65 | 53/56 | 0 |
+| 一个二级菜单出现多个章节名（§3c） | 16 组 | 14 组 | 0 |
+| 同动作多套文案（`_ia3` C 段） | 39 组 | 19 组 | ≤10 组 |
+| 跨页重复卡片标题（§4） | 11 组 | 8 组 | ≤3 组 |
+| 同页 metric ↔ 明细卡 1:1 重复（§6） | 7 页 | **8 页（微增，见 R-33）** | 0 |
+| 同页同文案不同动作（§3d） | 19 组 | 17 组 | ≤6 组（真同义） |
+| 口径多套（`_audit_kpi` 覆盖） | 3 组 | **0 ✅** | 0 |
+| 系数造假 / 硬编码项目 ID（§9） | 0（B1 已清） | 0 | 0（脚本守护） |
+| 权限码错配（§10 + `_audit_perms`） | 4 处 | 4 处（未动，B5 处理） | 0 |
+| 导出共用固定文件名 | 0（B1 已清） | 0 | 0（脚本守护） |
+
+> §6 从 7 → 8 是合并的副作用：tab 块自带一组指标，宿主页头部又有一组同名 KPI，两个 tab 同时命中。属"合并后要补的一刀"，已列入 R-33。
+
+---
+
+## 一、已完成（B1 口径收口 v9.6.1 / B2 实体归并 v9.6.2 → v9.7.0）
+
+| # | 事项 | 落点 | 验收证据 |
+| --- | --- | --- | --- |
+| B1-01 | 项目预算收敛为单一账本 | `derived.budgetOfProject(p)` 读 `DB.budgets`；`store.ensureProjectBudget()` 缺失补建、存在回写项目字段 | `_audit_kpi` 断言 7 个项目 `source=ledger`、字段与账本同值 |
+| B1-02 | 账本补齐与历史漂移修复 | `data.js` 项目账本 6 → 10 条；SP-26015 已用 7420→14420、SP-26007 23890→26000 且状态改「已冻结」 | 首页 hero「预算已用 51%」= 账本计算值 |
+| B1-03 | 阈值判定只留一处 | `store.budgetStateFor(used,total,frozen)`，85% 取 `DB.pricing.budgetWarnRate` | `_audit_kpi` §7 五态用例 + 静态扫描 0 命中 |
+| B1-04 | 集进度单一口 | `derived.progressOf(p)` 以 `done/episodes` 为准；`normalizeActiveProjects()` 只在分集完整覆盖时回写 `p.done` | `_audit_kpi` §2；修复前会把 16 集改写成 1 集 |
+| B1-05 | 任务/交付/待办单一口 | `taskStats / deliveryStats / duties`；`duties` 以通知表为唯一源 | `_audit_kpi` §3–4：六身份分类之和 = 总数 |
+| B1-06 | 首页口径统一 | hero 预算、mini-kpi、指标「待我处理」、明细卡「待处理事项」全部同源；删除死派生 `home().decisions` | `_audit_kpi` §5 |
+| B1-07 | 系数造假清零 | 字幕单价、每镜均价、抽检比例移入 `DB.pricing` | `_audit_ia2` §9：0 |
+| B1-08 | 导出带对象名 | `app.exportFileName()` = 页面标题 + 项目号 + 日期 | 20 处导出不再产出 `prototype-export.csv` |
+| B1-09 | 模块侧口径补迁移 | `orgs / analytics / workspace / creation / post / projects` 全部改走派生口 | `_audit_kpi` §8 静态扫描 0 命中 |
+| B1-10 | 回归守护 | 新增 `_audit_kpi`（112 断言）与 `_audit_ia2/_ia3` | 全套审计全绿 |
+| B1-11 | 版本串同步 | `?v=9.6.1` 全站、侧栏版号、README 章节 | 缓存不回放旧 JS |
+
+B2 九条（统一手法：重复页主体抽成 `xxxBlock(p)` 纯函数 → 宿主页加 `U.card("", U.tabs(...))` → 新增 `X.tab` 动作 → 删被并路由与菜单项 → `app.js` `LEGACY` 转发旧 hash）：
+
+| # | 原路由 → 宿主 | 形态 | 落地版 | 验证（字符 / 卡片 / 指标） |
+| --- | --- | --- | --- | --- |
+| B2-01 | `workspace/projects` → `projects/list` | 「关系筛选」全部 / 我负责 / 我参与 / 待我审核 + 卡片「我的角色」 | 9.6.2 | `_peek_list` 四关系计数自洽（owner：可见 4 / 负责 2 / 参与 2 / 待审 1） |
+| B2-02 | `quality/gates` → `quality/reports` | 「门禁」tab（四级 × 十维矩阵、三态结论、阻断与豁免） | 9.6.3 | 10043 字符 / 12 卡 / 16 指标 |
+| B2-03 | `post/works` → `post/delivery` | 「作品」tab（作品清单 / 状态口径 / 交付摘要 / 新版本链） | 9.6.4 | 3703 字符 / 7 卡 |
+| B2-04 | `video/results` → `video/preview` | 「版本列表」tab（多版本并存、设为采用） | 9.7.0 | 3238 字符 |
+| B2-05 | `director/storyboard` → `director/shots` | 「分镜视图」（`director.view` = table / board） | 9.7.0 | 4335 字符 |
+| B2-06 | `assets/usage` → `assets/library` | 「引用」tab（引用表、删除阻断、引用统计） | 9.7.0 | 4225 字符 |
+| B2-07 | `cost/usage` → `cost/ledger` | 「用量」tab（计量差异、按能力用量、计费口径） | 9.7.0 | 3851 字符 |
+| B2-08 | `notify/incidents` → `compliance/risks` | 「处置」tab（异常台账、处置原则、高频处置口径） | 9.7.0 | 4084 字符 |
+| B2-09 | `analytics/departments` + `analytics/employees` → `analytics/enterprise` | 「部门对比」「员工对比」两 tab；删「对比入口」卡 | 9.7.0 | 6068 / 8011 / 14936 字符 |
+
+收官验证：`regress` 56 路由全渲染、`_audit_links` 失效内链 0、`_audit_actions` 324 注册 / 0 未注册 / 0 重复、`_audit_perms` 0 missing、`flow` 18/18、`_journey` 22/22、`_audit_kpi` 112 项通过、`_audit_project_guard` 项目页阻断 23/23。
+
+---
+
+## 二、三个决策：已定（原"开工前必须先定"）
+
+| 决策 | 结论 | 理由 |
+| --- | --- | --- |
+| D1 合并范围 | **只做 M1–M9，65 → 56**；M10–M13 不做 | M10–M13 是**下钻层级**不是重复实体：`projects/detail` 承载单项目上下文（集数、成员、账本），`tasks/attempt` 是单次执行轨迹，`models/routing` 是单模型策略，`orgs/member` 是单员工档案。四页均需上游带参进入，合并后无处承载上下文；且它们的 body 与"父页"重叠度 < 30%，不是同一实体的第二份渲染 |
+| D2 命名主线 | **保留现名**（创作工作台 / 立项与项目），只做"章节由菜单派生" | 问题不在名字，在**四条名称链并存**（`DB.menu`、模块 `label`、页面 `title`、页眉手写章节）导致同一页三种叫法。改名要动 README 路由表 + 6 份身份说明 + 全部评审批注，收益为零。B3 只把后三条链收归 `DB.menu` |
+| D3 首页定位 | **「今日制作台」**（今日待办 + 当前项目 + 风险升级 + 下一步，链路只留一行摘要跳流水线） | 首页是每日入口不是总览看板。现状 13 区块里 8 个是"概览"，真正的下一步动作要滚过两屏；管理员/审计身份进来看到的是自己无权操作的项目细节。链路明细只应存在于 `projects/workflow` |
+
+---
+
+## 三、待整改清单（B3–B6，24 条）
+
+### B3 命名派生（5 条，消除四条名称链）
+
+| ID | 优先级 | 问题 | 动作 | 落点 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| R-10 | P1 | 合并后旧动作仍在：`projects.listLink` / `director.toProjects` 两种"返回项目列表" | 统一为 `nav.projects`，删 `director.toProjects` | `app.js` 动作表、各模块 | `_audit_actions` 未注册 0；同目标动作只剩 1 个 |
+| R-11 | P1 | 页眉章节各页手写（`U.page("组织与权限 / 企业主体", ...)`），53/56 与二级菜单不符 | `UI.page(title, sub, actions, body, note)` 取消手写章节，章节由壳层从菜单状态注入 | `assets/js/ui.js` + 56 处调用 | 页眉章节 = 二级菜单名 100%（新增 `_audit_naming.mjs`） |
+| R-12 | P1 | 面包屑用 `route.title` 拼，与菜单、页眉三处口径不同 | 面包屑改三级：一级 / 二级 / 三级，全部来自菜单状态 | `assets/js/app.js` 壳层头部 | 面包屑尾段 = 当前页 title，中间段 = 二级菜单 |
+| R-13 | P1 | 模块 `label`（「我的工作台 / 项目中心 / 任务与队列 / 模型与资源」）仍在展示层出现 | `AppModule.register` 的 `label` 只作内部 key；展示一律取 `DB.menu` | `assets/js/menu.js`、各 `pages.js` | 全站 grep 不到第二套域名词 |
+| R-14 | P1 | 「后期与交付」一域两章节（后期与剪辑 / 审核与交付），`post` 6 页分裂 | 章节统一「后期与交付」，页内用 tab 区分后期 / 审核 / 交付 | `modules/post/pages.js` | §3c 14 → 0 |
+
+> D3 已定后新增：`workspace/home` 的 title「工作台首页」与页眉「今日制作台」需一并统一（当前在 §3b 命中列表内），随 R-11 一次收口。
+
+### B4 骨架瘦身（9 条）
+
+| ID | 优先级 | 问题 | 动作 | 落点 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| R-15 | P2 | 菜单 label 与页面 title 不一致 1 例：`projects/workflow`「制作流水线」vs「项目制作流水线」 | 菜单名即 title | `data.js` / `projects/pages.js` | §2 不一致 0 |
+| R-16 | P1 | 8 页 metric 与其下明细卡 1:1 重复（首页、授权台账、风险、成本、路由、通知、返工…） | 保留带下钻的 KPI，删同名明细卡 | 8 个 `pages.js` | §6 8 → 0 |
+| R-17 | P1 | 47 张规则/口径卡分布各页，占屏比最高 | 每域留 1 张「口径与规则」，其余改为页头 `?` 抽屉或 `INTERACTION-SPEC` 章节 | 全部模块 | 规则卡 47 → ≤17；每页 ≤1 |
+| R-18 | P1 | 同页重复按钮（`creation/brief` 11 个、`creation/script` 16 个、`video/preview` 11 个） | 同页同动作只留 1 个，其余进「更多」；每页 ≤6 | 对应模块 | 同页同动作 ≤1、按钮 ≤6（`_audit_buttons`） |
+| R-19 | P1 | 19 组同一动作多套文案（`projects.wfOpen` 6 种、`common.export` 20 种） | 动作 → 唯一文案表；导出按对象命名 | `app.js` 动作表 | 19 → ≤10；同动作文案唯一 |
+| R-20 | P2 | 3 例文案与落点不符：`查看拆解结果`→拆解页、`处理交付阻断`→授权台账、`打开分镜板`→镜头契约 | 文案改成落点页 title | 3 个模块 | `_ia3` B 段 0 条 |
+| R-21 | P1 | 首页 13 区块（hero + 8 阶段链路 + 分集卡 + 下一步 + 4 KPI + 明细） | 按 D3：hero（预算+进度）/ 待办表 / 当前项目 / 1 张风险 / 1 条下一步；链路只留一行摘要 + 跳流水线 | `modules/workspace/pages.js` | 首页区块 ≤8；链路明细只在 `projects/workflow` |
+| R-22 | P2 | `ops/overview` 与 `ops/queue` 页级重复（「任务队列」两页各一份） | overview 只留总览与异常，队列明细归 `ops/queue` | `modules/ops/pages.js` | §4 8 → ≤3 |
+| R-23 | P2 | 合并后**单页体量**反而变大：`orgs/handover` 23483、`analytics/enterprise` 14936、`workspace/home` 13700 字符 | 单页 >12KB 的页只留"摘要 ≤3 条 + 跳主清单"；tab 块内规则卡移交 `INTERACTION-SPEC` | 相应模块 | 渲染 ≥12KB 的页数 0 |
+
+### B5 权限与视图对齐（4 条）
+
+| ID | 优先级 | 问题 | 动作 | 落点 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| R-24 | P0 | `workspace/home` 用 `analytics.own` 门禁，管理员/审计/部门负责人看不到首页 | 路由门禁改 `project.read`（或新增 `workspace.read`），写按钮按 `can()` 隐藏 | `data.js`、`modules/workspace/pages.js` | 6 身份首页可达；管理员/审计只读 |
+| R-25 | P0 | `post/delivery`（含作品 tab）用 `delivery.execute`，审计看不到交付记录 | 读 `delivery.read`（新增），执行动作单挂 `delivery.execute` | `data.js`、`modules/post/pages.js` | 审计可读不可执行 |
+| R-26 | P1 | `tasks/*` 权限 `[task.operate, audit.read]`，写读混在路由上 | 路由 `task.read`，写动作挂 `task.operate` | `data.js`、`modules/tasks/pages.js` | `_audit_perms` 0 missing |
+| R-27 | P1 | `models/config` 只有 `models.own`，管理员无企业分配与额度视图 | 改 any-of `models.own | models.manage`，管理员加"企业分配/额度"段 | `data.js`、`modules/models/pages.js` | 管理员可见分配，不越权改他人凭据 |
+
+### B6 文档、版本与脚本（6 条）
+
+| ID | 优先级 | 问题 | 动作 | 落点 | 验收 |
+| --- | --- | --- | --- | --- | --- |
+| R-28 | P0 | `_smoke` / `_e2e` 按旧路由与旧按钮断言 | 路由表改 56；`_e2e` 补 9 条 tab 断言（M1–M9 各 1） | `_smoke.html`、`_e2e.html` | 56 路由无 JS 错误；断言 28 → 37 |
+| R-29 | ✅ 已同步 | 三份文档仍需复核 | README 路由表已同步 56 与 tab（✅ 本轮）；`TRACEABILITY` / `INTERACTION-SPEC` 已改 9 处（✅ 本轮）；补「路由删除对照表」便于评审回查 | `README.md`、`docs/` | 文档内路由数 = 代码 56 |
+| R-30 | ✅ 已完成 | 版本串与缓存 | 已升 `?v=9.7.0`、侧栏版号、README 顶部（✅ 本轮）；并已修正 README 中 9.6.4/9.6.3 两节小标题被批量替换误伤的错号 | `index.html`、`_smoke`、`_e2e`、`app.js`、README | 全站无 9.6.x 残留（历史审计文档除外） |
+| R-31 | P1 | 「章节 = 二级菜单」「同页同动作 ≤1」只能靠人看 | 新增 `tools/_audit_naming.mjs`、`tools/_audit_buttons.mjs`，并入交付前回归 | `tools/`、README 回归段 | 两脚本 0 失败即达标 |
+| R-32 | P2 | 部门/企业预算双源（`D.enterprise.budget` / `D.departments.budget` 与 `DB.budgets` 并存） | 统一到 `DB.budgets`，实体字段降级为投影（同 B1 对项目做法） | `data.js`、`store.js`、`analytics/pages.js`、`orgs/pages.js` | 断言：部门/企业已用 = 账本 used |
+| R-33 | P1 | 合并副作用：tab 块指标与宿主页 KPI 同名（§6 7 → 8） | 宿主页头部只保留"跨 tab 汇总"指标；tab 内指标改名/降为表头 | `analytics/enterprise`、`cost/ledger`、`post/delivery`、`quality/reports`、`compliance/risks`、`assets/library` | §6 8 → 0，且 tab 切换不出现"同屏两组同名指标" |
+| R-34 | ✅ 已完成 | 旧地址转发只覆盖 hash 解析路径，`LEGACY` 缺测即静默 404 | `_audit_links.mjs` 直接从 `app.js` 解析 `LEGACY` 表，逐条断言"旧地址已不在路由表 + 目标存在 + 宿主页渲染 ≥500 字符" | `tools/_audit_links.mjs` | 已达成：LEGACY 转发 10 条 · 通过 10 · 异常 0（同时把该脚本的 App 桩补齐为带项目上下文，动作覆盖 242 → 1468） |
+
+---
+
+## 四、执行顺序与门禁
+
+```
+B1 口径收口 ✅ v9.6.1（65 条，零路由变更）
+B2 实体归并 ✅ v9.6.2 → v9.7.0（9 条，65 → 56）
+  └─ 决策 D1/D2/D3 ✅ 已定（见第二节）
+B3 命名派生（R-10…R-14）            门禁：_audit_naming 0 例外
+B4 骨架瘦身（R-15…R-23 + R-33）      门禁：_audit_buttons 0 例外 / 首页 ≤8 区块 / §6 = 0
+B5 权限对齐（R-24…R-27）            门禁：_audit_perms 0 missing / 6×56 矩阵快照
+B6 文档版本（R-28/R-31/R-32）        门禁：全套回归 + _e2e 37 断言 + 10 条 LEGACY 断言（R-29/R-30/R-34 已完成）
+```
+
+硬约束（每批都适用）：
+
+1. 一批之内不改两件性质不同的事（改名与删路由不同批，否则评审无法归因）。
+2. 每批结束必须跑 `node --check` 全量 + `regress / _audit_links / _audit_actions / _audit_perms / flow / _journey / _audit_kpi`，并重生成 `tools/_ia_report.txt` 快照。
+3. 合并页的 tab 键进状态层（`App.set(scope, "tab")`），刷新后保持，不做临时变量；`director` 的键是 `view` 不是 `tab`。
+4. 任何删除路由需同时在 `README` 路由表与「路由删除对照表」留一条，旧地址必须由 `LEGACY` 转发，不返回 404。
+
+## 五、风险与回滚
+
+- **旧地址不可逆风险**：已用 `LEGACY` 十个映射兜底（含 `analytics/departments|employees` 两条指向同一宿主）。R-34 加断言后，转发失效会在回归里暴露，而不是等评审点开才发现。
+- **B2 与 B3 顺序**：B2 已完成，B3 的章节派生在 56 页上做一次即可，不会重复改两遍。
+- **tab 化丢功能**：每条合并都用 `_probe_tab.mjs` 逐 tab 渲染断言（字符数 / 卡片数 / 指标数 / 是否含 undefined·NaN / 关键词是否出现），防"合并了但 tab 空白"。
+- **回滚**：B1 独立成版（9.6.1），B2 分三个版号落地（9.6.2 M1 / 9.6.3 M7 / 9.6.4 M2 / 9.7.0 其余六条），单条回退可 `git checkout` 对应文件。
+
+## 六、执行进展（2026-11-25 · B3–B7）
+
+### 已闭环（有脚本证据）
+
+| 批次 | 条目 | 证据 |
+| --- | --- | --- |
+| B3 命名派生 | R-10…R-15 | `_audit_naming` 56 路由 0 失败；页眉章节由 `DB.menu` 派生；面包屑改三级；`projects/workflow` title 与菜单一致 |
+| B4 骨架瘦身 | R-16 / R-19 / R-20 / R-21 | `_audit_ia2` §6 = 0；`_audit_ia3` C 段 22 组 → 2 组（余下 `common.export` / `quality.judge` 属白名单）；首页 4317 字符 / 页面级动作 6 |
+| B4 按钮与体量 | R-18 / R-22 / R-23 | `_audit_buttons` 全站 76 快照：同页重复动作 0、动作 >6 的页 0、≥12KB 的页 0（`analytics/enterprise` 14929 → 10989）；`ops/overview` 队列明细改一行摘要，明细归 `ops/queue` |
+| B5 权限对齐 | R-24…R-27 | `_audit_perms` 23 guard codes / 0 missing；`workspace/home` 六身份可达；`delivery.read` / `task.read` 写入权限字典与角色 |
+| B6 脚本与账本 | R-31 / R-32 / R-34 | `_audit_naming` + `_audit_buttons` 已建；`_audit_kpi` 112 → **127 项**（新增部门/企业预算 = 账本断言）；`LEGACY` 10 条断言通过 |
+
+### 部分完成
+
+| 条目 | 现状 | 剩余 |
+| --- | --- | --- |
+| R-28 | `_smoke.html` 已按 `App.routes()` 自适应 56 路由，并新增 9 条合并页 tab 断言（点击 `data-value` 后断言非空、无 undefined/NaN）；`_e2e.html` 未加计数 | 浏览器侧跑一遍 `_smoke/_e2e`（需本地服务）；`_e2e` 补 9 条 tab 断言 |
+| R-19 | 全站同动作多文案 2 组（白名单） | 在 `_audit_buttons` 里固化白名单理由（已写注释），文档留痕即可 |
+| R-17 | 规则/口径卡未系统收敛 | 47 → ≤17，需逐域判断保留哪一张；`analytics` 已把 25 行口径表压到 10 行 |
+
+### 事故与恢复记录（必读）
+
+本轮用 PowerShell 对 `modules/*/pages.js` 做批量 `.Replace` 时，`$map` 被展平成字符串数组，`$p[0]`/`$p[1]` 取到的是首/次字符，结果把 4 个文件里的**所有双引号**替换成了各不相同的中文字符（director→`进`、post→`处`、projects→`打`、video→`去`），`node --check` 全红。
+
+恢复方式（可复现）：按"两侧皆为非 ASCII 则视为正文、否则视为引号"的邻接规则逐字符回写，`post/pages.js` 另有 2 处 `" 处…"` 形态需手工回填（`refs + " 处"`、`" 处下游引用…"`）。恢复后 `node --check` 全站 0 失败，`regress / _audit_links / _audit_actions / _audit_perms / _audit_naming / _audit_kpi / flow / _journey / _audit_dups / _audit_project_guard` 全绿。
+
+**结论：禁止再用 PowerShell 批量替换 JS 源码**。改文案一律走 `Edit` 工具逐处替换，或写 `.mjs` 脚本用 Node 读写（Node 端 UTF-8 无此问题）。

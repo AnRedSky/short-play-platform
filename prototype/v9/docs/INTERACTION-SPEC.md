@@ -142,7 +142,7 @@
 
 ## 3. 导演规划（director）
 
-路由：`director/plan` `director/cast` `director/world` `director/shots` `director/storyboard`。权限：`production.write`（规划固化、提交生产）。
+路由：`director/plan` `director/cast` `director/world` `director/shots`（视图：镜头清单 / 分镜视图）。权限：`production.write`（规划固化、提交生产）。
 
 ### 3.1 固化分镜方案
 
@@ -168,7 +168,7 @@
 
 ## 4. 视频生产（video）
 
-路由：`video/production` `video/results` `video/preview`。权限：`production.write`。
+路由：`video/production` `video/preview`（tab：预览与校验 / 版本列表）。权限：`production.write`。
 
 任务行操作列：`详情` 固定；`执行` 仅在「排队中/待执行/失败（可重试）/待质检/待人工处理」出现；`处理` 仅在「待人工处理」出现。
 
@@ -214,7 +214,7 @@
 
 ## 6. 后期与交付（post）
 
-路由：`post/timeline` `post/episodes` `post/review` `post/delivery` `post/works` `post/versions`。权限：`post.write`、`final.review`、`delivery.execute`。
+路由：`post/timeline` `post/episodes` `post/review` `post/delivery`（tab：交付包 / 作品） `post/versions`。权限：`post.write`、`final.review`、`delivery.execute`。
 
 ### 6.1 时间线
 
@@ -244,7 +244,7 @@
 
 ## 7. 质量与返工（quality）
 
-路由：`quality/gates` `quality/reports` `quality/rework`。权限：`quality.operate`。
+路由：`quality/reports`（tab：报告 / 门禁 / 返工台账） `quality/rework`。权限：`quality.read` / `quality.operate`。
 
 - 报告详情：逐条检测项 + 接受/返工/驳回三个裁决入口。
 - 接受现状：理由 ≥8 字（空理由字段拦截）；写 `decision/note/by/at`，同步审计。
@@ -273,7 +273,7 @@
 
 ## 9. 通知与异常（notify）
 
-路由：`notify/inbox` `notify/incidents`。权限：`notify.handle`。
+路由：`notify/inbox`（异常处置在 `compliance/risks`「处置」tab）。权限：`notify.handle`。
 
 - 处理：抽屉展示项目、触发原因、阻塞影响、建议动作、责任人、状态；出口为「去业务页处理 / 转待办 / 记录处理结论 / 升级」。
 - 关闭：必须选结论类型 + 结论（≥10 字），写回 `state=已处理`、`unread=false`；只关通知不处理业务对象视为未闭环。
@@ -285,7 +285,7 @@
 
 ## 10. 合规与授权（compliance）
 
-路由：`compliance/rights` `compliance/risks` `compliance/audit`。权限：`compliance.write`。
+路由：`compliance/rights` `compliance/risks`（tab：风险清单 / 处置） `compliance/audit`。权限：`compliance.write`。
 
 - 授权详情：主体、类型、权利人、证明、使用范围、地区、期限、商用性、限制、复核、状态；提供续期/替换/停用。
 - 续期：选 `RT-xx` + 新到期日 + 回执号；格式错误字段拦截；成功后状态回「有效」，解除相关阻断。
@@ -298,7 +298,7 @@
 
 ## 11. 资产（assets）
 
-路由：`assets/library` `assets/usage`。权限：`asset.manage`。
+路由：`assets/library`（tab：资产目录 / 引用）。权限：`asset.manage`。
 
 - 详情：基本信息 + 引用检查 + 新版本 + 删除入口。
 - 删除检查：只列「无引用且非正式资产」；有引用或正式资产直接阻断，不允许强制删除。
@@ -309,7 +309,7 @@
 
 ## 12. 成本预算（cost）
 
-路由：`cost/ledger` `cost/budget` `cost/usage`。权限：`cost.manage`。
+路由：`cost/ledger`（tab：台账明细 / 用量） `cost/budget`。权限：`cost.manage`。
 
 - 调整预算：当前总额/已用只读展示；填新总额 + 原因（≥8 字）；新总额低于已用被拦截。
 - 设置阈值：提醒阈值 50–100%，需填依据；85% 触发预算提醒通知（每预算只提醒一次）。
@@ -354,7 +354,7 @@
 
 ## 16. 工作台指令（workspace）
 
-路由：`workspace/home` `workspace/assistant` `workspace/projects`。
+路由：`workspace/home` `workspace/assistant`。项目关系视图（我负责 / 我参与 / 待我审核）不再是独立页面，改为 `projects/list` 的关系筛选。
 
 - 解析：按关键词识别意图（新建项目 / 查询进度 / 发起返工 / 发起交付 / 查询成本），展示抽取字段与置信度；未识别给出可点选的示例。
 - 执行：按意图真实分发——新建项目跳立项页；查询进度打开真实进度抽屉；发起返工提交 `SH-05` 任务；发起交付先跑交付门禁再跳 `post/delivery`；查询成本跳 `cost/ledger`。

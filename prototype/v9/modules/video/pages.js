@@ -3,6 +3,43 @@
   const U = UI, D = DB, SCOPE = "video";
   const vTasks = (pid) => D.tasks.filter(t => t.kind === "视频生成" && (!pid || t.project === pid));
 
+  /* ---------- 镜头版本（原 video/results，B2·M3 并入预览与校验的「版本列表」tab） ----------
+     同一镜头可有多次尝试与多个版本：采用、未采用、待复核都必须有明确结论与理由。 */
+  const versionsBlock = (p) => {
+    const pid = p.id;
+    const frozen = ["已交付", "已归档"].indexOf(p.status) >= 0;
+    const filter = App.get(SCOPE, "resFilter", "all");
+    const tasks = D.tasks.filter(t => t.project === pid && t.kind === "视频生成");
+    const versions = tasks.map(t => {
+      const s = D.shots.find(x => x.id === t.shot) || D.shots.find(x => x.project === pid && x.ep === t.ep && x.no === t.shot);
+      const state = t.status === "成功" && t.qc === "PASS" ? "已采用" : (t.status === "成功" || t.status === "待质检" ? "待复核" : (t.status === "失败" || t.status === "待人工处理" ? "未采用" : "待生成"));
+      return { shot: s ? s.id : t.shot, v: state === "待生成" ? "—" : "v" + Math.max(1, Number(t.attempt) || 1), at: t.submitAt || "—", by: t.model, state: state, adopt: state === "已采用", note: t.failReason && t.failReason !== "—" ? t.failReason : (t.output || t.status) };
+    });
+    const list = filter === "all" ? versions : versions.filter(v => v.state === filter);
+    const rows = list.map(v =>
+      '<tr><td>' + U.code(v.shot) + "</td><td>" + U.code(v.v) + "</td><td>" + U.esc(v.by) + '</td><td class="idx">' + U.esc(v.at) + "</td><td>" + U.pill(v.state) + '</td><td class="cell-wrap muted">' + U.esc(v.note) + "</td><td>" +
+      U.btn("预览", "video.preview", "sm", { shot: v.shot, v: v.v }) + (!frozen && !v.adopt && v.state !== "待生成" ? " " + U.btn("设为采用", "video.adopt", "sm", { shot: v.shot, v: v.v }) : "") + "</td></tr>").join("");
+    const adopted = versions.filter(v => v.state === "已采用").length;
+    const review = versions.filter(v => v.state === "待复核").length;
+    const rejected = versions.filter(v => v.state === "未采用").length;
+    const pending = versions.filter(v => v.state === "待生成").length;
+    const avgAttempt = tasks.length ? (tasks.reduce((n, t) => n + (Number(t.attempt) || 0), 0) / tasks.length).toFixed(2) : "0";
+    return '<div class="toolbar">' + U.seg([
+        { value: "all", label: "全部" }, { value: "已采用", label: "已采用" }, { value: "待复核", label: "待复核" }, { value: "未采用", label: "未采用" }, { value: "待生成", label: "待生成" }
+      ], filter, "video.filter") + '<span class="faint small">结论由人或质量门禁给出，不按时间自动采用</span></div>' +
+      U.card("镜头版本 · " + rows.length + " 条", U.table(["镜头", "版本", "模型", "生成时间", "结论", "说明", "操作"], rows, tasks.length ? "该分类下暂无结果" : "当前项目还没有视频生成任务"), rows.length ? "版本并存，采用只标记不删除" : (tasks.length ? "该分类下暂无结果" : "当前项目还没有视频生成任务")) +
+      '<div class="grid grid-2 mt-4">' +
+        U.card("版本规则", U.listRows([
+          ["多版本并存", "同一镜头可保留多个版本，采用版本标记但旧版本不删除"],
+          ["采用依据", "质量报告 PASS + 与相邻镜头衔接检查"],
+          ["未采用理由", "必须记录具体缺陷，便于提示词修正"],
+          ["资产入库", "采用版本进入正式资产库，未采用保留临时区"],
+          ["引用", "下游时间线引用具体版本号，不引用「最新」"]
+        ]), "采用不等于覆盖") +
+        U.card("结果统计", '<div class="kv-grid">' + U.kv("生成任务", String(tasks.length)) + U.kv("已采用", String(adopted)) + U.kv("待复核", String(review)) + U.kv("未采用", String(rejected)) + U.kv("待生成", String(pending)) + U.kv("平均尝试数", avgAttempt) + "</div>", "按任务尝试记录统计，不伪造完成度") +
+      "</div>";
+  };
+
   AppModule.register({
     group: "video", label: "视频生产", icon: "video", order: 5, end: "workspace",
     routes: [
@@ -11,7 +48,7 @@
         desc: "四状态分离：供应商调用成功、文件下载完成、资产持久化完成、质量检测通过，任一步未完成都不算生产成功。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p) return U.page("视频生产 / 生产队列", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；生产队列不会回退到其他项目。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
+          if (!p) return U.page("视频生产 / 生产队列", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；生产队列不会回退到其他项目。", U.btn("返回项目列表", "common.projects", "primary"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
           const pid = p.id;
           const list = vTasks(pid);
           if (["已交付", "已归档"].indexOf(p.status) >= 0) {
@@ -122,60 +159,27 @@
         }
       },
       {
-        path: "video/results", title: "生成结果", icon: "film", permission: "production.write",
-        desc: "同一镜头可有多次尝试与多个版本：采用、未采用、待复核都必须有明确结论与理由。",
-        render(query) {
-          const p = App.currentProject(query);
-          if (!p) return U.page("视频生产 / 生成结果", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；生成结果不会回退到其他项目。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
-          const pid = p.id;
-          const frozen = ["已交付", "已归档"].indexOf(p.status) >= 0;
-          const filter = App.get(SCOPE, "resFilter", "all");
-          const tasks = D.tasks.filter(t => t.project === pid && t.kind === "视频生成");
-          const versions = tasks.map(t => {
-            const s = D.shots.find(x => x.id === t.shot) || D.shots.find(x => x.project === pid && x.ep === t.ep && x.no === t.shot);
-            const state = t.status === "成功" && t.qc === "PASS" ? "已采用" : (t.status === "成功" || t.status === "待质检" ? "待复核" : (t.status === "失败" || t.status === "待人工处理" ? "未采用" : "待生成"));
-            return { shot: s ? s.id : t.shot, v: state === "待生成" ? "—" : "v" + Math.max(1, Number(t.attempt) || 1), at: t.submitAt || "—", by: t.model, state: state, adopt: state === "已采用", note: t.failReason && t.failReason !== "—" ? t.failReason : (t.output || t.status) };
-          });
-          const list = filter === "all" ? versions : versions.filter(v => v.state === filter);
-          const rows = list.map(v =>
-            '<tr><td>' + U.code(v.shot) + "</td><td>" + U.code(v.v) + "</td><td>" + U.esc(v.by) + '</td><td class="idx">' + U.esc(v.at) + "</td><td>" + U.pill(v.state) + '</td><td class="cell-wrap muted">' + U.esc(v.note) + "</td><td>" +
-            U.btn("预览", "video.preview", "sm", { shot: v.shot, v: v.v }) + (!frozen && !v.adopt && v.state !== "待生成" ? " " + U.btn("设为采用", "video.adopt", "sm", { shot: v.shot, v: v.v }) : "") + "</td></tr>").join("");
-          const adopted = versions.filter(v => v.state === "已采用").length;
-          const review = versions.filter(v => v.state === "待复核").length;
-          const rejected = versions.filter(v => v.state === "未采用").length;
-          const pending = versions.filter(v => v.state === "待生成").length;
-          const avgAttempt = tasks.length ? (tasks.reduce((n, t) => n + (Number(t.attempt) || 0), 0) / tasks.length).toFixed(2) : "0";
-          return U.page("视频生产 / 生成结果", "生成结果 · " + p.name, "未采用的版本保留可追溯，不因采用新版本而删除；结果直接从当前项目的任务尝试记录投影。",
-            U.btn("导出结果清单", "common.export") + U.btn("进入预览评审", "video.toPreview", "primary", { shot: tasks[0] ? tasks[0].shot : "" }),
-            '<div class="toolbar">' + U.seg([
-              { value: "all", label: "全部" }, { value: "已采用", label: "已采用" }, { value: "待复核", label: "待复核" }, { value: "未采用", label: "未采用" }, { value: "待生成", label: "待生成" }
-            ], filter, "video.filter") + '<span class="faint small">结论由人或质量门禁给出，不按时间自动采用</span></div>' +
-            U.card("镜头版本 · " + rows.length + " 条", U.table(["镜头", "版本", "模型", "生成时间", "结论", "说明", "操作"], rows, tasks.length ? "该分类下暂无结果" : "当前项目还没有视频生成任务"), rows.length ? "版本并存，采用只标记不删除" : (tasks.length ? "该分类下暂无结果" : "当前项目还没有视频生成任务")) +
-            '<div class="grid grid-2 mt-4">' +
-              U.card("版本规则", U.listRows([
-                ["多版本并存", "同一镜头可保留多个版本，采用版本标记但旧版本不删除"],
-                ["采用依据", "质量报告 PASS + 与相邻镜头衔接检查"],
-                ["未采用理由", "必须记录具体缺陷，便于提示词修正"],
-                ["资产入库", "采用版本进入正式资产库，未采用保留临时区"],
-                ["引用", "下游时间线引用具体版本号，不引用「最新」"]
-              ]), "采用不等于覆盖") +
-              U.card("结果统计", '<div class="kv-grid">' + U.kv("生成任务", String(tasks.length)) + U.kv("已采用", String(adopted)) + U.kv("待复核", String(review)) + U.kv("未采用", String(rejected)) + U.kv("待生成", String(pending)) + U.kv("平均尝试数", avgAttempt) + "</div>", "按任务尝试记录统计，不伪造完成度") +
-            "</div>"
-          );
-        }
-      },
-      {
         path: "video/preview", title: "预览与校验", icon: "film", permission: "production.write",
         desc: "预览不提供真实视频素材：以画幅占位与契约摘要呈现评审结构，明确标注为静态展示态。",
         render(query) {
           const q = query || {};
           const shotHit = D.shots.find(x => x.id === q.shot || x.no === q.shot);
           const p = App.currentProject({ id: q.id || (shotHit && shotHit.project) || "" });
-          if (!p) return U.page("视频生产 / 预览与校验", "项目不在可见范围", "该链接中的项目或镜头不属于当前身份可见范围，已阻止跨项目预览。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取预览对象", "请从当前项目的生成结果进入。"));
+          if (!p) return U.page("视频生产 / 预览与校验", "项目不在可见范围", "该链接中的项目或镜头不属于当前身份可见范围，已阻止跨项目预览。", U.btn("返回项目列表", "common.projects", "primary"), U.empty("无法读取预览对象", "请从当前项目的生成结果进入。"));
           const pid = p.id;
           const frozen = ["已交付", "已归档"].indexOf(p.status) >= 0;
+          const tab = App.get(SCOPE, "tab", "preview");
+          const tabsBar = U.card("", U.tabs([
+            { value: "preview", label: "预览与校验", count: 1 },
+            { value: "versions", label: "版本列表", count: D.tasks.filter(t => t.project === pid && t.kind === "视频生成").length }
+          ], tab, "video.tab"));
+          if (tab === "versions") {
+            return U.page("视频生产 / 预览与校验", "版本列表 · " + p.name, "同一镜头的多次尝试与多个版本都在这里：未采用的版本保留可追溯，不因采用新版本而删除。",
+              U.btn("导出结果清单", "common.export"),
+              tabsBar + versionsBlock(p));
+          }
           const s = (shotHit && shotHit.project === pid ? shotHit : null) || (q.shot ? null : D.shots.filter(x => x.project === pid)[0]);
-          if (!s) return U.page("视频生产 / 预览与校验", "预览与校验", "没有可预览的镜头。", U.btn("返回生成结果", "video.toResults", "primary", { id: pid }), U.empty(q.shot ? "镜头不属于当前项目" : "暂无镜头", q.shot ? "当前链接中的镜头与项目不匹配，已阻止跨项目预览。" : "先从分镜板提交镜头生产。"));
+          if (!s) return U.page("视频生产 / 预览与校验", "预览与校验", "没有可预览的镜头。", U.btn("版本列表", "video.tab", "primary", { value: "versions" }), U.empty(q.shot ? "镜头不属于当前项目" : "暂无镜头", q.shot ? "当前链接中的镜头与项目不匹配，已阻止跨项目预览。" : "先从分镜板提交镜头生产。"));
           const frameImg = U.storyFrame(s) || "assets/img/covers/shot-post.jpg";
           const epShots = D.shots.filter(x => x.project === s.project && x.ep === s.ep).sort((a, b) => a.order - b.order);
           const idx = epShots.findIndex(x => x.id === s.id);
@@ -192,7 +196,8 @@
           ];
           const reviewCount = checks.filter(c => c[3] === "需人工判断").length;
           return U.page("视频生产 / 预览与校验", "预览与校验 · " + s.id, "以关键帧、时间线与契约逐项对照来评审；原型不加载真实成片，画面标注为静态关键帧。",
-            U.btn("返回结果", "video.toResults") + U.btn("重新生成", "video.regenShot", "primary", { id: s.id }),
+            U.btn("重新生成", "video.regenShot", "primary", { id: s.id }),
+            tabsBar +
             '<div class="review-studio">' +
               '<section class="review-left">' +
                 '<div class="phone-frame">' +
@@ -202,7 +207,7 @@
                   '<div class="phone-bottom">' +
                     '<div class="phone-meta"><b>E' + s.ep + " / S" + s.scene + " · " + U.esc(s.frame) + " · " + U.esc(s.move) + '</b><span>静态关键帧 · 非成片</span></div>' +
                     '<div class="scrub"><i style="width:52%"></i><em style="left:52%"></em></div>' +
-                    '<div class="transport"><span>00:03</span><button type="button" data-action="video.playPreview">▶</button><button type="button" data-action="video.toResults">≡</button><span>00:06</span></div>' +
+                    '<div class="transport"><span>00:03</span><button type="button" data-action="video.toResults">≡</button><span>00:06</span></div>' +
                   '</div>' +
                 '</div>' +
                 '<div class="shot-strip"><div class="strip-label"><span class="kicker">同场景镜头</span><small>点击切换评审对象</small></div>' +
@@ -230,18 +235,21 @@
     App.set("tasks", "task", (el && el.dataset && el.dataset.id) || "");
     App.go("tasks/attempt");
   });
+  App.on("video.tab", (el) => { App.set(SCOPE, "tab", el.dataset.value); App.refresh(); });
   App.on("video.toResults", (el) => {
     const q = App.current().query || {};
     const shot = D.shots.find(x => x.id === q.shot || x.no === q.shot);
     const pid = (el && el.dataset && el.dataset.id) || q.id || (shot && shot.project);
-    App.go("video/results", pid ? { id: pid } : undefined);
+    App.set(SCOPE, "tab", "versions");
+    App.go("video/preview", pid ? { id: pid } : undefined);
   });
   App.on("video.toPreview", (el) => {
     const shot = el && el.dataset ? el.dataset.shot : "";
     const hit = D.shots.find(x => x.id === shot || x.no === shot);
+    App.set(SCOPE, "tab", "preview");
     App.go("video/preview", shot ? { shot: shot, id: (el.dataset.id || (hit && hit.project) || "") } : undefined);
   });
-  App.on("video.toStoryboard", (el) => App.go("director/storyboard", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }));
+  App.on("video.toStoryboard", (el) => { App.set("director", "view", "board"); App.go("director/shots", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }); });
   App.on("video.toModels", () => App.go(App.can("models.manage") ? "models/providers" : "models/config"));
   App.on("video.selectTask", (el) => { App.set(SCOPE, "task", el.dataset.id); App.refresh(); });
   App.on("video.closeAndGoAttempts", (el) => { App.set("tasks", "task", (el && el.dataset && el.dataset.id) || ""); App.closeDrawer(); App.go("tasks/attempt"); });
@@ -249,6 +257,7 @@
   App.on("video.preview", (el) => {
     const shot = el && el.dataset ? el.dataset.shot : "";
     const hit = D.shots.find(x => x.id === shot || x.no === shot);
+    App.set(SCOPE, "tab", "preview");
     App.go("video/preview", { shot: shot, id: (el && el.dataset && el.dataset.id) || (hit && hit.project) || "" });
   });
 })();

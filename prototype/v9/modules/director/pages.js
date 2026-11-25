@@ -3,6 +3,53 @@
   const U = UI, D = DB, SCOPE = "director";
   const shotsOf = (p) => D.shots.filter(s => !p || s.project === p);
 
+  /* ---------- 分镜视图（原 director/storyboard，B2·M4 并入镜头契约的「分镜视图」） ----------
+     按生产状态组织镜头：待执行、执行中、待人工、已通过。分镜板用于评审画面语言，不用于伪造完成度。 */
+  const boardBlock = (p) => {
+    const pid = p.id;
+    const all = shotsOf(pid);
+    if (App.get(SCOPE, "boardPid", "") !== pid) {
+      App.set(SCOPE, "boardPid", pid);
+      App.set(SCOPE, "boardEp", "all");
+      App.set(SCOPE, "boardState", "all");
+      App.set(SCOPE, "boardShot", "");
+    }
+    const ep = App.get(SCOPE, "boardEp", "all");
+    const st = App.get(SCOPE, "boardState", "all");
+    const epList = Array.from(new Set(all.map(s => s.ep)));
+    const list = all.filter(s => (ep === "all" || String(s.ep) === String(ep)) &&
+      (st === "all" || (st === "passed" ? s.status.indexOf("已通过") >= 0 : s.status.indexOf(st) >= 0)));
+    const selId = App.get(SCOPE, "boardShot", list[0] ? list[0].id : "");
+    const sel = list.find(s => s.id === selId) || list[0];
+    return '<div class="board-toolbar"><div class="seg-chips">' +
+        '<button type="button" class="seg-chip' + (ep === "all" ? " on" : "") + '" data-action="director.boardEp" data-value="all">全部集</button>' +
+        epList.map(n => '<button type="button" class="seg-chip' + (String(ep) === String(n) ? " on" : "") + '" data-action="director.boardEp" data-value="' + n + '">E' + n + "</button>").join("") +
+        '</div><span class="grow"></span><div class="seg-chips">' +
+        [["all", "全部"], ["passed", "已通过"], ["待执行", "待执行"], ["执行中", "执行中"], ["待人工", "待人工"]].map(x =>
+          '<button type="button" class="seg-chip' + (st === x[0] ? " on" : "") + '" data-action="director.boardState" data-value="' + x[0] + '">' + x[1] + "</button>").join("") +
+        '</div><span class="faint small">' + list.length + " 个镜头</span></div>" +
+      '<div class="split-wide"><div class="stack">' +
+        '<div class="board-grid">' + list.map(s => '<button type="button" class="shot-tile' + (sel && s.id === sel.id ? " on" : "") + '" data-action="director.boardShot" data-id="' + U.esc(s.id) + '">' +
+          '<span class="tile-media">' + (U.storyFrame(s) ? '<img src="' + U.esc(U.storyFrame(s)) + '" alt="' + U.esc(s.desc) + ' 关键帧">' : "") +
+            '<span class="tile-no">E' + s.ep + " " + U.esc(s.no) + '</span><span class="tile-state">' + U.pill(s.status) + '</span><span class="tile-dur">' + U.esc(s.duration) + "</span></span>" +
+          '<span class="tile-body"><b>' + U.esc(s.desc) + "</b><small>" + U.esc(s.frame + " · " + s.angle + " · " + s.move) + "</small>" +
+            '<span class="tile-tags"><span class="tag">' + U.esc(s.chars) + '</span><span class="tag">' + U.esc(s.version) + "</span></span></span></button>").join("") +
+          '<button type="button" class="tile-add" data-action="director.newShot" data-pid="' + U.esc(pid) + '">+ 新增镜头契约</button></div>' +
+        U.card("画面语言检查", U.listRows([
+          ["景别节奏", "同一场景内不连续 3 个同景别镜头"], ["轴线", "对话镜头保持同侧，不越轴"],
+          ["场景连续性", "光线、雨量与道具状态在相邻镜头一致"], ["人物视线", "对白镜头视线方向与站位一致"]
+        ]), "检查项用于评审，不自动改画面") +
+      '</div><aside class="stack">' +
+        (sel ? U.card("镜头契约 · " + sel.id,
+          (U.storyFrame(sel) ? '<div class="shot-preview"><img src="' + U.esc(U.storyFrame(sel)) + '" alt="' + U.esc(sel.desc) + '"></div>' : "") +
+          U.desc([["集 / 场", "E" + sel.ep + " / S" + sel.scene], ["景别 / 角度", sel.frame + " · " + sel.angle], ["运镜", sel.move], ["镜头倾向", sel.lens],
+            ["时长", sel.duration], ["人物", sel.chars], ["情绪", sel.emotion], ["台词", sel.line], ["参考", sel.refs], ["模型", sel.model], ["状态", sel.status + " · " + sel.version]]) +
+          '<div class="btn-row-inline">' + U.btn("重新生成", "director.regenerate", "primary", { id: sel.id }) + U.btn("查看完整契约", "director.shotDetail", "", { id: sel.id }) + "</div>" +
+          U.notice("重新生成只影响这一镜，保留旧结果与新尝试记录；不会整集重跑。", "info"), "当前选中镜头") : U.empty("当前项目还没有镜头", "先在剧本拆解中生成镜头契约，或在左侧新增一镜。")) +
+        U.card("重生成入口", U.notice("按镜头粒度执行，失败成本单独入账。", "info") + '<div class="btn-row-inline">' + U.btn("选择镜头重生成", "director.pickRegen", "sm", { pid: pid }) + "</div>", "返工按镜头计费") +
+      "</aside></div>";
+  };
+
   AppModule.register({
     group: "director", label: "导演规划", icon: "film", order: 4, end: "workspace",
     routes: [
@@ -11,7 +58,7 @@
         desc: "把锁定剧本翻译成可执行的镜头生产计划：场次、参考资产、镜头契约、并行分组与门禁条件。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p) return U.page("导演规划 / 镜头生产计划", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；镜头计划不会回退到其他项目。", U.btn("返回项目列表", "director.toProjects"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
+          if (!p) return U.page("导演规划 / 镜头生产计划", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；镜头计划不会回退到其他项目。", U.btn("返回项目列表", "common.projects"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
           const pid = p.id;
           const eps = D.episodes.filter(e => e.project === pid).sort((a, b) => a.no - b.no);
           const shots = D.shots.filter(s => s.project === pid);
@@ -70,7 +117,7 @@
         desc: "人物设定与视觉档案：外观、造型、禁用项、参考资产与版本。禁用项会写入提示词负面约束，避免跨集漂移。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p) return U.page("导演规划 / 人物视觉档案", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；人物档案不会回退到其他项目。", U.btn("返回项目列表", "director.toProjects"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
+          if (!p) return U.page("导演规划 / 人物视觉档案", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；人物档案不会回退到其他项目。", U.btn("返回项目列表", "common.projects"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
           const pid = p.id;
           const chars = D.characters.filter(c => c.project === pid);
           const sel = chars[0];
@@ -108,7 +155,7 @@
         desc: "场景决定光线与色彩基准，道具决定跨集连续性。两者都以版本管理，引用时必须锁定版本号。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p) return U.page("导演规划 / 场景与道具", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；场景与道具不会回退到其他项目。", U.btn("返回项目列表", "director.toProjects"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
+          if (!p) return U.page("导演规划 / 场景与道具", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；场景与道具不会回退到其他项目。", U.btn("返回项目列表", "common.projects"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
           const pid = p.id;
           const locs = D.locations.filter(l => l.project === pid);
           const props = D.props.filter(x => x.project === pid);
@@ -137,7 +184,7 @@
         desc: "ShotContract 是生产的最小契约：景别、机位、运镜、时长、人物、场景、道具、对白、情绪与质量要求缺一不可。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p) return U.page("导演规划 / 镜头契约", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；镜头契约不会回退到其他项目。", U.btn("返回项目列表", "director.toProjects"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
+          if (!p) return U.page("导演规划 / 镜头契约", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；镜头契约不会回退到其他项目。", U.btn("返回项目列表", "common.projects"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
           const pid = p.id;
           const list = shotsOf(pid).slice().sort((a, b) => a.ep - b.ep || a.order - b.order);
           const eps = Array.from(new Set(list.map(s => Number(s.ep)))).sort((a, b) => a - b);
@@ -149,9 +196,15 @@
           const rows = list.map(s =>
             '<tr><td>' + U.code(s.no) + '<div class="faint small">E' + s.ep + " / S" + s.scene + "</div></td><td class=\"cell-wrap\">" + U.esc(s.desc) + "</td><td>" + U.esc(s.frame) + " · " + U.esc(s.angle) + " · " + U.esc(s.move) + '</td><td class="num">' + U.esc(s.duration) + '</td><td class="cell-wrap muted">' + U.esc(s.chars) + '</td><td class="cell-wrap">' + U.esc(s.refs) + "</td><td>" + U.pill(s.status) + "</td><td>" +
             U.btn("详情", "director.shotDetail", "sm", { id: s.id }) + " " + U.btn("提交生产", "director.submitShot", "sm", { id: s.id }) + "</td></tr>").join("");
-          return U.page("导演规划 / 镜头契约", "镜头契约 · " + p.name, "契约固化后才允许提交生成；缺字段、参考未就绪或预算触发的镜头不允许进入队列。",
-            U.btn("新建镜头", "director.newShot", "primary", { pid: pid }) + U.btn("批量提交", "director.batchSubmit", "", { pid: pid }) + U.btn("查看分镜板", "director.toStoryboard", "", { id: pid }),
-            U.card("镜头清单 · " + epRange, U.table(["镜头", "画面描述", "景别 / 机位 / 运镜", "时长", "人物", "引用资产", "状态", "操作"], rows, "当前项目还没有镜头契约"), "镜头清单只包含当前项目") +
+          const view = App.get(SCOPE, "view", "table");
+          const tabsBar = U.card("", U.tabs([
+            { value: "table", label: "镜头清单", count: list.length },
+            { value: "board", label: "分镜视图", count: list.length }
+          ], view, "director.view"));
+          return U.page("导演规划 / 镜头契约", view === "board" ? "分镜视图 · " + p.name : "镜头契约 · " + p.name,
+            view === "board" ? "先看画面再谈镜头：每张卡是一份可执行的镜头契约，状态来自任务，不靠拖动伪造。" : "契约固化后才允许提交生成；缺字段、参考未就绪或预算触发的镜头不允许进入队列。",
+            U.btn("新建镜头", "director.newShot", "primary", { pid: pid }) + U.btn("批量提交", "director.batchSubmit", "", { pid: pid }) + (view === "board" ? U.btn("一致性抽检", "director.check", "", { pid: pid }) : ""),
+            tabsBar + (view === "board" ? boardBlock(p) : U.card("镜头清单 · " + epRange, U.table(["镜头", "画面描述", "景别 / 机位 / 运镜", "时长", "人物", "引用资产", "状态", "操作"], rows, "当前项目还没有镜头契约"), "镜头清单只包含当前项目") +
             '<div class="split mt-4"><div class="stack">' +
               (list.length ? U.card("镜头卡预览", '<div class="shot-grid">' + list.slice(0, 3).map(s => U.shotCard(s)).join("") + "</div>", "镜头卡用于分镜评审，不代替契约字段") : U.empty("没有可预览的镜头", "先完成剧本拆解或新建镜头契约")) +
               U.card("批量提交校验", U.table(["校验项", "结果", "说明"], [
@@ -167,60 +220,7 @@
                 ["环境", "场景与光线版本"], ["道具", "关键道具与状态"], ["对白", "台词与语气"],
                 ["表演", "情绪与动作指示"], ["声音", "环境声与音效要求"], ["质量", "检测项与阈值"], ["引用", "资产版本号与来源"]
               ]), "缺任意一项视为契约未完成") +
-            "</div></div>"
-          );
-        }
-      },
-      {
-        path: "director/storyboard", title: "分镜板", icon: "grid", permission: "director.write",
-        desc: "按生产状态组织镜头：待执行、执行中、待人工、已通过。分镜板用于评审画面语言，不用于伪造完成度。",
-        render(query) {
-          const p = App.currentProject(query);
-          if (!p) return U.page("导演规划 / 分镜板", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；分镜板不会回退到其他项目。", U.btn("返回项目列表", "director.toProjects"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
-          const pid = p.id;
-          const all = shotsOf(pid);
-          if (App.get(SCOPE, "boardPid", "") !== pid) {
-            App.set(SCOPE, "boardPid", pid);
-            App.set(SCOPE, "boardEp", "all");
-            App.set(SCOPE, "boardState", "all");
-            App.set(SCOPE, "boardShot", "");
-          }
-          const ep = App.get(SCOPE, "boardEp", "all");
-          const st = App.get(SCOPE, "boardState", "all");
-          const epList = Array.from(new Set(all.map(s => s.ep)));
-          const list = all.filter(s => (ep === "all" || String(s.ep) === String(ep)) &&
-            (st === "all" || (st === "passed" ? s.status.indexOf("已通过") >= 0 : s.status.indexOf(st) >= 0)));
-          const selId = App.get(SCOPE, "boardShot", list[0] ? list[0].id : "");
-          const sel = list.find(s => s.id === selId) || list[0];
-          return U.page("导演规划 / 分镜板", "分镜板 · " + p.name, "先看画面再谈镜头：每张卡是一份可执行的镜头契约，状态来自任务，不靠拖动伪造。",
-            U.btn("切换列表", "director.toShots", "", { id: pid }) + U.btn("一致性抽检", "director.check", "primary", { pid: pid }),
-            '<div class="board-toolbar"><div class="seg-chips">' +
-              '<button type="button" class="seg-chip' + (ep === "all" ? " on" : "") + '" data-action="director.boardEp" data-value="all">全部集</button>' +
-              epList.map(n => '<button type="button" class="seg-chip' + (String(ep) === String(n) ? " on" : "") + '" data-action="director.boardEp" data-value="' + n + '">E' + n + "</button>").join("") +
-              '</div><span class="grow"></span><div class="seg-chips">' +
-              [["all", "全部"], ["passed", "已通过"], ["待执行", "待执行"], ["执行中", "执行中"], ["待人工", "待人工"]].map(x =>
-                '<button type="button" class="seg-chip' + (st === x[0] ? " on" : "") + '" data-action="director.boardState" data-value="' + x[0] + '">' + x[1] + "</button>").join("") +
-              '</div><span class="faint small">' + list.length + " 个镜头</span></div>" +
-            '<div class="split-wide"><div class="stack">' +
-              '<div class="board-grid">' + list.map(s => '<button type="button" class="shot-tile' + (sel && s.id === sel.id ? " on" : "") + '" data-action="director.boardShot" data-id="' + U.esc(s.id) + '">' +
-                '<span class="tile-media">' + (U.storyFrame(s) ? '<img src="' + U.esc(U.storyFrame(s)) + '" alt="' + U.esc(s.desc) + ' 关键帧">' : "") +
-                  '<span class="tile-no">E' + s.ep + " " + U.esc(s.no) + '</span><span class="tile-state">' + U.pill(s.status) + '</span><span class="tile-dur">' + U.esc(s.duration) + "</span></span>" +
-                '<span class="tile-body"><b>' + U.esc(s.desc) + "</b><small>" + U.esc(s.frame + " · " + s.angle + " · " + s.move) + "</small>" +
-                  '<span class="tile-tags"><span class="tag">' + U.esc(s.chars) + '</span><span class="tag">' + U.esc(s.version) + "</span></span></span></button>").join("") +
-                '<button type="button" class="tile-add" data-action="director.newShot" data-pid="' + U.esc(pid) + '">+ 新增镜头契约</button></div>' +
-              U.card("画面语言检查", U.listRows([
-                ["景别节奏", "同一场景内不连续 3 个同景别镜头"], ["轴线", "对话镜头保持同侧，不越轴"],
-                ["场景连续性", "光线、雨量与道具状态在相邻镜头一致"], ["人物视线", "对白镜头视线方向与站位一致"]
-              ]), "检查项用于评审，不自动改画面") +
-            '</div><aside class="stack">' +
-              (sel ? U.card("镜头契约 · " + sel.id,
-                (U.storyFrame(sel) ? '<div class="shot-preview"><img src="' + U.esc(U.storyFrame(sel)) + '" alt="' + U.esc(sel.desc) + '"></div>' : "") +
-                U.desc([["集 / 场", "E" + sel.ep + " / S" + sel.scene], ["景别 / 角度", sel.frame + " · " + sel.angle], ["运镜", sel.move], ["镜头倾向", sel.lens],
-                  ["时长", sel.duration], ["人物", sel.chars], ["情绪", sel.emotion], ["台词", sel.line], ["参考", sel.refs], ["模型", sel.model], ["状态", sel.status + " · " + sel.version]]) +
-                '<div class="btn-row-inline">' + U.btn("重新生成", "director.regenerate", "primary", { id: sel.id }) + U.btn("查看完整契约", "director.shotDetail", "", { id: sel.id }) + "</div>" +
-                U.notice("重新生成只影响这一镜，保留旧结果与新尝试记录；不会整集重跑。", "info"), "当前选中镜头") : U.empty("当前项目还没有镜头", "先在剧本拆解中生成镜头契约，或在左侧新增一镜。")) +
-              U.card("重生成入口", U.notice("按镜头粒度执行，失败成本单独入账。", "info") + '<div class="btn-row-inline">' + U.btn("选择镜头重生成", "director.pickRegen", "sm", { pid: pid }) + "</div>", "返工按镜头计费") +
-            "</aside></div>"
+            "</div></div>")
           );
         }
       }
@@ -228,12 +228,12 @@
   });
 
   /* ---------- 动作 ---------- */
-  App.on("director.toProjects", () => App.go("projects/list"));
-  App.on("director.toStoryboard", (el) => App.go("director/storyboard", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }));
+  App.on("director.view", (el) => { App.set(SCOPE, "view", el.dataset.value || "table"); App.refresh(); });
+  App.on("director.toStoryboard", (el) => { App.set(SCOPE, "view", "board"); App.go("director/shots", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }); });
   App.on("director.boardEp", (el) => { App.set(SCOPE, "boardEp", el.dataset.value || "all"); App.set(SCOPE, "boardShot", ""); App.refresh(); });
   App.on("director.boardState", (el) => { App.set(SCOPE, "boardState", el.dataset.value || "all"); App.set(SCOPE, "boardShot", ""); App.refresh(); });
   App.on("director.boardShot", (el) => { App.set(SCOPE, "boardShot", el.dataset.id || ""); App.refresh(); });
-  App.on("director.toShots", (el) => App.go("director/shots", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }));
+  App.on("director.toShots", (el) => { App.set(SCOPE, "view", "table"); App.go("director/shots", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }); });
   App.on("director.toCast", (el) => App.go("director/cast", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }));
   App.on("director.toVideo", (el) => App.go("video/production", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }));
   App.on("director.toQueue", (el) => App.go("video/production", { id: (el && el.dataset.id) || ((App.currentProject() || {}).id || "") }));
@@ -494,12 +494,14 @@
     const shots = D.shots.filter(s => s.project === pid);
     if (!shots.length) { App.toast("当前项目还没有镜头，无法抽检", "bad"); return; }
     App.job({
-      title: "执行一致性抽检", sub: "抽取约 20% 镜头比对人物 / 场景 / 道具与版本；不产生视频生成费用",
+      title: "执行一致性抽检", sub: "按价目与规则常量抽取 " + (D.pricing ? Math.round(D.pricing.qcSampleRate * 100) : 20) + "% 镜头比对人物 / 场景 / 道具与版本；不产生视频生成费用",
       steps: ["确定抽检样本", "比对参考资产版本", "写入质量报告"],
       run() {
-        const sample = shots.slice(0, Math.max(2, Math.round(shots.length * 0.2)));
+        const rate = D.pricing ? D.pricing.qcSampleRate : 0.2;
+        const minN = D.pricing ? D.pricing.qcMinSample : 2;
+        const sample = shots.slice(0, Math.max(minN, Math.round(shots.length * rate)));
         const bad = sample.filter(s => s.status !== "已通过");
-        const report = { id: "QR-" + pid.replace("SP-", "") + "-C" + sample.length + "-" + (D.qualityReports.length + 1), project: pid, object: pid + " / 一致性抽检", level: "镜头级", version: "抽检 " + sample.length + " 个", result: bad.length ? "REVIEW_REQUIRED" : "PASS", items: sample.length * 3, issues: bad.length, review: bad.length, fail: 0, engine: "视觉模型 V2", at: DB.state.at(), note: "抽检样本 " + sample.length + " 个" };
+        const report = { id: "QR-" + pid.replace("SP-", "") + "-C" + sample.length + "-" + (D.qualityReports.length + 1), project: pid, object: pid + " / 一致性抽检", level: "镜头级", version: "抽检 " + sample.length + " 个", result: bad.length ? "REVIEW_REQUIRED" : "PASS", items: sample.length * (D.pricing ? D.pricing.qcItemsPerShot : 3), issues: bad.length, review: bad.length, fail: 0, engine: "视觉模型 V2", at: DB.state.at(), note: "抽检样本 " + sample.length + " 个（比例 " + Math.round(rate * 100) + "%，最少 " + minN + " 个）" };
         D.qualityReports.unshift(report);
         bad.forEach(s => D.qualityIssues.unshift({ report: report.id, project: pid, dim: "人物一致性", where: s.id, level: "中", action: "局部重生成", auto: "否" }));
         DB.state.log("一致性抽检", "抽检 " + sample.length + " 个镜头，问题 " + bad.length + " 项", bad.length ? "待处理" : "成功", report.id);

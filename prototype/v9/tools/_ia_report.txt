@@ -1,0 +1,406 @@
+=== 1. 路由 × 菜单 × 页眉 一致性 ===
+path | 菜单(组/分支/名) | 页面 title | 页眉章节 | 权限 | 菜单可见 | projectScoped | 长度
+analytics/enterprise | 经营分析/企业经营/企业整体数据 | 企业整体数据 | （无 U.page 首参） | analytics.read | yes | - | 7762
+analytics/me | 经营分析/企业经营/我的数据 | 我的数据 | 经营分析 / 我的数据 | [analytics.own, analytics.read] | yes | - | 5151
+assets/library | 资源与治理/数字资产/资产库 | 资产库 | 资产 / 资产库 | asset.read | yes | - | 15694
+audio/dialogue | 短剧制作/音频与字幕/对白配音 | 对白配音 | 音频与字幕 / 对白配音 | production.write | yes | - | 4399
+audio/voice | 短剧制作/音频与字幕/声音档案 | 声音档案 | 音频与字幕 / 声音档案 | production.write | yes | - | 3594
+audio/bgm | 短剧制作/音频与字幕/配乐与音效 | 配乐与音效 | 音频与字幕 / 配乐与音效 | production.write | yes | - | 3393
+audio/subtitle | 短剧制作/音频与字幕/字幕与口型 | 字幕与口型 | 音频与字幕 / 字幕与口型 | production.write | yes | - | 27179
+compliance/rights | 企业与合规/合规与审计/权利与授权台账 | 权利与授权台账 | 合规与审计 / 权利与授权 | compliance.read | yes | - | 4261
+compliance/risks | 企业与合规/合规与审计/风险与异常 | 风险与异常 | 合规与审计 / 风险与异常 | compliance.read | yes | - | 3772
+compliance/audit | 企业与合规/合规与审计/审计日志 | 审计日志 | 合规与审计 / 审计日志 | compliance.read | yes | - | 16252
+cost/ledger | 资源与治理/成本与预算/成本台账 | 成本台账 | 成本与预算 / 成本台账 | cost.read | yes | - | 4855
+cost/budget | 资源与治理/成本与预算/预算与阈值 | 预算与阈值 | 成本与预算 / 预算与阈值 | cost.read | yes | - | 13801
+creation/brief | 短剧制作/创意与剧本/创意设定 | 创意设定 | （无 U.page 首参） | creation.write | yes | - | 4242
+creation/plan | 短剧制作/创意与剧本/创意方案 | 创意方案 | （无 U.page 首参） | creation.write | yes | - | 3250
+creation/script | 短剧制作/创意与剧本/剧本版本 | 剧本版本 | 创意与剧本 / 剧本工作台 | creation.write | yes | - | 11683
+creation/review | 短剧制作/创意与剧本/剧本审核 | 剧本审核 | 创意与剧本 / 剧本审核 | script.review | yes | - | 5196
+creation/breakdown | 短剧制作/创意与剧本/剧本拆解 | 剧本拆解 | 创意与剧本 / 剧本拆解 | creation.write | yes | - | 39289
+director/plan | 短剧制作/导演与视觉/镜头生产计划 | 镜头生产计划 | 导演规划 / 镜头生产计划 | director.write | yes | - | 5704
+director/cast | 短剧制作/导演与视觉/人物视觉档案 | 人物视觉档案 | 导演规划 / 人物视觉档案 | director.write | yes | - | 3344
+director/world | 短剧制作/导演与视觉/场景与道具 | 场景与道具 | 导演规划 / 场景与道具 | director.write | yes | - | 2921
+director/shots | 短剧制作/导演与视觉/镜头契约 | 镜头契约 | 导演规划 / 镜头契约 | director.write | yes | - | 26358
+models/config | 资源与治理/模型资源/资源配置 | 资源配置 | 模型与资源 / 资源配置 | [models.own, models.manage] | yes | - | 4651
+models/providers | 资源与治理/模型资源/供应商与模型 | 供应商与模型 | 模型与资源 / 供应商与模型 | models.manage | yes | - | 2219
+models/routing | 资源与治理/模型资源/能力与路由 | 能力与路由 | 模型与资源 / 能力与路由 | models.manage | yes | - | 11065
+notify/inbox | 创作工作台/通知与异常/待办与通知 | 待办与通知 | 通知与异常 / 待办与通知 | notify.handle | yes | - | 15750
+ops/overview | 平台运维/平台管理/平台总览 | 平台总览 | 平台管理 / 平台总览 | platform.read | yes | - | 3958
+ops/capabilities | 平台运维/平台管理/能力字典与适配器 | 能力字典与适配器 | 平台管理 / 能力字典 | platform.read | yes | - | 1898
+ops/queue | 平台运维/平台管理/队列、存储与备份 | 队列、存储与备份 | 平台管理 / 队列与存储 | platform.read | yes | - | 3182
+ops/logs | 平台运维/平台管理/系统日志 | 系统日志 | 平台管理 / 系统日志 | platform.read | yes | - | 2093
+ops/config | 平台运维/平台管理/平台业务配置 | 平台业务配置 | 平台管理 / 业务配置 | platform.config | yes | - | 7107
+orgs/enterprise | 企业与合规/组织与权限/企业主体 | 企业主体 | 组织与权限 / 企业主体 | enterprise.read | yes | - | 2268
+orgs/departments | 企业与合规/组织与权限/部门与组织单元 | 部门与组织单元 | 组织与权限 / 部门与组织 | org.read | yes | - | 2521
+orgs/members | 企业与合规/组织与权限/员工账号 | 员工账号 | 组织与权限 / 员工账号 | org.read | yes | - | 2199
+orgs/member | 企业与合规/组织与权限/员工档案 | 员工档案 | 组织与权限 / 员工档案 | org.read | hidden | - | 3216
+orgs/roles | 企业与合规/组织与权限/角色与权限 | 角色与权限 | 组织与权限 / 角色与权限 | org.read | yes | - | 1926
+orgs/grants | 企业与合规/组织与权限/项目成员授权 | 项目成员授权 | 组织与权限 / 项目授权 | grant.manage | yes | - | 2196
+orgs/handover | 企业与合规/组织与权限/离职与移交 | 离职与移交 | 组织与权限 / 离职与移交 | grant.manage | yes | - | 23483
+post/timeline | 短剧制作/后期与交付/时间线与剪辑 | 时间线与剪辑 | 后期与剪辑 / 时间线与剪辑 | post.write | yes | - | 5053
+post/episodes | 短剧制作/后期与交付/分集成片 | 分集成片 | 后期与剪辑 / 分集成片 | post.write | yes | - | 3349
+post/review | 短剧制作/后期与交付/最终成片审核 | 最终成片审核 | 审核与交付 / 最终成片审核 | final.review | yes | - | 4031
+post/delivery | 短剧制作/后期与交付/交付包 | 交付包 | 审核与交付 / 交付包 | [delivery.read, delivery.execute] | yes | - | 5176
+post/versions | 短剧制作/后期与交付/版本链 | 版本链 | 后期与剪辑 / 版本链 | post.write | yes | - | 21098
+projects/list | 短剧制作/立项与项目/项目列表 | 项目列表 | 项目中心 / 项目列表 | project.read | yes | - | 6402
+projects/workflow | 短剧制作/立项与项目/制作流水线 | 制作流水线 | 项目中心 / 制作流水线 | project.read | yes | Y | 7998
+projects/new | 短剧制作/立项与项目/新建项目 | 新建项目 | 项目中心 / 新建项目 | project.create | yes | - | 4300
+projects/detail | 短剧制作/立项与项目/项目详情 | 项目详情 | 项目中心 / 无权限 | project.read | hidden | Y | 6136
+projects/lifecycle | 短剧制作/立项与项目/生命周期与状态机 | 生命周期与状态机 | 项目中心 / 生命周期 | project.manage | yes | - | 26305
+quality/reports | 短剧制作/质量与返工/质量报告 | 质量报告 | 质量与返工 / 质量报告 | quality.read | yes | - | 4393
+quality/rework | 短剧制作/质量与返工/返工与返工台账 | 返工与返工台账 | 质量与返工 / 返工台账 | quality.operate | yes | - | 11332
+tasks/list | 资源与治理/生产任务/生产任务 | 生产任务 | 任务与队列 / 生产任务 | task.read | yes | - | 5859
+tasks/queue | 资源与治理/生产任务/资源池与队列 | 资源池与队列 | 任务与队列 / 资源池与队列 | task.read | yes | - | 4172
+tasks/attempt | 资源与治理/生产任务/尝试与调用记录 | 尝试与调用记录 | 任务与队列 / 尝试与调用 | task.read | yes | - | 18976
+video/production | 短剧制作/视频生产/视频生产队列 | 视频生产队列 | 视频生产 / 生产队列 | production.write | yes | - | 10573
+video/preview | 短剧制作/视频生产/预览与校验 | 预览与校验 | 视频生产 / 预览与校验 | production.write | yes | - | 20977
+workspace/home | 创作工作台/工作台/工作台首页 | 工作台首页 | 工作台 / 今日制作台 | [project.read, platform.read] | yes | - | 9338
+workspace/assistant | 创作工作台/工作台/指令式生产助手 | 指令式生产助手 | 工作台 / 指令式生产助手 | creation.write | yes | - | 33203
+
+=== 2. 菜单 label 与页面 title 不一致 ===
+
+=== 3b. 页眉章节名 vs 二级菜单名 ===
+analytics/me: 页眉「经营分析」 vs 二级菜单「企业经营」
+assets/library: 页眉「资产」 vs 二级菜单「数字资产」
+director/plan: 页眉「导演规划」 vs 二级菜单「导演与视觉」
+director/cast: 页眉「导演规划」 vs 二级菜单「导演与视觉」
+director/world: 页眉「导演规划」 vs 二级菜单「导演与视觉」
+director/shots: 页眉「导演规划」 vs 二级菜单「导演与视觉」
+models/config: 页眉「模型与资源」 vs 二级菜单「模型资源」
+models/providers: 页眉「模型与资源」 vs 二级菜单「模型资源」
+models/routing: 页眉「模型与资源」 vs 二级菜单「模型资源」
+post/timeline: 页眉「后期与剪辑」 vs 二级菜单「后期与交付」
+post/episodes: 页眉「后期与剪辑」 vs 二级菜单「后期与交付」
+post/review: 页眉「审核与交付」 vs 二级菜单「后期与交付」
+post/delivery: 页眉「审核与交付」 vs 二级菜单「后期与交付」
+post/versions: 页眉「后期与剪辑」 vs 二级菜单「后期与交付」
+projects/list: 页眉「项目中心」 vs 二级菜单「立项与项目」
+projects/workflow: 页眉「项目中心」 vs 二级菜单「立项与项目」
+projects/new: 页眉「项目中心」 vs 二级菜单「立项与项目」
+projects/detail: 页眉「项目中心」 vs 二级菜单「立项与项目」
+projects/lifecycle: 页眉「项目中心」 vs 二级菜单「立项与项目」
+tasks/list: 页眉「任务与队列」 vs 二级菜单「生产任务」
+tasks/queue: 页眉「任务与队列」 vs 二级菜单「生产任务」
+tasks/attempt: 页眉「任务与队列」 vs 二级菜单「生产任务」
+
+=== 3c. 同一二级菜单下出现多个页眉章节 ===
+短剧制作/后期与交付: post/timeline→后期与剪辑 / 时间线与剪辑 | post/episodes→后期与剪辑 / 分集成片 | post/review→审核与交付 / 最终成片审核 | post/delivery→审核与交付 / 交付包 | post/versions→后期与剪辑 / 版本链
+
+=== 3d. 同一按钮文案不同动作 ===
+「详情」: assets.detail(1页) / audio.assetDetail(1页) / compliance.rightDetail(1页) / compliance.riskDetail(1页) / director.shotDetail(1页) / orgs.deptDetail(1页) / post.reviewDetail(1页) / quality.reworkDetail(1页) / tasks.detail(1页)
+「引用检查」: assets.toUsage(1页) / assets.refs(1页)
+「档案」: audio.voiceDetail(1页) / director.charDetail(1页)
+「授权台账」: audio.toRights(2页) / compliance.toRights(1页)
+「补登记授权」: audio.fixRights(1页) / compliance.renew(1页)
+「替换素材」: audio.replaceAsset(1页) / compliance.replace(2页)
+「导出日志」: compliance.exportAudit(1页) / common.export(1页)
+「升级」: compliance.escalate(1页) / notify.escalate(1页)
+「调整」: cost.adjustBudget(1页) / ops.editConfig(1页) / orgs.editGrant(2页)
+「打开」: creation.openBrief(1页) / post.openTimeline(1页)
+「查看」: creation.openScript(1页) / director.locDetail(1页) / director.propDetail(1页)
+「审核记录」: creation.reviewHistory(1页) / post.reviewHistory(1页)
+「进入终审」: post.toReview(1页) / projects.wfFinal(1页)
+「质量报告」: projects.qcLink(1页) / quality.toReports(1页)
+「取消任务」: tasks.cancel(1页) / video.cancelTask(1页)
+「查看尝试记录」: tasks.toAttempts(1页) / video.closeAndGoAttempts(1页)
+
+=== 4. 跨页重复卡片标题（同标题出现≥2 页）===
+ → analytics/enterprise, assets/library, audio/subtitle, compliance/risks, cost/ledger, director/shots, notify/inbox, post/delivery, quality/reports, video/preview
+授权状态 → audio/voice, audio/bgm
+成本口径 → audio/voice, tasks/attempt
+静态原型说明 → audio/subtitle, workspace/assistant
+版本记录 → creation/brief, post/versions
+分集覆盖 → creation/script, creation/review
+审核清单 → creation/review, post/review
+任务队列 → ops/overview, ops/queue
+
+=== 5. 跨页重复指标标签 ===
+已通过 → audio/dialogue, post/episodes, post/review
+
+=== 6. 页面内 metric 与 card 同义重复（页内）===
+
+=== 7. 同一按钮目标的多页入口（新建/清单类）===
+返回项目列表→common.projects (23) → compliance/rights, compliance/risks, compliance/audit, cost/ledger, cost/budget, creation/script, creation/review, creation/breakdown, director/plan, director/cast, director/world, director/shots, post/delivery, projects/workflow, projects/workflow, projects/new, projects/detail, projects/detail, quality/reports, quality/rework, video/production, video/preview, workspace/home
+打开制作流水线→projects.wfOpen (5) → post/episodes, post/delivery, projects/detail, workspace/home, workspace/home
+查看授权台账→audio.toRights (3) → audio/voice, audio/bgm, audio/subtitle
+查看方案→creation.toPlan (3) → creation/brief, creation/brief, creation/brief
+查看剧本→creation.toScript (3) → creation/plan, creation/plan, creation/plan
+返回创意设定→creation.toBrief (3) → creation/plan, creation/plan, creation/plan
+返回名录→orgs.toMembers (3) → orgs/member, orgs/member, orgs/member
+新增授权→orgs.grantNew (3) → orgs/grants, orgs/grants, projects/detail
+
+=== 8. 取数函数分布 ===
+analytics/enterprise | visibleProjects:1 rawTasks:1
+analytics/me | myProjects:1 rawTasks:1 home:1
+assets/library | visibleProjects:2 currentProject:1 | guard
+audio/dialogue | currentProject:1 | guard
+audio/voice | currentProject:1 | guard
+audio/bgm | currentProject:1 | guard
+audio/subtitle | currentProject:11 | guard
+compliance/rights | visibleProjects:1 | guard
+compliance/risks | visibleProjects:1 | guard
+compliance/audit | visibleProjects:4 currentProject:1 | guard
+cost/ledger | visibleProjects:1 scopeLabel:2 | guard
+cost/budget | visibleProjects:1 rawTasks:1 scopeLabel:1 | guard
+creation/brief | currentProject:1 | guard
+creation/plan | currentProject:1 | guard
+creation/script | currentProject:1
+creation/review | currentProject:1
+creation/breakdown | currentProject:15 rawProjects:1 | guard
+director/plan | currentProject:1
+director/cast | currentProject:1
+director/world | currentProject:1
+director/shots | currentProject:10
+models/config | 
+models/providers | 
+models/routing | rawTasks:2
+notify/inbox | visibleProjects:1 | guard
+ops/overview | 
+ops/capabilities | 
+ops/queue | 
+ops/logs | 
+ops/config | 
+orgs/enterprise | 
+orgs/departments | rawProjects:1 scopeLabel:1
+orgs/members | visibleProjects:1 scopeLabel:2
+orgs/member | visibleProjects:1 scopeLabel:1
+orgs/roles | 
+orgs/grants | 
+orgs/handover | rawProjects:4 rawTasks:7
+post/timeline | currentProject:1 | guard
+post/episodes | currentProject:1 workflow:1 | guard
+post/review | currentProject:1 workflow:1 | guard
+post/delivery | currentProject:1 workflow:1 | guard
+post/versions | currentProject:10 rawProjects:1 workflow:1 | guard
+projects/list | visibleProjects:1 workflow:1 scopeLabel:1
+projects/workflow | currentProject:1 rawTasks:2 workflow:1 | guard
+projects/new | rawProjects:1
+projects/detail | currentProject:1 scopeLabel:1 | guard
+projects/lifecycle | visibleProjects:1 currentProject:5 rawProjects:3 workflow:6 | guard
+quality/reports | currentProject:1 | guard
+quality/rework | currentProject:2 | guard
+tasks/list | visibleProjects:1 rawTasks:3
+tasks/queue | visibleProjects:1 rawTasks:7
+tasks/attempt | visibleProjects:1 rawTasks:4
+video/production | currentProject:1
+video/preview | currentProject:4 rawTasks:2
+workspace/home | visibleProjects:1 currentProject:1 rawTasks:1 home:1 workflow:1 qualityOf:1
+workspace/assistant | currentProject:12 rawProjects:1 rawTasks:2 | guard
+
+=== 9. 硬编码项目 ID / 系数造假 ===
+
+=== 10. 权限码语义分布 ===
+production.write (6): audio/dialogue, audio/voice, audio/bgm, audio/subtitle, video/production, video/preview
+creation.write (5): creation/brief, creation/plan, creation/script, creation/breakdown, workspace/assistant
+director.write (4): director/plan, director/cast, director/world, director/shots
+platform.read (4): ops/overview, ops/capabilities, ops/queue, ops/logs
+org.read (4): orgs/departments, orgs/members, orgs/member, orgs/roles
+compliance.read (3): compliance/rights, compliance/risks, compliance/audit
+post.write (3): post/timeline, post/episodes, post/versions
+project.read (3): projects/list, projects/workflow, projects/detail
+task.read (3): tasks/list, tasks/queue, tasks/attempt
+cost.read (2): cost/ledger, cost/budget
+models.manage (2): models/providers, models/routing
+grant.manage (2): orgs/grants, orgs/handover
+analytics.read (1): analytics/enterprise
+[analytics.own, analytics.read] (1): analytics/me
+asset.read (1): assets/library
+script.review (1): creation/review
+[models.own, models.manage] (1): models/config
+notify.handle (1): notify/inbox
+platform.config (1): ops/config
+enterprise.read (1): orgs/enterprise
+final.review (1): post/review
+[delivery.read, delivery.execute] (1): post/delivery
+project.create (1): projects/new
+project.manage (1): projects/lifecycle
+quality.read (1): quality/reports
+quality.operate (1): quality/rework
+[project.read, platform.read] (1): workspace/home
+
+=== 11. 逐页区块清单（卡片 / 指标 / 按钮）===
+--- analytics/enterprise [8 卡 / 0 指标 / 1 按钮] 经营分析/企业经营
+  卡片:  | 交付与成本趋势 | 数据口径 | 企业指标口径（业务方案 §19.3 五组 · §19.5 口径定义） | 定时快照（不可回溯篡改） | 企业预算 | 质量与返工 | 个人视图入口
+  按钮: 导出报表→common.export
+--- analytics/me [5 卡 / 4 指标 / 4 按钮] 经营分析/企业经营
+  指标: 我的项目 | 任务成功率 | 个人承担成本 | 有效交付集数
+  卡片: 我的近期任务 | 成本结构 | 项目完成度 | 复盘提示 | 口径说明
+  按钮: 企业整体数据→analytics.toEnterprise | 员工对比→analytics.toEmployees | 切换月份→analytics.month | 导出我的数据→common.export
+--- assets/library [6 卡 / 0 指标 / 11 按钮] 资源与治理/数字资产
+  卡片:  | 资产目录 ·  | 八类资产 | 不可交付资产 | 版本历史与使用位置 | 引用位置明细
+  按钮: 返回资产库→assets.toLibrary | 详情→assets.detail | 引用→assets.refs | 上传资产→assets.upload | 引用检查→assets.toUsage | 上传资产→assets.upload | 导出清单→common.export | 引用检查→assets.refs | 新版本→assets.newVersion | 归档→assets.archiveOne | 删除资产→assets.deleteOne
+--- audio/dialogue [5 卡 / 4 指标 / 4 按钮] 短剧制作/音频与字幕
+  指标: 对白总数 | 已通过 | 回听异常 | 对白成本
+  卡片: 对白清单 ·  | 生成与校验规则 | 当前项目音频成本 | 对白状态分布 | 异常提示
+  按钮: 回听→audio.listen | 重生成→audio.regenLine | 批量生成对白→audio.batchDialogue | 查看声音档案→audio.toVoice
+--- audio/voice [7 卡 / 0 指标 / 8 按钮] 短剧制作/音频与字幕
+  卡片: 声音档案 ·  | 授权风险 ·  | 授权状态 | 试听占位 | 音频异常 ·  | 音色规则 | 成本口径
+  按钮: 试听→audio.previewVoice | 档案→audio.voiceDetail | 新建声音档案→audio.newVoice | 授权复核→audio.rightsCheck | 授权台账→audio.toRights | 续期登记→audio.renew | 替换音色→audio.replaceVoice | 查看授权台账→audio.toRights
+--- audio/bgm [7 卡 / 0 指标 / 7 按钮] 短剧制作/音频与字幕
+  卡片: 素材台账 ·  | 授权阻断 ·  | 授权状态 | 混音标准 | 授权类型 | 使用建议 | 素材状态
+  按钮: 详情→audio.assetDetail | 替换→audio.replaceAsset | 登记素材→audio.newAsset | 授权台账→audio.toRights | 补登记授权→audio.fixRights | 替换素材→audio.replaceAsset | 查看授权台账→audio.toRights
+--- audio/subtitle [4 卡 / 0 指标 / 10 按钮] 短剧制作/音频与字幕
+  卡片:  | 字幕校验项 ·  | 口型口径 | 静态原型说明
+  按钮: 校对→audio.proofSub | 重做→audio.redoLip | 生成字幕→audio.genSub | 批量口型对齐→audio.batchLip | 查看授权台账→audio.toRights | 重生成此句→audio.regenLine | 试听参数→audio.previewVoice | 停用档案→audio.disableVoice | 启用档案→audio.enableVoice | 确认可用→audio.confirmAsset
+--- compliance/rights [5 卡 / 4 指标 / 9 按钮] 企业与合规/合规与审计
+  指标: 授权记录 | 有效 | 快到期 | 阻断交付
+  卡片: 授权台账 ·  | 交付阻断 | 授权有效期规则 | 到期提醒 | 权利类型分布
+  按钮: 返回项目列表→common.projects | 详情→compliance.rightDetail | 新增授权记录→compliance.newRight | 风险视图→compliance.toRisks | 导出台账→common.export | 补登记授权→compliance.renew | 替换素材→compliance.replace | 登记续期→compliance.renew | 停用音色→compliance.disable
+--- compliance/risks [4 卡 / 4 指标 / 4 按钮] 企业与合规/合规与审计
+  指标: 未闭环风险 | 高风险 | 异常事件 | 升级规则
+  卡片:  | 风险清单 ·  | 等级与处置 | 未闭环事件
+  按钮: 返回项目列表→common.projects | 详情→compliance.riskDetail | 登记风险→compliance.newRisk | 审计日志→compliance.toAudit
+--- compliance/audit [3 卡 / 0 指标 / 10 按钮] 企业与合规/合规与审计
+  卡片: 日志 · 当前  | 11 类审计事件 | 留痕规则
+  按钮: 返回项目列表→common.projects | 导出日志→compliance.exportAudit | 导出日志→common.export | 授权台账→compliance.toRights | 风险视图→compliance.toRisks | 续期→compliance.renew | 替换素材→compliance.replace | 停用→compliance.disable | 闭环→compliance.closeRisk | 升级→compliance.escalate
+--- cost/ledger [4 卡 / 4 指标 / 7 按钮] 资源与治理/成本与预算
+  指标: 预计合计 | 实际合计 | 失败成本 | 个人承担
+  卡片:  | 成本明细 ·  | 十维成本口径 | 失败与重试成本明细
+  按钮: 返回项目列表→common.projects | 核验→cost.verify | 费用调整→cost.adjust | 核验→cost.verify | 导出明细→common.export | 预算视图→cost.toBudget | 导出用量→common.export
+--- cost/budget [6 卡 / 0 指标 / 6 按钮] 资源与治理/成本与预算
+  卡片: 预算表 ·  | 预算规则（6 条） | 预检与阻塞 | 预算告警 | 使用率分布 | 阈值口径
+  按钮: 返回项目列表→common.projects | 调整→cost.adjustBudget | 成本台账→cost.toLedger | 调整阈值→cost.setThreshold | 追加预算→cost.addBudget | 恢复任务→cost.resume
+--- creation/brief [6 卡 / 0 指标 / 11 按钮] 短剧制作/创意与剧本
+  卡片: 当前项目 ·  | 创意设定台账 ·  | 当前创意设定 ·  | 版本记录 | 输入方式（七选一） | 生成前校验
+  按钮: 打开→creation.openBrief | 查看方案→creation.toPlan | 新建 V2 版本链→post.newVersion | 新建创意设定→creation.newBrief | 派生新版本→creation.deriveBrief | 查看方案→creation.toPlan | 查看方案→creation.toPlan | 导入小说另立项目→creation.importNovel | 派生新版本→creation.deriveBrief | 与下游剧本比对→creation.briefTrace | 查看该方式说明→creation.modeDetail
+--- creation/plan [2 卡 / 0 指标 / 9 按钮] 短剧制作/创意与剧本
+  卡片: 方案对比 | 方案到剧本的交接
+  按钮: 查看剧本→creation.toScript | 返回创意设定→creation.toBrief | 重新生成方案→creation.regenPlan | 返回创意设定→creation.toBrief | 查看剧本→creation.toScript | 返回创意设定→creation.toBrief | 查看剧本→creation.toScript | 选定该方案→creation.choosePlan | 查看评分依据→creation.scoreDetail
+--- creation/script [8 卡 / 0 指标 / 16 按钮] 短剧制作/创意与剧本
+  卡片: 当前版本 | 分集覆盖 ·  | 本集概览 | 人物在场 | 连续性检查 | 版本摘要 | 审核状态 | 版本台账
+  按钮: 返回项目列表→common.projects | 去选定方案→creation.toPlan | 生成候选剧本→creation.generateScript | 查看制作流水线→projects.wfOpen | 去剧本审核→creation.toReview | 返回制作流水线→projects.wfOpen | 返回制作流水线→projects.wfOpen | 生成候选剧本→creation.generateScript | 提交审核→creation.submitReview | 返回流水线→projects.wfOpen | 导出剧本→common.export | 与正式版比对→creation.diff | 查看拆解结果→creation.toBreakdown | 锁定正式版本→creation.lock | 去剧本审核→creation.toReview | 查看→creation.openScript
+--- creation/review [6 卡 / 0 指标 / 11 按钮] 短剧制作/创意与剧本
+  卡片: 待审对象 | 分集覆盖 | 审核清单（7 项） | 审核结论 | 变更影响分析（业务方案 §6.4） | 历史审核
+  按钮: 返回项目列表→common.projects | 返回项目→projects.wfOpen | 审核记录→creation.reviewHistory | 返回剧本版本→creation.toScript | 通过并锁定正式版本→creation.approveScript | 退回修改（指出位置）→creation.rejectScript | 指定位置局部修改→creation.partialScript | 终止项目→creation.terminateScript | 查看正式版本→creation.openScript | 发起局部修改→creation.partialScript | 查看镜头级受影响清单→creation.impact
+--- creation/breakdown [9 卡 / 0 指标 / 4 按钮] 短剧制作/创意与剧本
+  卡片: 拆解结果 ·  | 集 / 场 | 人物 | 场景 / 道具 | 引用关系 | 拆解待处理 | 拆解质量自检 | 八维度影响汇总 | 镜头级受影响清单
+  按钮: 返回项目列表→common.projects | 查看制作流水线→projects.wfOpen | 进入导演规划→creation.toDirector | 与正式版本比对→creation.diff
+--- director/plan [6 卡 / 4 指标 / 10 按钮] 短剧制作/导演与视觉
+  指标: 镜头总数 | 场次数 | 参考资产就绪 | 契约固化率
+  卡片: 规划链路 | 场次规划 ·  | 并行分组与门禁 | 镜头契约必填字段 | 规划待处理 | 规划口径
+  按钮: 返回项目列表→common.projects | 查看镜头→director.sceneShots | 重新规划→director.replan | 固化生产计划→director.freezePlan | 查看生产流水线→projects.wfOpen | 先选定创意方案→creation.toPlan | 先完成剧本审核→creation.toScript | 进入分镜板→director.toStoryboard | 去视频生产→director.toVideo | 查看队列→director.toQueue
+--- director/cast [4 卡 / 0 指标 / 8 按钮] 短剧制作/导演与视觉
+  卡片: 人物档案表 | 档案待处理 | 档案规则 | 当前项目人物
+  按钮: 返回项目列表→common.projects | 档案→director.charDetail | 新建人物档案→director.newChar | 一致性抽检→director.check | 导出档案→common.export | 追加参考资产→director.addRef | 新建版本→director.versionChar | 全部档案→director.toCast
+--- director/world [4 卡 / 0 指标 / 6 按钮] 短剧制作/导演与视觉
+  卡片: 场景（ | 道具（ | 场景一致性要求 | 道具连续性
+  按钮: 返回项目列表→common.projects | 查看→director.locDetail | 查看→director.propDetail | 新增场景→director.newLoc | 新增道具→director.newProp | 一致性报告→director.check
+--- director/shots [6 卡 / 0 指标 / 12 按钮] 短剧制作/导演与视觉
+  卡片:  | 镜头清单 ·  | 镜头卡预览 | 批量提交校验 | 契约字段组（10 项） | 生产门禁
+  按钮: 返回项目列表→common.projects | 详情→director.shotDetail | 提交生产→director.submitShot | 新建镜头→director.newShot | 批量提交→director.batchSubmit | 一致性抽检→director.check | 重新生成这一镜→director.regenerate | 确认视觉设定→director.confirmChar | 追加参考资产→director.addRef | 新建版本→director.versionChar | 确认场景设定→director.confirmLoc | 确认道具设定→director.confirmProp
+--- models/config [7 卡 / 4 指标 / 6 按钮] 资源与治理/模型资源
+  指标: 个人自持 | 企业托管资源 | 已用额度 | 异常资源
+  卡片: 企业托管资源与额度（管理员视图） | 我的资源配置 | 资源归属与可见性 | PRV 资源异常 | 额度占用 | 资源验证记录 | 安全边界
+  按钮: 测试→models.test | 设为默认→models.setDefault | 更新凭据→models.updateCredential | 删除→models.remove | 新增资源→models.newProvider | 路由策略→models.toRouting
+--- models/providers [4 卡 / 0 指标 / 3 按钮] 资源与治理/模型资源
+  卡片: 供应商（ | 模型能力档案（ | 接入方式 | 错误分类
+  按钮: 测试连接→models.test | 新增供应商→models.newProvider | 查看调用日志→models.toLogs
+--- models/routing [6 卡 / 4 指标 / 2 按钮] 资源与治理/模型资源
+  指标: 能力项 | 视频能力 | 后期能力 | 兼容不满足
+  卡片: 路由策略 ·  | 备用切换兼容校验 | 能力清单 | 剪辑与后期能力 | 视频能力可用性 | 路由原则
+  按钮: 修改路由策略→models.editRoute | 供应商→models.toProviders
+--- notify/inbox [3 卡 / 4 指标 / 8 按钮] 创作工作台/通知与异常
+  指标: 未读 | 待我处理 | 已升级 | 已闭环
+  卡片:  | 升级规则 | 通知要素与渠道
+  按钮: 全部标记已读→notify.readAll | 去异常中心→notify.toIncidents | 处理→notify.handle | 转待办→notify.toTask | 通知偏好→notify.prefs | 去业务页处理→notify.jump | 记录处理结论→notify.close | 升级→notify.escalate
+--- ops/overview [5 卡 / 0 指标 / 4 按钮] 平台运维/平台管理
+  卡片: 服务健康与监控 | 平台边界说明 | 存储占用 | 任务队列 | 按角色可见范围
+  按钮: 队列与存储→ops.queueLink | 平台配置→ops.toConfig | 刷新视图→ops.refresh | 进入队列视图→ops.queueLink
+--- ops/capabilities [2 卡 / 0 指标 / 3 按钮] 平台运维/平台管理
+  卡片: 十六类模型能力 | 适配器注册表
+  按钮: 登记适配器→ops.adapterRegister | 导出字典→common.export | 登记适配器→ops.adapterRegister
+--- ops/queue [4 卡 / 0 指标 / 3 按钮] 平台运维/平台管理
+  卡片: 任务队列 | 媒体存储 | 备份与恢复 | 容量与成本趋势
+  按钮: 导出资源快照→common.export | 扩容申请→ops.scaleRequest | 发起恢复演练→ops.restoreDrill
+--- ops/logs [3 卡 / 4 指标 / 1 按钮] 平台运维/平台管理
+  指标: 日志条数 | ERROR | WARN | 脱敏字段
+  卡片: 系统日志 | 日志边界 | 监控口径
+  按钮: 导出日志快照→common.export
+--- ops/config [3 卡 / 0 指标 / 3 按钮] 平台运维/平台管理
+  卡片: 全局参数 | 数据保留与归档策略 | 配置边界
+  按钮: 保存配置→ops.saveConfig | 导出配置快照→common.export | 调整→ops.editConfig
+--- orgs/enterprise [4 卡 / 0 指标 / 5 按钮] 企业与合规/组织与权限
+  卡片: 企业档案 | 统一治理范围 | 企业策略 | 治理边界
+  按钮: 编辑企业信息→orgs.editEnterprise | 调整策略→orgs.editPolicy | 查看企业总览→orgs.toAnalytics | 停用企业（保留数据）→orgs.disable | 调整策略→orgs.editPolicy
+--- orgs/departments [3 卡 / 0 指标 / 2 按钮] 企业与合规/组织与权限
+  卡片: 部门列表 | 组织边界规则 | 部门视图授权
+  按钮: 详情→orgs.deptDetail | 新建部门→orgs.newDept
+--- orgs/members [1 卡 / 3 指标 / 3 按钮] 企业与合规/组织与权限
+  指标: 在职（可见） | 个人自持配置 | 覆盖项目
+  卡片: 成员目录
+  按钮: 邀请员工→orgs.newMember | 导出名录→common.export | 角色与权限对照→orgs.toRoles
+--- orgs/member [4 卡 / 0 指标 / 5 按钮] 企业与合规/组织与权限
+  卡片: 基础信息 | 负责与参与项目 | 个人产出 | 人员变动
+  按钮: 返回名录→orgs.toMembers | 返回名录→orgs.toMembers | 返回名录→orgs.toMembers | 调整项目授权→orgs.grant | 发起离职移交→orgs.offboard
+--- orgs/roles [3 卡 / 0 指标 / 3 按钮] 企业与合规/组织与权限
+  卡片: 六类角色 | 权限码清单（ | 三层判定与按钮层示例
+  按钮: 新建角色→orgs.newRole | 调整权限码→orgs.editPerms | 查看权限码→orgs.roleDetail
+--- orgs/grants [3 卡 / 0 指标 / 5 按钮] 企业与合规/组织与权限
+  卡片: 项目 × 成员授权矩阵 | 授权规则 | 待处理授权申请
+  按钮: 新增授权→orgs.grantNew | 导出授权台账→common.export | 调整→orgs.editGrant | 撤销→orgs.revokeGrant | 新增授权→orgs.grantNew
+--- orgs/handover [5 卡 / 0 指标 / 4 按钮] 企业与合规/组织与权限
+  卡片: 待移交项目 | 移交预览要素 ·  | 移交预览 | 人员变动处理口径 | 移交与成员变更记录
+  按钮: 发起移交→orgs.transfer | 移交历史→orgs.history | 移交预览→orgs.preview | 部门统计视图→orgs.deptStats
+--- post/timeline [6 卡 / 0 指标 / 4 按钮] 短剧制作/后期与交付
+  卡片: 时间线清单 | E | 剪辑要点 | 时间线结构 | 标脏片段 | 输出规格
+  按钮: 打开→post.openTimeline | 新建集时间线→post.newTimeline | 输出成片→post.exportTimeline | 去分集成片→post.toEpisodes
+--- post/episodes [5 卡 / 4 指标 / 3 按钮] 短剧制作/后期与交付
+  指标: 目标集数 | 已通过 | 后期中 | 待生产
+  卡片: 分集成片 ·  | 分集完成度 | 成片输出规格 | 分集质检结论 | 整剧打包条件
+  按钮: 镜头与报告→projects.wfEpDetail | 打开制作流水线→projects.wfOpen | 进入终审→post.toReview
+--- post/review [5 卡 / 4 指标 / 3 按钮] 短剧制作/后期与交付
+  指标: 待审核 | 已通过 | 指定返工 | 审核人
+  卡片: 成片审核记录 ·  | 审核清单（节点 B · 10 项） | 审核结论口径（业务方案 §16.3 · 四种结论） | 当前审核对象 ·  | 判定维度
+  按钮: 详情→post.reviewDetail | 审核记录→post.reviewHistory | 指定返工→projects.wfQuality
+--- post/delivery [6 卡 / 4 指标 / 7 按钮] 短剧制作/后期与交付
+  指标: 已交付 | 待核验 | 交付内容项 | 阻断项
+  卡片:  | 交付包清单 ·  | 交付内容模板（9 类） | 生成前检查 | 阻断提示 | 冻结规则
+  按钮: 交付清单→post.deliveryDetail | 返回项目列表→common.projects | 确认交付并冻结→projects.wfDelivery | 生成交付包→projects.wfDelivery | 处理交付阻断→projects.wfRights | 进入终审→projects.wfFinal | 打开制作流水线→projects.wfOpen
+--- post/versions [4 卡 / 0 指标 / 9 按钮] 短剧制作/后期与交付
+  卡片: 链路视图 ·  | 版本记录 ·  | 版本规则 | 当前版本状态
+  按钮: 回指引用检查→post.refCheck | 资产库→post.toAssets | 新建 V2 版本链→post.newVersion | 执行集级质检→post.runEpQc | 确认接收→post.confirmDelivery | 作废交付包→post.voidDelivery | 归档项目→post.archiveProject | 归档项目→post.archiveProject | 从此版本新建 V2→post.newVersion
+--- projects/list [2 卡 / 0 指标 / 3 按钮] 短剧制作/立项与项目
+  卡片: 项目状态分布 | 状态机提示
+  按钮: 新建项目→projects.new | 导出项目台账→common.export | 查看状态机→projects.lifecycleLink
+--- projects/workflow [3 卡 / 0 指标 / 4 按钮] 短剧制作/立项与项目
+  卡片: 全  | 最近质检 | 成本与预算
+  按钮: 返回项目列表→common.projects | 项目档案→projects.detail | 暂停项目→projects.pause | 返回项目列表→common.projects
+--- projects/new [5 卡 / 0 指标 / 3 按钮] 短剧制作/立项与项目
+  卡片: 项目属性（必填项标 *） | 创意输入 | 创建校验 | 从既有项目复制 | 预算与资源预检
+  按钮: 返回项目列表→common.projects | 保存草稿→projects.saveDraft | 创建并入工作台→projects.create
+--- projects/detail [8 卡 / 0 指标 / 11 按钮] 短剧制作/立项与项目
+  卡片: 阶段进度 | 项目档案 | 创作基准（下游唯一依据） | 成员与授权 | 预算与成本 | 质量与审核 | 风险与待办 | 生命周期记录
+  按钮: 返回项目列表→common.projects | 返回项目列表→common.projects | 查看角色权限→projects.lifecycleLink | 打开制作流水线→projects.wfOpen | 暂停项目→projects.pause | 移交→orgs.transfer | 进入交付→projects.deliveryLink | 调整→orgs.editGrant | 新增授权→orgs.grantNew | 成本明细→cost.ledgerLink | 质量报告→projects.qcLink
+--- projects/lifecycle [4 卡 / 0 指标 / 7 按钮] 短剧制作/立项与项目
+  卡片: 状态定义与进入条件 | 迁移规则 | 可见项目状态分布 | 项目当前状态
+  按钮: 批量暂停项目→projects.pauseAll | 批量恢复项目→projects.resumeAll | 终止指定项目→projects.terminate | 查看异常中心→projects.incidentsLink | 查看审计流水→compliance.toAudit | 打开分镜板→projects.wfToShots | 打开视频生产→projects.wfToProduction
+--- quality/reports [5 卡 / 0 指标 / 3 按钮] 短剧制作/质量与返工
+  卡片:  | 报告可信口径 | 检测结果分布 | 报告趋势 | 报告有效期
+  按钮: 返回项目列表→common.projects | 报告详情→quality.reportDetail | 返工台账→quality.toRework
+--- quality/rework [5 卡 / 4 指标 / 8 按钮] 短剧制作/质量与返工
+  指标: 返工记录 | 返工成本 | 平均轮次 | 转人工
+  卡片: 返工台账 | 返工规则 | 自动 vs 人工 | 当前范围暂无返工 | 返工成本分布
+  按钮: 返回项目列表→common.projects | 详情→quality.reworkDetail | 重跑→quality.rerun | 发起返工→quality.newRework | 质量报告→quality.toReports | 接受→quality.judge | 返工→quality.judge | 驳回→quality.judge
+--- tasks/list [4 卡 / 0 指标 / 9 按钮] 资源与治理/生产任务
+  卡片: 任务列表 · 当前  | 任务状态（业务方案 §12.2 ·  | 失败类型与差异化策略（业务方案 §12.5） | 重试规则
+  按钮: 查看全部任务→tasks.toList | 详情→tasks.detail | 尝试→tasks.toAttempts | 批量重试→tasks.batchRetry | 暂停队列→tasks.pauseQueue | 资源池与队列→tasks.toQueue | 尝试与调用→tasks.toAttempts | 查看尝试→tasks.toAttempts | 人工决策→tasks.decide
+--- tasks/queue [4 卡 / 4 指标 / 2 按钮] 资源与治理/生产任务
+  指标: 执行中 | 排队中 | 待人工 | 平台并发上限
+  卡片: 队列看板 | 资源池 | 等待原因 · 实时 | 队列原则
+  按钮: 任务列表→tasks.toList | 调整并发→tasks.setConcurrency
+--- tasks/attempt [8 卡 / 0 指标 / 9 按钮] 资源与治理/生产任务
+  卡片: 尝试记录 | 模型调用记录 | 失败分类 | 成本口径 | 凭据隔离 | 四状态分离（业务方案 §8.2 · 强制） | 文件校验明细 | 生产衔接门禁（业务方案 §12.7）
+  按钮: 清除任务筛选→tasks.clearTask | 清除筛选→tasks.clearTask | 任务列表→tasks.toList | 导出记录→common.export | 执行任务→tasks.execute | 人工决策→tasks.decide | 取消任务→tasks.cancel | 切换模型→tasks.switchModel | 查看尝试记录→tasks.toAttempts
+--- video/production [7 卡 / 0 指标 / 12 按钮] 短剧制作/视频生产
+  卡片: 生产队列 · 已冻结 | 生产队列为空 | 四状态分离口径 | 失败处理与重试 | 批次进度 | 资源配置占用 | 成本提示
+  按钮: 返回项目列表→common.projects | 查看项目档案→projects.detail | 查看交付包→post.toDelivery | 新建生成批次→video.newBatch | 查看任务中心→video.toTasks | 去分镜板→video.toStoryboard | 新建生成批次→video.newBatch | 查看任务→video.taskDetail | 处理失败→video.handleFail | 进入预览评审→video.toPreview | 全部尝试记录→video.toAttempts | 去资源配置→video.toModels
+--- video/preview [5 卡 / 0 指标 / 11 按钮] 短剧制作/视频生产
+  卡片:  | 与契约比对 | 采用决策 | 镜头摘要 | 同组衔接
+  按钮: 返回项目列表→common.projects | 导出结果清单→common.export | 版本列表→video.tab | 重新生成→video.regenShot | 采用该版本→video.adoptCurrent | 局部重生成→video.regenShot | 接受并记录理由→video.adoptCurrent | 执行→video.runTask | 处理失败→video.handleFail | 取消任务→video.cancelTask | 查看尝试记录→video.closeAndGoAttempts
+--- workspace/home [2 卡 / 3 指标 / 8 按钮] 创作工作台/工作台
+  指标: 最近交付作品 | AI 生成消耗 | 个人资源可用
+  卡片: 分集 | 今日待办
+  按钮: 新建项目→projects.new | 返回项目列表→common.projects | 继续这一集→workspace.openEp | 生产队列→workspace.toVideo | 镜头计划→workspace.toDirector | 打开制作流水线→projects.wfOpen | 查看全部待办→workspace.toNotify | 打开制作流水线→projects.wfOpen
+--- workspace/assistant [7 卡 / 0 指标 / 10 按钮] 创作工作台/工作台
+  卡片: 输入指令 | 解析结果 ·  | 可识别的目标类型（业务方案 §20.4） | 本次会话执行记录 | 能力边界 | 确认机制 | 静态原型说明
+  按钮: 查看可用指令→workspace.cmdHelp | 指令历史→workspace.cmdHistory | 解析指令→workspace.parse | 清空→workspace.clearCmd | 指定项目并重新解析→workspace.pickTarget | 修改参数→workspace.editParams | 解析示例指令→workspace.parse | 打开剧本版本→workspace.toScript | 打开视觉档案→workspace.toCast | 进入项目→projects.detail

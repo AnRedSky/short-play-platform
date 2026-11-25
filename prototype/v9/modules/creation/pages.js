@@ -23,7 +23,7 @@
             frozen ? "该项目当前为「" + p.status + "」，创意设定与方案只读；如需修改请从作品库新建 V2 版本链。" : editable ? "所有输入方式最终都收敛为同一份结构化创意设定；版本、授权与来源可追溯，草稿不进入下游。" : "项目已进入「" + p.status + "」，创意设定锁定为历史版本；修改需走剧本变更或新建 V2，不得回写已生产镜头。",
             (frozen ? U.btn("查看方案", "creation.toPlan", "", { id: pid }) + U.btn("新建 V2 版本链", "post.newVersion", "primary", { pid: pid }) : editable ? U.btn("新建创意设定", "creation.newBrief", "primary", { id: pid }) + U.btn("派生新版本", "creation.deriveBrief", "", { id: pid }) + U.btn("查看方案", "creation.toPlan", "", { id: pid }) : U.btn("查看方案", "creation.toPlan", "", { id: pid })) + U.btn("导入小说另立项目", "creation.importNovel"),
             '<div class="brief-layout"><div class="stack">' +
-              U.card("当前项目 · " + U.esc(p ? p.name : pid), U.desc([["项目", pid], ["状态", p ? p.status : "—"], ["集数", (p ? p.episodes : 0) + " 集"], ["单集时长", p ? p.duration : "—"], ["预算", "¥" + Number(p ? p.budget : 0).toLocaleString("zh-CN")], ["创意设定", cur ? cur.id + " · " + cur.version + "（" + cur.status + "）" : "尚未建立"]]), "创意设定只对当前项目生效；需要另立项目请使用导入小说入口") +
+              U.card("当前项目 · " + U.esc(p ? p.name : pid), U.desc([["项目", pid], ["状态", p ? p.status : "—"], ["集数", (p ? p.episodes : 0) + " 集"], ["单集时长", p ? p.duration : "—"], ["预算", "¥" + Number(p ? DB.derived.budgetOfProject(p).total : 0).toLocaleString("zh-CN")], ["创意设定", cur ? cur.id + " · " + cur.version + "（" + cur.status + "）" : "尚未建立"]]), "创意设定只对当前项目生效；需要另立项目请使用导入小说入口") +
               U.card("创意设定台账 · " + U.esc(p ? p.name : pid), rows || U.empty("当前项目还没有创意设定", "新建创意设定并提交后，系统会生成可比较的创意方案"), "草稿不进入下游生产") +
               U.card("当前创意设定 · " + (cur ? cur.id : "尚无"), cur ? U.desc([["输入方式", cur.mode], ["创作意图", cur.note, true], ["版本 / 状态", cur.version + " · " + cur.status], ["操作者 / 时间", cur.by + " · " + cur.at], ["项目", cur.project]]) +
                 '<div class="btn-row-inline">' + (editable ? U.btn("派生新版本", "creation.deriveBrief", "sm", { id: pid }) : "") + U.btn("与下游剧本比对", "creation.briefTrace", "sm", { id: cur.id }) + "</div>" : U.empty("尚无已确认创意设定", "先提交创作意图，再生成创意方案"), "资料授权不明确时不得进入生成") +
@@ -56,13 +56,13 @@
           const frozen = !!p && ["已交付", "已归档"].indexOf(p.status) >= 0;
           const editable = !!p && !frozen && p.status === "创意策划中";
           return U.page("创意与剧本 / 创意方案 · " + (p ? p.name : pid), "创意方案", frozen ? "该项目当前为「" + p.status + "」，方案只读；下游剧本与镜头均以交付版本为准。" : editable ? "方案对比必须能看出差异与风险，而不是三份换词的同一份。" : "项目当前为「" + p.status + "」，方案已定稿；如需重选请走剧本变更，不得绕过锁定版本。",
-            frozen ? U.btn("查看剧本", "creation.toScript", "", { id: pid }) + U.btn("返回创意设定", "creation.toBrief", "", { id: pid }) : editable ? U.btn("重新生成方案", "creation.regenPlan", "", { pid: pid }) + U.btn("返回创意设定", "creation.toBrief", "", { id: pid }) : U.btn("查看剧本", "creation.toScript", "", { id: pid }) + U.btn("返回创意设定", "creation.toBrief", "", { id: pid }),
+            frozen ? U.btn("剧本版本", "creation.toScript", "", { id: pid }) + U.btn("返回创意设定", "creation.toBrief", "", { id: pid }) : editable ? U.btn("重新生成方案", "creation.regenPlan", "", { pid: pid }) + U.btn("返回创意设定", "creation.toBrief", "", { id: pid }) : U.btn("剧本版本", "creation.toScript", "", { id: pid }) + U.btn("返回创意设定", "creation.toBrief", "", { id: pid }),
             (plans.length ? '<div class="grid grid-2">' + plans.map(plan =>
               '<article class="card plan-card' + (plan.id === (chosen ? chosen.id : "") ? " chosen" : "") + '"><div class="card-body">' +
                 '<div class="plan-head"><div><span class="kicker">' + U.esc(plan.id) + "</span><h3>" + U.esc(plan.title) + '</h3><div class="faint small">' + U.esc(plan.project) + '</div></div><div class="plan-score"><b>' + plan.score + "</b><span>自检分</span></div></div>" +
                 U.desc([["核心卖点", plan.selling], ["主题", plan.theme], ["开场钩子", plan.hook], ["主要风险", plan.risk]]) +
                 (plan.chosen ? '<div class="notice ok">当前已选定该方案，下游剧本以此为输入。</div>' : "") +
-                '<div class="btn-row-inline">' + (plan.chosen ? U.btn("查看剧本", "creation.toScript", "sm", { id: plan.project }) : editable ? U.btn("选定该方案", "creation.choosePlan", "primary", { id: plan.id }) : "") + U.btn("查看评分依据", "creation.scoreDetail", "sm", { id: plan.id }) + "</div>" +
+                '<div class="btn-row-inline">' + (plan.chosen ? U.btn("剧本版本", "creation.toScript", "sm", { id: plan.project }) : editable ? U.btn("选定该方案", "creation.choosePlan", "primary", { id: plan.id }) : "") + U.btn("查看评分依据", "creation.scoreDetail", "sm", { id: plan.id }) + "</div>" +
               "</div></article>").join("") + "</div>" : U.empty(frozen ? "该项目没有留存可比较方案" : "当前项目还没有创意方案", frozen ? "交付项目只保留已选定方案与剧本记录" : "先提交已确认的创意设定，再生成可比较方案")) +
             (plans.length ? U.card("方案对比", U.table(["维度"].concat(plans.map(x => x.id)), [
               ["核心卖点"].concat(plans.map(x => x.selling)),
@@ -81,7 +81,7 @@
         desc: "剧本以版本为单位管理：候选、退回、已通过正式版本并存，正式版本锁定后不静默覆盖。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p) return U.page("创意与剧本 / 剧本工作台", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；剧本版本不会回退到其他项目。", U.btn("返回项目列表", "projects.listLink"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
+          if (!p) return U.page("创意与剧本 / 剧本工作台", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；剧本版本不会回退到其他项目。", U.btn("返回项目列表", "common.projects"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
           const project = p.id;
           const list = scriptList(project);
           const cur = list.find(s => s.locked) || list[0];
@@ -91,8 +91,8 @@
             return U.page("创意与剧本 / 剧本工作台 · " + pname, "剧本工作台 · " + pname,
               cur ? "该版本已登记规模与审核状态；正文样本未载入，审核以版本记录与分集覆盖为准。" : "该项目还没有剧本版本。",
               (!cur
-                ? (p.status === "创意策划中" ? U.btn("去选定方案", "creation.toPlan", "primary", { id: project }) : p.status === "剧本创作中" ? U.btn("生成候选剧本", "creation.generateScript", "primary", { id: project }) : U.btn("查看制作流水线", "projects.wfOpen", "primary", { pid: project }))
-                : U.btn("去剧本审核", "creation.toReview", "primary", { id: project })) + U.btn("返回制作流水线", "projects.wfOpen", "", { pid: project }),
+                ? (p.status === "创意策划中" ? U.btn("查看方案", "creation.toPlan", "primary", { id: project }) : p.status === "剧本创作中" ? U.btn("生成候选剧本", "creation.generateScript", "primary", { id: project }) : U.btn("制作流水线", "projects.wfOpen", "primary", { pid: project }))
+                : U.btn("去剧本审核", "creation.toReview", "primary", { id: project })) + U.btn("制作流水线", "projects.wfOpen", "", { pid: project }),
               U.card("当前版本", cur ? U.desc([["版本", cur.id], ["状态", cur.status], ["规模", cur.episodes + " 集 / " + (cur.scenes || 0) + " 场 / " + (cur.shots || 0) + " 镜 / " + (cur.lines || 0) + " 行"], ["项目", project], ["提交人 / 时间", cur.by + " · " + cur.at], ["说明", cur.note || "—", true]]) : U.empty("暂无剧本版本", "先导入小说或从创意生成候选剧本。"), "未载入正文时不展示虚构内容") +
               U.card("分集覆盖 · " + project, eps.length ? U.table(["集", "标题", "场", "镜头", "时长", "状态"], eps.map(e => '<tr><td class="num">E' + e.no + '</td><td>' + U.esc(e.title) + '</td><td class="num">' + e.scenes + '</td><td class="num">' + e.shots + '</td><td class="num">' + U.esc(e.duration) + '</td><td>' + U.pill(e.status) + "</td></tr>").join("")) : U.empty("尚未拆解分集", "剧本审核锁定后才能生成集、场与镜头契约"), "只展示当前项目真实记录")
             );
@@ -102,7 +102,7 @@
           const epNo = Number((query && query.ep) || defaultEp);
           const ep = D.episodes.find(e => e.project === project && e.no === epNo);
           if (!ep) return U.page("创意与剧本 / 剧本工作台 · " + p.name, "第 " + epNo + " 集不存在", "该集不在当前项目范围内；剧本正文与镜头不会被其他集替代展示。",
-            U.btn("返回制作流水线", "projects.wfOpen", "primary", { pid: project }),
+            U.btn("制作流水线", "projects.wfOpen", "primary", { pid: project }),
             U.empty("无法打开该集", "请选择当前项目已拆解的集次，或从流水线重新进入。"));
           const epShots = D.shots.filter(s => s.project === project && s.ep === epNo);
           const sceneOrder = [];
@@ -141,7 +141,7 @@
           const canEdit = !cur.locked || (projRec && ["剧本创作中", "待剧本审核"].indexOf(projRec.status) >= 0);
           const charRows = D.characters.filter(c => c.project === project && epShots.some(s => String(s.refs).indexOf(c.id) >= 0)).map(c => [c.name, c.look + " · 本集 " + epShots.filter(s => String(s.refs).indexOf(c.id) >= 0).length + " 镜"]);
           return U.page("创意与剧本 / 剧本工作台", "剧本工作台 · " + ((projRec || {}).name || project), "左边是这一集的场次，中间是可以直接读的稿纸，右边是人物、连续性与版本；改稿产生新版本，不覆盖已锁定版本。",
-            ((projRec && projRec.status === "剧本创作中") ? U.btn("生成候选剧本", "creation.generateScript", "primary", { id: project }) : "") + (App.can("script.review") && cur.status === "待审核" ? U.btn("提交审核", "creation.submitReview", "", { id: cur.id }) : "") + U.btn("返回流水线", "projects.wfOpen", "", { pid: project }) + U.btn("导出剧本", "common.export"),
+            ((projRec && projRec.status === "剧本创作中") ? U.btn("生成候选剧本", "creation.generateScript", "primary", { id: project }) : "") + (App.can("script.review") && cur.status === "待审核" ? U.btn("提交审核", "creation.submitReview", "", { id: cur.id }) : "") + U.btn("制作流水线", "projects.wfOpen", "", { pid: project }) + U.btn("导出剧本", "common.export"),
             '<div class="script-studio">' +
               '<aside class="scene-rail">' +
                 '<div class="rail-head"><span class="kicker">E' + epNo + ' · ' + U.esc(ep ? ep.title : "未命名") + '</span><b>' + scenes.length + ' 场 · ' + epShots.length + ' 镜</b><small>' + U.esc(ep ? ep.duration : "—") + ' · 竖屏 9:16</small></div>' +
@@ -154,7 +154,7 @@
               '</aside>' +
               '<section class="script-main">' +
                 '<div class="script-toolbar"><span class="pill ' + (cur.status === "已锁定" || cur.locked ? "ok" : "warn") + '">' + U.esc(cur.id) + " · " + U.esc(cur.status) + '</span><span class="faint small">第 ' + epNo + ' 集 · 第 ' + (scenes.findIndex(s => s.no === curScene) + 1) + ' / ' + scenes.length + ' 场</span><span style="flex:1"></span>' +
-                  U.btn("与正式版比对", "creation.diff", "sm") + '</div>' +
+                  U.btn("与正式版本比对", "creation.diff", "sm") + '</div>' +
                 '<article class="screenplay">' +
                   '<div class="sp-page-mark">FRAME · 剧本稿纸 / 第 ' + epNo + ' 集</div>' +
                   '<h2 class="sp-heading">' + ((curSceneItem.loc || "").indexOf("/ 内") >= 0 ? "内景" : "外景") + ' · ' + U.esc(curSceneItem.loc) + '</h2>' +
@@ -162,7 +162,7 @@
                   '<div class="sp-body">' + (sceneBodies[curScene] || '<p class="sp-action">本场正文尚未载入；当前只登记镜头契约，正文以锁定版本为准。</p>') + '</div>' +
                   '<div class="sp-page-foot"><span>第 ' + (scenes.findIndex(s => s.no === curScene) + 1) + ' 场 / 共 ' + scenes.length + ' 场</span><span>' + U.esc(cur.version) + ' · ' + U.esc(cur.by) + ' · ' + U.esc(cur.at) + '</span></div>' +
                 '</article>' +
-                '<div class="script-main-foot">' + U.btn(canEdit ? "编辑本场" : "发起局部修改", canEdit ? "creation.editScript" : "creation.partialScript", "primary", { id: cur.id }) + U.btn("查看拆解结果", "creation.toBreakdown", "sm", { id: project }) + (App.can("script.review") && !cur.locked ? U.btn("锁定正式版本", "creation.lock", "sm", { id: cur.id }) : "") + '</div>' +
+                '<div class="script-main-foot">' + U.btn(canEdit ? "编辑本场" : "发起局部修改", canEdit ? "creation.editScript" : "creation.partialScript", "primary", { id: cur.id }) + U.btn("剧本拆解", "creation.toBreakdown", "sm", { id: project }) + (App.can("script.review") && !cur.locked ? U.btn("锁定正式版本", "creation.lock", "sm", { id: cur.id }) : "") + '</div>' +
               '</section>' +
               '<aside class="script-side">' +
                 U.card("本集概览", U.desc([["集号 / 标题", "E" + epNo + "《" + (ep ? ep.title : "未命名") + "》"], ["场次 / 镜头", scenes.length + " 场 · " + epShots.length + " 镜"], ["时长", ep ? ep.duration : "—"], ["当前阶段", "视频生产 · " + passCount + " / " + epShots.length + " 镜通过"], ["审核基准", cur.id + "（" + cur.status + "）"]]), "改稿不覆盖锁定版本") +
@@ -174,7 +174,7 @@
             '</div>' +
             '<div class="mt-4">' + U.card("版本台账", U.table(["版本", "状态", "集 / 场 / 镜头 / 对白", "操作者", "时间", "备注"], list.map(s =>
               '<tr><td>' + U.code(s.id) + '</td><td>' + U.pill(s.status) + (s.locked ? " " + U.pill("已锁定", "accent") : "") + '</td><td class="num cell-wrap">' + s.episodes + " / " + s.scenes + " / " + s.shots + " / " + s.lines + "</td><td>" + U.esc(s.by) + '</td><td class="idx">' + U.esc(s.at) + '</td><td class="cell-wrap muted">' + U.esc(s.note) + "</td><td>" +
-              U.btn("查看", "creation.openScript", "sm", { id: s.id }) + "</td></tr>").join("")), "共 " + list.length + " 个版本；锁定版本不可覆盖") + '</div>'
+              U.btn("查看剧本", "creation.openScript", "sm", { id: s.id }) + "</td></tr>").join("")), "共 " + list.length + " 个版本；锁定版本不可覆盖") + '</div>'
           );
 
         }
@@ -184,13 +184,13 @@
         desc: "节点 A：人工审核剧本。通过则锁定正式版本并进入拆解；退回则必须指出位置与原因，由创作人修订产生新版本。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p) return U.page("创意与剧本 / 剧本审核", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；审核记录不会回退到其他项目。", U.btn("返回项目列表", "projects.listLink"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
+          if (!p) return U.page("创意与剧本 / 剧本审核", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；审核记录不会回退到其他项目。", U.btn("返回项目列表", "common.projects"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
           const projectId = p.id;
           const scoped = D.scripts.filter(s => s.project === projectId);
           const target = scoped.find(s => s.status === "待审核") || scoped.slice().sort((a, b) => String(b.at).localeCompare(String(a.at)))[0];
           if (!target) {
             return U.page("创意与剧本 / 剧本审核", "剧本审核", "当前项目没有剧本版本，审核不能跨项目借用其他项目的剧本。",
-              U.btn("返回项目", "projects.wfOpen", "", { pid: projectId || "" }), U.empty("该项目暂无剧本版本", "先导入小说或从创意生成候选剧本，再进入节点 A 审核。"));
+              U.btn("制作流水线", "projects.wfOpen", "", { pid: projectId || "" }), U.empty("该项目暂无剧本版本", "先导入小说或从创意生成候选剧本，再进入节点 A 审核。"));
           }
           const proj = D.projects.find(p => p.id === target.project);
           const brief = D.briefs.find(b => b.project === target.project);
@@ -199,7 +199,7 @@
             ? targetEps.slice(-3).map(e => ["E" + String(e.no).padStart(2, "0"), e.title, e.scenes, e.shots, e.qc === "PASS" ? "已通过质检" : (e.status || "—")])
             : [["E01–E" + String(target.episodes).padStart(2, "0"), target.version + " 候选改编稿", target.scenes, target.shots, "尚未拆解；审核通过后才生成分集、场次与镜头契约"]];
           return U.page("创意与剧本 / 剧本审核", "剧本审核", "审核结论必须可执行：要么锁定版本，要么指出位置与修改方向。模糊结论一律视为未完成审核。",
-            U.btn("审核记录", "creation.reviewHistory", "", { id: target.project }) + U.btn("返回剧本版本", "creation.toScript", "", { id: target.project }),
+            U.btn("审核记录", "creation.reviewHistory", "", { id: target.project }) + U.btn("剧本版本", "creation.toScript", "", { id: target.project }),
             '<div class="split"><div class="stack">' +
               U.card("待审对象", U.desc([["剧本版本", target.id], ["项目", target.project + " · " + (proj ? proj.name : "未知项目")], ["版本", target.version + "（" + target.status + "）"],
                 ["规模", target.episodes + " 集 / " + target.scenes + " 场 / " + target.lines + " 行对白"], ["提交人", target.by], ["提交时间", target.at],
@@ -212,8 +212,8 @@
                 '<label class="check-line"><input type="checkbox"' + (i < 5 ? " checked" : "") + "><span>" + U.esc(it) + (i === 4 ? ' <span class="pill warn">待确认</span>' : "") + "</span></label>").join("") +
                 U.notice("未勾选的检查项必须在结论中说明原因；不允许只勾结论不填依据。", "warn"), "清单即审核口径") +
               U.card("审核结论", '<div class="btn-col">' + (target.status === "待审核"
-                ? U.btn("通过并锁定正式版本", "creation.approveScript", "primary", { id: target.id }) + U.btn("退回修改（指出位置）", "creation.rejectScript", "", { id: target.id }) + U.btn("指定位置局部修改", "creation.partialScript", "", { id: target.id }) + U.btn("终止项目", "creation.terminateScript", "", { id: target.id })
-                : U.btn("查看正式版本", "creation.openScript", "primary", { id: target.id }) + U.btn("发起局部修改", "creation.partialScript", "", { id: target.id })) + "</div>" +
+                ? U.btn("通过并锁定正式版本", "creation.approveScript", "primary", { id: target.id }) + U.btn("退回修改（指出位置）", "creation.rejectScript", "", { id: target.id }) + U.btn("局部修改", "creation.partialScript", "", { id: target.id }) + U.btn("终止项目", "creation.terminateScript", "", { id: target.id })
+                : U.btn("查看剧本", "creation.openScript", "primary", { id: target.id }) + U.btn("局部修改", "creation.partialScript", "", { id: target.id })) + "</div>" +
                 U.notice(target.status === "待审核" ? "通过后必须记录审核人、角色、时间、结论与依据；锁定后下游才可启动。审核结论共三种：通过 / 退回修改 / 终止项目。" : "已锁定版本只能派生新版本修改，不能覆盖。", "info"), "结论写入审核记录与项目生命周期") +
               U.card("变更影响分析（业务方案 §6.4）", (function () {
                 const imp = DB.state.impactAnalysis(projectId, target.id);
@@ -233,7 +233,7 @@
         desc: "把锁定剧本拆成集、场、人物、场景、道具、对白六类独立对象，并建立引用关系；拆解结果进入导演规划。",
         render(query) {
           const p = App.currentProject(query);
-          if (!p) return U.page("创意与剧本 / 剧本拆解", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；拆解记录不会回退到其他项目。", U.btn("返回项目列表", "projects.listLink"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
+          if (!p) return U.page("创意与剧本 / 剧本拆解", "项目不在可见范围", "该链接指向的项目不存在或当前身份无权查看；拆解记录不会回退到其他项目。", U.btn("返回项目列表", "common.projects"), U.empty("无法读取项目", "请从项目列表或制作流水线进入可见项目。"));
           const pid = p.id;
           const eps = D.episodes.filter(e => e.project === pid).sort((a, b) => a.no - b.no);
           const shots = D.shots.filter(s => s.project === pid);
@@ -268,7 +268,7 @@
           const firstEp = eps.find(e => shots.some(s => s.ep === e.no));
           const firstShots = firstEp ? shots.filter(s => s.ep === firstEp.no).slice(0, 2) : [];
           return U.page("创意与剧本 / 剧本拆解", "剧本拆解 · " + p.name, "拆解不是切分文本：每个对象都有独立 ID、版本与引用，镜头契约从这里生成。",
-            (canBreak ? U.btn(eps.length ? "重新拆解" : "执行拆解", "creation.rerunBreakdown", "", { id: pid }) : U.btn("查看制作流水线", "projects.wfOpen", "primary", { pid: pid })) + U.btn("进入导演规划", "creation.toDirector", canBreak ? "primary" : "", { id: pid }),
+            (canBreak ? U.btn(eps.length ? "重新拆解" : "执行拆解", "creation.rerunBreakdown", "", { id: pid }) : U.btn("制作流水线", "projects.wfOpen", "primary", { pid: pid })) + U.btn("进入导演规划", "creation.toDirector", canBreak ? "primary" : "", { id: pid }),
             U.card("拆解结果 · " + (script ? script.id : "尚无锁定剧本"), '<div class="kv-grid">' + U.kv("集", eps.length) + U.kv("场", totalScenes) + U.kv("人物", chars.length) + U.kv("场景", locs.length) + U.kv("道具", props.length) + U.kv("镜头", shots.length) + "</div>", "引用对象版本，不引用自由文本；数据来自当前项目 " + pid) +
             '<div class="split mt-4"><div class="stack">' +
               U.card("集 / 场", U.table(["集", "标题", "场", "镜头", "时长", "状态"], eps.map(e =>

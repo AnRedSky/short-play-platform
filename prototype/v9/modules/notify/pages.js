@@ -63,52 +63,11 @@
           );
         }
       },
-      {
-        path: "notify/incidents", title: "异常中心", icon: "alert", permission: "notify.handle",
-        desc: "异常按影响范围局部暂停，不整项目静默全停；处理必须留下决策、责任人与下一步。",
-        render() {
-          const visPids = DB.derived.visibleProjects().map(p => p.id);
-          const inc = D.incidents.filter(i => visPids.indexOf(i.project) >= 0);
-          const open = inc.filter(i => i.result !== "已闭环");
-          const escalatedInc = inc.filter(i => String(i.level).indexOf("升级") >= 0);
-          const incProjects = [...new Set(inc.map(i => i.project))];
-          return U.page("通知与异常 / 异常中心", "异常中心", "异常来源：重试达上限、资源不可用、预算触发、合规高风险、质量阻断。",
-            U.btn("导出异常台账", "common.export") + U.btn("查看任务链路", "notify.toTasks", "primary"),
-            '<div class="grid grid-4">' +
-              U.metric("未闭环", String(open.length), "可见异常 " + inc.length + " 项", "!") +
-              U.metric("处理中", String(inc.filter(i => i.result === "处理中").length), "已派发处置动作", "+") +
-              U.metric("已升级", String(escalatedInc.length), "超出项目内处置范围", "↑") +
-              U.metric("涉及项目", String(incProjects.length), "非成员项目异常不展示", "▤") +
-            "</div>" +
-            U.card("异常台账", U.table(["异常", "项目", "类型", "首次 / 最近", "处理次数", "处置动作", "决策与责任人", "下一步", "结果", "最终状态", "级别"], inc.map(i => {
-              const pj = D.projects.find(x => x.id === i.project);
-              return '<tr><td>' + U.code(i.id) + "</td><td>" + U.esc(i.project) + '</td><td class="cell-wrap">' + U.esc(i.type) + '</td><td class="idx">' + U.esc(i.first) + "<br>" + U.esc(i.last) + '</td><td class="idx">' + U.esc(String(i.handled || 0)) + ' 次</td><td class="cell-wrap">' + U.esc(i.action) + '</td><td class="cell-wrap muted">' + U.esc(i.decision) + "</td><td class=\"cell-wrap\">" + U.esc(i.next) + "</td><td>" + U.pill(i.result) + "</td><td>" + U.pill(pj ? pj.status : "待确认") + "</td><td>" + U.pill(i.level, i.level.indexOf("企业") >= 0 ? "bad" : "info") + "</td><td>" +
-                U.btn("处置", "notify.incidentAction", "sm", { id: i.id }) + "</td></tr>";
-            }).join("")), "异常关闭需回写结果与验证方式") +
-            '<div class="grid grid-2 mt-4">' +
-              U.card("处置原则", U.listRows([
-                ["局部优先", "仅暂停受影响镜头 / 任务链路，其余镜头继续生产"],
-                ["不静默", "任何暂停、降级、切换模型都必须通知到责任人与配置人"],
-                ["不覆盖", "返工产生新尝试与新资产版本，原结果保留可追溯"],
-                ["费用", "失败、重试与取消均入账，不因异常而丢失成本记录"],
-                ["闭环", "关闭异常需给出验证方式与验证结果"]
-              ]), "异常处理结果进入项目生命周期记录") +
-              U.card("高频异常与处置口径", U.table(["异常类型", "建议处置"], [
-                ["合规高风险", "阻断下游 → 替换素材 / 调整提示词 → 重生成 → 抽检"],
-                ["人物严重不一致", "重建参考资产 → 局部重生成 → 与相邻镜头比对"],
-                ["模型不可用 / 鉴权失败", "暂停依赖任务 → 配置人更新凭据 → 重做可用性检查"],
-                ["预算触发", "暂停高成本任务 → 调整预算或缩减范围 → 记录决策"],
-                ["质量阻断", "按镜头返工，不整集重跑；保留原报告"]
-              ].map(r => "<tr><td class=\"cell-strong\">" + r[0] + '</td><td class="cell-wrap muted">' + r[1] + "</td></tr>").join("")), "处置建议不等于自动执行") +
-            "</div>"
-          );
-        }
-      }
     ]
   });
 
   App.on("notify.tab", (el) => { App.set(SCOPE, "tab", el.dataset.value); App.refresh(); });
-  App.on("notify.toIncidents", () => App.go("notify/incidents"));
+  App.on("notify.toIncidents", () => { App.set("compliance", "tab", "dispose"); App.go("compliance/risks"); });
   App.on("notify.toTasks", () => App.go("tasks/list"));
   const canSeeProject = (pid) => {
     const p = D.projects.find(x => x.id === pid);

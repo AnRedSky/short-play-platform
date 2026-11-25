@@ -11,14 +11,14 @@
 | §1.3 核心业务原则、§1.5 非目标与边界 | 全站 `demo-strip` 声明、每页 `footer-note`、README「原型边界」 |
 | §2.2 业务功能域总图 | `modules/` 17 个目录与侧栏 17 个分组 |
 | §2.3 核心业务链路 | `workspace/home` 链路视图；各页面 `chain` 组件 |
-| §3.1 业务对象总表 / §3.3 版本与引用规则 | `data.js` 全部 Mock 字典；`post/versions`、`assets/usage` |
+| §3.1 业务对象总表 / §3.3 版本与引用规则 | `data.js` 全部 Mock 字典；`post/versions`、`assets/library`「引用」tab |
 | §3.4 状态机总则 | 各页状态列 + `U.pill` 三态配色；`projects/lifecycle` |
 | §4.4 角色体系 / §4.5 权限模型 / §4.6 权限基本规则 | `data.js` roles/permissions/identities；`app.js` 三层校验；`orgs/roles` |
 | §4.7 凭据与运维隔离 | `models/config`、`models/providers`（`U.masked`，任何角色不可见明文） |
 | §4.8 人员变动处理 | `orgs/handover` |
 | §5.5 项目状态机（15 状态） | `projects/detail`、`projects/lifecycle`、`data.js projectStates` |
 | §12.2 任务状态（11 状态） | `tasks/list`、`tasks/attempt` |
-| §18.2 作品与交付状态（6 类） | `post/works` |
+| §18.2 作品与交付状态（6 类） | `post/delivery`「作品」tab |
 | §20.5 页面功能域清单 | 见下表逐域映射 |
 | §22.1 数据归属 / §22.4 数据隔离边界 | `data.js` 归属字段、`orgs/*`、`models/config` |
 | §24.9 真实性红线 | 全站演示声明；不含真实媒资、真实账单、真实凭据 |
@@ -44,29 +44,29 @@
 | projects | `projects/lifecycle` | §5.8 项目异常与终止 | 暂停 / 异常 / 终止与恢复 |
 | workspace | `workspace/home` | §20.1–§20.3 工作台 | 我的项目、待我处理、链路进度 |
 | workspace | `workspace/assistant` | §20.4 指令式生产助手 | 六类指令识别、解析结果、高风险二次确认 |
-| workspace | `workspace/projects` | §20.2 工作台入口 | 我参与的项目与集次进度 |
+| workspace | `projects/list`（关系筛选） | §20.2 工作台入口 | 我参与的项目与集次进度；原 `workspace/projects` 已并入 |
 | notify | `notify/inbox` | §17.1–§17.3 | 通知要素（原因 / 影响 / 动作 / 时限） |
-| notify | `notify/incidents` | §17.3 / §17.4 | 异常闭环、4 小时升级、局部暂停原则 |
+| notify | `notify/inbox`；异常处置在 `compliance/risks`「处置」tab | §17.3 / §17.4 | 异常闭环、4 小时升级、局部暂停原则 |
 | creation | `creation/brief`、`creation/plan` | §5.3 创意输入、§5.4 创意方案 | 创意简报七种模式与方案评分 |
 | creation | `creation/script`、`creation/review` | §6.1–§6.4、§16.2 节点 A | 剧本版本、变更影响、审核通过/退回 |
 | creation | `creation/breakdown` | §7.1 结构拆解 | 集 / 场 / 镜头拆解与重跑 |
 | director | `director/plan`、`director/shots` | §7.2、§8.1 镜头生产计划 | 场次规划、镜头契约字段、并行分组 |
 | director | `director/cast`、`director/world` | §7.3–§7.6 | 人物 / 场景 / 服装道具档案与一致性 |
-| director | `director/storyboard` | §7.2 分镜规划 | 分镜板与镜头状态 |
-| video | `video/production`、`video/results`、`video/preview` | §8.2 镜头生成、§8.4 能力清单、§12.7 衔接门禁 | 四状态分离（供应商成功/下载/持久化/质量通过）、版本采用 |
+| director | `director/shots`「分镜视图」 | §7.2 分镜规划 | 分镜板与镜头状态 |
+| video | `video/production`、`video/preview`（含「版本列表」tab） | §8.2 镜头生成、§8.4 能力清单、§12.7 衔接门禁 | 四状态分离（供应商成功/下载/持久化/质量通过）、版本采用 |
 | audio | `audio/dialogue`、`audio/voice` | §9.1 声音配置、§9.2 对白生成 | 对白生成与回听校验、声音档案与授权 |
 | audio | `audio/bgm`、`audio/subtitle` | §9.3 音乐音效、§9.4 字幕、§9.5 口型 | 素材授权台账、字幕版本与口型对齐 |
 | post | `post/timeline`、`post/episodes` | §10.1 时间线、§10.5 分集输出 | 轨道编排、标脏片段、分集成片质检 |
 | post | `post/review` | §16.3 节点 B | 成片审核清单与三种结论 |
-| post | `post/delivery`、`post/works`、`post/versions` | §18.1–§18.4 | 9 类交付内容、交付冻结、作品状态、版本链 |
-| quality | `quality/gates`、`quality/reports` | §11.1–§11.3、§11.6 | 四级 × 十维矩阵、三态结论、报告 |
+| post | `post/delivery`（含「作品」tab）、`post/versions` | §18.1–§18.4 | 9 类交付内容、交付冻结、作品状态、版本链 |
+| quality | `quality/reports`（含「门禁」tab） | §11.1–§11.3、§11.6 | 四级 × 十维矩阵、三态结论、报告 |
 | quality | `quality/rework` | §11.4 / §11.5、§8.3 | 返工台账、最小单元、轮次上限 |
 | tasks | `tasks/list`、`tasks/queue`、`tasks/attempt` | §12.1–§12.6、§12.8 | 11 状态、依赖并行、Attempt / 调用双层证据 |
 | models | `models/config`、`models/providers` | §13.1 供给模式、§13.5 个人配置 | 资源归属、7 家供应商、脱敏凭据 |
 | models | `models/routing` | §13.2–§13.4、§13.6 | 能力清单、主/辅/备路由、兼容校验 |
-| assets | `assets/library`、`assets/usage` | §14.1–§14.6 | 八类资产、版本不覆盖、引用检查 |
-| cost | `cost/ledger`、`cost/budget`、`cost/usage` | §15.1–§15.6 | 预计/实际/失败三列、预算阈值、计量差异 |
-| analytics | `analytics/enterprise`、`analytics/departments`、`analytics/employees`、`analytics/me` | §19.1–§19.7 | 三类数据口径、部门/员工对比、个人视图、快照 |
+| assets | `assets/library`（含「引用」tab） | §14.1–§14.6 | 八类资产、版本不覆盖、引用检查 |
+| cost | `cost/ledger`（含「用量」tab）、`cost/budget` | §15.1–§15.6 | 预计/实际/失败三列、预算阈值、计量差异 |
+| analytics | `analytics/enterprise`（tab：企业整体 / 部门对比 / 员工对比）、`analytics/me` | §19.1–§19.7 | 三类数据口径、部门/员工对比、个人视图、快照 |
 | compliance | `compliance/rights`、`compliance/risks`、`compliance/audit` | §16.6 / §16.7、§16.8、§17.3 | 授权台账与到期提醒、风险等级、11 类审计事件 |
 
 ## 2.1 菜单层级与业务链路映射
@@ -79,8 +79,8 @@
 | 短剧制作 | 导演与视觉 | 镜头生产计划、人物视觉档案、场景与道具、镜头契约、分镜板 | §7.1–7.7 导演规划与视觉资产 |
 | 短剧制作 | 视频生产 | 视频生产队列、生成结果、预览与校验 | §8.1–8.4 镜头生产 |
 | 短剧制作 | 音频与字幕 | 对白配音、声音档案、配乐与音效、字幕与口型 | §9.1–9.6 音频与字幕 |
-| 短剧制作 | 后期与交付 | 时间线与剪辑、分集成片、最终成片审核、交付包、作品库、版本链 | §10.1–10.6 后期、§16.3 终审、§18 交付 |
-| 短剧制作 | 质量与返工 | 质量门禁、质量报告、返工与返工台账 | §11.1–11.6 质量与返工 |
+| 短剧制作 | 后期与交付 | 时间线与剪辑、分集成片、最终成片审核、交付包（含作品 tab）、版本链 | §10.1–10.6 后期、§16.3 终审、§18 交付 |
+| 短剧制作 | 质量与返工 | 质量报告（含门禁 tab）、返工与返工台账 | §11.1–11.6 质量与返工 |
 | 资源与治理 | 模型资源 / 生产任务 / 数字资产 / 成本与预算 | 资源配置、供应商与模型、能力与路由 / 生产任务、资源池与队列、尝试与调用记录 / 资产库、引用与使用关系 / 成本台账、预算与阈值、用量与计量 | §13 模型与资源、§12 任务、§14 资产、§15 成本 |
 | 经营分析 | 企业经营 | 企业整体数据、部门对比、员工对比、我的数据 | §19.1–19.7 经营分析 |
 | 企业与合规 | 组织与权限 / 合规与审计 | 企业主体、部门与组织单元、员工账号、员工档案、角色与权限、项目成员授权、离职与移交 / 权利与授权台账、风险与异常、审计日志 | §4.1–4.8 组织与权限、§16.6–16.8 合规审计 |
@@ -92,13 +92,13 @@
 | --- | --- |
 | 独立 Episode / Scene / Character / Prop / Dialogue / Timeline 对象 | `data.js` 独立字典；`creation/breakdown`、`director/*`、`audio/dialogue`、`post/timeline` |
 | Shot 全字段契约 | `director/shots` + `video/preview` 契约比对 |
-| 预算超限自动暂停与任务衔接规则化 | `cost/budget`、`tasks/queue`、`notify/incidents` |
+| 预算超限自动暂停与任务衔接规则化 | `cost/budget`、`tasks/queue`、`compliance/risks`「处置」 |
 | 自然语言指令入口（六类目标 + 确认） | `workspace/assistant` |
-| 员工横向对比、视频生成量、音频异常率、单位时间完成集数 | `analytics/employees`、`analytics/enterprise` |
+| 员工横向对比、视频生成量、音频异常率、单位时间完成集数 | `analytics/enterprise`「员工对比」tab |
 | 定时快照与对比 | `analytics/enterprise` 快照表（不可回溯） |
 | 合规记录新增/续期/到期提醒 | `compliance/rights` |
-| 资产删除前引用检查 | `assets/usage` |
-| 交付后新版本链 | `post/works`、`post/versions` |
+| 资产删除前引用检查 | `assets/library`「引用」tab |
+| 交付后新版本链 | `post/delivery`「作品」tab、`post/versions` |
 | 独立资源池与任务队列视图 | `tasks/queue`、`ops/queue` |
 | 平台用户从企业成员视图拆出 | `ops/overview` 与 `orgs/members` 分离 |
 
@@ -132,7 +132,7 @@ _smoke.html（浏览器）   → 通过（66 路由 + 3 身份权限拦截，无
 
 ## 6. 视觉复核记录（2026-11-22）
 
-用本机 Chrome headless（1440×1250 与 1120×760 两档）对以下视图做了逐页截图核对：`workspace/home`（默认落地）、`post/timeline`（六轨剪辑）、`quality/gates`（四级×十维矩阵）、`tasks/queue`（状态看板）、`projects/list`、404 与 403 视图。
+用本机 Chrome headless（1440×1250 与 1120×760 两档）对以下视图做了逐页截图核对：`workspace/home`（默认落地）、`post/timeline`（六轨剪辑）、`quality/reports`「门禁」tab（四级×十维矩阵）、`tasks/queue`（状态看板）、`projects/list`、404 与 403 视图。
 
 本轮修正项：
 

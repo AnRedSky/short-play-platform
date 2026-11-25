@@ -1,7 +1,11 @@
 /* 模块：projects 项目中心（企业管理端 + 员工端共用） */
 (function () {
   const U = UI, D = DB, SCOPE = "projects";
-  const pct = (p) => Math.round(p.actual / p.budget * 100);
+  const pct = (p) => DB.derived.budgetOfProject(p).pct;
+  const budgetText = (p) => {
+    const b = DB.derived.budgetOfProject(p);
+    return "¥" + b.used.toLocaleString("zh-CN") + " / ¥" + b.total.toLocaleString("zh-CN");
+  };
 
   function stageChain(p) {
     const idx = D.stagePipeline.findIndex(s => p.phase.indexOf(s.name.replace("后期合成", "后期")) >= 0 || p.phase.indexOf(s.name) >= 0);
@@ -21,9 +25,17 @@
         desc: "项目是短剧制作的容器，也是资产、任务、成本与交付的唯一归属单元。列表展示真实状态字段，不由前端文案伪造。",
         render() {
           const st = App.get(SCOPE, "status", ""), dept = App.get(SCOPE, "dept", "");
+          const rel = App.get(SCOPE, "rel", "");
           const visible = DB.derived.visibleProjects();
+          const me = App.identity();
+          const uid = me.userId;
+          const own = visible.filter(p => p.ownerId === uid);
+          const joined = visible.filter(p => p.ownerId !== uid && (p.members || []).some(m => m.userId === uid));
+          const review = visible.filter(p => p.status.indexOf("待") >= 0 && (p.ownerId === uid || (p.members || []).some(m => m.userId === uid && m.role === "审核")));
+          const roleOf = (p) => (p.ownerId === uid ? "负责人" : ((p.members || []).find(m => m.userId === uid) || {}).role || "—");
+          const inRel = (p) => (rel === "own" ? p.ownerId === uid : rel === "join" ? p.ownerId !== uid && (p.members || []).some(m => m.userId === uid) : rel === "review" ? p.status.indexOf("待") >= 0 && (p.ownerId === uid || (p.members || []).some(m => m.userId === uid && m.role === "审核")) : true);
           const scope = DB.derived.scopeLabel();
-          const list = visible.filter(p => (!st || p.status === st) && (!dept || p.dept === dept));
+          const list = visible.filter(p => (!st || p.status === st) && (!dept || p.dept === dept) && inRel(p));
           const counts = {
             active: visible.filter(p => ["生产中", "后期制作中", "质量检测中", "待最终审核", "生产准备中"].indexOf(p.status) >= 0).length,
             review: visible.filter(p => p.status.indexOf("待") >= 0).length,
@@ -38,7 +50,12 @@
             '<div class="project-toolbar"><div class="seg-chips">' +
               [["", "全部 " + visible.length], ["生产中", "进行中 " + counts.active], ["待剧本审核", "待审 " + counts.review], ["已交付", "已交付 " + counts.delivered], ["草稿", "草稿 " + counts.draft]].map(x =>
                 '<button type="button" class="seg-chip' + (st === x[0] ? " on" : "") + '" data-action="projects.setStatus" data-value="' + x[0] + '">' + U.esc(x[1]) + "</button>").join("") +
-              '</div><div class="toolbar" style="margin:0"><input class="search" placeholder="搜索项目 / 编号 / 负责人" data-scope="' + SCOPE + '" data-filter="q">' +
+              "</div>" +
+              '<div class="seg-chips">' +
+              [["", "全部关系"], ["own", "我负责 " + own.length], ["join", "我参与 " + joined.length], ["review", "待我审核 " + review.length]].map(x =>
+                '<button type="button" class="seg-chip' + (rel === x[0] ? " on" : "") + '" data-action="projects.setRel" data-value="' + x[0] + '">' + U.esc(x[1]) + "</button>").join("") +
+              "</div>" +
+              '<div class="toolbar" style="margin:0"><input class="search" placeholder="搜索项目 / 编号 / 负责人" data-scope="' + SCOPE + '" data-filter="q">' +
               '<span class="faint small" data-filter-count></span></div></div>' +
             '<div class="project-grid">' + list.map(p => {
               const cover = U.cover(p.id);
@@ -48,11 +65,11 @@
                   '<div class="pc-state">' + U.pill(p.status) + '</div><span class="pc-dur">' + p.episodes + " 集 · " + U.esc(p.duration) + "</span>" +
                   '<div class="pc-title"><b>' + U.esc(p.name) + '</b><small>' + U.esc(p.id) + " · " + U.esc(p.genre) + "</small></div></div>" +
                 '<div class="project-body">' +
-                  '<div class="project-meta"><span>负责人 ' + U.esc(p.owner) + " · " + U.esc(p.dept) + "</span><span>" + U.pill(p.quality) + "</span></div>" +
+                  '<div class="project-meta"><span>负责人 ' + U.esc(p.owner) + " · " + U.esc(p.dept) + "</span><span>" + (roleOf(p) === "—" ? "" : U.pill("我的角色 " + roleOf(p), p.ownerId === uid ? "accent" : "info") + " ") + U.pill(p.quality) + "</span></div>" +
                   '<div class="project-progress"><div class="progress-label"><span>已通过 ' + wf.passEps.length + " / " + p.episodes + "</span><span>完成 " + wf.pct + "%</span></div>" +
                     '<div class="progress"><span style="width:' + wf.pct + '%"></span></div></div>' +
                   '<div class="project-meta"><span>下一步</span><b>' + U.esc(wf.next[0].title) + '</b></div>' +
-                  '<div class="project-meta"><span>预算</span><b>¥' + Number(p.actual || 0).toLocaleString("zh-CN") + " / ¥" + Number(p.budget || 0).toLocaleString("zh-CN") + "</b></div>" +
+                  '<div class="project-meta"><span>预算</span><b>' + budgetText(p) + "</b></div>" +
                   '<div class="project-foot"><span class="who">' + U.ico("clock", 12) + " " + U.esc(p.updated) + '</span><button class="btn sm primary" data-action="projects.wfOpen" data-pid="' + U.esc(p.id) + '">继续制作</button></div>' +
                 "</div></article>";
             }).join("") +
@@ -75,13 +92,13 @@
         }
       },
       {
-        path: "projects/workflow", title: "项目制作流水线", icon: "play", permission: "project.read", projectScoped: true,
+        path: "projects/workflow", title: "制作流水线", icon: "play", permission: "project.read", projectScoped: true,
         desc: "把锁定剧本 → 拆解 → 资产确认 → 计划固化 → 连续生产 → 字幕合成 → 整集质检 → 终审 → 交付串成一条可操作链路，每步都写入同一项目状态。",
         render(query) {
           const p = App.currentProject(query);
           if (!p || !DB.derived.canViewProject(p)) {
             return U.page("项目中心 / 制作流水线", "项目不在可见范围", "切换到有权限的身份，或由负责人授权后再进入。",
-              U.btn("返回项目库", "projects.listLink", "primary"), U.empty("无访问权限", "跨项目访问不渲染任何业务内容。"));
+              U.btn("返回项目列表", "common.projects", "primary"), U.empty("无访问权限", "跨项目访问不渲染任何业务内容。"));
           }
           const wf = DB.derived.workflow(p);
           const n = wf.next[0];
@@ -98,7 +115,7 @@
           return U.page("项目中心 / " + p.id + " / 制作流水线", p.name + " · 从剧本到交付", "不是功能目录，而是这部戏今天真实走到哪一步。每个按钮都落到项目状态、任务、成本与质检记录上。",
             U.btn("项目档案", "projects.detail", "", { id: p.id }) +
             (App.can("project.manage") && DB.state.canMove(p, "已暂停").ok ? U.btn("暂停项目", "projects.pause", "", { id: p.id }) : "") +
-            U.btn("返回项目库", "projects.listLink"),
+            U.btn("返回项目列表", "common.projects"),
             '<section class="wf-hero">' +
               '<div class="wf-cover">' + (U.cover(p.id) ? '<img src="' + U.esc(U.cover(p.id)) + '" alt="">' : "") +
                 '<span class="wf-cover-pill">' + U.pill(p.status) + '</span></div>' +
@@ -109,7 +126,7 @@
                   '<div class="wf-progress-meta"><b>' + wf.passEps.length + " / " + p.episodes + ' 集通过质检</b><span>' + wf.pct + "% · 当前阶段 " + U.esc(p.phase) + "</span></div></div>" +
                 '<div class="wf-kpis">' +
                   '<div><span>镜头</span><b>' + passedShots + " / " + totalShots + "</b></div>" +
-                  '<div><span>预算</span><b>¥' + Number(p.actual || 0).toLocaleString("zh-CN") + " / ¥" + Number(p.budget || 0).toLocaleString("zh-CN") + "</b></div>" +
+                  '<div><span>预算</span><b>' + budgetText(p) + "</b></div>" +
                   '<div><span>进行中任务</span><b>' + activeTasks.length + "</b></div>" +
                   '<div><span>待确认资产</span><b>' + wf.pendingAssets.length + "</b></div>" +
                 "</div>" +
@@ -157,9 +174,9 @@
               U.card("最近质检", U.table(["报告", "对象", "结果", "问题", "时间"], D.qualityReports.filter(r => String(r.object).indexOf(p.id) === 0).slice(0, 6).map(r =>
                 '<tr><td>' + U.code(r.id) + '</td><td class="cell-wrap">' + U.esc(r.object) + '</td><td>' + U.pill(r.result) + '</td><td class="num">' + r.issues + '</td><td class="idx">' + U.esc(r.at) + "</td></tr>").join("")), "报告绑定被检版本") +
               U.card("成本与预算", U.desc([
-                ["已用", "¥" + Number(p.actual || 0).toLocaleString("zh-CN")],
-                ["剩余", "¥" + Number((p.budget || 0) - (p.actual || 0)).toLocaleString("zh-CN")],
-                ["单镜均价", "¥37.8"],
+                ["已用", "¥" + DB.derived.budgetOfProject(p).used.toLocaleString("zh-CN")],
+                ["剩余", "¥" + Math.max(0, DB.derived.budgetOfProject(p).total - DB.derived.budgetOfProject(p).used).toLocaleString("zh-CN")],
+                ["单镜均价", "¥" + (D.pricing ? D.pricing.videoPerShot : "—") + "（演示价目）"],
                 ["已通过镜头", passedShots + " / " + totalShots]
               ]), "费用随任务执行实时写入成本台账") +
             "</div>"
@@ -173,7 +190,7 @@
           const mode = App.get(SCOPE, "newMode", "自由描述");
           const copyFrom = App.get(SCOPE, "copyFrom", "不复制");
           return U.page("项目中心 / 新建项目", "新建项目", "项目创建本身不要求模型调用成功；创建成功与生成成功是两件事。无可用 AI 配置时允许保存草稿，但阻止启动生成。",
-            U.btn("返回列表", "projects.listLink"),
+            U.btn("返回项目列表", "common.projects"),
             '<div class="split"><div class="stack">' +
               U.card("项目属性（必填项标 *）", '<div class="form-grid">' +
                 U.fField("项目名称", "name", { required: true, placeholder: "例如：雾城来信" }) +
@@ -226,12 +243,12 @@
           const p = App.currentProject(query);
           if (!p) {
             return U.page("项目中心 / 无权限", "项目不存在或不可见", "请从项目列表重新选择；直接访问不存在的项目不会自动跳转到其他项目。",
-              U.btn("返回项目列表", "projects.listLink", "primary"),
+              U.btn("返回项目列表", "common.projects", "primary"),
               U.empty("项目不存在", "检查项目编号，或从项目列表进入。"));
           }
           if (!DB.derived.canViewProject(p)) {
             return U.page("项目中心 / 无权限", "项目不在可见范围", "当前身份「" + App.identity().name + "」的可见范围是：" + DB.derived.scopeLabel() + "。跨项目访问必须由项目负责人或企业管理员授权，未授权时不渲染任何项目内容。",
-              U.btn("返回项目列表", "projects.listLink", "primary") + U.btn("查看角色权限", "projects.lifecycleLink"),
+              U.btn("返回项目列表", "common.projects", "primary") + U.btn("查看角色权限", "projects.lifecycleLink"),
               U.empty("无访问权限", "如确需参与该项目，请由项目负责人授予项目角色后再访问；授权动作会写入审计。"));
           }
           const sum = DB.derived.projectSummary(p);
@@ -239,7 +256,7 @@
           const actions = [];
           actions.push(U.btn("打开制作流水线", "projects.wfOpen", "primary", { pid: p.id }));
           if (App.can("project.manage") && DB.state.canMove(p, "已暂停").ok) actions.push(U.btn("暂停项目", "projects.pause", "", { id: p.id }));
-          if (grantable) actions.push(U.btn("移交", "orgs.transfer"));
+          if (grantable) actions.push(U.btn("发起移交", "orgs.transfer"));
           if (App.can("delivery.execute") && ["待最终审核", "已完成"].indexOf(p.status) >= 0) actions.push(U.btn("进入交付", "projects.deliveryLink", "primary", { id: p.id }));
           const members = (p.members || []).map(m => {
             const u = D.users.find(x => x.id === m.userId) || { name: m.userId, dept: "—" };
@@ -255,7 +272,7 @@
             .concat([{ time: p.updated, title: "当前状态 · " + p.status, desc: p.phase + " · 更新人 " + p.owner }]);
           return U.page("项目中心 / " + p.id, p.name, "项目归属企业，由员工独立推进；协作是授权行为。动作按「权限 + 状态 + 前置条件」渲染，不可用动作不显示。",
             actions.join("") || '<span class="faint small">当前状态无可执行的项目级动作</span>',
-            U.card("阶段进度", stageChain(p) + '<div class="mt-3">' + U.desc([["当前阶段", p.phase], ["项目状态", '<span class="pill ' + U.toneOf(p.status) + '">' + p.status + "</span>", true], ["已完成集数", p.done + " / " + p.episodes + "（" + Math.round(p.done / p.episodes * 100) + "%）"], ["最近更新", p.updated]]) + "</div>", "阶段门禁不满足时任务保持待执行") +
+            U.card("阶段进度", stageChain(p) + '<div class="mt-3">' + U.desc([["当前阶段", p.phase], ["项目状态", '<span class="pill ' + U.toneOf(p.status) + '">' + p.status + "</span>", true], ["已完成集数", DB.derived.progressOf(p).done + " / " + DB.derived.progressOf(p).total + "（" + DB.derived.progressOf(p).pct + "%）"], ["最近更新", p.updated]]) + "</div>", "阶段门禁不满足时任务保持待执行") +
             '<div class="split mt-4"><div class="stack">' +
               U.card("项目档案", U.desc([
                 ["项目编号", p.id], ["题材 / 受众", p.genre + " · " + p.audience], ["计划集数 / 单集时长", p.episodes + " 集 / " + p.duration],
@@ -267,8 +284,8 @@
               U.card("成员与授权", U.table(["成员", "项目角色", "部门", "操作"], members), "非成员即使持有功能权限码也不得访问项目内对象",
                 grantable ? U.btn("新增授权", "orgs.grantNew", "sm") : "") +
             '</div><div class="stack">' +
-              U.card("预算与成本", U.progress(pct(p), "已用 ¥" + p.actual.toLocaleString() + " / ¥" + p.budget.toLocaleString(), pct(p) > 85 ? "warn" : "") +
-                U.listRows([["预计成本", "¥" + p.estimated.toLocaleString()], ["实际成本", "¥" + p.actual.toLocaleString()], ["预算状态", '<span class="pill ' + U.toneOf(p.budgetState) + '">' + p.budgetState + "</span>", true], ["计费依据", "供应商用量或账单，不用估算替代实际"]]) +
+              U.card("预算与成本", U.progress(pct(p), "已用 " + budgetText(p), pct(p) > (D.pricing ? D.pricing.budgetWarnRate * 100 : 85) ? "warn" : "") +
+                U.listRows([["预计成本", "¥" + p.estimated.toLocaleString()], ["实际成本", "¥" + DB.derived.budgetOfProject(p).used.toLocaleString()], ["预算状态", '<span class="pill ' + U.toneOf(DB.derived.budgetOfProject(p).state) + '">' + DB.derived.budgetOfProject(p).state + "</span>", true], ["计费依据", "供应商用量或账单，不用估算替代实际"]]) +
                 '<div class="mt-3">' + U.btn("成本明细", "cost.ledgerLink", "sm", { project: p.id }) + "</div>", "预计与实际分栏展示") +
               U.card("质量与审核", U.desc([
                 ["项目质量", '<span class="pill ' + U.toneOf(p.quality) + '">' + p.quality + "</span>", true],
@@ -326,8 +343,8 @@
   });
 
   App.on("projects.new", () => App.go("projects/new"));
-  App.on("projects.listLink", () => App.go("projects/list"));
   App.on("projects.setStatus", (el) => { App.set(SCOPE, "status", el.dataset.value || ""); App.refresh(); });
+  App.on("projects.setRel", (el) => { App.set(SCOPE, "rel", el.dataset.value || ""); App.refresh(); });
   App.on("projects.lifecycleLink", () => App.go("projects/lifecycle"));
   App.on("projects.incidentsLink", () => App.go("notify/incidents"));
   App.on("projects.qcLink", (el) => App.go("quality/reports", el && el.dataset.id ? { id: el.dataset.id } : undefined));
@@ -603,7 +620,7 @@
     App.modal({
       title: "连续生产 · " + p.name, sub: "按镜头提交 → 供应商执行 → 下载持久化 → 镜头质检；失败即停，不跳过、不伪造 PASS",
       body: U.fField("起始集", "fromEp", { required: true, type: "number", value: String(first), min: 1, max: p.episodes, hint: "从该集起连续处理剩余 " + remain + " 集" }) +
-        U.notice("预计每镜 ¥37.8；当前预算剩余 ¥" + Math.max(0, Math.round(p.budget - p.actual)) + "。预算不足会在集边界停止。", "info"),
+        U.notice("预计每镜 ¥" + (D.pricing ? D.pricing.videoPerShot : "—") + "（演示价目）；当前预算剩余 ¥" + Math.max(0, DB.derived.budgetOfProject(p).total - DB.derived.budgetOfProject(p).used) + "。预算不足会在集边界停止。", "info"),
       submitText: "开始连续生产",
       onSubmit(d) {
         return App.job({
@@ -785,10 +802,10 @@
     if (!App.guard("project.manage")) return;
     const p = wfNeed(el);
     if (!p) return;
-    const bg = DB.state.budgetOf(p.id);
+    const b = DB.derived.budgetOfProject(p);
     App.modal({
-      title: "调整项目预算", sub: "当前已用 ¥" + (bg ? bg.used : p.actual) + "；追加后才能继续提交生产任务",
-      body: U.fField("新预算总额", "total", { required: true, type: "number", value: String(Math.max(p.budget, Math.ceil(p.actual * 1.3))) }) +
+      title: "调整项目预算", sub: "当前已用 ¥" + b.used + "；追加后才能继续提交生产任务",
+      body: U.fField("新预算总额", "total", { required: true, type: "number", value: String(Math.max(b.total, Math.ceil(b.used * 1.3))) }) +
         U.fTextarea("调整理由", "reason", { required: true, minlen: 8, rows: 3, value: "全剧镜头与质检成本高于初始估算，按实际剩余集数追加预算。" }),
       submitText: "保存预算",
       onSubmit(d) {

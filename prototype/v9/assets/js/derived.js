@@ -8,8 +8,24 @@ DB.derived = (function () {
     return (D.identities && D.identities[0]) || { id: "u-01", name: "系统", role: "owner", userId: "u-01" };
   };
   let ctx = { identity: fallbackIdentity };
-  function bind(context) { if (context && context.identity) ctx = { identity: context.identity }; }
+  function bind(context) { if (context && context.identity) ctx = { identity: context.identity }; syncScopeBudgets(); }
   function currentIdentity() { return ctx.identity() || fallbackIdentity(); }
+
+  /* R-32：部门 / 企业预算的实体字段只是 DB.budgets 的投影。
+     任何一次预算账本变动后由这里回写，页面不得再读实体字段当数据源。 */
+  function syncScopeBudgets() {
+    const led = (scope, name) => D.budgets.find(b => b.scope === scope && (name ? b.name === name : true));
+    const ent = led("企业");
+    if (ent && D.enterprise) { D.enterprise.budget = Number(ent.total); D.enterprise.used = Number(ent.used); }
+    (D.analytics && D.analytics.depts ? D.analytics.depts : []).forEach((d) => {
+      const b = led("部门", d.dept);
+      if (!b) return;
+      d.budget = Number(b.total);
+      d.cost = Number(b.used);
+      d.budgetState = b.state;
+    });
+    return true;
+  }
 
   function actor(me) { return me || currentIdentity(); }
 
@@ -113,30 +129,107 @@ DB.derived = (function () {
 
   function money(n) { return "¥" + Number(n || 0).toLocaleString("zh-CN"); }
 
+  /* ---------- 单一取数口（README「口径与取数」约定） ----------
+     预算 / 集进度 / 任务 / 待办 各只有一处算法；页面不得自行求和、改分母或按对象 ID 分支。 */
+  function budgetOfProject(p) {
+    if (!p) return { total: 0, used: 0, reserve: 0, state: "未设置", pct: 0, set: false, source: "none" };
+    const led = D.budgets.find(b => b.scope === "项目" && String(b.name).indexOf(p.id) === 0);
+    const total = Number((led ? led.total : p.budget) || 0);
+    const used = Number((led ? led.used : p.actual) || 0);
+    const reserve = Number((led ? led.reserve : 0) || 0);
+    return {
+      total: total,
+      used: used,
+      reserve: reserve,
+      state: (led && led.state) || p.budgetState || "未设置",
+      pct: total ? Math.round(used / total * 100) : 0,
+      set: total > 0,
+      source: led ? "ledger" : "project"
+    };
+  }
+
+  /* 集进度：已完成集数以项目台账为准；episodes 表是抽样明细，不作为分母或通过数来源 */
+  function progressOf(p) {
+    const total = Number((p && p.episodes) || 0);
+    const done = Number((p && p.done) || 0);
+    const delivered = Number((p && p.delivered) || 0);
+    return { done: done, total: total, delivered: delivered, pct: total ? Math.round(done / total * 100) : 0 };
+  }
+
+  function projectsOf(scope, me) {
+    if (scope === "visible" || scope === "all") return visibleProjects(me);
+    return myProjects(me);
+  }
+
+  function taskStats(me) {
+    const ids = projectsOf("mine", me).map(p => p.id);
+    const rows = D.tasks.filter(t => ids.indexOf(t.project) >= 0);
+    const open = rows.filter(t => ["排队中", "执行中"].indexOf(t.status) >= 0);
+    return {
+      total: rows.length,
+      open: open.length,
+      queued: open.filter(t => t.status === "排队中").length,
+      running: open.filter(t => t.status === "执行中").length,
+      waiting: rows.filter(t => t.status === "待人工处理").length,
+      failed: rows.filter(t => ["失败", "已失败"].indexOf(t.status) >= 0).length
+    };
+  }
+
+  function deliveryStats(me) {
+    const ids = projectsOf("mine", me).map(p => p.id);
+    const rows = D.deliveries.filter(d => ids.indexOf(d.project) >= 0 && ["已交付", "已归档"].indexOf(d.status) >= 0);
+    return { count: rows.length, episodes: rows.reduce((s, d) => s + Number(d.episodes || 0), 0), rows: rows };
+  }
+
+  /* 待我处理：以通知表为唯一事实源（通知的 owner 兼容「姓名」与「姓名 · 角色」两种写法），
+     首页的待办卡、待办指标、侧栏 mini-kpi 必须全部取自本函数，禁止各自过滤。 */
+  function ownerKey(name) { return String(name || "").split(" · ")[0].trim(); }
+  function duties(me) {
+    const a = actor(me);
+    const u = actorUser(a);
+    const mineIds = myProjects(a).map(p => p.id);
+    const names = [ownerKey(a.name), u && ownerKey(u.name)].filter(Boolean);
+    const items = (D.notifications || []).filter(n => {
+      const st = String(n.state || "");
+      if (st.indexOf("已处理") >= 0 || st.indexOf("已完成") >= 0 || st.indexOf("已关闭") >= 0) return false;
+      if (names.indexOf(ownerKey(n.owner)) < 0) return false;
+      if (n.project && mineIds.indexOf(n.project) < 0) return false;
+      return true;
+    });
+    const isReview = (t) => String(t || "").indexOf("审核") >= 0 || String(t || "").indexOf("判断") >= 0;
+    return {
+      items: items,
+      total: items.length,
+      review: items.filter(n => isReview(n.type)).length,
+      quality: items.filter(n => String(n.type || "").indexOf("质量") >= 0).length,
+      budget: items.filter(n => String(n.type || "").indexOf("预算") >= 0).length,
+      other: items.filter(n => !isReview(n.type) && String(n.type || "").indexOf("质量") < 0 && String(n.type || "").indexOf("预算") < 0).length
+    };
+  }
+
   function home(me) {
     const a = actor(me);
     const mine = myProjects(a);
     const ids = mine.map(p => p.id);
-    const openTasks = D.tasks.filter(t => ids.indexOf(t.project) >= 0 && ["排队中", "执行中"].indexOf(t.status) >= 0);
-    const reviewOpen = D.reviews.filter(r => ids.indexOf(r.project) >= 0 && r.result !== "通过").length
-      + D.qualityReports.filter(r => ids.indexOf(projectIdOfReport(r)) >= 0 && r.result === "REVIEW_REQUIRED").length;
-    const cost = mine.reduce((s, p) => s + Number(p.actual || 0), 0);
-    const budget = mine.reduce((s, p) => s + Number(p.budget || 0), 0);
-    const doneDeliveries = D.deliveries.filter(d => ids.indexOf(d.project) >= 0 && ["已交付", "已归档"].indexOf(d.status) >= 0);
-    const deliveredEpisodes = doneDeliveries.reduce((s, d) => s + Number(d.episodes || 0), 0);
+    const ts = taskStats(a);
+    const d = duties(a);
+    const cost = mine.reduce((s, p) => s + budgetOfProject(p).used, 0);
+    const budget = mine.reduce((s, p) => s + budgetOfProject(p).total, 0);
+    const dl = deliveryStats(a);
     return {
+      scope: "mine",
       mine: mine,
       own: mine.filter(p => p.ownerId === (actorUser(a) || {}).id).length,
       join: mine.length - mine.filter(p => p.ownerId === (actorUser(a) || {}).id).length,
-      decisions: reviewOpen,
-      tasks: openTasks.length,
-      queued: openTasks.filter(t => t.status === "排队中").length,
-      running: openTasks.filter(t => t.status === "执行中").length,
+      duties: d,
+      tasks: ts.open,
+      queued: ts.queued,
+      running: ts.running,
       cost: cost,
       budget: budget,
       budgetPct: budget ? Math.round(cost / budget * 100) : 0,
-      deliveredEpisodes: deliveredEpisodes,
-      deliveries: doneDeliveries.length
+      deliveredEpisodes: dl.episodes,
+      deliveries: dl.count
     };
   }
 
@@ -167,8 +260,8 @@ DB.derived = (function () {
     const passEps = eps.filter(e => e.qc === "PASS");
     const total = p.episodes || 0;
     const pct = total ? Math.round(passEps.length / total * 100) : 0;
-    const bg = DB.state.budgetOf(p.id);
-    const bgPct = bg && bg.total ? Math.round(bg.used / bg.total * 100) : 0;
+    const bg = budgetOfProject(p);
+    const bgPct = bg.pct;
     const gProd = DB.state.gate(p.id, "生产");
     const gDel = DB.state.gate(p.id, "交付");
     const stat = p.status;
@@ -237,8 +330,9 @@ DB.derived = (function () {
   }
 
   return {
-    bind: bind, identity: currentIdentity,
+    bind: bind, identity: currentIdentity, syncScopeBudgets,
     actorUser, visibleProjects, canViewProject, visibleMembers, visibleCosts, visibleBudgets, scopeLabel,
-    myProjects, home, projectIdOfReport, qualityOf, reviewsOf, deliveriesOf, risksOf, money, projectSummary, workflow
+    myProjects, projectsOf, budgetOfProject, progressOf, taskStats, deliveryStats, duties,
+    home, projectIdOfReport, qualityOf, reviewsOf, deliveriesOf, risksOf, money, projectSummary, workflow
   };
 })();

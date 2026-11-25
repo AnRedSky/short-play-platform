@@ -31,7 +31,9 @@ window.DB = {
     "quality.operate": "质量返工与复检",
     "post.write": "后期与合成操作",
     "final.review": "成片审核（节点 B）",
+    "delivery.read": "交付包与作品记录查看",
     "delivery.execute": "交付执行",
+    "task.read": "任务与调用记录查看",
     "task.operate": "任务重试、暂停、取消",
     "asset.read": "资产查看",
     "asset.manage": "资产版本、删除与归档",
@@ -52,11 +54,11 @@ window.DB = {
   /* ---------- 角色体系（六角色，不以传统制作岗位划分） ---------- */
   roles: [
     { code: "ops", name: "系统运维管理员", scope: "基础设施与全局参数", duty: "部署、运行、监控、备份恢复与技术排障", perms: ["platform.read", "platform.config"], deny: "默认不读取业务内容；不得读取任何个人凭据明文" },
-    { code: "admin", name: "企业管理员", scope: "企业全域（按职责授权）", duty: "企业主体、部门、账号、角色、预算制度、合规与经营查看", perms: ["platform.read", "enterprise.read", "enterprise.edit", "org.read", "org.manage", "grant.manage", "project.read", "project.manage", "cost.read", "cost.export", "cost.manage", "models.manage", "compliance.write", "compliance.read", "analytics.read", "audit.read", "audit.export", "notify.handle"], deny: "个人凭据明文始终不可见；不得绕过内容合规与审计" },
-    { code: "dept", name: "部门管理员", scope: "本部门范围", duty: "本部门成员、项目归属、部门资源与统计视图", perms: ["enterprise.read", "org.read", "org.manage", "grant.manage", "project.read", "project.manage", "cost.read", "cost.manage", "compliance.write", "compliance.read", "analytics.read", "notify.handle"], deny: "不得跨部门读写；不得调整企业级策略" },
-    { code: "owner", name: "项目负责人", scope: "负责项目范围", duty: "项目推进、成员授权、关键审核、异常决策、移交配合", perms: ["project.read", "project.create", "project.manage", "creation.write", "script.review", "director.write", "production.write", "models.own", "quality.read", "quality.operate", "post.write", "final.review", "delivery.execute", "task.operate", "asset.read", "asset.manage", "cost.read", "compliance.write", "compliance.read", "analytics.own", "notify.handle"], deny: "不得读取他人个人凭据；不得绕过预算与审核规则" },
-    { code: "staff", name: "普通员工", scope: "本人及被授权项目", duty: "独立制作短剧、维护个人 AI 资源、审核与交付", perms: ["project.read", "project.create", "creation.write", "director.write", "production.write", "quality.read", "quality.operate", "post.write", "task.operate", "asset.read", "models.own", "cost.read", "analytics.own", "notify.handle"], deny: "仅使用本人配置的资源；不得修改企业级策略" },
-    { code: "auditor", name: "审计与经营管理人员", scope: "指定部门或汇总视图", duty: "查询操作、调用、成本、授权与交付追溯记录", perms: ["enterprise.read", "org.read", "project.read", "cost.read", "cost.export", "analytics.read", "audit.read", "audit.export", "compliance.read", "quality.read"], deny: "只读；不自动获得内容修改权" }
+    { code: "admin", name: "企业管理员", scope: "企业全域（按职责授权）", duty: "企业主体、部门、账号、角色、预算制度、合规与经营查看", perms: ["platform.read", "enterprise.read", "enterprise.edit", "org.read", "org.manage", "grant.manage", "project.read", "project.manage", "cost.read", "cost.export", "cost.manage", "models.manage", "delivery.read", "task.read", "compliance.write", "compliance.read", "analytics.read", "audit.read", "audit.export", "notify.handle"], deny: "个人凭据明文始终不可见；不得绕过内容合规与审计" },
+    { code: "dept", name: "部门管理员", scope: "本部门范围", duty: "本部门成员、项目归属、部门资源与统计视图", perms: ["enterprise.read", "org.read", "org.manage", "grant.manage", "project.read", "project.manage", "cost.read", "cost.manage", "delivery.read", "task.read", "compliance.write", "compliance.read", "analytics.read", "notify.handle"], deny: "不得跨部门读写；不得调整企业级策略" },
+    { code: "owner", name: "项目负责人", scope: "负责项目范围", duty: "项目推进、成员授权、关键审核、异常决策、移交配合", perms: ["project.read", "project.create", "project.manage", "creation.write", "script.review", "director.write", "production.write", "models.own", "quality.read", "quality.operate", "post.write", "final.review", "delivery.read", "delivery.execute", "task.read", "task.operate", "asset.read", "asset.manage", "cost.read", "compliance.write", "compliance.read", "analytics.own", "notify.handle"], deny: "不得读取他人个人凭据；不得绕过预算与审核规则" },
+    { code: "staff", name: "普通员工", scope: "本人及被授权项目", duty: "独立制作短剧、维护个人 AI 资源、审核与交付", perms: ["project.read", "project.create", "creation.write", "director.write", "production.write", "quality.read", "quality.operate", "post.write", "delivery.read", "task.read", "task.operate", "asset.read", "models.own", "cost.read", "analytics.own", "notify.handle"], deny: "仅使用本人配置的资源；不得修改企业级策略" },
+    { code: "auditor", name: "审计与经营管理人员", scope: "指定部门或汇总视图", duty: "查询操作、调用、成本、授权与交付追溯记录", perms: ["enterprise.read", "org.read", "project.read", "cost.read", "cost.export", "analytics.read", "audit.read", "audit.export", "compliance.read", "quality.read", "delivery.read", "task.read"], deny: "只读；不自动获得内容修改权" }
   ],
 
   /* ---------- 当前身份（切换仅用于演示菜单与路由权限差异） ---------- */
@@ -143,7 +145,7 @@ window.DB = {
     {
       id: "SP-26015", name: "第七码头", genre: "悬疑 / 犯罪", audience: "20–35 岁男性", episodes: 16, duration: "100 秒 / 集",
       ratio: "9:16 · 1080×1920", language: "普通话 + 粤语片段", style: "高对比夜景 · 冷蓝", constraints: "不得出现警用标识与真实码头名称",
-      budget: 16000, actual: 7420, estimated: 9800, status: "异常中", phase: "视频生产（受阻）", done: 8, delivered: 0,
+      budget: 16000, actual: 14420, estimated: 9800, status: "异常中", phase: "视频生产（受阻）", done: 8, delivered: 0,
       quality: "需处理", ownerId: "u-01", owner: "林知远", deptId: "D-01", dept: "内容创新部", budgetState: "接近阈值",
       created: "2026-09-21", updated: "2026-11-21 18:20", scriptVersion: "SCR-26015-V3（已锁定）", timelineVersion: "TL-26015-V2",
       members: [{ userId: "u-01", role: "管理" }, { userId: "u-04", role: "编辑" }]
@@ -159,8 +161,8 @@ window.DB = {
     {
       id: "SP-26007", name: "回声计划", genre: "科幻 / 悬疑", audience: "18–35 岁科技向", episodes: 30, duration: "90 秒 / 集",
       ratio: "9:16 · 1080×1920", language: "普通话", style: "冷白极简 · 慢速运镜", constraints: "未来设备不得出现真实商标",
-      budget: 26000, actual: 23890, estimated: 25100, status: "已归档", phase: "归档完成", done: 30, delivered: 30,
-      quality: "通过", ownerId: "u-03", owner: "王亦宁", deptId: "D-02", dept: "制作中心", budgetState: "正常",
+      budget: 26000, actual: 26000, estimated: 25100, status: "已归档", phase: "归档完成", done: 30, delivered: 30,
+      quality: "通过", ownerId: "u-03", owner: "王亦宁", deptId: "D-02", dept: "制作中心", budgetState: "已冻结",
       created: "2026-05-08", updated: "2026-10-30 11:20", scriptVersion: "SCR-26007-V6（已锁定）", timelineVersion: "TL-26007-V4",
       members: [{ userId: "u-03", role: "管理" }]
     },
@@ -465,10 +467,26 @@ window.DB = {
     { scope: "企业", name: "企业年度 AI 预算", total: 1200000, used: 486300, reserve: 96000, state: "正常", owner: "沈牧" },
     { scope: "部门", name: "内容创新部", total: 420000, used: 198600, reserve: 42000, state: "正常", owner: "韩清" },
     { scope: "部门", name: "制作中心", total: 380000, used: 201400, reserve: 38000, state: "接近阈值", owner: "王亦宁" },
+    { scope: "部门", name: "短剧二组", total: 120000, used: 47100, reserve: 12000, state: "正常", owner: "赵一宁" },
+    { scope: "部门", name: "经营管理部", total: 160000, used: 0, reserve: 16000, state: "正常", owner: "许衡" },
     { scope: "项目", name: "SP-26031 雾城来信", total: 18000, used: 9260, reserve: 2000, state: "正常", owner: "林知远" },
+    { scope: "项目", name: "SP-26028 逆光的约定", total: 12000, used: 680, reserve: 1440, state: "正常", owner: "陈可心" },
+    { scope: "项目", name: "SP-26019 长街旧梦", total: 15000, used: 11840, reserve: 1800, state: "正常", owner: "王亦宁" },
     { scope: "项目", name: "SP-26015 第七码头", total: 16000, used: 14420, reserve: 800, state: "接近阈值", owner: "林知远" },
-    { scope: "项目", name: "SP-26007 回声计划", total: 26000, used: 26000, reserve: 0, state: "已冻结", owner: "王亦宁" }
+    { scope: "项目", name: "SP-26011 夏日边界", total: 9000, used: 240, reserve: 1080, state: "正常", owner: "赵一宁" },
+    { scope: "项目", name: "SP-26007 回声计划", total: 26000, used: 26000, reserve: 0, state: "已冻结", owner: "王亦宁" },
+    { scope: "项目", name: "SP-26004 灶台之上", total: 14000, used: 0, reserve: 0, state: "未设置", owner: "陈可心" }
   ],
+  /* 价目与规则常量：单价、抽检比例、预警阈值只允许出现在这里，页面不得写魔法数字 */
+  pricing: {
+    subtitlePerLine: 0.3,
+    voicePerSecond: 1.2,
+    videoPerShot: 37.8,
+    qcSampleRate: 0.2,
+    qcMinSample: 2,
+    qcItemsPerShot: 3,
+    budgetWarnRate: 0.85
+  },
   budgetRules: [
     "项目总预算与单集预算两级控制；单集预算之和不得超过总预算，弹性需显式声明。",
     "每个任务提交前估算预计成本并做预算预检，超限则任务保持「待执行」并给出阻塞原因。",
@@ -651,7 +669,7 @@ window.DB = {
     { id: "N-4405", type: "预算提醒", project: "SP-26015", title: "《第七码头》预算接近阈值", reason: "已用 90.1%，剩余 ¥1,580", impact: "高成本镜头需先请示调整", state: "已通知", action: "调整预算或缩减范围", owner: "林知远", link: "cost/budget", unread: false, at: "2026-11-21 09:40" },
     { id: "N-4402", type: "授权到期", project: "SP-26015", title: "声音克隆授权 30 天内到期", reason: "AT-2026-041 有效期至 2026-12-31", impact: "到期后相关对白不可交付", state: "待处理", action: "续期或替换音色", owner: "林知远", link: "compliance/rights", unread: false, at: "2026-11-20 10:02" },
     { id: "N-4398", type: "交付完成", project: "SP-26019", title: "《长街旧梦》交付包已生成", reason: "终审通过且集数完整", impact: "已冻结交付 V1", state: "已完成", action: "查看交付包与校验摘要", owner: "王亦宁", link: "post/delivery", unread: false, at: "2026-11-18 16:05" },
-    { id: "N-4390", type: "异常升级", project: "SP-26015", title: "异常超 4 小时未处理，已升级", reason: "合规阻断未在阈值内处理", impact: "第 9–16 集交付全部阻塞", state: "已升级", action: "由企业管理员指派处理人", owner: "沈牧", link: "notify/incidents", unread: true, at: "2026-11-21 22:30" }
+    { id: "N-4390", type: "异常升级", project: "SP-26015", title: "异常超 4 小时未处理，已升级", reason: "合规阻断未在阈值内处理", impact: "第 9–16 集交付全部阻塞", state: "已升级", action: "由企业管理员指派处理人", owner: "沈牧", link: "compliance/risks", unread: true, at: "2026-11-21 22:30" }
   ],
   incidents: [
     { id: "IN-0087", project: "SP-26015", type: "内容合规高风险", first: "2026-11-21 18:15", handled: 3, last: "2026-11-22 09:20", action: "暂停 E09 受影响链路；发起素材替换重生成", decision: "林知远 · 待补授权后重生成", result: "未闭环", next: "替换画面元素 → 重生成 SH-02 → 抽检", level: "升级至企业管理员" },
@@ -670,13 +688,12 @@ window.DB = {
       id: "workspace", label: "创作工作台", icon: "home",
       children: [
       { id: "workspace-desk", label: "工作台", items: [
-        { id: "w-home", label: "工作台首页", path: "workspace/home", perm: "analytics.own" },
-        { id: "w-assistant", label: "指令式生产助手", path: "workspace/assistant", perm: "creation.write" },
-        { id: "w-projects", label: "我的项目", path: "workspace/projects", perm: "project.read" }
+        { id: "w-home", label: "工作台首页", path: "workspace/home", perm: ["project.read", "platform.read"] },
+        { id: "w-assistant", label: "指令式生产助手", path: "workspace/assistant", perm: "creation.write" }
       ] },
       { id: "workspace-notify", label: "通知与异常", items: [
         { id: "w-inbox", label: "待办与通知", path: "notify/inbox", perm: "notify.handle" },
-        { id: "w-incidents", label: "异常中心", path: "notify/incidents", perm: "notify.handle" }
+
       ] }
       ]
     },
@@ -702,11 +719,9 @@ window.DB = {
         { id: "d-cast", label: "人物视觉档案", path: "director/cast", perm: "director.write" },
         { id: "d-world", label: "场景与道具", path: "director/world", perm: "director.write" },
         { id: "d-shots", label: "镜头契约", path: "director/shots", perm: "director.write" },
-        { id: "d-storyboard", label: "分镜板", path: "director/storyboard", perm: "director.write" }
       ] },
       { id: "prod-video", label: "视频生产", items: [
         { id: "v-queue", label: "视频生产队列", path: "video/production", perm: "production.write" },
-        { id: "v-results", label: "生成结果", path: "video/results", perm: "production.write" },
         { id: "v-preview", label: "预览与校验", path: "video/preview", perm: "production.write" }
       ] },
       { id: "prod-audio", label: "音频与字幕", items: [
@@ -719,12 +734,10 @@ window.DB = {
         { id: "o-timeline", label: "时间线与剪辑", path: "post/timeline", perm: "post.write" },
         { id: "o-episodes", label: "分集成片", path: "post/episodes", perm: "post.write" },
         { id: "o-review", label: "最终成片审核", path: "post/review", perm: "final.review" },
-        { id: "o-delivery", label: "交付包", path: "post/delivery", perm: "delivery.execute" },
-        { id: "o-works", label: "作品库", path: "post/works", perm: "delivery.execute" },
+        { id: "o-delivery", label: "交付包", path: "post/delivery", perm: ["delivery.read", "delivery.execute"] },
         { id: "o-versions", label: "版本链", path: "post/versions", perm: "post.write" }
       ] },
       { id: "prod-quality", label: "质量与返工", items: [
-        { id: "q-gates", label: "质量门禁", path: "quality/gates", perm: "quality.read" },
         { id: "q-reports", label: "质量报告", path: "quality/reports", perm: "quality.read" },
         { id: "q-rework", label: "返工与返工台账", path: "quality/rework", perm: "quality.operate" }
       ] }
@@ -734,23 +747,21 @@ window.DB = {
       id: "resource", label: "资源与治理", icon: "cube",
       children: [
       { id: "res-models", label: "模型资源", items: [
-        { id: "m-config", label: "资源配置", path: "models/config", perm: "models.own" },
+        { id: "m-config", label: "资源配置", path: "models/config", perm: ["models.own", "models.manage"] },
         { id: "m-providers", label: "供应商与模型", path: "models/providers", perm: "models.manage" },
         { id: "m-routing", label: "能力与路由", path: "models/routing", perm: "models.manage" }
       ] },
       { id: "res-tasks", label: "生产任务", items: [
-        { id: "k-list", label: "生产任务", path: "tasks/list", perm: ["task.operate", "audit.read"] },
-        { id: "k-queue", label: "资源池与队列", path: "tasks/queue", perm: ["task.operate", "audit.read"] },
-        { id: "k-attempt", label: "尝试与调用记录", path: "tasks/attempt", perm: ["task.operate", "audit.read"] }
+        { id: "k-list", label: "生产任务", path: "tasks/list", perm: "task.read" },
+        { id: "k-queue", label: "资源池与队列", path: "tasks/queue", perm: "task.read" },
+        { id: "k-attempt", label: "尝试与调用记录", path: "tasks/attempt", perm: "task.read" }
       ] },
       { id: "res-assets", label: "数字资产", items: [
-        { id: "s-library", label: "资产库", path: "assets/library", perm: "asset.read" },
-        { id: "s-usage", label: "引用与使用关系", path: "assets/usage", perm: "asset.read" }
+        { id: "s-library", label: "资产库", path: "assets/library", perm: "asset.read" }
       ] },
       { id: "res-cost", label: "成本与预算", items: [
         { id: "t-ledger", label: "成本台账", path: "cost/ledger", perm: "cost.read" },
-        { id: "t-budget", label: "预算与阈值", path: "cost/budget", perm: "cost.read" },
-        { id: "t-usage", label: "用量与计量", path: "cost/usage", perm: "cost.read" }
+        { id: "t-budget", label: "预算与阈值", path: "cost/budget", perm: "cost.read" }
       ] }
       ]
     },
@@ -759,8 +770,6 @@ window.DB = {
       children: [
       { id: "ana-enterprise", label: "企业经营", items: [
         { id: "n-enterprise", label: "企业整体数据", path: "analytics/enterprise", perm: "analytics.read" },
-        { id: "n-departments", label: "部门对比", path: "analytics/departments", perm: "analytics.read" },
-        { id: "n-employees", label: "员工对比", path: "analytics/employees", perm: "analytics.read" },
         { id: "n-me", label: "我的数据", path: "analytics/me", perm: ["analytics.own", "analytics.read"] }
       ] }
       ]

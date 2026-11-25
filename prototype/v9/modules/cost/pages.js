@@ -3,6 +3,29 @@
   const U = UI, D = DB, SCOPE = "cost";
   const money = (n) => "¥" + Number(n || 0).toLocaleString("zh-CN");
 
+  /* ---------- 用量（原 cost/usage，B2·M6 并入成本台账的「用量」tab） ----------
+     用量以调用记录为准：供应商用量与平台用量并列，差异必须解释，不允许只保留平台估算。 */
+  const usageBlock = (pid) => {
+    const p = pid ? (D.projects.find(x => x.id === pid) || null) : null;
+    const visPids = DB.derived.visibleProjects().map(x => x.id);
+    const usage = pid ? D.usage.filter(u => u.project === pid) : D.usage.filter(u => visPids.indexOf(u.project) >= 0);
+    const rows = usage.map(x =>
+      '<tr><td>' + U.code(x.id) + "</td><td>" + U.esc(x.project) + "</td><td>" + U.code(x.task) + "</td><td>" + U.esc(x.cap) + "</td><td>" + U.esc(x.unit) + '</td><td class="cell-wrap">' + U.esc(x.vendorQty) + '</td><td class="cell-wrap">' + U.esc(x.platformQty) + "</td><td>" + U.esc(x.src) + "</td><td>" + U.pill(x.status) + "</td><td>" + U.esc(x.at) + "</td></tr>").join("");
+    const diff = usage.find(x => String(x.vendorQty).replace(/\s/g, "") !== String(x.platformQty).replace(/\s/g, "")) || null;
+    const caps = {};
+    usage.forEach(u => { caps[u.cap] = (caps[u.cap] || 0) + 1; });
+    return U.card("用量明细" + (p ? " · " + U.esc(p.name) : ""), U.table(["用量号", "项目", "任务", "能力", "单位", "供应商用量", "平台用量", "来源", "状态", "时间"], rows, "当前范围暂无用量记录")) +
+      '<div class="split mt-4"><div class="stack">' +
+        (diff ? U.card("计量差异 · " + diff.id, U.notice("供应商用量 " + diff.vendorQty + "，平台有效产出 " + diff.platformQty + "；差异必须保留说明，不允许抹平。", "warn") +
+          U.desc([["供应商用量", diff.vendorQty], ["平台有效", diff.platformQty], ["来源", diff.src], ["说明", "失败重试照常计费"]]) , "差异不允许抹平")
+          : U.card("计量差异", U.notice(usage.length ? "当前范围供应商用量与平台有效产出一致，没有计量差异。" : "当前范围没有用量记录。", "ok"), "只显示真实差异")) +
+        U.card("常见差异原因", U.listRows([["失败重试", "多次调用只产出一次"], ["超时截断", "调用完成但输出不可用"], ["降级输出", "分辨率降级导致重复生成"], ["上游截断", "长文本分批调用"]]) , "差异需在报告说明") +
+      '</div><div class="stack">' +
+        U.card("按能力用量", Object.keys(caps).length ? U.donut(Object.keys(caps).map((k, i) => ({ label: k, value: caps[k], color: ["var(--accent)", "var(--ok)", "var(--info)", "var(--warn)"][i % 4] })), "记录", String(usage.length)) : U.empty("暂无用量", "当前范围没有用量记录。"), "单位混合，仅示意记录数占比") +
+        U.card("计费口径", U.listRows([["视频生成", "按秒 · 含失败"], ["语音合成", "按字符 / 秒"], ["视觉理解", "按帧"], ["推理", "按千 tokens"], ["转码", "按分钟"]]) , "口径与企业合同一致") +
+      "</div></div>";
+  };
+
   AppModule.register({
     group: "cost", label: "成本与预算", icon: "coin", order: 12, end: "workspace",
     routes: [
@@ -16,7 +39,7 @@
           const requested = (query && query.id) || "";
           if (requested) {
             const rp = D.projects.find(x => x.id === requested);
-            if (!rp || !DB.derived.canViewProject(rp)) return U.page("成本与预算 / 成本台账", "项目成本不在可见范围", "只能查看自己负责、参与或经授权项目的成本；跨项目成本不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取成本台账", "项目不存在或当前身份不可见。"));
+            if (!rp || !DB.derived.canViewProject(rp)) return U.page("成本与预算 / 成本台账", "项目成本不在可见范围", "只能查看自己负责、参与或经授权项目的成本；跨项目成本不渲染。", U.btn("返回项目列表", "common.projects", "primary"), U.empty("无法读取成本台账", "项目不存在或当前身份不可见。"));
           }
           const saved = App.get(SCOPE, "proj", "全部");
           const proj = requested || (projIds.indexOf(saved) >= 0 ? saved : "全部");
@@ -30,9 +53,15 @@
           const fail = list.reduce((s, c) => s + c.failed, 0);
           const personal = list.filter(c => String(c.bearer).indexOf("个人") >= 0).length;
           const failedOne = list.filter(c => c.failed > 0)[0] || null;
-          return U.page("成本与预算 / 成本台账", "成本台账", "成本口径固定：预计、实际、失败三列并存，任何一列都不允许被「合并成总账」而丢失。",
-            U.btn("预算视图", "cost.toBudget", "primary") + U.btn("用量与计量", "cost.toUsage"),
-            '<div class="grid grid-4">' +
+          const tab = App.get(SCOPE, "tab", "ledger");
+          const useCnt = (proj === "全部" ? D.usage.filter(u => DB.derived.visibleProjects().map(x => x.id).indexOf(u.project) >= 0) : D.usage.filter(u => u.project === proj)).length;
+          const tabsBar = U.card("", U.tabs([
+            { value: "ledger", label: "台账明细", count: list.length },
+            { value: "usage", label: "用量", count: useCnt }
+          ], tab, "cost.tab"));
+          return U.page("成本与预算 / 成本台账", tab === "usage" ? "用量与计量" : "成本台账", tab === "usage" ? "计量差异（含失败重试）必须显式展示：供应商按调用计费，平台按有效产出统计。" : "成本口径固定：预计、实际、失败三列并存，任何一列都不允许被「合并成总账」而丢失。",
+            U.btn("预算视图", "cost.toBudget", "primary") + (tab === "usage" ? U.btn("导出用量", "common.export") : ""),
+            tabsBar + (tab === "usage" ? usageBlock(proj === "全部" ? "" : proj) : '<div class="grid grid-4">' +
               U.metric("预计合计", money(est), "当前视图 " + list.length + " 笔", "≈") +
               U.metric("实际合计", money(act), "以调用记录为准", "¥") +
               U.metric("失败成本", money(fail), "不摊入成功项", "×") +
@@ -44,8 +73,8 @@
               U.card("十维成本口径", '<div class="chip-row">' + D.costDimensions.map(x => '<span class="chip">' + U.esc(x) + "</span>").join("") + "</div>" + U.listRows([["项目 / 单集 / 单镜头", "按结构逐层汇总"], ["能力维度", "图像 / 视频 / 音频 / 后期"], ["失败与重试", "单列，不回填到成功项"], ["存储与转码", "按体积与时长计量"]]) , "统计按维度可下钻") +
               (failedOne
                 ? U.card(failedOne.id + " · 失败成本示例", U.notice("该任务失败成本 " + money(failedOne.failed) + " 已入账，承担方为「" + failedOne.bearer + "」。", "warn") + U.desc([["预计", money(failedOne.est)], ["实际", money(failedOne.actual)], ["失败成本", money(failedOne.failed)], ["承担方", failedOne.bearer], ["账单", failedOne.bill]]) , "无产出也要记账")
-                : U.card("失败成本", U.empty("当前可见范围内没有失败成本", "失败与重试会在发生时单列入账。"), "无产出也要记账")) +
-            "</div>"
+                : U.card("失败与重试成本明细", U.empty("当前可见范围内没有失败成本", "失败与重试会在发生时单列入账。"), "无产出也要记账")) +
+            "</div>")
           );
         }
       },
@@ -55,7 +84,7 @@
         render(query) {
           const pid = (query && query.id) || "";
           const p = pid ? (D.projects.find(x => x.id === pid) || null) : null;
-          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("成本与预算 / 预算与阈值", "项目预算不在可见范围", "只能查看自己负责、参与或经授权项目的预算；跨项目预算不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取项目预算", "项目不存在或当前身份不可见。"));
+          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("成本与预算 / 预算与阈值", "项目预算不在可见范围", "只能查看自己负责、参与或经授权项目的预算；跨项目预算不渲染。", U.btn("返回项目列表", "common.projects", "primary"), U.empty("无法读取项目预算", "项目不存在或当前身份不可见。"));
           const visible = DB.derived.visibleBudgets();
           const budgets = pid ? visible.filter(b => String(b.name).indexOf(pid) === 0 || b.project === pid) : visible;
           const rows = budgets.map(b => {
@@ -86,35 +115,6 @@
             "</div></div>"
           );
         }
-      },
-      {
-        path: "cost/usage", title: "用量与计量", icon: "chart", permission: "cost.read",
-        desc: "用量以调用记录为准：供应商用量与平台用量并列，差异必须解释，不允许只保留平台估算。",
-        render(query) {
-          const pid = (query && query.id) || "";
-          const p = pid ? (D.projects.find(x => x.id === pid) || null) : null;
-          if (pid && (!p || !DB.derived.canViewProject(p))) return U.page("成本与预算 / 用量与计量", "项目用量不在可见范围", "只能查看自己负责、参与或经授权项目的用量；跨项目用量不渲染。", U.btn("返回项目列表", "projects.listLink", "primary"), U.empty("无法读取用量", "项目不存在或当前身份不可见。"));
-          const visPids = DB.derived.visibleProjects().map(x => x.id);
-          const usage = pid ? D.usage.filter(u => u.project === pid) : D.usage.filter(u => visPids.indexOf(u.project) >= 0);
-          const rows = usage.map(x =>
-            '<tr><td>' + U.code(x.id) + "</td><td>" + U.esc(x.project) + "</td><td>" + U.code(x.task) + "</td><td>" + U.esc(x.cap) + "</td><td>" + U.esc(x.unit) + '</td><td class="cell-wrap">' + U.esc(x.vendorQty) + '</td><td class="cell-wrap">' + U.esc(x.platformQty) + "</td><td>" + U.esc(x.src) + "</td><td>" + U.pill(x.status) + "</td><td>" + U.esc(x.at) + "</td></tr>").join("");
-          const diff = usage.find(x => String(x.vendorQty).replace(/\s/g, "") !== String(x.platformQty).replace(/\s/g, "")) || null;
-          const caps = {};
-          usage.forEach(u => { caps[u.cap] = (caps[u.cap] || 0) + 1; });
-          return U.page("成本与预算 / 用量与计量", "用量与计量", "计量差异（含失败重试）必须显式展示：供应商按调用计费，平台按有效产出统计。",
-            U.btn("成本台账", "cost.toLedger", "", p ? { id: p.id } : {}) + U.btn("导出用量", "common.export"),
-            U.card("用量明细" + (p ? " · " + U.esc(p.name) : ""), U.table(["用量号", "项目", "任务", "能力", "单位", "供应商用量", "平台用量", "来源", "状态", "时间"], rows, "当前范围暂无用量记录")) +
-            '<div class="split mt-4"><div class="stack">' +
-              (diff ? U.card("计量差异 · " + diff.id, U.notice("供应商用量 " + diff.vendorQty + "，平台有效产出 " + diff.platformQty + "；差异必须保留说明，不允许抹平。", "warn") +
-                U.desc([["供应商用量", diff.vendorQty], ["平台有效", diff.platformQty], ["来源", diff.src], ["说明", "失败重试照常计费"]]) , "差异不允许抹平")
-                : U.card("计量差异", U.notice(usage.length ? "当前范围供应商用量与平台有效产出一致，没有计量差异。" : "当前范围没有用量记录。", "ok"), "只显示真实差异")) +
-              U.card("常见差异原因", U.listRows([["失败重试", "多次调用只产出一次"], ["超时截断", "调用完成但输出不可用"], ["降级输出", "分辨率降级导致重复生成"], ["上游截断", "长文本分批调用"]]) , "差异需在报告说明") +
-            '</div><div class="stack">' +
-              U.card("按能力用量", Object.keys(caps).length ? U.donut(Object.keys(caps).map((k, i) => ({ label: k, value: caps[k], color: ["var(--accent)", "var(--ok)", "var(--info)", "var(--warn)"][i % 4] })), "记录", String(usage.length)) : U.empty("暂无用量", "当前范围没有用量记录。"), "单位混合，仅示意记录数占比") +
-              U.card("计费口径", U.listRows([["视频生成", "按秒 · 含失败"], ["语音合成", "按字符 / 秒"], ["视觉理解", "按帧"], ["推理", "按千 tokens"], ["转码", "按分钟"]]) , "口径与企业合同一致") +
-            "</div></div>"
-          );
-        }
       }
     ]
   });
@@ -130,8 +130,10 @@
   });
   App.on("cost.toUsage", (el) => {
     const pid = (el && el.dataset && el.dataset.id) || (App.current().query || {}).id;
-    App.go("cost/usage", pid ? { id: pid } : undefined);
+    App.set(SCOPE, "tab", "usage");
+    App.go("cost/ledger", pid ? { id: pid } : undefined);
   });
+  App.on("cost.tab", (el) => { App.set(SCOPE, "tab", el.dataset.value || "ledger"); App.refresh(); });
   App.on("cost.ledgerLink", (el) => {
     const id = (el && el.dataset && el.dataset.project) || "";
     if (id && !DB.derived.canViewProject(D.projects.find(p => p.id === id))) {
@@ -229,7 +231,7 @@
               return { ok: true, msg: r.msg };
             }
             bg.total = next;
-            bg.state = bg.used >= next * 0.85 ? "接近阈值" : "正常";
+            if (bg.state !== "已冻结") bg.state = DB.state.budgetStateFor(bg.used, next, false);
             DB.state.log("预算 " + bg.name, "总额调整为 ¥" + next + "：" + d.note, "成功", pid);
             return { ok: true, msg: bg.name + " 总额已调整为 ¥" + DB.state.money(next) };
           }

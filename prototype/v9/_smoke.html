@@ -5,7 +5,7 @@
 </head>
 <body>
 <pre id="out">running…</pre>
-<iframe id="f" src="/index.html?v=9.6.0"></iframe>
+<iframe id="f" src="/index.html?v=9.7.0"></iframe>
 <script>
 const out = [];
 const errors = [];
@@ -53,10 +53,30 @@ const put = (t) => { document.getElementById("out").textContent = t; };
     }
   }
 
+  /* 合并页 tab 断言（B2 归并后 9 个宿主页的 tab 必须渲染出真实内容） */
+  const tabCases = [
+    ["projects/list", "rel"], ["quality/reports", "gates"], ["post/delivery", "works"],
+    ["video/preview", "versions"], ["director/shots", "board"], ["assets/library", "refs"],
+    ["cost/ledger", "usage"], ["compliance/risks", "dispose"], ["analytics/enterprise", "depts"]
+  ];
+  const tabBad = [];
+  for (const [p, v] of tabCases) {
+    W().location.hash = "#/" + p;
+    await wait(400);
+    const chip = D().querySelector('#view button[data-value="' + v + '"]');
+    if (!chip) { tabBad.push(p + " 缺少 tab=" + v + " 的切换控件"); continue; }
+    chip.dispatchEvent(new Event("click", { bubbles: true }));
+    await wait(350);
+    const text = (D().querySelector("#view") || {}).textContent || "";
+    if (text.trim().length < 20) tabBad.push(p + " tab=" + v + " 渲染为空");
+    if (/undefined|NaN|\[object Object\]/.test(text)) tabBad.push(p + " tab=" + v + " 含 undefined/NaN");
+  }
+
   put("routes=" + routes.length + "\n" + (bad.length ? "ROUTE ISSUES:\n" + bad.join("\n") : "所有路由渲染正常，无 JS 错误、无 undefined/NaN") +
+    "\n" + "tabs=" + tabCases.length + "\n" + (tabBad.length ? "TAB ISSUES:\n" + tabBad.join("\n") : "合并页 tab 切换均渲染出内容") +
     "\n" + (roleBad.length ? "ROLE ISSUES:\n" + roleBad.join("\n") : "角色切换后权限拦截均有提示") +
     "\n" + (errors.length ? "ERRORS:\n" + errors.join("\n") : "无全局 JS 错误") + "\n\nDONE");
-  document.title = "Smoke " + (bad.length || roleBad.length ? "FAIL" : "OK");
+  document.title = "Smoke " + (bad.length || roleBad.length || tabBad.length ? "FAIL" : "OK");
 })().catch((e) => put("FATAL " + e.message + "\n" + e.stack));
 </script>
 </body>
