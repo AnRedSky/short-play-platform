@@ -854,6 +854,36 @@ export const SPECS: Record<string, PageSpec> = {
     side: () => [{ title: '返工规则', type: 'kv', items: [{ label: '单镜上限', value: '3 轮' }, { label: '超限', value: '转人工决策' }, { label: '旧版本', value: '保留，不覆盖' }] }],
   },
 
+  '/tasks/queue': {
+    kicker: 'TASKS / QUEUE',
+    title: '资源池与队列',
+    desc: '按能力族查看积压、并发与失败；调度只认队列，不认页面。',
+    table: {
+      endpoint: '/generation-tasks',
+      limit: 80,
+      columns: [
+        col('id', '任务', { mono: true }),
+        col('project', '项目'),
+        col('kind', '能力族'),
+        col('status', '状态', { pill: true }),
+        col('priority', '优先级'),
+        col('executor', '执行人'),
+        col('attempt', '尝试'),
+        col('est', '预估'),
+      ],
+      filters: [{ key: 'status', label: '队列', options: ['排队中', '执行中', '失败'] }],
+    },
+    stats: (rows) => [
+      { label: '积压', value: countOf(rows, 'status', '排队中') },
+      { label: '执行中', value: countOf(rows, 'status', '执行中') },
+      { label: '失败', value: countOf(rows, 'status', '失败') },
+      { label: '并发上限', value: '6' },
+    ],
+    side: () => [
+      { title: '队列口径', type: 'kv', items: [{ label: '调度粒度', value: '能力族 + 供应商配额' }, { label: '退避', value: '30s / 120s / 480s' }, { label: '超时回收', value: '30 分钟' }, { label: '人工介入', value: '重试达上限后' }] },
+    ],
+  },
+
   '/tasks/list': {
     kicker: 'TASKS / LIST',
     title: '生产任务',

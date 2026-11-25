@@ -91,7 +91,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/orgs/grants', name: 'orgs-grants', component: view('SpecPage') },
   { path: '/orgs/handover', name: 'orgs-handover', component: view('SpecPage') },
 
-  { path: '/:pathMatch(.*)*', name: 'not-found', component: view('SpecPage') },
+  { path: '/:pathMatch(.*)*', name: 'not-found', component: view('NotFound') },
 ]
 
 /** 把原型 routes.json 里的权限要求挂到对应路由：页面可见性与菜单锁标记使用同一份权限口径。 */

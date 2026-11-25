@@ -1,2 +1,0 @@
-import { ref } from 'vue'
-export function useRequest<T>(request:()=>Promise<T>){const data=ref<T>();const loading=ref(false);const error=ref<string|null>(null);async function execute(){loading.value=true;error.value=null;try{data.value=await request();return data.value}catch(cause){error.value=cause instanceof Error?cause.message:'请求失败';throw cause}finally{loading.value=false}}return{data,loading,error,execute}}
