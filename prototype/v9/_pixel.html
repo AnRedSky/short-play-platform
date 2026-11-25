@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>Pixel</title>
+<style>body{font:12px/1.5 monospace;margin:12px}iframe{width:1280px;height:800px;border:1px solid #ccc;display:block}pre{white-space:pre-wrap}</style>
+</head>
+<body>
+<pre id="out">running…</pre>
+<iframe id="f" src="/index.html?v=9.7.2"></iframe>
+<script>
+const out = [];
+const fail = [];
+const f = document.getElementById("f");
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const W = () => f.contentWindow;
+const D = () => f.contentWindow.document;
+const put = (t) => { document.getElementById("out").textContent = t; };
+const log = (s) => { out.push(s); };
+const bad = (s) => { fail.push(s); log("FAIL " + s); };
+
+const MODALS = [
+  ["creation.importNovel", "导入小说改编为剧本"],
+  ["assets.upload", "资产新版本"],
+  ["audio.newVoice", "批量生成对白"],
+  ["compliance.newRight", "新增授权"],
+  ["compliance.newRisk", "登记风险"],
+  ["director.newShot", "新增镜头"],
+  ["director.newChar", "新增角色"],
+  ["orgs.grantNew", "新增授权记录"],
+  ["models.newProvider", "接入模型服务"]
+];
+const DRAWERS = ["assets.detail", "post.deliveryDetail", "creation.openScript", "workspace.cmdHelp",
+  "video.taskDetail", "orgs.preview", "quality.reworkDetail", "director.shotDetail"];
+
+function pageStats() {
+  const doc = D(), vw = W().innerWidth, vh = W().innerHeight;
+  const de = doc.documentElement;
+  const bo = de.scrollWidth - de.clientWidth;
+  const tables = [];
+  doc.querySelectorAll(".table-wrap").forEach((wrap) => {
+    const tb = wrap.querySelector("table"); if (!tb) return;
+    const th = tb.tHead && tb.tHead.rows[0] ? tb.tHead.rows[0].cells.length : 0;
+    const need = tb.scrollWidth - wrap.clientWidth;
+    const last = tb.tHead && tb.tHead.rows[0] ? (tb.tHead.rows[0].cells[tb.tHead.rows[0].cells.length - 1].textContent || "").trim() : "";
+    tables.push(th + "col/need" + need + (need > 0 && /操作|动作/.test(last) ? "/操作末列" : ""));
+  });
+  let clipped = 0; const samples = [];
+  doc.querySelectorAll("#view td, #view th").forEach((c) => {
+    if (c.scrollWidth - c.clientWidth > 2) { clipped += 1; if (samples.length < 5) samples.push((c.textContent || "").trim().slice(0, 10)); }
+  });
+  const cards = Array.from(doc.querySelectorAll("#view .card"));
+  const narrow = cards.filter((c) => c.getBoundingClientRect().width < 230).length;
+  /* 横滚表格：首列（行标识）与末列（操作）必须始终留在滚动可视区内（.has-x + sticky 两侧） */
+  const pinned = [];
+  doc.querySelectorAll("#view .table-wrap").forEach((wrap) => {
+    const tb = wrap.querySelector("table"); if (!tb) return;
+    if (tb.scrollWidth - wrap.clientWidth <= 2) return;
+    const wr = wrap.getBoundingClientRect();
+    const row = tb.tBodies[0] && tb.tBodies[0].rows[0];
+    if (!row || !row.cells.length) return;
+    const last = row.cells[row.cells.length - 1].getBoundingClientRect();
+    const first = row.cells[0].getBoundingClientRect();
+    if (last.right > wr.right + 1) pinned.push("末列超出 " + Math.round(last.right - wr.right) + "px");
+    if (first.left < wr.left - 1) pinned.push("首列超出 " + Math.round(wr.left - first.left) + "px");
+  });
+  return { vw: vw, vh: vh, bo: bo, tables: tables, clipped: clipped, samples: samples, cards: cards.length, narrow: narrow, pinned: pinned };
+}
+
+function modalStats() {
+  const doc = D(), vw = W().innerWidth, vh = W().innerHeight;
+  const m = doc.querySelector(".modal"); if (!m) return null;
+  const mr = m.getBoundingClientRect();
+  const foot = doc.querySelector(".modal-foot");
+  const fr = foot ? foot.getBoundingClientRect() : null;
+  const grid = doc.querySelector(".modal .grid.grid-2");
+  const cells = grid ? Array.from(grid.children).map((c) => Math.round(c.getBoundingClientRect().width)) : [];
+  const fields = Array.from(doc.querySelectorAll(".modal .field-wrap"));
+  const cramped = fields.filter((x) => x.getBoundingClientRect().width < 150)
+    .map((x) => (x.querySelector(".field-label") || {}).textContent ? x.querySelector(".field-label").textContent.trim().slice(0, 10) : "?");
+  const spill = fields.filter((x) => {
+    const i = x.querySelector("input,select,textarea");
+    return i && i.getBoundingClientRect().right > mr.right - 6;
+  }).length;
+  return {
+    vw: vw, vh: vh, w: Math.round(mr.width), h: Math.round(mr.height), right: Math.round(mr.right),
+    xo: m.scrollWidth - m.clientWidth, yo: m.scrollHeight - m.clientHeight,
+    footY: fr ? Math.round(fr.bottom) : null, footVisible: fr ? (fr.bottom <= vh && fr.right <= vw) : null,
+    twoCol: cells.length, cells: cells, cramped: cramped, spill: spill, fields: fields.length
+  };
+}
+
+function drawerStats() {
+  const doc = D(), vw = doc.documentElement.clientWidth;   /* fixed 元素贴的是内容区右缘，不含滚动条 */
+  const d = doc.querySelector("aside.drawer"); if (!d) return null;
+  const r = d.getBoundingClientRect();
+  const body = doc.getElementById("drawer-body");
+  let tables = 0; doc.querySelectorAll("#drawer-body .table-wrap").forEach((wrap) => {
+    const tb = wrap.querySelector("table");
+    if (tb && tb.scrollWidth - wrap.clientWidth > 0) tables += 1;
+  });
+  return { w: Math.round(r.width), right: Math.round(r.right), vw: vw, flush: Math.abs(r.right - vw) <= 1,
+    xo: d.scrollWidth - d.clientWidth, bodyXo: body ? body.scrollWidth - body.clientWidth : 0, scrollTables: tables };
+}
+
+(async () => {
+  const t0 = Date.now();
+  /* 就绪判据不能只看 App 是否存在：模块是逐个注册的，App 早就存在但 routes 仍在增长。
+     必须等路由注册完毕（56 条），否则只会抽检到最先注册的少数页面。 */
+  while (Date.now() - t0 < 12000) {
+    if (W().App && W().App.routes && W().App.routes().length >= 56) break;
+    await wait(200);
+  }
+  if (!W().App) { put("FAIL app not ready"); document.title = "Pixel FAIL"; return; }
+  const routes = W().App.routes().map((r) => r.path);
+  if (routes.length < 56) { put("FAIL 路由注册未完成：仅 " + routes.length + " 条"); document.title = "Pixel FAIL"; return; }
+  const has = {};
+  for (const p of routes) {
+    W().location.hash = "#/" + p;   /* 逐页导航，否则只会采到首屏的动作 */
+    await wait(300);
+    for (const a of Array.from(D().querySelectorAll("#view [data-action]")) ) {
+      const k = a.dataset.action;
+      if (k && !has[k]) has[k] = p;
+    }
+  }
+  const findRoute = (act) => has[act] || null;
+
+  for (const w of [1280, 1440]) {
+    f.style.width = w + "px";
+    await wait(400);
+    log(""); log("=== viewport " + w + "x800 ===");
+
+    /* A. 全站页面：横向溢出 / 表格横滚需求 / 截断单元格 / 过窄卡片 */
+    let pageBad = 0;
+    for (const p of routes) {
+      W().location.hash = "#/" + p;
+      await wait(320);
+      const s = pageStats();
+      const flags = [];
+      if (s.bo > 0) flags.push("PAGE-XO=" + s.bo);
+      if (s.narrow > 0) flags.push("NARROW-CARD=" + s.narrow);
+      if (s.pinned.length) flags.push("PIN-FAIL=" + s.pinned.join("|"));
+      if (flags.length) { pageBad += 1; bad("page " + w + " " + p + " " + flags.join(",")); }
+      const scrollTables = s.tables.filter((t) => /need(\d+)/.exec(t) && Number(/need(\d+)/.exec(t)[1]) > 0);
+      if (scrollTables.length) log("  " + p + " tables=" + s.tables.join(" ") + " → 横滚 " + scrollTables.length);
+      if (s.clipped > 0) log("  " + p + " 截断单元格 " + s.clipped + "：" + s.samples.join(" / "));
+    }
+    log("  页面级：" + routes.length + " 路由，横向溢出/窄卡异常 " + pageBad);
+
+    /* B. 弹窗：宽度、内层溢出、两列是否挤压、底部操作是否在视口内 */
+    for (const [act, name] of MODALS) {
+      const p = findRoute(act);
+      if (!p) { log("  modal " + act + " 无触发入口，跳过"); continue; }
+      W().location.hash = "#/" + p;
+      await wait(340);
+      const el = D().querySelector('#view [data-action="' + act + '"]');
+      if (!el) { log("  modal " + act + " 入口元素缺失（" + p + "）"); continue; }
+      el.dispatchEvent(new Event("click", { bubbles: true }));
+      await wait(320);
+      const m = modalStats();
+      if (!m) { bad("modal " + w + " " + act + " 点击后未打开（入口页 " + p + "）"); W().App.closeModal(); continue; }
+      const flags = [];
+      if (m.right > m.vw) flags.push("OUT-VIEW(right=" + m.right + "/" + m.vw + ")");
+      if (m.xo > 0) flags.push("INNER-XO=" + m.xo);
+      if (m.yo > 0) flags.push("SCROLL-Y=" + m.yo);
+      if (m.spill > 0) flags.push("FIELD-SPILL=" + m.spill);
+      if (m.cramped.length) flags.push("CRAMPED=" + m.cramped.join("|"));
+      if (m.footVisible === false) flags.push("FOOT-OUT(y=" + m.footY + "/" + m.vh + ")");
+      log("  modal " + act + " [" + name + "] w=" + m.w + " h=" + m.h + " 两列=" + (m.twoCol ? m.cells.join("+") : "无") +
+        " fields=" + m.fields + " foot=" + (m.footVisible === false ? "视口外 y" + m.footY + "/" + m.vh : "可见") +
+        (m.yo > 0 ? " 竖向滚动 " + m.yo : "") + (flags.length ? " ← " + flags.join(" ") : ""));
+      if (flags.length) bad("modal " + w + " " + act + " " + flags.join(","));
+      W().App.closeModal();
+      await wait(150);
+    }
+
+    /* C. 抽屉：宽度、贴边、内部横向溢出 */
+    for (const act of DRAWERS) {
+      const p = findRoute(act);
+      if (!p) { log("  drawer " + act + " 无触发入口，跳过"); continue; }
+      W().location.hash = "#/" + p;
+      await wait(340);
+      const el = D().querySelector('#view [data-action="' + act + '"]');
+      if (!el) { log("  drawer " + act + " 入口元素缺失（" + p + "）"); continue; }
+      el.dispatchEvent(new Event("click", { bubbles: true }));
+      await wait(300);
+      const s = drawerStats();
+      if (!s) { bad("drawer " + w + " " + act + " 点击后未打开（入口页 " + p + "）"); W().App.closeDrawer(); continue; }
+      const flags = [];
+      if (!s.flush) flags.push("NOT-FLUSH(right=" + s.right + "/" + s.vw + ")");
+      if (s.xo > 0) flags.push("INNER-XO=" + s.xo);
+      if (s.bodyXo > 0) flags.push("BODY-XO=" + s.bodyXo);
+      log("  drawer " + act + " w=" + s.w + " right=" + s.right + "/" + s.vw + (s.scrollTables ? " 表横滚 " + s.scrollTables : "") + (flags.length ? " ← " + flags.join(" ") : ""));
+      if (flags.length) bad("drawer " + w + " " + act + " " + flags.join(","));
+      W().App.closeDrawer();
+      await wait(150);
+    }
+  }
+
+  put(out.join("\n") + "\n\n" + (fail.length ? "FAILS=" + fail.length + "\n" + fail.join("\n") : "像素级抽检全部通过（无溢出/无挤压/无出视口）") + "\n\nDONE");
+  document.title = "Pixel " + (fail.length ? "FAIL" : "OK");
+})().catch((e) => put("FATAL " + e.message + "\n" + e.stack));
+</script>
+</body>
+</html>

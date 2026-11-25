@@ -1,4 +1,4 @@
-# FRAME 短剧工场 · 第 9.7.1 版静态交互原型
+# FRAME 短剧工场 · 第 9.7.2 版静态交互原型
 
 单一企业内部 AI 短剧制作平台的静态交互原型。**全部数据为虚构示例数据**，不连接任何真实模型、存储、任务调度或账单系统；但业务流程按真实系统执行：状态机、门禁、表单校验、权限拦截、成败反馈与数据联动都是真实逻辑，不是占位 Toast。
 
@@ -30,6 +30,7 @@ B2 收盘后在同版内继续做了五类整改，均以脚本断言落地：
 - **承载方式复核（C-1~C-4）**：新增 `tools/_audit_carry.mjs`，按动作处理体核对「页面跳转 / 抽屉 / 弹窗 / 页内切换」是否用对（325 动作：跳转 89 · 抽屉 46 · 弹窗 124 · 页内切换 31）。整改后重弹窗 7→0（6 个多字段表单加 `wide: true` 走两列网格），重抽屉 8→0（6 个字段 >10 的抽屉按同类成对合并，16→11、15→10、13→10、12→7、12→7、12→8，信息不删）。**未新增路由**。判定树与 C-01…C-06 见 `docs/REVIEW-CARRY-V9.7.0.md`。
 - **交互复核（I-1~I-5）**：新增 `tools/_audit_ux.mjs`（按动作处理体反查承载方式：抽屉 / 弹窗 / 跳转 / 状态切换 / 写入）。整改后：有查询区的页面 1→10、长表无查询 9→1（仅 `workspace/assistant` 字典表白名单）、只读死端 1→0、单行动作过载 1→0（`models/config` 5→2，低频动作迁入「管理」抽屉 `models.detail`）、「详情/档案」承载二义 2 组→0（`orgs.members` 改「档案页」）。`applyFilters` 计数改为整页聚合，多表页面不再只报最后一张表。方向与五条规范见 `docs/REVIEW-UX-V9.7.0.md`。
 - **布局简洁度（S-01）**：新增 `tools/_audit_layout.mjs` 量化 56 页骨架（台账 28 / 详情 15 / 评审 9 / 看板 4）与六个密度指标；首批把 4 张最宽的表裁到 ≤10 列：`cost/ledger` 18→9（归属七维移入「核验」抽屉）、`compliance/rights` 14→9、`tasks/list` 13→10、`models/providers` 11→9。方向与后续清单见 `docs/REVIEW-SIMPLIFY-V9.7.0.md`（列 ≤9 / 卡 ≤5 / 提示 ≤1 / 容器 ≤2 四条基线）。
+- **D-04 像素级抽检（9.7.2）**：新增 `_pixel.html`，用 iframe 把同一套页面按 1280×800 / 1440×800 两档逐页量测（56 路由 × 2 档 + 9 个弹窗 + 8 个抽屉），量的是真实几何而不是截图目测。查出并修掉两类真问题：① 11 页宽表在 1280 下横滚时「操作」列被推出视口 89–238px —— 改为 `markWideTables()` 只给真正溢出的表格打 `.has-x`，CSS 把首列（行标识）与末列（操作）吸附两侧，滚动看中间列时身份与按钮都留在视口内；② 高表单弹窗整窗滚动会把提交按钮滚出视口（导入小说 12 字段，底部操作 y=991/800）—— 弹窗改为「头部固定 + 表单区滚动 + 底部操作 sticky」。同时修掉两个审计口径缺陷：`_smoke` 原来只等 `App` 存在就读路由，实际只跑最先注册的 17 条（现改为等满 56 条才开跑，并断言不足 56 直接 FAIL）；抽屉贴边判据误用 `window.innerWidth`（含 15px 滚动条），改用 `documentElement.clientWidth`。量测快照见 `tools/_ia_pixel.txt`，截图见 `docs/shots/`。
 - **D 系列整改（9.7.1）**：卡 6-7 的 10 页全部并卡（`models/config`、`models/routing`、`post/timeline`、`creation/brief`、`creation/review`、`creation/breakdown`、`director/plan`、`quality/reports`、`audio/bgm`、`projects/detail`）→ 全站无卡 ≥6；列 10 清零（`tasks/list` 11→9、`compliance/risks` 10→8×2、`quality/rework` 10→9）；`post/timeline` 的「标脏片段」卡与同页标脏提示重复，直接删卡并把提示改为有无标脏双态。口径再定：每页 ≤2 条提示，且不得两条同为规则引用（规则引用 + 状态告警允许），故 `提示 2` 降为观察项；规则卡 15→14 张。版本号统一 9.7.1（`index.html` 全部 `?v=`、`_smoke/_e2e`、侧栏、README）。结果与 D-02/D-04/D-05/D-07 后续见 `docs/PLAN-IA-REMEDIATION-V9.7.0.md` 第十二章。
 - **C 系列整改（C-01~C-06）**：孤岛页 13→8（5 个流程中段补相邻下钻：`video.toBgm` / `post.toDialogue` / `director.toWorld` / `post.toVersions` / `ops.toLogs`，跳转 89→94 且跳转过碎 0）；真宽表（≥11 列）清零（`assets/library`、`quality/reports`、`post/delivery`、`compliance/risks`、`tasks/attempt` 各降 1-3 列，`cost/budget` 降到 8 列）；卡 ≥8 与单卡 ≥80% 清零（`projects/detail` 卡 8→7、`ops/capabilities` 单卡 87%→57%）；提示 ≥3 清零（`cost/budget` 4→1、`creation/review` 3→2、`orgs/grants` 与 `ops/capabilities` 1→0）。**口径修正**：`_audit_layout` 原用 `/<th/` 统计列数会把 `<thead>` 计入，全站列数被系统性高估 1 列，已改为 `/<th[ >]/` 并重算基线；同时把指标分为硬阻断（卡 ≥8 / 列 ≥11 / 提示 ≥3 / 单卡 ≥80%）与观察项（卡 6-7 / 列 9-10 / 提示 2 / 单卡 60-79% / 表 ≥3 / 布局 ≥3 种）。执行结果与 D-01…D-06 后续见 `docs/PLAN-IA-REMEDIATION-V9.7.0.md` 第十一章。
 - **重复功能复核（R-35）**：新增 `tools/_audit_overlap.mjs`，56 路由（菜单 53 + 下钻 3）逐页渲染后按四个维度比对：同名卡片 0、真双入口写动作 0（改前 `director.check` 在 cast/world 两页）、页面相似度 ≥0.5 为 0 对。据此修掉 4 处残留：`projects/workflow` 去掉暂停入口（归 `projects/detail` 单项目 / `projects/lifecycle` 批量）、`projects/detail`「发起移交」改为跳 `orgs/handover`（新增 `orgs.toHandover` + `orgs.handoverProject` 预选）、`projects/lifecycle` 删掉与项目列表重复的「可见项目状态分布」、`director/cast` 与 `director/world` 去掉项目级「一致性抽检」（只留 `director/shots`）。另把 `models/config` 的「新增资源」按权限分流（管理员→`models/providers`，无管理权限员工才见新增）。允许重复只留三类：导航到同一目的地、页面本地导出、首页全局创建入口。
@@ -392,7 +393,8 @@ node tools/_probe_tab.mjs video/preview versions   # 单 tab 渲染探针（合�
 
 浏览器侧（4190 服务在线）：
 
-- `http://localhost:4190/_smoke.html`：56 路由渲染 + 9 条合并页 tab 断言 + 3 个身份权限拦截 + 全局 JS 错误巡检。
+- `http://localhost:4190/_smoke.html`：56 路由渲染 + 9 条合并页 tab 断言 + 3 个身份权限拦截 + 全局 JS 错误巡检（先等 56 条路由注册完再开跑，不足 56 条直接判 FAIL）。
+- `http://localhost:4190/_pixel.html`：像素级抽检——1280×800 / 1440×800 两档逐页量测横向溢出、宽表首末列是否留在视口、弹窗宽度/两列挤压/底部操作是否可见、抽屉贴边与内部横溢（约 110 秒）。
 - `http://localhost:4190/_e2e.html`：真实点击链路 37 条断言（新建项目校验与创建、前置依赖拦截、终审门禁、交付说明与分批交付、质量理由校验与裁决写回、通知闭环、项目暂停、预算低于已用、供应商连通性失败、合规类返工禁止重跑、重复邮箱占用、三页 tab 状态持久化）。
 
 ## 与《通用静态原型开发规范》的符合性说明

@@ -5,7 +5,7 @@
 </head>
 <body>
 <pre id="out">running…</pre>
-<iframe id="f" src="/index.html?v=9.7.1"></iframe>
+<iframe id="f" src="/index.html?v=9.7.2"></iframe>
 <script>
 const out = [];
 const errors = [];
@@ -17,13 +17,18 @@ const put = (t) => { document.getElementById("out").textContent = t; };
 
 (async () => {
   const t0 = Date.now();
-  while (Date.now() - t0 < 8000 && !(W().DB && W().DB.state && W().App)) await wait(200);
+  /* App 在模块注册前就已存在，必须等 56 条路由全部注册完，否则只会跑到最先加载的少数路由 */
+  while (Date.now() - t0 < 12000) {
+    if (W().App && W().App.routes && W().App.routes().length >= 56) break;
+    await wait(200);
+  }
   if (!W().App) { put("FAIL app not ready"); return; }
   W().addEventListener("error", (e) => errors.push("JS " + e.message + " @" + (e.filename || "").split("/").pop() + ":" + e.lineno));
   W().addEventListener("unhandledrejection", (e) => errors.push("REJECT " + (e.reason && e.reason.message ? e.reason.message : e.reason)));
 
   const routes = W().App.routes().map((r) => r.path);
   const bad = [];
+  if (routes.length < 56) bad.push("路由注册不完整：仅 " + routes.length + " 条（期望 56），本次只覆盖部分页面");
   for (const p of routes) {
     const n0 = errors.length;
     W().location.hash = "#/" + p;

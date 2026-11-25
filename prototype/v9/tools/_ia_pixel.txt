@@ -1,0 +1,66 @@
+像素级抽检快照 · 9.7.2 · 2026-11-25
+入口：_pixel.html（iframe 按 1280×800 / 1440×800 两档逐页量测；56 路由 × 2 档 + 9 个弹窗 + 8 个抽屉）
+结论：页面级横向溢出 0、窄卡 0、宽表首末列全部吸附在滚动视口内、弹窗底部操作全部可见、抽屉贴边且内部无横溢
+
+=== viewport 1280x800 ===
+  projects/workflow tables=5col/need90 → 横滚 1
+  creation/review tables=5col/need0 4col/need115 5col/need0 → 横滚 1
+  creation/breakdown tables=6col/need0 6col/need24 6col/need44 3col/need28 3col/need0 → 横滚 3
+  director/shots tables=8col/need16/操作末列 3col/need0 → 横滚 1
+  audio/bgm tables=9col/need101/操作末列 3col/need0 → 横滚 1
+  post/delivery tables=9col/need239/操作末列 3col/need0 → 横滚 1
+  tasks/list tables=9col/need200/操作末列 3col/need0 3col/need0 → 横滚 1
+  tasks/queue tables=8col/need12 3col/need52 → 横滚 2
+  models/config tables=9col/need229/操作末列 4col/need0 → 横滚 1
+  assets/library tables=9col/need131/操作末列 → 横滚 1
+  compliance/rights tables=9col/need101/操作末列 → 横滚 1
+  页面级：56 路由，横向溢出/窄卡异常 0
+  modal creation.importNovel [导入小说改编为剧本] w=880 h=704 两列=401+401+401+401+401+401+401+401+401+401 fields=12 foot=可见
+  modal assets.upload [资产新版本] w=880 h=594 两列=无 fields=6 foot=可见
+  modal audio.newVoice [批量生成对白] w=880 h=594 两列=无 fields=6 foot=可见
+  modal compliance.newRight [新增授权] w=880 h=704 两列=无 fields=9 foot=可见
+  modal compliance.newRisk [登记风险] w=880 h=640 两列=无 fields=6 foot=可见
+  modal director.newShot [新增镜头] w=880 h=704 两列=无 fields=10 foot=可见
+  modal director.newChar [新增角色] w=880 h=660 两列=无 fields=7 foot=可见
+  modal orgs.grantNew 无触发入口，跳过（需 grant.manage，owner 无）
+  modal models.newProvider [接入模型服务] w=620 h=475 两列=无 fields=4 foot=可见
+  drawer assets.detail w=420 right=1265/1265 表横滚 1
+  drawer post.deliveryDetail w=420 right=1265/1265
+  drawer creation.openScript w=420 right=1265/1265
+  drawer workspace.cmdHelp w=420 right=1265/1265 表横滚 1
+  drawer video.taskDetail w=420 right=1265/1265
+  drawer orgs.preview 无触发入口，跳过
+  drawer quality.reworkDetail w=420 right=1265/1265
+  drawer director.shotDetail w=420 right=1265/1265
+
+=== viewport 1440x800 ===
+  projects/workflow tables=5col/need10 → 横滚 1
+  creation/review tables=5col/need0 4col/need54 5col/need0 → 横滚 1
+  post/delivery tables=9col/need140/操作末列 3col/need0 → 横滚 1
+  tasks/list tables=9col/need40/操作末列 3col/need0 3col/need0 → 横滚 1
+  models/config tables=9col/need69/操作末列 4col/need0 → 横滚 1
+  页面级：56 路由，横向溢出/窄卡异常 0
+  modal creation.importNovel [导入小说改编为剧本] w=880 h=704 两列=401+401+401+401+401+401+401+401+401+401 fields=12 foot=可见
+  modal assets.upload [资产新版本] w=880 h=594 两列=无 fields=6 foot=可见
+  modal audio.newVoice [批量生成对白] w=880 h=594 两列=无 fields=6 foot=可见
+  modal compliance.newRight [新增授权] w=880 h=704 两列=无 fields=9 foot=可见
+  modal compliance.newRisk [登记风险] w=880 h=640 两列=无 fields=6 foot=可见
+  modal director.newShot [新增镜头] w=880 h=704 两列=无 fields=10 foot=可见
+  modal director.newChar [新增角色] w=880 h=660 两列=无 fields=7 foot=可见
+  modal orgs.grantNew 无触发入口，跳过（需 grant.manage，owner 无）
+  modal models.newProvider [接入模型服务] w=620 h=475 两列=无 fields=4 foot=可见
+  drawer assets.detail w=420 right=1425/1425 表横滚 1
+  drawer post.deliveryDetail w=420 right=1425/1425
+  drawer creation.openScript w=420 right=1425/1425
+  drawer workspace.cmdHelp w=420 right=1425/1425 表横滚 1
+  drawer video.taskDetail w=420 right=1425/1425
+  drawer orgs.preview 无触发入口，跳过
+  drawer quality.reworkDetail w=420 right=1425/1425
+  drawer director.shotDetail w=420 right=1425/1425
+
+像素级抽检全部通过（无溢出/无挤压/无出视口）
+
+修复前（同一脚本，9.7.1 口径）26 项 FAIL：
+- 11 页宽表的「操作」列被横向滚动推出视口 89–238px（post/delivery、models/config、tasks/list、assets/library、audio/bgm、compliance/rights、director/shots、projects/workflow、creation/review、creation/breakdown、tasks/queue）
+- 2 个高表单弹窗整窗滚动导致提交按钮在视口外（creation.importNovel 底部操作 y=991/800、compliance.newRight y=816/800），director.newShot 亦有 13px 溢出
+- 抽屉判据误用 window.innerWidth（含滚动条 15px），已改为 documentElement.clientWidth：8 个抽屉实际均贴边

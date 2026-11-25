@@ -279,6 +279,42 @@ B6 文档版本（R-28/R-31/R-32）        门禁：全套回归 + _e2e 37 断�
 | 编号 | 事项 | 为什么还没做 |
 | --- | --- | --- |
 | D-02 | 提示 2 的页继续收成 1 条 | 复核后判定多数属"规则引用 + 状态告警"的合法组合，硬收会丢状态可见性；只对"两条都是规则引用"的页再收（当前扫描为 0 页） |
-| D-04 | 1280 / 1440 像素级抽检 | 需截图流程，本轮只做了 DOM 级验收 |
+| D-04 | 1280 / 1440 像素级抽检 | **已完成（9.7.2，见第十三章）** |
 | D-05 | 17 个审计脚本接 GitHub Actions | 卡在 develop 推送策略未定（origin 仍停在 `fb36f1e`） |
 | D-07 | `tools/_cols.mjs` 写进 README 回归清单 | 单页逐表列数诊断工具已落地，尚未进标准序列 |
+
+## 十三、D-04 像素级抽检执行结果（2026-11-25 · 9.7.2）
+
+**做法**：不做"截图目测"，做可复跑的几何量测。新增 `_pixel.html`，用 iframe 把 `index.html` 依次摆成 1280×800 与 1440×800，逐页导航后读真实 `getBoundingClientRect` / `scrollWidth`：
+
+1. 56 路由 × 2 档：页面级横向溢出、过窄卡片、横向溢出表格的首列/末列是否仍在滚动视口内、被截断单元格。
+2. 9 个弹窗（含全部 wide 表单）：宽度是否出视口、内层是否横溢、`.grid-2` 两列是否被压到 150px 以下、字段是否溢出、底部操作是否在视口内。
+3. 8 个抽屉：右缘是否贴边、抽屉本体与 `#drawer-body` 是否横溢、内部宽表是否可滚。
+
+**首轮（9.7.1 口径）26 项 FAIL，全部是真问题或口径缺陷：**
+
+| 类别 | 事实 | 结论 |
+| --- | --- | --- |
+| 宽表操作列 | 11 页在 1280 下横滚时「操作」列被推出视口 89–238px（`post/delivery` 238、`models/config` 228、`tasks/list` 199–200、`assets/library` 130、`audio/bgm` 100、`compliance/rights` 100、`projects/workflow` 89、`creation/review` 114、`creation/breakdown` 23–43、`director/shots` 15、`tasks/queue` 11–51）；1440 下仍有 5 页（`post/delivery` 139、`models/config` 68、`tasks/list` 39、`creation/review` 53、`projects/workflow` 9） | 不是列数问题而是"最后一列被藏起来"，用户要点操作必须先横向滚动 |
+| 高表单弹窗 | `creation.importNovel` 12 字段，整窗滚动，底部「解析并生成改编稿」在 y=991（视口 800）；`compliance.newRight` 在 y=816；`director.newShot` 溢出 13px | 弹窗能打开但看不到怎么提交 |
+| 抽屉贴边 | 8 个抽屉右缘 1265/1280、1425/1440，差 15px | **口径错误**：`window.innerWidth` 含滚动条，fixed 元素贴的是 `documentElement.clientWidth`，实际已贴边 |
+| `_smoke` 覆盖 | 输出 `routes=17` 而非 56 | **口径错误**：就绪判据只等 `App` 存在，而 `App` 在模块注册前就已存在，实际只跑了最先注册的 17 条路由 |
+
+**修复（三项系统级改动，不动页面内容）：**
+
+1. `app.js` 新增 `markWideTables()`：只给 `table.scrollWidth - wrap.clientWidth > 2` 的表格打 `.has-x`，在 `renderView()` / `drawer()` / `resize` 三处调用。非溢出表格不加类，避免小表被无谓粘连。
+2. `components.css`：`.table-wrap.has-x` 下首列与末列 `position:sticky` 吸附左右（表头同时保持顶部吸附，z-index 4；表体 3；两侧 10px 渐隐阴影；暗色主题补 `#11151b` / `#171d25` 背景，避免与 `--surface` 色差）。
+3. `components.css`：`.modal` 改 flex 纵向 + `overflow:hidden`，`#app-form` 承担滚动，`.modal-foot` 改 `position:sticky;bottom:0`。头部与提交按钮常驻，字段区自身滚动。
+
+**复测**：同脚本两档全绿——页面级横向溢出 0、窄卡 0、宽表首末列 0 出视口；9 个弹窗底部操作全部可见、无内层横溢、两列各 401px 未挤压；8 个抽屉右缘 = 1265/1265 与 1425/1425 贴边、内部无横溢（`orgs.grantNew` 因需 `grant.manage`、owner 无权限而跳过）。快照 `tools/_ia_pixel.txt`，截图 5 张在 `docs/shots/`。
+
+**回归**：24 个 js `node --check` 全过；`regress`、`_audit_links`（56 路由 / LEGACY 10 / 失效 0）、`_audit_actions`（330/264/0）、`_audit_perms`、`_audit_kpi` 127、`_audit_dups` 0、`_audit_project_guard` 23、`_audit_naming` 56、`_audit_buttons` 76、`_audit_rules` 14、`_audit_labels` 252、`_audit_density` 0 过薄、`_audit_overlap`、`_audit_layout` 硬阻断 0、`_audit_ux`、`_audit_carry`、`flow` 18、`_journey` 22 全通过；浏览器 `_smoke`（**56 路由**，首次真正全覆盖）与 `_e2e` 37/37 PASS。
+
+**遗留（D-04 之外的后续）**
+
+| 编号 | 事项 | 状态 |
+| --- | --- | --- |
+| D-02 | 提示 2 继续收成 1 条 | 扫描 0 页（剩余均为"规则引用 + 状态告警"合法组合），视为收口 |
+| D-05 | 审计脚本接 GitHub Actions | 未做，卡推送策略 |
+| D-08 | 1280 下仍有 5 页宽表需要横滚（`post/delivery` 239、`models/config` 229、`tasks/list` 200、`assets/library` 131、`compliance/rights` 101），中间列被吸附列遮挡 | 新增后续项：要么再降 1 列，要么把高频中列（状态/时间）提到吸附列旁；需先按真实点击频次排序再定 |
+| D-09 | `_pixel.html` 未进 CI，靠手动起服务跑 | 与 D-05 一并处理 |

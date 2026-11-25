@@ -186,7 +186,7 @@ window.App = (function () {
     app.innerHTML =
       '<div class="shell">' +
         '<aside class="sidebar' + (S.menuOpen ? " open" : "") + '" id="sidebar">' +
-          '<div class="sidebar-brand"><span class="mark">FR</span><div><b>FRAME 短剧工场</b><small>AI 短剧创作工作台 · 第 9.7.1 版</small></div></div>' +
+          '<div class="sidebar-brand"><span class="mark">FR</span><div><b>FRAME 短剧工场</b><small>AI 短剧创作工作台 · 第 9.7.2 版</small></div></div>' +
           '<nav class="nav" id="menu-root" aria-label="主导航"></nav>' +
           '<div class="sidebar-foot">一人一部戏 · 从创意到交付<br>静态原型 · 全部数据为虚构演示</div>' +
         "</aside>" +
@@ -254,6 +254,17 @@ window.App = (function () {
       view.innerHTML = UI.page("error", "页面渲染异常", "该页面渲染过程中出现异常，已回退到安全视图。", "", UI.empty("渲染异常", String(err && err.message || err)));
       if (window.console) console.error(err);
     }
+    markWideTables();
+  }
+
+  /* 1280 像素宽时 9 列表格必然横向溢出，若不做处理，「操作」列会被推出视口。
+     这里只给真正溢出的表格打标记，由 CSS 把首列与末列吸附在两侧（非溢出表格不加，避免无谓的粘连）。 */
+  function markWideTables() {
+    Array.prototype.forEach.call(document.querySelectorAll(".table-wrap"), (wrap) => {
+      const t = wrap.querySelector("table");
+      if (!t) { wrap.classList.remove("has-x"); return; }
+      wrap.classList.toggle("has-x", t.scrollWidth - wrap.clientWidth > 2);
+    });
   }
 
   function refresh() {
@@ -332,6 +343,7 @@ window.App = (function () {
     if (!root) return;
     S.drawerOpen = true;
     root.innerHTML = '<div class="backdrop" data-action="common.closeDrawer"></div><aside class="drawer" role="dialog" aria-modal="true"><div class="modal-head"><div><h3>' + esc(title) + "</h3></div>" + UI.iconBtn("✕", "common.closeDrawer", "关闭") + '</div><div id="drawer-body">' + html + "</div></aside>";
+    markWideTables();
   }
   function closeDrawer() { const root = document.getElementById("drawer-root"); if (root) root.innerHTML = ""; S.drawerOpen = false; }
 
@@ -621,6 +633,7 @@ window.App = (function () {
       }
     });
     window.addEventListener("hashchange", () => { S.menuOpen = false; closeDrawer(); shell(); });
+    window.addEventListener("resize", markWideTables);
   }
 
   function currentProject(query) {
