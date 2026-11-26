@@ -1,0 +1,734 @@
+openapi: 3.1.0
+info:
+  title: 短剧智能生产平台 · 项目域契约
+  version: 0.1.0-draft
+  description: |
+    B-01 项目域契约定稿草案。以现有 mock 响应结构为唯一基线，前端 `services/projects` 内部替换实现即可，页面不改。
+
+    字段映射约定：对外契约统一使用前端口径 `id` / `name`；后端 ORM 的 `code` / `title` 在序列化层映射，不把两套字段同时暴露给页面。
+    `id` 是稳定的业务编号（mock 为 `SP-26031`），不是数据库 UUID；数据库主键通过内部 `record_id` 关联，不进入页面契约。
+servers:
+  - url: http://127.0.0.1:8000/api/v1
+    description: 本地真实 API
+security:
+  - bearerAuth: []
+tags:
+  - name: projects
+paths:
+  /projects:
+    get:
+      tags: [projects]
+      summary: 项目列表
+      operationId: listProjects
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: 匹配 id / name / genre / owner
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ProjectStatus'
+        - name: owner
+          in: query
+          schema:
+            type: string
+        - name: genre
+          in: query
+          schema:
+            type: string
+        - name: relation
+          in: query
+          schema:
+            type: string
+            enum: [all, mine, review, blocked]
+      responses:
+        '200':
+          description: 项目分页列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Project'
+                      meta:
+                        $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /projects/{project_id}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [projects]
+      summary: 项目详情
+      operationId: readProject
+      responses:
+        '200':
+          description: 项目实体
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /projects/{project_id}/summary:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [projects]
+      summary: 项目详情页聚合数据
+      operationId: readProjectSummary
+      description: 一次返回项目详情页所需的项目、阶段与 7 个集合，避免详情页瀑布请求。
+      responses:
+        '200':
+          description: 项目汇总
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ProjectSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /projects/{project_id}/workflow:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [projects]
+      summary: 项目流水线快照
+      operationId: readProjectWorkflow
+      description: 阶段进度、当前状态可用动作与 KPI。`allowed_actions` 由服务端按身份权限裁剪，前端不自行判断。
+      responses:
+        '200':
+          description: 流水线快照
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ProjectWorkflow'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /projects/{project_id}/timeline:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [projects]
+      summary: 项目动作与审核时间线
+      operationId: readProjectTimeline
+      description: 审计动作与审核记录合并后按时间倒序，只读。
+      responses:
+        '200':
+          description: 时间线事件
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TimelineEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /projects/{project_id}/transitions:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    post:
+      tags: [projects]
+      summary: 执行项目状态迁移
+      operationId: transitionProject
+      description: |
+        B-02 的契约定稿，B-01 只固定请求/响应形状。服务端必须重新校验状态、动作、权限与原因，不能信任前端 `allowed_actions`。
+        `expected_state` 用于乐观并发；同一 `Idempotency-Key` 重复提交只写一次审计。
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransitionRequest'
+      responses:
+        '200':
+          description: 迁移成功，返回新项目与刷新后的可用动作
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TransitionResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 非法迁移或并发状态不一致
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                illegalTransition:
+                  value:
+                    error:
+                      code: ILLEGAL_TRANSITION
+                      message: 状态「生产中」不允许动作 terminate
+                      request_id: req-01
+                stateConflict:
+                  value:
+                    error:
+                      code: STATE_CONFLICT
+                      message: 项目状态已被其他操作更新，请刷新后重试
+                      details:
+                        expected_state: 生产中
+                        actual_state: 后期制作中
+                      request_id: req-02
+        '422':
+          description: 缺少必填原因或参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                reasonRequired:
+                  value:
+                    error:
+                      code: REASON_REQUIRED
+                      message: 该动作必须填写原因
+                      request_id: req-03
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ProjectId:
+      name: project_id
+      in: path
+      required: true
+      schema:
+        type: string
+        examples: [SP-26031]
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        maxLength: 128
+  responses:
+    Unauthorized:
+      description: 未认证
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: 缺少项目域权限或不是项目成员
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: 项目不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    Envelope:
+      type: object
+      required: [data]
+      properties:
+        data: {}
+        meta:
+          type: object
+          additionalProperties: true
+    PageMeta:
+      type: object
+      required: [total, page, page_size]
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+            request_id:
+              type: string
+    ProjectStatus:
+      type: string
+      enum: [草稿, 创意策划中, 剧本创作中, 待剧本审核, 生产准备中, 生产中, 后期制作中, 质量检测中, 待最终审核, 已完成, 已交付, 已归档, 已暂停, 异常中, 已终止]
+    Project:
+      type: object
+      required: [id, name, genre, episodes, budget, status, phase, ownerId, owner, created, updated]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          description: 稳定业务编号，等同后端 code
+          examples: [SP-26031]
+        name:
+          type: string
+          description: 项目标题，等同后端 title
+        genre:
+          type: string
+          examples: ['悬疑 / 都市']
+        audience:
+          type: string
+        episodes:
+          type: integer
+          minimum: 1
+        duration:
+          type: string
+          examples: ['90 秒 / 集']
+        ratio:
+          type: string
+          examples: ['9:16 · 1080×1920']
+        language:
+          type: string
+        style:
+          type: string
+        constraints:
+          type: string
+        budget:
+          type: number
+          minimum: 0
+        actual:
+          type: number
+          minimum: 0
+        estimated:
+          type: number
+          minimum: 0
+        status:
+          $ref: '#/components/schemas/ProjectStatus'
+        phase:
+          type: string
+          description: 展示用阶段名，权威阶段以 workflow.stages 为准
+        done:
+          type: integer
+          minimum: 0
+        delivered:
+          type: integer
+          minimum: 0
+        quality:
+          type: string
+        ownerId:
+          type: string
+        owner:
+          type: string
+        deptId:
+          type: string
+        dept:
+          type: string
+        budgetState:
+          type: string
+          enum: [正常, 预警, 超限]
+        created:
+          type: string
+          description: 创建日期 YYYY-MM-DD
+        updated:
+          type: string
+          description: 最后更新时间 YYYY-MM-DD HH:mm
+        scriptVersion:
+          type: string
+        timelineVersion:
+          type: string
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMember'
+    ProjectMember:
+      type: object
+      required: [userId, role]
+      properties:
+        userId:
+          type: string
+        role:
+          type: string
+          enum: [管理, 编辑, 审核, 观察]
+    Stage:
+      type: object
+      required: [key, name, owner, gate, out, state]
+      properties:
+        key:
+          type: string
+          enum: [brief, script, plan, video, audio, post, qc, delivery]
+        name:
+          type: string
+        owner:
+          type: string
+        gate:
+          type: string
+        out:
+          type: string
+        state:
+          type: string
+          enum: [done, now, blocked, todo]
+    GateAction:
+      type: object
+      required: [key, label, permission, next]
+      properties:
+        key:
+          type: string
+          examples: [start, confirmBrief, submitScript, approveScript, terminate]
+        label:
+          type: string
+        tone:
+          type: string
+          enum: [primary, default, ghost]
+        permission:
+          type: string
+          examples: [creation.write]
+        next:
+          type: string
+          description: 目标状态；`__prev__` 表示恢复到暂停前状态
+        needReason:
+          type: boolean
+        hint:
+          type: string
+    ProjectSummary:
+      type: object
+      required: [project, stages, scripts, episodes, assets, costs, tasks, reviews, notifications]
+      properties:
+        project:
+          $ref: '#/components/schemas/Project'
+        stages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Stage'
+        scripts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScriptRef'
+        episodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/EpisodeRef'
+        assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetRef'
+        costs:
+          type: array
+          items:
+            $ref: '#/components/schemas/CostRef'
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskRef'
+        reviews:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewRef'
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationRef'
+    ScriptRef:
+      type: object
+      required: [id, project, version, status, locked]
+      properties:
+        id:
+          type: string
+        project:
+          type: string
+        version:
+          type: string
+        status:
+          type: string
+        locked:
+          type: boolean
+        updatedAt:
+          type: string
+    EpisodeRef:
+      type: object
+      required: [project, no, title, status]
+      properties:
+        project:
+          type: string
+        no:
+          type: integer
+        title:
+          type: string
+        scenes:
+          type: integer
+        shots:
+          type: integer
+        duration:
+          type: string
+        status:
+          type: string
+        qc:
+          type: string
+          enum: [PASS, REVIEW_REQUIRED, FAIL, 待检]
+        timeline:
+          type: string
+    AssetRef:
+      type: object
+      required: [id, name, project, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        project:
+          type: string
+        type:
+          type: string
+        version:
+          type: string
+        checksum:
+          type: string
+        qc:
+          type: string
+        status:
+          type: string
+    CostRef:
+      type: object
+      required: [id, project, cap, actual]
+      properties:
+        id:
+          type: string
+        project:
+          type: string
+        ep:
+          type: integer
+        shot:
+          type: string
+        task:
+          type: string
+        cap:
+          type: string
+        est:
+          type: number
+        actual:
+          type: number
+        failed:
+          type: number
+        status:
+          type: string
+    TaskRef:
+      type: object
+      required: [id, project, kind, status]
+      properties:
+        id:
+          type: string
+        project:
+          type: string
+        ep:
+          type: integer
+        shot:
+          type: string
+        kind:
+          type: string
+        stage:
+          type: string
+        status:
+          type: string
+        attempt:
+          type: integer
+        maxAttempts:
+          type: integer
+        actual:
+          type: number
+        qc:
+          type: string
+    ReviewRef:
+      type: object
+      required: [id, project, node, result]
+      properties:
+        id:
+          type: string
+        project:
+          type: string
+        node:
+          type: string
+        object:
+          type: string
+        version:
+          type: string
+        auditor:
+          type: string
+        role:
+          type: string
+        at:
+          type: string
+        result:
+          type: string
+        note:
+          type: string
+    NotificationRef:
+      type: object
+      required: [id, project, title, state, unread]
+      properties:
+        id:
+          type: string
+        project:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        reason:
+          type: string
+        impact:
+          type: string
+        state:
+          type: string
+        action:
+          type: string
+        owner:
+          type: string
+        link:
+          type: string
+        unread:
+          type: boolean
+        at:
+          type: string
+    ProjectWorkflow:
+      type: object
+      required: [project, stages, allowed_actions, progress, kpis]
+      properties:
+        project:
+          $ref: '#/components/schemas/Project'
+        stages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Stage'
+        allowed_actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/GateAction'
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        kpis:
+          type: array
+          items:
+            type: object
+            required: [label, value]
+            properties:
+              label:
+                type: string
+              value:
+                type: string
+    TimelineEvent:
+      type: object
+      required: [at, title, by, kind, note]
+      properties:
+        at:
+          type: string
+        title:
+          type: string
+        by:
+          type: string
+        kind:
+          type: string
+          enum: [动作, 审核]
+        note:
+          type: string
+    TransitionRequest:
+      type: object
+      required: [action]
+      additionalProperties: false
+      properties:
+        action:
+          type: string
+          minLength: 1
+          examples: [start, confirmBrief, submitScript, approveScript, toPost, submitQc, passQc, finalApprove, deliver, archive]
+        reason:
+          type: string
+          maxLength: 2000
+        expected_state:
+          $ref: '#/components/schemas/ProjectStatus'
+    TransitionResult:
+      type: object
+      required: [project, allowed_actions, message]
+      properties:
+        project:
+          $ref: '#/components/schemas/Project'
+        allowed_actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/GateAction'
+        message:
+          type: string
+          examples: ['生产中 → 后期制作中']
