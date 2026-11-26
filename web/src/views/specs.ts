@@ -3,6 +3,7 @@
  * 核心闭环页面（项目/剧本/镜头/生产/后期/质检/交付）另有专用组件，见 views/core。
  */
 import { http } from '../api/client'
+import { findBreakdownIssues, formatBreakdownIssue } from '../composables/breakdownGate'
 import type { Row } from '../mock/db'
 import type { DialogField } from '../stores/ui'
 import type { Column } from '../components/ui/DataTable.vue'
@@ -46,6 +47,8 @@ export interface SpecContext {
   rows: Row[]
   project: { currentId: string }
   reload: () => Promise<void>
+  /** 把列表收敛到指定行，用于阻断项定位；由规格页实现，未实现时安全跳过。 */
+  locate?: (rowId: string) => void
   ui: { toast: (text: string, tone?: 'ok' | 'bad' | 'info') => void; openDialog: (config: DialogConfig) => void; confirm: (title: string, message: string, danger?: boolean) => Promise<boolean> }
   session: { can: (permission?: string | null) => boolean }
 }
@@ -469,6 +472,7 @@ export const SPECS: Record<string, PageSpec> = {
       { label: '镜头数', value: rows.length },
       { label: '已进入生产', value: countOf(rows, 'status', '执行中') },
       { label: '待生成', value: countOf(rows, 'status', '待生成') },
+      { label: '阻断项', value: findBreakdownIssues(rows).length },
     ],
     table: {
       endpoint: '/shots',
@@ -484,7 +488,37 @@ export const SPECS: Record<string, PageSpec> = {
         col('status', '状态', { pill: true }),
       ],
     },
-    side: (rows) => [{ title: '拆解质量', type: 'kv', items: [{ label: '场景覆盖', value: `${new Set(rows.map((row) => row.scene)).size} 场` }, { label: '人物覆盖', value: `${new Set(rows.map((row) => row.chars)).size} 组` }, { label: '口径', value: '以锁定剧本为唯一基准' }] }],
+    actions: [
+      {
+        label: '校验拆解',
+        permission: 'creation.write',
+        run: (ctx) => {
+          const issues = findBreakdownIssues(ctx.rows)
+          if (!issues.length) {
+            ctx.ui.toast(`拆解校验通过：${ctx.rows.length} 个镜头字段完整`)
+            return
+          }
+          ctx.ui.toast(`${formatBreakdownIssue(issues[0])}；共 ${issues.length} 条阻断`, 'bad')
+          ctx.locate?.(issues[0].rowId)
+        },
+      },
+    ],
+    side: (rows) => {
+      const issues = findBreakdownIssues(rows)
+      return [
+        { title: '拆解质量', type: 'kv', items: [{ label: '场景覆盖', value: `${new Set(rows.map((row) => row.scene)).size} 场` }, { label: '人物覆盖', value: `${new Set(rows.map((row) => row.chars)).size} 组` }, { label: '口径', value: '以锁定剧本为唯一基准' }] },
+        {
+          title: '生产准入',
+          type: 'list',
+          items: issues.length
+            ? [
+                ...issues.slice(0, 6).map((issue) => ({ label: `${issue.no || issue.rowId} · 缺${issue.label}`, value: `第 ${issue.ep || '—'} 集 / 场 ${issue.scene || '—'}` })),
+                ...(issues.length > 6 ? [{ label: '其余阻断', value: `${issues.length - 6} 条，校验时会定位首个` }] : []),
+              ]
+            : [{ label: '校验结果', value: '字段完整，可进入生产' }],
+        },
+      ]
+    },
   },
 
   /* ---------------- 导演 ---------------- */

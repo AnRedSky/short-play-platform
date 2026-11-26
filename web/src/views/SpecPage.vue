@@ -161,6 +161,10 @@ const ctx = {
   reload,
   ui,
   session,
+  locate: (rowId: string) => {
+    for (const key of Object.keys(filterValues)) delete filterValues[key]
+    search.value = rowId
+  },
 }
 
 const visibleActions = computed(() => (spec.value.actions ?? []).filter((action) => session.can(action.permission)))
@@ -218,6 +222,13 @@ watch([search, () => ({ ...filterValues })], () => {
 }, { deep: true })
 
 watch(() => route.path, () => {
+  search.value = ''
+  for (const key of Object.keys(filterValues)) delete filterValues[key]
+  if (panel.isOpen.value) panel.close()
+  reload()
+})
+
+watch(() => project.currentId, () => {
   search.value = ''
   for (const key of Object.keys(filterValues)) delete filterValues[key]
   if (panel.isOpen.value) panel.close()

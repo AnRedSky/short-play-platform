@@ -33,10 +33,10 @@
         </div>
 
         <div class="card">
-          <div class="card-head"><h3 class="card-title">版本链</h3><span class="card-sub">点击切换查看</span></div>
-          <DataTable :columns="columns" :rows="versions" row-key="id" clickable @row-click="select">
+          <div class="card-head"><h3 class="card-title">版本链</h3><span class="card-sub">点击查看版本详情</span></div>
+          <DataTable :columns="columns" :rows="versions" row-key="id" clickable @row-click="openVersion">
             <template #actions="{ row }">
-              <button class="link-btn" @click="select(row)">查看</button>
+              <button class="link-btn" @click="openVersion(row)">详情</button>
             </template>
           </DataTable>
         </div>
@@ -70,22 +70,48 @@
         </div>
       </aside>
     </div>
+
+    <AppDrawer
+      :open="panel.isOpen.value"
+      title="剧本版本详情"
+      :subtitle="activeVersion ? `${activeVersion.id} · ${activeVersion.version}` : '未找到该版本'"
+      @close="panel.close"
+    >
+      <template v-if="activeVersion">
+        <div class="grid grid-4">
+          <div class="mini-kpi"><small>集数</small><b>{{ activeVersion.episodes ?? '—' }}</b></div>
+          <div class="mini-kpi"><small>场次</small><b>{{ activeVersion.scenes ?? '—' }}</b></div>
+          <div class="mini-kpi"><small>镜头</small><b>{{ activeVersion.shots ?? '—' }}</b></div>
+          <div class="mini-kpi"><small>台词</small><b>{{ activeVersion.lines ?? '—' }}</b></div>
+        </div>
+        <dl class="kv-lite">
+          <dt>状态</dt><dd><StatusPill :status="activeVersion.status" /></dd>
+          <dt>创建人</dt><dd>{{ activeVersion.by || '—' }}</dd>
+          <dt>创建时间</dt><dd>{{ activeVersion.at || '—' }}</dd>
+          <dt>锁定</dt><dd>{{ activeVersion.locked ? '已锁定 · 下游唯一基准' : '未锁定' }}</dd>
+          <dt>修改说明</dt><dd>{{ activeVersion.note || '—' }}</dd>
+        </dl>
+      </template>
+      <p v-else class="muted">记录不存在：链接中的版本可能已删除，或不属于当前项目。</p>
+    </AppDrawer>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { creationApi } from '../../../services/creation'
 import { projectApi } from '../../../services/projects'
 import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
+import { useRoutePanel } from '../../../composables/useRoutePanel'
 import type { Row } from '../../../mock/db'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
 import DataTable, { type Column } from '../../../components/ui/DataTable.vue'
 import EmptyState from '../../../components/ui/EmptyState.vue'
 import StatusPill from '../../../components/ui/StatusPill.vue'
+import AppDrawer from '../../../components/ui/AppDrawer.vue'
 
 const session = useSessionStore()
 const projectStore = useProjectStore()
@@ -94,6 +120,11 @@ const ui = useUiStore()
 const versions = ref<Row[]>([])
 const diffs = ref<Row[]>([])
 const selected = ref<Row | null>(null)
+const panel = useRoutePanel('creation-script-version')
+const activeVersion = computed(() => {
+  if (!panel.activeId.value) return null
+  return versions.value.find((row) => String(row.id) === panel.activeId.value) ?? null
+})
 
 const columns: Column[] = [
   { key: 'id', label: '版本编号', mono: true },
@@ -105,8 +136,8 @@ const columns: Column[] = [
 
 const canSubmit = computed(() => session.can('creation.write') && projectStore.current?.status === '剧本创作中')
 
-function select(row: Row) {
-  selected.value = row
+function openVersion(row: Row) {
+  panel.open(String(row.id ?? ''))
 }
 
 async function load() {
@@ -115,7 +146,7 @@ async function load() {
     creationApi.scriptDiffs(),
   ])
   versions.value = scriptRows.rows
-  selected.value = scriptRows.rows[0] ?? null
+  selected.value = scriptRows.rows.find((row) => row.locked) ?? scriptRows.rows[0] ?? null
   diffs.value = diffRows.rows
 }
 
@@ -156,6 +187,11 @@ async function submitReview() {
   ui.toast('已提交剧本审核')
   await projectStore.load()
 }
+
+watch(() => projectStore.currentId, () => {
+  if (panel.isOpen.value) panel.close()
+  load()
+})
 
 onMounted(load)
 </script>

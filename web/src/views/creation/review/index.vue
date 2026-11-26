@@ -31,12 +31,7 @@
             <span>{{ item }}</span>
           </div>
         </div>
-        <p class="field-hint" style="margin-top: 8px">勾选仅表示本轮人工确认过的项目；结论与原因会写进审核记录。</p>
-
-        <div class="field-wrap" style="margin-top: 12px">
-          <label class="field-label">审核意见</label>
-          <textarea v-model="note" class="field" rows="3" placeholder="说明依据；退回时必须写清要改什么"></textarea>
-        </div>
+        <p class="field-hint" style="margin-top: 8px">已勾选 {{ checkedCount }} / {{ checklist.length }} 项。结论与意见在确认弹窗中填写，退回原因必填；提交后结论与原因写入审核记录。</p>
       </div>
 
       <aside class="spec-side">
@@ -63,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { creationApi } from '../../../services/creation'
 import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
@@ -82,7 +77,7 @@ const script = ref<Row | null>(null)
 const history = ref<Row[]>([])
 const checklist = ref<string[]>([])
 const checked = reactive<Record<string, boolean>>({})
-const note = ref('')
+const checkedCount = computed(() => Object.values(checked).filter(Boolean).length)
 
 const reviewing = computed(() => projectStore.current?.status === '待剧本审核')
 
@@ -97,19 +92,49 @@ async function load() {
   checklist.value = (groups.rows[0]?.items ?? []) as string[]
 }
 
-async function decide(result: '通过' | '退回') {
-  if (!script.value) return
-  if (result === '退回' && !note.value.trim()) {
-    ui.toast('退回必须填写审核意见', 'bad')
+function decide(result: '通过' | '退回') {
+  const target = script.value
+  if (!target || !reviewing.value) return
+  if (result === '通过' && target.locked) {
+    ui.toast('该剧本版本已锁定，请刷新后核对审核对象', 'bad')
     return
   }
-  const yes = await ui.confirm(`确认${result}`, result === '通过' ? '通过后剧本锁定，项目进入生产准备中。' : '退回后项目回到剧本创作中。', result === '退回')
-  if (!yes) return
-  await creationApi.reviewScript(String(script.value.id), { result, note: note.value, checklist: Object.keys(checked).filter((key) => checked[key]) })
-  ui.toast(`已${result}`)
-  await projectStore.load()
-  await load()
+  const isReject = result === '退回'
+  ui.openDialog({
+    title: isReject ? '确认退回修订' : '确认通过并锁定',
+    subtitle: isReject
+      ? `退回 ${target.id}（${target.version}），项目回到剧本创作中。`
+      : `通过后 ${target.id}（${target.version}）锁定为下游唯一基准，项目进入生产准备中。`,
+    danger: isReject,
+    submitLabel: isReject ? '确认退回' : '通过并锁定',
+    fields: [
+      {
+        key: 'note',
+        label: isReject ? '退回原因' : '审核意见',
+        type: 'textarea',
+        required: isReject,
+        rows: 4,
+        placeholder: isReject ? '写清需修改的集/场/镜头与期望结果' : '可补充审核依据；留空也可提交',
+        hint: isReject ? '退回原因必填；缺失时会在字段下方提示并将焦点移回本字段。' : '',
+      },
+    ],
+    onSubmit: async (values) => {
+      const note = String(values.note ?? '').trim()
+      if (isReject && !note) throw new Error('「退回原因」为必填项')
+      await creationApi.reviewScript(String(target.id), {
+        result,
+        note,
+        checklist: Object.keys(checked).filter((key) => checked[key]),
+      })
+      for (const key of Object.keys(checked)) checked[key] = false
+      ui.toast(isReject ? '已退回修订' : '已通过并锁定剧本')
+      await projectStore.load()
+      await load()
+    },
+  })
 }
+
+watch(() => projectStore.currentId, load)
 
 onMounted(load)
 </script>
