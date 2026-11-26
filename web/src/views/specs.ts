@@ -3,7 +3,7 @@
  * 核心闭环页面（项目/剧本/镜头/生产/后期/质检/交付）另有专用组件，见 views/core。
  */
 import { http } from '../api/client'
-import { findBreakdownIssues, formatBreakdownIssue } from '../composables/breakdownGate'
+import { findBreakdownIssues, findShotContractIssues, formatBreakdownIssue, formatShotContractIssue } from '../composables/breakdownGate'
 import type { Row } from '../mock/db'
 import type { DialogField } from '../stores/ui'
 import type { Column } from '../components/ui/DataTable.vue'
@@ -79,6 +79,140 @@ export interface PageSpec {
 
 const col = (key: string, label: string, extra: Partial<Column> = {}): Column => ({ key, label, ...extra })
 const countOf = (rows: Row[], key: string, value: string) => rows.filter((row) => String(row[key] ?? '').includes(value)).length
+
+function nextVersion(version: unknown): string {
+  const match = String(version ?? '').match(/(\d+)/)
+  return match ? `v${Number(match[1]) + 1}` : 'v1'
+}
+
+function versionedId(row: Row, version: string): string {
+  const base = String(row.id ?? '').replace(/-(v\d+)$/i, '')
+  return `${base}-${version}`
+}
+
+function nowStamp(): string {
+  const date = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function characterSnapshot(row: Row): Record<string, unknown> {
+  return {
+    project: row.project,
+    name: row.name,
+    age: row.age,
+    look: row.look,
+    build: row.build,
+    hair: row.hair,
+    forbid: row.forbid,
+    rights: row.rights,
+    reuse: row.reuse,
+  }
+}
+
+function openCostumeDialog(row: Row, ctx: SpecContext) {
+  const version = nextVersion(row.version)
+  ctx.ui.openDialog({
+    title: `换装 · ${row.name}`,
+    subtitle: `为 ${row.id} 新建 ${version} 服装版本；旧版本与跨集引用保持不变。`,
+    submitLabel: '创建服装版本',
+    fields: [
+      { key: 'costume', label: '新服装', type: 'text', required: true, value: String(row.costume ?? ''), placeholder: '例如：深灰风衣 v3 + 旧围巾' },
+      { key: 'scope', label: '适用集数', type: 'text', value: String(row.reuse ?? ''), hint: '默认沿用当前引用范围。' },
+      { key: 'note', label: '换装原因', type: 'textarea', required: true, rows: 3, placeholder: '写清剧情节点与换装依据' },
+    ],
+    onSubmit: async (values) => {
+      await http.post('/characters', {
+        ...characterSnapshot(row),
+        id: versionedId(row, version),
+        parent: row.id,
+        costume: String(values.costume ?? ''),
+        reuse: String(values.scope ?? ''),
+        note: String(values.note ?? ''),
+        version,
+        refs: 0,
+        status: '待确认',
+      })
+      ctx.ui.toast(`已为 ${row.name} 创建服装版本 ${version}`)
+      await ctx.reload()
+    },
+  })
+}
+
+function openCharacterVersionDialog(row: Row, ctx: SpecContext) {
+  const version = nextVersion(row.version)
+  ctx.ui.openDialog({
+    title: `新增版本 · ${row.name}`,
+    subtitle: `生成 ${version} 外观版本；旧版本保留，下游按版本引用。`,
+    submitLabel: '创建外观版本',
+    wide: true,
+    fields: [
+      { key: 'look', label: '外观要点', type: 'textarea', required: true, rows: 2, value: String(row.look ?? ''), full: true },
+      { key: 'build', label: '体态', type: 'text', required: true, value: String(row.build ?? '') },
+      { key: 'hair', label: '发型', type: 'text', required: true, value: String(row.hair ?? '') },
+      { key: 'forbid', label: '禁止项', type: 'textarea', required: true, rows: 2, value: String(row.forbid ?? ''), full: true },
+      { key: 'note', label: '版本原因', type: 'textarea', required: true, rows: 2, placeholder: '写清为何需要新版本，以及适用集数' },
+    ],
+    onSubmit: async (values) => {
+      await http.post('/characters', {
+        ...characterSnapshot(row),
+        id: versionedId(row, version),
+        parent: row.id,
+        look: String(values.look ?? ''),
+        build: String(values.build ?? ''),
+        hair: String(values.hair ?? ''),
+        forbid: String(values.forbid ?? ''),
+        note: String(values.note ?? ''),
+        version,
+        refs: 0,
+        status: '待确认',
+      })
+      ctx.ui.toast(`已为 ${row.name} 创建版本 ${version}`)
+      await ctx.reload()
+    },
+  })
+}
+
+let planFreezeBusy = false
+
+async function freezePlan(ctx: SpecContext) {
+  if (planFreezeBusy) return
+  planFreezeBusy = true
+  try {
+    const latest = ctx.rows[0]
+    const version = nextVersion(latest?.version)
+    const scope = String(latest?.scope ?? '全片')
+    const yes = await ctx.ui.confirm(
+      '固化镜头计划',
+      `将基于当前拆解结果新建 ${version} 固化计划（${scope}）。固化后下游任务可派发，已有计划保留。`,
+    )
+    if (!yes) return
+    const all = await http.list<Row>('/shots', { project: ctx.project.currentId, limit: 999 })
+    const issues = findShotContractIssues(all.rows)
+    if (issues.length) {
+      ctx.ui.toast(`固化被阻断：${formatShotContractIssue(issues[0])}；全量共 ${issues.length} 条`, 'bad')
+      return
+    }
+    const planPrefix = String(latest?.id ?? '').replace(/-v\d+$/i, '') || ctx.project.currentId
+    await http.post('/storyboard-plans', {
+      id: `${planPrefix}-${version.toUpperCase()}`,
+      project: ctx.project.currentId,
+      version,
+      scope,
+      shots: Number(latest?.shots) || all.rows.length,
+      tasks: Number(latest?.tasks) || 0,
+      frozen: nowStamp(),
+      status: '已固化',
+      note: `由 ${latest?.version ?? '当前拆解'} 派生；固化后下游可派发。`,
+    })
+    ctx.ui.toast(`${version} 镜头计划已固化，下游任务可派发`)
+    await ctx.reload()
+  } catch {
+    ctx.ui.toast('固化前校验或写入失败，请稍后重试', 'bad')
+  } finally {
+    planFreezeBusy = false
+  }
+}
 
 const projectOptions = ['SP-26031', 'SP-26028', 'SP-26019', 'SP-26015', 'SP-26011', 'SP-26007', 'SP-26004']
 
@@ -546,29 +680,19 @@ export const SPECS: Record<string, PageSpec> = {
         col('status', '状态', { pill: true }),
       ],
     },
-    side: () => [{ title: '固化前置', type: 'checklist', items: [{ label: '镜头契约完整', on: true }, { label: '视觉资产就绪', on: true }, { label: '成本估算通过', on: true }, { label: '并行组无循环依赖', on: true }] }],
-    actions: [
+    side: (rows) => [
       {
-        label: '固化计划',
-        tone: 'primary',
-        permission: 'director.write',
-        run: (ctx) => {
-          void (async () => {
-            try {
-              const all = await http.list<Row>('/shots', { project: ctx.project.currentId, limit: 999 })
-              const issues = findBreakdownIssues(all.rows)
-              if (issues.length) {
-                ctx.ui.toast(`固化被阻断：${formatBreakdownIssue(issues[0])}；全量共 ${issues.length} 条`, 'bad')
-                return
-              }
-              ctx.ui.toast('已固化镜头计划：下游任务可派发', 'ok')
-              ctx.reload()
-            } catch {
-              ctx.ui.toast('固化前校验失败，请稍后重试', 'bad')
-            }
-          })()
-        },
+        title: '固化口径',
+        type: 'kv',
+        items: [
+          { label: '已固化计划', value: rows.filter((row) => String(row.status).includes('已固化')).length },
+          { label: '当前版本', value: String(rows[0]?.version ?? '—') },
+          { label: '准入校验', value: '全量镜头契约' },
+        ],
       },
+    ],
+    actions: [
+      { label: '固化计划', tone: 'primary', permission: 'director.write', run: (ctx) => { void freezePlan(ctx) } },
     ],
   },
 
@@ -590,6 +714,30 @@ export const SPECS: Record<string, PageSpec> = {
         col('status', '状态', { pill: true }),
       ],
     },
+    rowPanel: {
+      title: '人物档案详情',
+      hint: '跨集引用固定版本；换装或外观变更需新建版本，旧版本继续可追溯。',
+      fields: [
+        { key: 'name', label: '角色' },
+        { key: 'age', label: '年龄' },
+        { key: 'look', label: '外观要点' },
+        { key: 'build', label: '体态' },
+        { key: 'hair', label: '发型' },
+        { key: 'costume', label: '服装' },
+        { key: 'forbid', label: '禁止项' },
+        { key: 'version', label: '版本' },
+        { key: 'status', label: '状态' },
+        { key: 'refs', label: '参考图' },
+        { key: 'rights', label: '授权' },
+        { key: 'reuse', label: '复用范围' },
+        { key: 'parent', label: '派生自' },
+        { key: 'note', label: '版本说明' },
+      ],
+    },
+    rowActions: (row) => [
+      { label: '换装', run: (ctx) => openCostumeDialog(row, ctx) },
+      { label: '新增版本', run: (ctx) => openCharacterVersionDialog(row, ctx) },
+    ],
     side: () => [{ title: '一致性规则', type: 'checklist', items: [{ label: '禁用项必须显式声明', on: true }, { label: '跨集引用固定版本', on: true }, { label: '换装需新建版本', on: true }] }],
   },
 
@@ -609,6 +757,22 @@ export const SPECS: Record<string, PageSpec> = {
         col('color', '色彩'),
         col('refs', '参考图'),
         col('status', '状态', { pill: true }),
+      ],
+    },
+    rowPanel: {
+      title: '场景详情',
+      hint: '场景的空间、光线、色彩与道具连续性共同构成下游生成的视觉约束。',
+      fields: [
+        { key: 'name', label: '场景' },
+        { key: 'type', label: '内外景' },
+        { key: 'layout', label: '空间布局' },
+        { key: 'light', label: '光线' },
+        { key: 'color', label: '色彩' },
+        { key: 'props', label: '道具' },
+        { key: 'refs', label: '参考图' },
+        { key: 'version', label: '版本' },
+        { key: 'rights', label: '授权' },
+        { key: 'status', label: '状态' },
       ],
     },
     side: (rows) => [{ title: '场景盘点', type: 'list', items: ['内景', '外景'].map((type) => ({ label: type, value: rows.filter((row) => row.type === type).length })) }],
