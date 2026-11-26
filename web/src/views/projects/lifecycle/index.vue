@@ -11,7 +11,7 @@
           <p class="card-sub">{{ current?.name }} · {{ current?.status }}</p>
         </div>
         <div class="act-bar">
-          <button v-for="action in allowed" :key="action.key" class="btn" :class="{ primary: action.tone === 'primary' && !isDanger(action.key), danger: isDanger(action.key) }" @click="run(action)">{{ action.label }}</button>
+          <button v-for="action in allowed" :key="action.key" class="btn" :class="{ primary: action.tone === 'primary' && !isDanger(action.key), danger: isDanger(action.key) }" :title="actionImpact(action)" @click="run(action)">{{ action.label }}</button>
         </div>
       </div>
       <StageRail :stages="stages" />
@@ -33,7 +33,7 @@
           <div class="card-head"><h3 class="card-title">{{ selectedState?.name || current?.status }} · 出口</h3></div>
           <div class="checklist">
             <div v-for="action in actionsOf(selectedState?.name || current?.status)" :key="action.key" class="ck">
-              <i class="on">→</i><span>{{ action.label }} → {{ action.next === '__prev__' ? '暂停前状态' : action.next }}<em class="muted"> · {{ action.permission }}</em></span>
+              <i class="on">→</i><span>{{ action.label }} → {{ action.next === '__prev__' ? '暂停前状态' : action.next }}<em class="muted"> · {{ permissionLabel(action.permission) }}</em></span>
             </div>
             <EmptyState v-if="!actionsOf(selectedState?.name || current?.status).length" title="该状态无人工出口" desc="终态不可回退，或由系统自动迁移。" compact />
           </div>
@@ -56,6 +56,7 @@ import { projectApi } from '../../../services/projects'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
 import { GATE_ACTIONS, type GateAction, type StageRow } from '../../../mock/state'
+import { actionImpact, isDangerAction as isDanger, permissionLabel, useGateActionRunner } from '../../../composables/useGateActionRunner'
 import type { Row } from '../../../mock/db'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
@@ -69,10 +70,6 @@ const states = ref<Row[]>([])
 const pipeline = ref<Row[]>([])
 const stages = ref<StageRow[]>([])
 const allowed = ref<GateAction[]>([])
-const DANGER_ACTIONS = ['terminate', 'archive', 'deliver']
-function isDanger(key: unknown) {
-  return DANGER_ACTIONS.includes(String(key))
-}
 const selectedState = ref<Row | null>(null)
 
 const current = computed(() => projectStore.current)
@@ -97,28 +94,11 @@ function preview(row: Row) {
   ui.toast(`「${row.name}」出口 ${actionsOf(String(row.name)).length} 个`, 'info')
 }
 
-async function run(action: GateAction) {
-  if (action.needReason) {
-    ui.openDialog({
-      title: action.label,
-      subtitle: `当前状态「${current.value?.status}」→「${action.next === '__prev__' ? '暂停前状态' : action.next}」；必须填写原因。`,
-      danger: isDanger(action.key),
-      fields: [{ key: 'reason', label: '原因', type: 'textarea', required: true, placeholder: '说明为什么执行该动作' }],
-      submitLabel: '确认执行',
-      onSubmit: async (values) => {
-        await projectApi.transition(projectStore.currentId, action.key, String(values.reason))
-        ui.toast(`${action.label} 已完成`)
-        await projectStore.load()
-        await load()
-      },
-    })
-    return
-  }
-  await projectApi.transition(projectStore.currentId, action.key)
-  ui.toast(`${action.label} 已完成`)
-  await projectStore.load()
-  await load()
-}
+const { run } = useGateActionRunner({
+  projectId: () => projectStore.currentId,
+  status: () => current.value?.status,
+  reload: load,
+})
 
 async function load() {
   const [stateRows, pipelineRows, workflow] = await Promise.all([

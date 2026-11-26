@@ -117,7 +117,7 @@ import type { Row } from '../../../mock/db'
 import type { GateAction } from '../../../mock/state'
 import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
-import { useUiStore } from '../../../stores/ui'
+import { actionImpact, isDangerAction as isDanger, permissionLabel, useGateActionRunner } from '../../../composables/useGateActionRunner'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
 import EmptyState from '../../../components/ui/EmptyState.vue'
@@ -125,59 +125,9 @@ import StageRail from '../../../components/ui/StageRail.vue'
 
 const session = useSessionStore()
 const projectStore = useProjectStore()
-const ui = useUiStore()
 const router = useRouter()
 
 const data = ref<Row>({})
-const DANGER_ACTIONS = ['terminate', 'archive', 'deliver']
-function isDanger(key: unknown) {
-  return DANGER_ACTIONS.includes(String(key))
-}
-
-const PERMISSION_LABELS: Record<string, string> = {
-  'creation.write': '创作编辑',
-  'script.review': '剧本审核',
-  'director.write': '导演编辑',
-  'production.write': '生产执行',
-  'post.write': '后期制作',
-  'quality.operate': '质量处置',
-  'final.review': '终审',
-  'delivery.execute': '交付执行',
-  'project.manage': '项目管理',
-}
-
-const ACTION_IMPACTS: Record<string, string> = {
-  start: '项目从草稿进入创意策划，负责人和成员会收到启动通知。',
-  confirmBrief: '创意方案被确认后进入剧本创作，后续修改需新建版本。',
-  submitScript: '剧本进入待审核，审核人将收到待办；此时不再接受正文修改。',
-  approveScript: '剧本锁定并进入生产准备，下游镜头与资产按该版本引用。',
-  rejectScript: '剧本退回创作，必须写清退回原因，返工记录会写入审计。',
-  confirmPlan: '镜头计划固化，下游生成任务开始按计划派发。',
-  toPost: '生产阶段结束并转入后期，未完成任务会保留为阻塞项。',
-  pause: '暂停后不再派发新任务，执行中的任务按服务端状态继续或回收。',
-  submitQc: '进入质量检测，检测完成前不能进入终审。',
-  passQc: '质量检测通过后进入待最终审核，阻断项必须全部关闭。',
-  failQc: '存在阻断项时退回后期，返工原因与轮次会记账。',
-  finalApprove: '终审通过后进入已完成，可生成交付包。',
-  finalReject: '终审退回后期，已交付版本不会自动覆盖。',
-  deliver: '生成交付包并冻结当前版本，交付后不可覆盖历史。',
-  archive: '归档后项目进入只读终态，资产与审计记录保留。',
-  resume: '恢复暂停前的生产状态，未完成任务重新进入调度。',
-  terminate: '终止是不可逆终态，未完成任务停止，原因必须留审计。',
-}
-
-function permissionLabel(code: unknown) {
-  const key = String(code ?? '')
-  return PERMISSION_LABELS[key] ? `「${PERMISSION_LABELS[key]}」` : `「${key}」`
-}
-
-function actionImpact(action: GateAction) {
-  return action.hint || ACTION_IMPACTS[action.key] || '该动作会推进项目状态并写入审计日志。'
-}
-
-function actionTarget(action: GateAction) {
-  return action.next === '__prev__' ? '暂停前状态' : `「${action.next}」`
-}
 const timeline = ref<Row[]>([])
 const blockers = ref<Row[]>([])
 
@@ -208,34 +158,14 @@ async function reload() {
   blockers.value = notifications.rows.filter((row) => row.unread)
 }
 
-async function runAction(action: GateAction) {
-  if (action.needReason) {
-    ui.openDialog({
-      title: action.label,
-      subtitle: `当前状态「${projectRow.value?.status}」→ ${actionTarget(action)}。${actionImpact(action)}`,
-      danger: action.key === 'terminate',
-      fields: [{ key: 'reason', label: '原因', type: 'textarea', required: true, placeholder: '说明为什么执行该动作，原因会写入审计日志' }],
-      submitLabel: '确认执行',
-      onSubmit: async (values) => {
-        await projectApi.transition(projectStore.currentId, action.key, String(values.reason))
-        ui.toast(`${action.label} 已完成`)
-        await projectStore.load()
-        await reload()
-      },
-    })
-    return
-  }
-  const danger = isDanger(action.key)
-  const yes = await ui.confirm(
-    action.label,
-    `当前状态「${projectRow.value?.status}」→ ${actionTarget(action)}。${actionImpact(action)}该动作会写入审计日志。`,
-    danger,
-  )
-  if (!yes) return
-  await projectApi.transition(projectStore.currentId, action.key)
-  ui.toast(`${action.label} 已完成`)
-  await projectStore.load()
-  await reload()
+const { run: runGateAction } = useGateActionRunner({
+  projectId: () => projectStore.currentId,
+  status: () => projectRow.value?.status,
+  reload,
+})
+
+function runAction(action: GateAction) {
+  return runGateAction(action)
 }
 
 watch(() => projectStore.currentId, reload)
