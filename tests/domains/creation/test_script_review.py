@@ -31,10 +31,10 @@ def _transition(client, admin, project_id, action, **extra):
 def _script_ready_for_review(client, admin, code):
     project = _create_project(client, admin, code)
     for action in ("start", "confirmBrief", "submitScript"):
-        _transition(client, admin, project["id"], action)
+        _transition(client, admin, project["record_id"], action)
 
     episode = client.post(
-        f"/api/v1/projects/{project['id']}/episodes",
+        f"/api/v1/projects/{project['record_id']}/episodes",
         headers=admin["headers"],
         json={"episode_number": 1, "title": "第一集", "synopsis": ""},
     )
@@ -76,7 +76,7 @@ def test_approve_reviews_script_and_moves_project_once(client, admin, db_session
     assert data["review"]["decision"] == "approve"
     assert data["transition"]["project"]["status"] == "生产准备中"
 
-    project_after = client.get(f"/api/v1/projects/{project['id']}", headers=admin["headers"])
+    project_after = client.get(f"/api/v1/projects/{project['record_id']}", headers=admin["headers"])
     assert project_after.json()["data"]["status"] == "生产准备中"
 
     versions = client.get(f"/api/v1/scripts/{script_id}/versions", headers=admin["headers"])
@@ -99,7 +99,7 @@ def test_approve_reviews_script_and_moves_project_once(client, admin, db_session
     )
     transitions = db_session.scalars(
         select(ProjectTransition).where(
-            ProjectTransition.project_id == uuid.UUID(project["id"]),
+            ProjectTransition.project_id == uuid.UUID(project["record_id"]),
             ProjectTransition.action == "approveScript",
         )
     ).all()
@@ -123,7 +123,7 @@ def test_reject_missing_reason_rolls_back_every_write(client, admin, db_session)
         )
         == 0
     )
-    project_after = client.get(f"/api/v1/projects/{project['id']}", headers=admin["headers"])
+    project_after = client.get(f"/api/v1/projects/{project['record_id']}", headers=admin["headers"])
     assert project_after.json()["data"]["status"] == "待剧本审核"
     versions = client.get(f"/api/v1/scripts/{script_id}/versions", headers=admin["headers"])
     assert versions.json()["data"][0]["status"] == "draft"
@@ -131,7 +131,7 @@ def test_reject_missing_reason_rolls_back_every_write(client, admin, db_session)
         db_session.scalar(
             select(func.count(AuditLog.id)).where(
                 AuditLog.action == "project.transition.rejectScript",
-                AuditLog.resource_id == project["id"],
+                AuditLog.resource_id == project["record_id"],
             )
         )
         == 0
@@ -177,7 +177,7 @@ def test_review_requires_script_review_permission_and_membership(client, admin):
     assert denied_non_member.status_code == 403
 
     added = client.post(
-        f"/api/v1/projects/{project['id']}/members",
+        f"/api/v1/projects/{project['record_id']}/members",
         headers=admin["headers"],
         json={"user_id": user_id, "project_role": "reviewer"},
     )

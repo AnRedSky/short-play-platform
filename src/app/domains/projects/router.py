@@ -14,7 +14,6 @@ from app.domains.projects.schemas import (
     ProjectCreate,
     ProjectMemberAdd,
     ProjectMemberRead,
-    ProjectRead,
     ProjectUpdate,
     TransitionRequest,
 )
@@ -37,7 +36,7 @@ def list_projects(
         pagination=pagination,
     )
     return envelope(
-        [ProjectRead.model_validate(project).model_dump(mode="json") for project in rows],
+        [projects_service.serialize_project(project) for project in rows],
         pagination.meta(total),
     )
 
@@ -53,9 +52,20 @@ def create_project(
         db,
         organization_id=principal.organization_id,
         code=payload.code,
-        title=payload.title,
+        title=payload.resolved_title,
         summary=payload.summary,
         owner_user_id=principal.user.id,
+        brief={
+            "genre": payload.genre,
+            "audience": payload.audience,
+            "episodes": payload.episodes,
+            "duration": payload.duration,
+            "ratio": payload.ratio,
+            "language": payload.language,
+            "style": payload.style,
+            "constraints": payload.constraints,
+            "budget": payload.budget,
+        },
     )
     audit_service.record(
         db,
@@ -67,7 +77,8 @@ def create_project(
         details={"code": project.code},
     )
     db.commit()
-    return envelope(ProjectRead.model_validate(project).model_dump(mode="json"))
+    db.refresh(project)
+    return envelope(projects_service.serialize_project(project))
 
 
 @router.get("/{project_id}")
@@ -83,7 +94,7 @@ def read_project(
         permissions=principal.permissions,
         permission_needed="project.read",
     )
-    return envelope(ProjectRead.model_validate(project).model_dump(mode="json"))
+    return envelope(projects_service.serialize_project(project))
 
 
 @router.patch("/{project_id}")
@@ -101,7 +112,7 @@ def update_project(
         permissions=principal.permissions,
         permission_needed="project.manage",
     )
-    changes = payload.model_dump(exclude_none=True)
+    changes = payload.changes()
     projects_service.update_project(db, project, changes)
     audit_service.record(
         db,
@@ -110,10 +121,11 @@ def update_project(
         resource_type="project",
         resource_id=str(project.id),
         request_id=getattr(request.state, "request_id", None),
-        details=payload.model_dump(exclude_none=True, mode="json"),
+        details=changes,
     )
     db.commit()
-    return envelope(ProjectRead.model_validate(project).model_dump(mode="json"))
+    db.refresh(project)
+    return envelope(projects_service.serialize_project(project))
 
 
 @router.post("/{project_id}/transitions")

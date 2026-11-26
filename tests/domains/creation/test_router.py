@@ -19,7 +19,7 @@ def _create_project(client: TestClient, admin: dict) -> dict:
 
 def test_creation_flow_from_episode_to_shot_contract(client, admin):
     project = _create_project(client, admin)
-    project_id = project["id"]
+    project_id = project["record_id"]
 
     episode = client.post(
         f"/api/v1/projects/{project_id}/episodes",
@@ -223,7 +223,7 @@ def test_creation_flow_from_episode_to_shot_contract(client, admin):
 
 def test_creation_domain_denies_non_project_members(client, admin):
     project = _create_project(client, admin)
-    project_id = project["id"]
+    project_id = project["record_id"]
 
     role = client.post(
         "/api/v1/roles",
@@ -275,7 +275,7 @@ def test_shot_cannot_reference_scene_from_another_project(client, admin):
     project_a = _create_project(client, admin)
     project_b = _create_project(client, admin)
     episode = client.post(
-        f"/api/v1/projects/{project_a['id']}/episodes",
+        f"/api/v1/projects/{project_a['record_id']}/episodes",
         headers=admin["headers"],
         json={"episode_number": 1, "title": "Project A episode"},
     ).json()["data"]
@@ -285,12 +285,12 @@ def test_shot_cannot_reference_scene_from_another_project(client, admin):
         json={"version_number": 1},
     ).json()["data"]
     scene = client.post(
-        f"/api/v1/projects/{project_b['id']}/scenes",
+        f"/api/v1/projects/{project_b['record_id']}/scenes",
         headers=admin["headers"],
         json={"name": "Private Project B location"},
     ).json()["data"]
     character = client.post(
-        f"/api/v1/projects/{project_b['id']}/characters",
+        f"/api/v1/projects/{project_b['record_id']}/characters",
         headers=admin["headers"],
         json={"name": "Private Project B character"},
     ).json()["data"]
@@ -321,7 +321,7 @@ def test_shot_cannot_reference_scene_from_another_project(client, admin):
     ).json()["data"]["access_token"]
     member_headers = {"Authorization": f"Bearer {token}"}
     membership = client.post(
-        f"/api/v1/projects/{project_a['id']}/members",
+        f"/api/v1/projects/{project_a['record_id']}/members",
         headers=admin["headers"],
         json={"user_id": user["id"], "project_role": "artist"},
     )

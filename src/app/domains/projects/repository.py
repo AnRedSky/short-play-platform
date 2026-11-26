@@ -16,7 +16,7 @@ def get_project(db: Session, project_id: UUID) -> Project | None:
 def get_project_for_update(db: Session, project_id: UUID) -> Project | None:
     """Row lock: serializes concurrent transitions for optimistic checking."""
     return db.scalar(
-        select(Project).where(Project.id == project_id).with_for_update()
+        select(Project).where(Project.id == project_id).with_for_update(of=Project)
     )
 
 
@@ -38,9 +38,33 @@ def get_project_by_code(db: Session, organization_id: UUID, code: str) -> Projec
 
 
 def create_project_row(
-    db: Session, *, organization_id: UUID, code: str, title: str, summary: str = ""
+    db: Session,
+    *,
+    organization_id: UUID,
+    code: str,
+    title: str,
+    summary: str = "",
+    owner_user_id: UUID | None = None,
+    brief: dict | None = None,
 ) -> Project:
-    project = Project(organization_id=organization_id, code=code, title=title, summary=summary)
+    brief = brief or {}
+    project = Project(
+        organization_id=organization_id,
+        code=code,
+        title=title,
+        summary=summary,
+        owner_user_id=owner_user_id,
+        genre=brief.get("genre", ""),
+        audience=brief.get("audience", ""),
+        episodes=brief.get("episodes", 1),
+        duration=brief.get("duration", ""),
+        ratio=brief.get("ratio", ""),
+        language=brief.get("language", ""),
+        style=brief.get("style", ""),
+        constraints=brief.get("constraints", ""),
+        budget=brief.get("budget", 0),
+        estimated=brief.get("estimated", 0),
+    )
     db.add(project)
     db.flush()
     return project

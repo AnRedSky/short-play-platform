@@ -4,8 +4,7 @@ import type { Row } from '../../mock/db'
  * B-01 契约的序列化边界。
  *
  * 页面只认 mock 的字段（`id` = 业务编号、`name` = 标题、`record_id` 隐藏 UUID）。
- * 真实后端仍返回 `code` / `title`，因此所有差异都收敛在这里：
- * 页面、组件与 store 不感知后端字段名，替换 `services/projects` 内部实现即可。
+ * 真实后端已按 B-01 返回 id/name/record_id；兼容分支保留给旧版 code/title 响应。
  */
 export interface ProjectDto {
   id?: string
@@ -99,17 +98,41 @@ export function toCreateDto(payload: Record<string, unknown>): Record<string, un
     `SP-${Date.now().toString(36).toUpperCase()}`
   return {
     code,
-    title: String(payload.name ?? payload.title ?? ''),
-    summary: String(payload.constraints ?? payload.summary ?? ''),
+    name: String(payload.name ?? payload.title ?? ''),
+    summary: String(payload.summary ?? ''),
+    genre: String(payload.genre ?? ''),
+    audience: String(payload.audience ?? ''),
+    episodes: Number(payload.episodes ?? 1),
+    duration: String(payload.duration ?? ''),
+    ratio: String(payload.ratio ?? ''),
+    language: String(payload.language ?? ''),
+    style: String(payload.style ?? ''),
+    constraints: String(payload.constraints ?? ''),
+    budget: Number(payload.budget ?? 0),
   }
 }
 
-/** 页面 patch -> 真实后端可接受的字段；不支持的业务字段不静默写入别的列。 */
+/** 页面 patch -> 真实后端可接受的字段；brief 字段直接落库，不再静默丢弃。 */
 export function toUpdateDto(patch: Record<string, unknown>): Record<string, unknown> {
   const dto: Record<string, unknown> = {}
-  if (patch.name !== undefined) dto.title = patch.name
-  if (patch.title !== undefined) dto.title = patch.title
-  if (patch.summary !== undefined) dto.summary = patch.summary
+  for (const key of [
+    'name',
+    'title',
+    'summary',
+    'genre',
+    'audience',
+    'episodes',
+    'duration',
+    'ratio',
+    'language',
+    'style',
+    'constraints',
+    'budget',
+  ]) {
+    if (patch[key] !== undefined) dto[key] = patch[key]
+  }
+  if (dto.name === undefined && dto.title !== undefined) dto.name = dto.title
+  delete dto.title
   return dto
 }
 

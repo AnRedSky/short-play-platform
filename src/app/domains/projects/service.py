@@ -11,7 +11,9 @@ from app.domains.organizations import repository as organizations_repo
 from app.domains.projects import repository as projects_repo
 from app.domains.projects.constants import PROJECT_WRITE_ROLES
 from app.domains.projects.models import Project, ProjectMember, ProjectTransition
+from app.domains.projects.schemas import ProjectRead
 from app.domains.projects.state_machine import (
+    STATUS_PHASE,
     allowed_actions,
     find_action,
     normalize_status,
@@ -19,6 +21,54 @@ from app.domains.projects.state_machine import (
 )
 from app.public.constants import ErrorCode
 from app.public.exceptions import AppError, conflict, not_found, permission_denied
+
+
+def _budget_state(project: Project) -> str:
+    budget = float(project.budget or 0)
+    actual = float(project.actual or 0)
+    if budget <= 0:
+        return "正常"
+    ratio = actual / budget
+    if ratio > 1:
+        return "超限"
+    if ratio >= 0.85:
+        return "预警"
+    return "正常"
+
+
+def serialize_project(project: Project) -> dict[str, Any]:
+    """The single Project -> page DTO boundary used by every project endpoint."""
+    status = normalize_status(project.status)
+    owner = project.owner
+    return ProjectRead(
+        record_id=project.id,
+        id=project.code,
+        name=project.title,
+        summary=project.summary,
+        genre=project.genre or "",
+        audience=project.audience or "",
+        episodes=int(project.episodes or 1),
+        duration=project.duration or "",
+        ratio=project.ratio or "",
+        language=project.language or "",
+        style=project.style or "",
+        constraints=project.constraints or "",
+        budget=float(project.budget or 0),
+        actual=float(project.actual or 0),
+        estimated=float(project.estimated or 0),
+        status=status,
+        phase=STATUS_PHASE.get(status, status),
+        done=int(project.done_episodes or 0),
+        delivered=int(project.delivered_episodes or 0),
+        quality=project.quality or "",
+        ownerId=str(project.owner_user_id) if project.owner_user_id else "",
+        owner=owner.full_name if owner is not None else "",
+        budgetState=_budget_state(project),
+        created=project.created_at.strftime("%Y-%m-%d"),
+        updated=project.updated_at.strftime("%Y-%m-%d %H:%M"),
+        scriptVersion=project.script_version or "",
+        timelineVersion=project.timeline_version or "",
+    ).model_dump(mode="json")
 
 
 def get_project_or_404(db: Session, project_id: UUID) -> Project:
@@ -97,11 +147,18 @@ def create_project(
     title: str,
     summary: str,
     owner_user_id: UUID | None,
+    brief: dict[str, Any] | None = None,
 ) -> Project:
     if projects_repo.get_project_by_code(db, organization_id, code) is not None:
         raise conflict("Project code already exists", {"code": code})
     project = projects_repo.create_project_row(
-        db, organization_id=organization_id, code=code, title=title, summary=summary
+        db,
+        organization_id=organization_id,
+        code=code,
+        title=title,
+        summary=summary,
+        owner_user_id=owner_user_id,
+        brief=brief,
     )
     if owner_user_id is not None:
         # The creator is always an owner so the project is reachable without a second write.
@@ -226,17 +283,11 @@ def transition_project(
     project.status = target_status
     project.previous_status = current if target_status == "已暂停" else None
     db.flush()
+    db.refresh(project)
 
     allowed = allowed_actions(target_status, permissions)
     payload: dict[str, Any] = {
-        "project": {
-            "id": str(project.id),
-            "organization_id": str(project.organization_id),
-            "code": project.code,
-            "title": project.title,
-            "summary": project.summary,
-            "status": target_status,
-        },
+        "project": serialize_project(project),
         "allowed_actions": allowed,
         "message": f"{current} → {target_status}",
     }

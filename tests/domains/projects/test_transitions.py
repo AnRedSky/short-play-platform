@@ -48,7 +48,7 @@ def test_transition_advances_state_and_returns_allowed_actions(client, admin):
     project = _create_project(client, admin, f"flow-{uuid.uuid4().hex[:6]}")
     assert project["status"] == "草稿"
 
-    response = _transition(client, admin["headers"], project["id"], action="start")
+    response = _transition(client, admin["headers"], project["record_id"], action="start")
     assert response.status_code == 200, response.text
     body = response.json()["data"]
     assert body["project"]["status"] == "创意策划中"
@@ -60,7 +60,7 @@ def test_transition_advances_state_and_returns_allowed_actions(client, admin):
 def test_patch_cannot_change_status(client, admin):
     project = _create_project(client, admin, f"patch-{uuid.uuid4().hex[:6]}")
     response = client.patch(
-        f"/api/v1/projects/{project['id']}",
+        f"/api/v1/projects/{project['record_id']}",
         headers=admin["headers"],
         json={"status": "生产中"},
     )
@@ -71,7 +71,7 @@ def test_patch_cannot_change_status(client, admin):
 
 def test_illegal_transition_is_rejected(client, admin):
     project = _create_project(client, admin, f"illegal-{uuid.uuid4().hex[:6]}")
-    response = _transition(client, admin["headers"], project["id"], action="deliver")
+    response = _transition(client, admin["headers"], project["record_id"], action="deliver")
     assert response.status_code == 409
     error = response.json()["error"]
     assert error["code"] == "ILLEGAL_TRANSITION"
@@ -83,7 +83,7 @@ def test_expected_state_conflict_is_rejected(client, admin):
     response = _transition(
         client,
         admin["headers"],
-        project["id"],
+        project["record_id"],
         action="start",
         expected_state="创意策划中",
     )
@@ -95,11 +95,13 @@ def test_expected_state_conflict_is_rejected(client, admin):
 
 def test_reason_is_required_for_destructive_action(client, admin):
     project = _create_project(client, admin, f"reason-{uuid.uuid4().hex[:6]}")
-    response = _transition(client, admin["headers"], project["id"], action="terminate")
+    response = _transition(client, admin["headers"], project["record_id"], action="terminate")
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "REASON_REQUIRED"
 
-    ok = _transition(client, admin["headers"], project["id"], action="terminate", reason="需求取消")
+    ok = _transition(
+        client, admin["headers"], project["record_id"], action="terminate", reason="需求取消"
+    )
     assert ok.status_code == 200, ok.text
     assert ok.json()["data"]["project"]["status"] == "已终止"
 
@@ -110,12 +112,12 @@ def test_idempotency_key_writes_once(client, admin, db_session):
     headers = {**admin["headers"], "Idempotency-Key": key}
 
     first = client.post(
-        f"/api/v1/projects/{project['id']}/transitions",
+        f"/api/v1/projects/{project['record_id']}/transitions",
         headers=headers,
         json={"action": "start"},
     )
     repeat = client.post(
-        f"/api/v1/projects/{project['id']}/transitions",
+        f"/api/v1/projects/{project['record_id']}/transitions",
         headers=headers,
         json={"action": "start"},
     )
@@ -126,14 +128,14 @@ def test_idempotency_key_writes_once(client, admin, db_session):
     logs = db_session.scalars(
         select(AuditLog).where(
             AuditLog.action == "project.transition.start",
-            AuditLog.resource_id == project["id"],
+            AuditLog.resource_id == project["record_id"],
         )
     ).all()
     assert len(logs) == 1
     count = db_session.scalar(
         select(func.count(AuditLog.id)).where(
             AuditLog.action == "project.transition.start",
-            AuditLog.resource_id == project["id"],
+            AuditLog.resource_id == project["record_id"],
         )
     )
     assert count == 1
@@ -155,17 +157,17 @@ def test_transition_requires_action_permission_and_membership(client, admin):
 
     project = _create_project(client, admin, f"perm-{uuid.uuid4().hex[:6]}")
     # Not a project member: read is denied before any action permission check.
-    denied = _transition(client, headers, project["id"], action="start")
+    denied = _transition(client, headers, project["record_id"], action="start")
     assert denied.status_code == 403
 
     added = client.post(
-        f"/api/v1/projects/{project['id']}/members",
+        f"/api/v1/projects/{project['record_id']}/members",
         headers=admin["headers"],
         json={"user_id": user["id"], "project_role": "writer"},
     )
     assert added.status_code == 201, added.text
 
     # Member now, but creation.write is still absent from the role.
-    denied_by_permission = _transition(client, headers, project["id"], action="start")
+    denied_by_permission = _transition(client, headers, project["record_id"], action="start")
     assert denied_by_permission.status_code == 403
     assert denied_by_permission.json()["error"]["code"] == "PERMISSION_DENIED"

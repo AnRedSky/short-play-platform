@@ -3,22 +3,56 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.domains.projects.constants import PROJECT_ROLES
-from app.domains.projects.state_machine import PROJECT_STATUSES, normalize_status
+from app.domains.projects.state_machine import PROJECT_STATUSES
 
 
 class ProjectCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     code: str = Field(min_length=2, max_length=60, pattern=r"^[A-Za-z0-9][A-Za-z0-9_\-]*$")
-    title: str = Field(min_length=1, max_length=200)
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    name: str | None = Field(default=None, min_length=1, max_length=200)
     summary: str = Field(default="", max_length=2000)
+    genre: str = Field(default="", max_length=120)
+    audience: str = Field(default="", max_length=200)
+    episodes: int = Field(default=1, ge=1, le=200)
+    duration: str = Field(default="", max_length=80)
+    ratio: str = Field(default="", max_length=80)
+    language: str = Field(default="", max_length=80)
+    style: str = Field(default="", max_length=300)
+    constraints: str = Field(default="", max_length=2000)
+    budget: float = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def _one_title(self):
+        if not self.title and not self.name:
+            raise ValueError("title or name is required")
+        if self.title and self.name and self.title != self.name:
+            raise ValueError("title and name must agree when both are supplied")
+        return self
+
+    @property
+    def resolved_title(self) -> str:
+        return self.title or self.name or ""
 
 
 class ProjectUpdate(BaseModel):
-    """PATCH only edits descriptive fields; status changes go through transitions."""
+    """PATCH edits brief fields; status changes go through transitions."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     title: str | None = Field(default=None, min_length=1, max_length=200)
+    name: str | None = Field(default=None, min_length=1, max_length=200)
     summary: str | None = Field(default=None, max_length=2000)
+    genre: str | None = Field(default=None, max_length=120)
+    audience: str | None = Field(default=None, max_length=200)
+    episodes: int | None = Field(default=None, ge=1, le=200)
+    duration: str | None = Field(default=None, max_length=80)
+    ratio: str | None = Field(default=None, max_length=80)
+    language: str | None = Field(default=None, max_length=80)
+    style: str | None = Field(default=None, max_length=300)
+    constraints: str | None = Field(default=None, max_length=2000)
+    budget: float | None = Field(default=None, ge=0)
 
     @model_validator(mode="before")
     @classmethod
@@ -27,21 +61,51 @@ class ProjectUpdate(BaseModel):
             raise ValueError("status cannot be patched; use POST /projects/{id}/transitions")
         return data
 
+    @model_validator(mode="after")
+    def _one_title(self):
+        if self.title and self.name and self.title != self.name:
+            raise ValueError("title and name must agree when both are supplied")
+        return self
+
+    def changes(self) -> dict:
+        data = self.model_dump(exclude_none=True)
+        if "name" in data:
+            data["title"] = data.pop("name")
+        return data
+
 
 class ProjectRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    """Page-aligned project DTO: business id plus every brief field the UI reads."""
 
-    id: UUID
-    organization_id: UUID
-    code: str
-    title: str
+    record_id: UUID
+    id: str
+    name: str
     summary: str
+    genre: str
+    audience: str
+    episodes: int
+    duration: str
+    ratio: str
+    language: str
+    style: str
+    constraints: str
+    budget: float
+    actual: float
+    estimated: float
     status: str
-
-    @field_validator("status")
-    @classmethod
-    def _canonical_status(cls, value: str) -> str:
-        return normalize_status(value)
+    phase: str
+    done: int
+    delivered: int
+    quality: str
+    ownerId: str
+    owner: str
+    deptId: str = ""
+    dept: str = ""
+    budgetState: str
+    created: str
+    updated: str
+    scriptVersion: str
+    timelineVersion: str
 
 
 class TransitionRequest(BaseModel):

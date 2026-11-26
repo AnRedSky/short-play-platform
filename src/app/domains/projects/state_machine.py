@@ -37,6 +37,23 @@ LEGACY_STATUS_MAP: dict[str, str] = {
 }
 
 TERMINAL_STATUSES: frozenset[str] = frozenset({"已归档", "已终止"})
+STATUS_PHASE: dict[str, str] = {
+    "草稿": "创意策划",
+    "创意策划中": "创意策划",
+    "剧本创作中": "剧本创作",
+    "待剧本审核": "剧本审核",
+    "生产准备中": "生产准备",
+    "生产中": "视频生产",
+    "后期制作中": "后期制作",
+    "质量检测中": "质量检测",
+    "待最终审核": "最终审核",
+    "已完成": "已交付",
+    "已交付": "已交付",
+    "已归档": "已归档",
+    "已暂停": "已暂停",
+    "异常中": "异常",
+    "已终止": "已终止",
+}
 IMMUTABLE_ACTIONS: frozenset[str] = frozenset({"terminate", "deliver", "archive"})
 REASON_REQUIRED_ACTIONS: frozenset[str] = frozenset(
     {"terminate", "rejectScript", "pause", "failQc", "finalReject"}

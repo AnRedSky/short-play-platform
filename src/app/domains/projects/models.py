@@ -3,9 +3,20 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.db import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
@@ -23,6 +34,30 @@ class Project(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="草稿")
     # Set when a project is paused so ``resume`` can return to the exact state.
     previous_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # Brief fields persisted from the creation page. They are plain columns so
+    # PATCH can store them without a second metadata table.
+    owner_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    genre: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    audience: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    episodes: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    duration: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    ratio: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    language: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    style: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    constraints: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    budget: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False, default=0)
+    actual: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False, default=0)
+    estimated: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False, default=0)
+    done_episodes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    delivered_episodes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    quality: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    script_version: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    timeline_version: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+
+    owner = relationship("User", lazy="joined", foreign_keys=[owner_user_id])
 
 
 class ProjectMember(Base, UUIDPrimaryKeyMixin, TimestampMixin):

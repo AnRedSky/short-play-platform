@@ -52,7 +52,7 @@ def test_upload_records_metadata_and_keeps_body_out_of_the_database(client, admi
     assert shutil.which(MediaBinaries().ffprobe or "") is not None
     project = _project(client, admin)
     payload = _png(tmp_path, "red.png")
-    response = _upload(client, admin, project["id"], payload)
+    response = _upload(client, admin, project["record_id"], payload)
     assert response.status_code == 201, response.text
     asset = response.json()["data"]
     assert asset["kind"] == "image"
@@ -61,9 +61,11 @@ def test_upload_records_metadata_and_keeps_body_out_of_the_database(client, admi
     assert len(asset["checksum"]) == 64
     assert asset["width"] == 320
     assert asset["height"] == 240
-    assert asset["storage_key"].startswith(f"assets/{project['id']}/")
+    assert asset["storage_key"].startswith(f"assets/{project['record_id']}/")
 
-    listing = client.get(f"/api/v1/projects/{project['id']}/assets", headers=admin["headers"])
+    listing = client.get(
+        f"/api/v1/projects/{project['record_id']}/assets", headers=admin["headers"]
+    )
     assert listing.status_code == 200
     assert [row["id"] for row in listing.json()["data"]] == [asset["id"]]
 
@@ -71,7 +73,7 @@ def test_upload_records_metadata_and_keeps_body_out_of_the_database(client, admi
 def test_download_returns_the_stored_bytes(client, admin, tmp_path):
     project = _project(client, admin)
     payload = _png(tmp_path, "blue.png", color="blue")
-    asset = _upload(client, admin, project["id"], payload).json()["data"]
+    asset = _upload(client, admin, project["record_id"], payload).json()["data"]
     response = client.get(f"/api/v1/assets/{asset['id']}/download", headers=admin["headers"])
     assert response.status_code == 200
     assert response.content == payload
@@ -79,7 +81,7 @@ def test_download_returns_the_stored_bytes(client, admin, tmp_path):
 
 def test_new_version_is_numbered_and_tracked(client, admin, tmp_path):
     project = _project(client, admin)
-    asset = _upload(client, admin, project["id"], _png(tmp_path, "a.png")).json()["data"]
+    asset = _upload(client, admin, project["record_id"], _png(tmp_path, "a.png")).json()["data"]
     second = _png(tmp_path, "b.png", color="green")
     response = client.post(
         f"/api/v1/assets/{asset['id']}/versions",
@@ -97,15 +99,15 @@ def test_new_version_is_numbered_and_tracked(client, admin, tmp_path):
 
 def test_slideshow_export_produces_a_verified_mp4_asset(client, admin, tmp_path):
     project = _project(client, admin)
-    first = _upload(client, admin, project["id"], _png(tmp_path, "one.png", color="red")).json()[
-        "data"
-    ]
-    second = _upload(client, admin, project["id"], _png(tmp_path, "two.png", color="blue")).json()[
-        "data"
-    ]
+    first = _upload(
+        client, admin, project["record_id"], _png(tmp_path, "one.png", color="red")
+    ).json()["data"]
+    second = _upload(
+        client, admin, project["record_id"], _png(tmp_path, "two.png", color="blue")
+    ).json()["data"]
 
     response = client.post(
-        f"/api/v1/projects/{project['id']}/exports",
+        f"/api/v1/projects/{project['record_id']}/exports",
         headers=admin["headers"],
         json={
             "asset_ids": [first["id"], second["id"]],
@@ -135,11 +137,11 @@ def test_slideshow_export_produces_a_verified_mp4_asset(client, admin, tmp_path)
 def test_export_rejects_non_image_assets(client, admin, tmp_path):
     project = _project(client, admin)
     document = _upload(
-        client, admin, project["id"], b"plain text", filename="notes.txt", mime="text/plain"
+        client, admin, project["record_id"], b"plain text", filename="notes.txt", mime="text/plain"
     ).json()["data"]
     assert document["kind"] == "document"
     response = client.post(
-        f"/api/v1/projects/{project['id']}/exports",
+        f"/api/v1/projects/{project['record_id']}/exports",
         headers=admin["headers"],
         json={"asset_ids": [document["id"]]},
     )
@@ -172,7 +174,7 @@ def test_upload_is_denied_for_non_project_members(client, admin, tmp_path):
     ]["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     denied = client.post(
-        f"/api/v1/projects/{project['id']}/assets",
+        f"/api/v1/projects/{project['record_id']}/assets",
         headers=headers,
         files={"file": ("frame.png", _png(tmp_path, "deny.png"), "image/png")},
     )
@@ -183,12 +185,12 @@ def test_upload_is_denied_for_non_project_members(client, admin, tmp_path):
 def test_project_member_cannot_read_or_mutate_another_projects_asset(client, admin, tmp_path):
     project_a = _project(client, admin)
     project_b = _project(client, admin)
-    asset_a = _upload(client, admin, project_a["id"], _png(tmp_path, "project-a.png")).json()[
-        "data"
-    ]
-    asset_b = _upload(client, admin, project_b["id"], _png(tmp_path, "project-b.png")).json()[
-        "data"
-    ]
+    asset_a = _upload(
+        client, admin, project_a["record_id"], _png(tmp_path, "project-a.png")
+    ).json()["data"]
+    asset_b = _upload(
+        client, admin, project_b["record_id"], _png(tmp_path, "project-b.png")
+    ).json()["data"]
 
     role = client.post(
         "/api/v1/roles",
@@ -218,7 +220,7 @@ def test_project_member_cannot_read_or_mutate_another_projects_asset(client, adm
     member_headers = {"Authorization": f"Bearer {login.json()['data']['access_token']}"}
 
     membership = client.post(
-        f"/api/v1/projects/{project_a['id']}/members",
+        f"/api/v1/projects/{project_a['record_id']}/members",
         headers=admin["headers"],
         json={"user_id": created.json()["data"]["id"], "project_role": "artist"},
     )
@@ -232,9 +234,7 @@ def test_project_member_cannot_read_or_mutate_another_projects_asset(client, adm
     assert denied_detail.status_code == 403
     assert denied_detail.json()["error"]["code"] == "PERMISSION_DENIED"
 
-    denied_download = client.get(
-        f"/api/v1/assets/{asset_b['id']}/download", headers=member_headers
-    )
+    denied_download = client.get(f"/api/v1/assets/{asset_b['id']}/download", headers=member_headers)
     assert denied_download.status_code == 403
     assert denied_download.json()["error"]["code"] == "PERMISSION_DENIED"
 
@@ -247,12 +247,11 @@ def test_project_member_cannot_read_or_mutate_another_projects_asset(client, adm
     assert denied_version.json()["error"]["code"] == "PERMISSION_DENIED"
 
 
-
 def test_export_cannot_reference_another_projects_assets(client, admin, tmp_path):
     project_a = _project(client, admin)
     project_b = _project(client, admin)
     foreign_asset = _upload(
-        client, admin, project_b["id"], _png(tmp_path, "foreign-export.png")
+        client, admin, project_b["record_id"], _png(tmp_path, "foreign-export.png")
     ).json()["data"]
 
     role = client.post(
@@ -276,19 +275,19 @@ def test_export_cannot_reference_another_projects_assets(client, admin, tmp_path
             "role_ids": [role["id"]],
         },
     ).json()["data"]
-    token = client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    ).json()["data"]["access_token"]
+    token = client.post("/api/v1/auth/login", json={"email": email, "password": password}).json()[
+        "data"
+    ]["access_token"]
     member_headers = {"Authorization": f"Bearer {token}"}
     membership = client.post(
-        f"/api/v1/projects/{project_a['id']}/members",
+        f"/api/v1/projects/{project_a['record_id']}/members",
         headers=admin["headers"],
         json={"user_id": user["id"], "project_role": "artist"},
     )
     assert membership.status_code == 201, membership.text
 
     response = client.post(
-        f"/api/v1/projects/{project_a['id']}/exports",
+        f"/api/v1/projects/{project_a['record_id']}/exports",
         headers=member_headers,
         json={"asset_ids": [foreign_asset["id"]], "width": 320, "height": 240},
     )

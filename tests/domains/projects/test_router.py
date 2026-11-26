@@ -48,7 +48,7 @@ def test_project_access_requires_membership(client, admin):
     hidden = _create_project(client, admin, "beta")
 
     # The user is a valid organization member with project.read, but not a project member.
-    denied = client.get(f"/api/v1/projects/{hidden['id']}", headers=headers)
+    denied = client.get(f"/api/v1/projects/{hidden['record_id']}", headers=headers)
     assert denied.status_code == 403
     assert denied.json()["error"]["code"] == "PERMISSION_DENIED"
 
@@ -58,22 +58,22 @@ def test_project_access_requires_membership(client, admin):
     assert listed.json()["meta"]["total"] == 0
 
     added = client.post(
-        f"/api/v1/projects/{visible['id']}/members",
+        f"/api/v1/projects/{visible['record_id']}/members",
         headers=admin["headers"],
         json={"user_id": user["id"], "project_role": "artist"},
     )
     assert added.status_code == 201, added.text
 
-    allowed = client.get(f"/api/v1/projects/{visible['id']}", headers=headers)
+    allowed = client.get(f"/api/v1/projects/{visible['record_id']}", headers=headers)
     assert allowed.status_code == 200
-    assert allowed.json()["data"]["code"] == "alpha"
+    assert allowed.json()["data"]["id"] == "alpha"
 
     listed_after = client.get("/api/v1/projects", headers=headers)
-    assert [row["code"] for row in listed_after.json()["data"]] == ["alpha"]
+    assert [row["id"] for row in listed_after.json()["data"]] == ["alpha"]
 
     # 'artist' project role cannot modify the project even though it can read it.
     patch = client.patch(
-        f"/api/v1/projects/{visible['id']}",
+        f"/api/v1/projects/{visible['record_id']}",
         headers=headers,
         json={"title": "Hijacked"},
     )
@@ -81,7 +81,7 @@ def test_project_access_requires_membership(client, admin):
 
     # Adding members is a project.manage action, which this user does not hold.
     add_denied = client.post(
-        f"/api/v1/projects/{visible['id']}/members",
+        f"/api/v1/projects/{visible['record_id']}/members",
         headers=headers,
         json={"user_id": user["id"], "project_role": "owner"},
     )
@@ -123,7 +123,7 @@ def test_project_member_must_belong_to_the_same_organization(client, admin, db_s
     db_session.flush()
 
     response = client.post(
-        f"/api/v1/projects/{project['id']}/members",
+        f"/api/v1/projects/{project['record_id']}/members",
         headers=admin["headers"],
         json={"user_id": str(other_user.id), "project_role": "writer"},
     )
