@@ -111,6 +111,22 @@ def permission_codes_for_user(
     return roles_repo.permission_codes_of_user(db, user_id, organization_id)
 
 
+def user_role_codes(db: Session, *, user_id: UUID, organization_id: UUID) -> list[str]:
+    return roles_repo.list_user_role_codes(
+        db, user_id=user_id, organization_id=organization_id
+    )
+
+
+def unassign_role_from_user(
+    db: Session, *, role_id: UUID, organization_id: UUID, user_id: UUID
+) -> Role:
+    role = validate_assignable_role(db, role_id, organization_id)
+    if roles_repo.get_user_role(db, user_id=user_id, role_id=role_id) is None:
+        raise not_found("Role assignment not found")
+    roles_repo.delete_user_role(db, user_id=user_id, role_id=role_id)
+    return role
+
+
 def role_permission_codes(db: Session, role_id: UUID) -> list[str]:
     return roles_repo.permission_codes_of_role(db, role_id)
 

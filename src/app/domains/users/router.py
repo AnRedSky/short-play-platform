@@ -88,7 +88,11 @@ def update_user(
     audit_service.record(
         db,
         actor_user_id=principal.user.id,
-        action="user.updated",
+        action=(
+            "user.deactivated"
+            if payload.is_active is False
+            else "user.updated"
+        ),
         resource_type="user",
         resource_id=str(user.id),
         request_id=getattr(request.state, "request_id", None),

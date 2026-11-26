@@ -74,6 +74,14 @@ class ProjectMember(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     project_role: Mapped[str] = mapped_column(String(20), nullable=False, default="writer")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    granted_by: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    granted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_by: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class ProjectTransition(Base, UUIDPrimaryKeyMixin):

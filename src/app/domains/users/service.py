@@ -8,14 +8,19 @@ from sqlalchemy.orm import Session
 from app.dependencies.pagination import PaginationParams
 from app.domains.audit import repository as audit_repo
 from app.domains.audit import service as audit_service
+from app.domains.auth import repository as auth_repo
 from app.domains.organizations import repository as organizations_repo
 from app.domains.organizations import service as organizations_service
+from app.domains.projects import repository as projects_repo
+from app.domains.roles import repository as roles_repo
 from app.domains.roles import service as roles_service
 from app.domains.users import repository as users_repo
 from app.domains.users.constants import WELCOME_NOTIFICATION_ACTION
 from app.domains.users.models import User
-from app.public.exceptions import conflict, not_found
+from app.public.constants import ErrorCode
+from app.public.exceptions import AppError, conflict, not_found
 from app.utils.crypto import hash_password
+from app.utils.datetime import utcnow
 from app.utils.string import normalize_email
 
 
@@ -70,6 +75,52 @@ def list_users(
     return users_repo.list_users_in_organization(db, organization_id, pagination)
 
 
+def deactivate_user_account(db: Session, user: User) -> dict:
+    """Account deactivation synchronously revokes every retained authorization."""
+    if not user.is_active:
+        return {
+            "memberships_deactivated": 0,
+            "project_authorizations_revoked": 0,
+            "roles_revoked": 0,
+            "permission_grants_revoked": 0,
+            "sessions_revoked": 0,
+        }
+    owned_projects = projects_repo.list_all_owned_projects_for_user(db, user.id)
+    if owned_projects:
+        raise AppError(
+            "Project owners must be offboarded with a handover target",
+            code=ErrorCode.HANDOVER_REQUIRED,
+            status_code=409,
+            details={"owned_projects": [project.code for project in owned_projects]},
+        )
+    now = utcnow()
+    memberships = organizations_repo.list_active_memberships_for_user(db, user.id)
+    for membership in memberships:
+        membership.is_active = False
+        membership.deactivated_at = now
+
+    authorizations = projects_repo.list_all_active_memberships_for_user(db, user.id)
+    for authorization in authorizations:
+        authorization.is_active = False
+        authorization.revoked_at = now
+
+    roles_revoked = roles_repo.delete_all_user_roles(db, user.id)
+    permission_grants_revoked = roles_repo.deactivate_permission_grants(db, user.id)
+    sessions = auth_repo.list_active_sessions(db, user.id)
+    for session in sessions:
+        session.revoked_at = now
+
+    user.is_active = False
+    db.flush()
+    return {
+        "memberships_deactivated": len(memberships),
+        "project_authorizations_revoked": len(authorizations),
+        "roles_revoked": roles_revoked,
+        "permission_grants_revoked": permission_grants_revoked,
+        "sessions_revoked": len(sessions),
+    }
+
+
 def update_user(
     db: Session,
     user: User,
@@ -79,8 +130,10 @@ def update_user(
 ) -> User:
     if full_name is not None:
         user.full_name = full_name
-    if is_active is not None:
-        user.is_active = is_active
+    if is_active is False:
+        deactivate_user_account(db, user)
+    elif is_active is True:
+        user.is_active = True
     db.flush()
     return user
 

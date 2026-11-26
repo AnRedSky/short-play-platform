@@ -21,6 +21,7 @@ from app.domains.projects.state_machine import (
 )
 from app.public.constants import ErrorCode
 from app.public.exceptions import AppError, conflict, not_found, permission_denied
+from app.utils.datetime import utcnow
 
 
 def _budget_state(project: Project) -> str:
@@ -168,6 +169,7 @@ def create_project(
             organization_id=organization_id,
             user_id=owner_user_id,
             project_role="owner",
+            actor_user_id=owner_user_id,
         )
     return project
 
@@ -198,28 +200,91 @@ def list_members(db: Session, project_id: UUID) -> list[ProjectMember]:
 
 
 def add_member(
-    db: Session, *, project_id: UUID, organization_id: UUID, user_id: UUID, project_role: str
+    db: Session,
+    *,
+    project_id: UUID,
+    organization_id: UUID,
+    user_id: UUID,
+    project_role: str,
+    actor_user_id: UUID | None = None,
 ) -> ProjectMember:
     if not organizations_repo.is_active_member(db, organization_id, user_id):
         raise not_found("User not found in this organization")
+    project = projects_repo.get_project(db, project_id)
+    if project is None:
+        raise not_found("Project not found")
+    if project_role == "owner" and project.owner_user_id != user_id:
+        raise AppError(
+            "Only the project owner can hold the owner role",
+            code=ErrorCode.PROJECT_OWNER_IMMUTABLE,
+            status_code=409,
+        )
     existing = projects_repo.find_member(db, project_id, user_id)
+    now = utcnow()
     if existing is not None:
         existing.project_role = project_role
         existing.is_active = True
+        existing.granted_by = actor_user_id
+        existing.granted_at = now
+        existing.revoked_by = None
+        existing.revoked_at = None
         db.flush()
         return existing
     return projects_repo.add_member_row(
-        db, project_id=project_id, user_id=user_id, project_role=project_role
+        db,
+        project_id=project_id,
+        user_id=user_id,
+        project_role=project_role,
+        granted_by=actor_user_id,
+        granted_at=now,
     )
 
 
-def remove_member(db: Session, *, project_id: UUID, user_id: UUID) -> ProjectMember:
+def update_member_role(
+    db: Session,
+    *,
+    project: Project,
+    user_id: UUID,
+    project_role: str,
+    actor_user_id: UUID,
+) -> ProjectMember:
+    member = projects_repo.find_member(db, project.id, user_id)
+    if member is None or not member.is_active:
+        raise not_found("Project member not found")
+    if member.project_role == "owner" and project_role != "owner":
+        raise AppError(
+            "Project owner role cannot be demoted; transfer ownership instead",
+            code=ErrorCode.PROJECT_OWNER_IMMUTABLE,
+            status_code=409,
+        )
+    if project_role == "owner" and project.owner_user_id != user_id:
+        raise AppError(
+            "Only the project owner can hold the owner role",
+            code=ErrorCode.PROJECT_OWNER_IMMUTABLE,
+            status_code=409,
+        )
+    member.project_role = project_role
+    member.granted_by = actor_user_id
+    member.granted_at = utcnow()
+    db.flush()
+    return member
+
+
+def remove_member(
+    db: Session, *, project_id: UUID, user_id: UUID, actor_user_id: UUID
+) -> ProjectMember:
     member = projects_repo.find_member(db, project_id, user_id)
     if member is None or not member.is_active:
         raise not_found("Project member not found")
     if member.project_role == "owner":
-        raise conflict("Project owner cannot be removed")
+        raise AppError(
+            "Project owner cannot be removed; transfer ownership instead",
+            code=ErrorCode.PROJECT_OWNER_IMMUTABLE,
+            status_code=409,
+        )
     member.is_active = False
+    member.revoked_by = actor_user_id
+    member.revoked_at = utcnow()
     db.flush()
     return member
 

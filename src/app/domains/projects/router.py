@@ -14,6 +14,7 @@ from app.domains.projects.schemas import (
     ProjectCreate,
     ProjectMemberAdd,
     ProjectMemberRead,
+    ProjectMemberUpdate,
     ProjectUpdate,
     TransitionRequest,
 )
@@ -208,6 +209,7 @@ def add_project_member(
         organization_id=project.organization_id,
         user_id=payload.user_id,
         project_role=payload.project_role,
+        actor_user_id=principal.user.id,
     )
     audit_service.record(
         db,
@@ -217,6 +219,42 @@ def add_project_member(
         resource_id=str(project.id),
         request_id=getattr(request.state, "request_id", None),
         details={"user_id": str(payload.user_id), "project_role": payload.project_role},
+    )
+    db.commit()
+    return envelope(ProjectMemberRead.model_validate(member).model_dump(mode="json"))
+
+
+@router.patch("/{project_id}/members/{user_id}")
+def update_project_member(
+    project_id: UUID,
+    user_id: UUID,
+    payload: ProjectMemberUpdate,
+    request: Request,
+    principal: Principal = Depends(require_permission("project.manage")),
+    db: Session = Depends(get_db),
+) -> dict:
+    project = projects_service.get_accessible_project(
+        db,
+        project_id,
+        user_id=principal.user.id,
+        permissions=principal.permissions,
+        permission_needed="project.manage",
+    )
+    member = projects_service.update_member_role(
+        db,
+        project=project,
+        user_id=user_id,
+        project_role=payload.project_role,
+        actor_user_id=principal.user.id,
+    )
+    audit_service.record(
+        db,
+        actor_user_id=principal.user.id,
+        action="project.member_role_changed",
+        resource_type="project",
+        resource_id=str(project.id),
+        request_id=getattr(request.state, "request_id", None),
+        details={"user_id": str(user_id), "project_role": payload.project_role},
     )
     db.commit()
     return envelope(ProjectMemberRead.model_validate(member).model_dump(mode="json"))
@@ -237,7 +275,9 @@ def remove_project_member(
         permissions=principal.permissions,
         permission_needed="project.manage",
     )
-    projects_service.remove_member(db, project_id=project.id, user_id=user_id)
+    projects_service.remove_member(
+        db, project_id=project.id, user_id=user_id, actor_user_id=principal.user.id
+    )
     audit_service.record(
         db,
         actor_user_id=principal.user.id,

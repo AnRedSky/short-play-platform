@@ -1,5 +1,6 @@
 """Project data access: rows, membership scoping and listings."""
 
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -154,9 +155,80 @@ def member_role(db: Session, project_id: UUID, user_id: UUID) -> str | None:
 
 
 def add_member_row(
-    db: Session, *, project_id: UUID, user_id: UUID, project_role: str
+    db: Session,
+    *,
+    project_id: UUID,
+    user_id: UUID,
+    project_role: str,
+    granted_by: UUID | None = None,
+    granted_at: datetime | None = None,
 ) -> ProjectMember:
-    member = ProjectMember(project_id=project_id, user_id=user_id, project_role=project_role)
+    member = ProjectMember(
+        project_id=project_id,
+        user_id=user_id,
+        project_role=project_role,
+        granted_by=granted_by,
+        granted_at=granted_at,
+    )
     db.add(member)
     db.flush()
     return member
+
+
+def list_owned_projects(db: Session, *, organization_id: UUID, user_id: UUID) -> list[Project]:
+    return list(
+        db.scalars(
+            select(Project).where(
+                Project.organization_id == organization_id,
+                Project.owner_user_id == user_id,
+            )
+        ).all()
+    )
+
+
+def list_all_owned_projects_for_user(db: Session, user_id: UUID) -> list[Project]:
+    return list(
+        db.scalars(select(Project).where(Project.owner_user_id == user_id)).all()
+    )
+
+
+def list_authorizations_for_user(
+    db: Session, *, organization_id: UUID, user_id: UUID
+) -> list[tuple[ProjectMember, Project]]:
+    rows = db.execute(
+        select(ProjectMember, Project)
+        .join(Project, Project.id == ProjectMember.project_id)
+        .where(
+            Project.organization_id == organization_id,
+            ProjectMember.user_id == user_id,
+        )
+        .order_by(ProjectMember.created_at)
+    ).all()
+    return [(member, project) for member, project in rows]
+
+
+def list_active_memberships(
+    db: Session, *, organization_id: UUID, user_id: UUID
+) -> list[ProjectMember]:
+    return list(
+        db.scalars(
+            select(ProjectMember)
+            .join(Project, Project.id == ProjectMember.project_id)
+            .where(
+                Project.organization_id == organization_id,
+                ProjectMember.user_id == user_id,
+                ProjectMember.is_active.is_(True),
+            )
+        ).all()
+    )
+
+
+def list_all_active_memberships_for_user(db: Session, user_id: UUID) -> list[ProjectMember]:
+    return list(
+        db.scalars(
+            select(ProjectMember).where(
+                ProjectMember.user_id == user_id,
+                ProjectMember.is_active.is_(True),
+            )
+        ).all()
+    )

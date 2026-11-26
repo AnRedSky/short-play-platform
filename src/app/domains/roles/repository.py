@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from app.dependencies.pagination import PaginationParams
@@ -101,3 +101,44 @@ def permission_codes_of_user(
         ).all()
     )
     return frozenset(codes)
+
+
+def list_user_role_codes(db: Session, *, user_id: UUID, organization_id: UUID) -> list[str]:
+    return sorted(
+        db.scalars(
+            select(Role.code)
+            .join(UserRole, UserRole.role_id == Role.id)
+            .where(UserRole.user_id == user_id, Role.organization_id == organization_id)
+        ).all()
+    )
+
+
+def delete_user_role(db: Session, *, user_id: UUID, role_id: UUID) -> int:
+    result = db.execute(
+        delete(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id)
+    )
+    return int(result.rowcount or 0)
+
+
+def delete_user_roles_in_organization(
+    db: Session, *, user_id: UUID, organization_id: UUID
+) -> int:
+    role_ids = select(Role.id).where(Role.organization_id == organization_id)
+    result = db.execute(
+        delete(UserRole).where(UserRole.user_id == user_id, UserRole.role_id.in_(role_ids))
+    )
+    return int(result.rowcount or 0)
+
+
+def delete_all_user_roles(db: Session, user_id: UUID) -> int:
+    result = db.execute(delete(UserRole).where(UserRole.user_id == user_id))
+    return int(result.rowcount or 0)
+
+
+def deactivate_permission_grants(db: Session, user_id: UUID) -> int:
+    result = db.execute(
+        update(PermissionGrant)
+        .where(PermissionGrant.user_id == user_id, PermissionGrant.is_active.is_(True))
+        .values(is_active=False)
+    )
+    return int(result.rowcount or 0)

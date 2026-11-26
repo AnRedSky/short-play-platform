@@ -15,6 +15,7 @@ from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 from app.dependencies.db import get_db
+from app.domains.organizations import repository as organizations_repo
 from app.domains.roles.service import permission_codes_for_user
 from app.domains.users.models import User
 from app.domains.users.repository import get_user_by_id
@@ -64,6 +65,10 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
         except ValueError:
             organization_id = None
     request.state.organization_id = organization_id
+    if organization_id is not None and not organizations_repo.is_active_member(
+        db, organization_id, user.id
+    ):
+        raise authentication_required("Organization membership is no longer active")
     return user
 
 

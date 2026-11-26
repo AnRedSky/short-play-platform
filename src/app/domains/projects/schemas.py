@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -141,6 +142,19 @@ class ProjectMemberAdd(BaseModel):
         return value
 
 
+class ProjectMemberUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    project_role: str
+
+    @field_validator("project_role")
+    @classmethod
+    def _known_role(cls, value: str) -> str:
+        if value not in PROJECT_ROLES:
+            raise ValueError(f"project_role must be one of {PROJECT_ROLES}")
+        return value
+
+
 class ProjectMemberRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -149,3 +163,7 @@ class ProjectMemberRead(BaseModel):
     user_id: UUID
     project_role: str
     is_active: bool
+    granted_by: UUID | None = None
+    granted_at: datetime | None = None
+    revoked_by: UUID | None = None
+    revoked_at: datetime | None = None

@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth import Principal, require_permission
@@ -102,3 +102,30 @@ def assign_role(
     )
     db.commit()
     return envelope({"role_id": str(role.id), "user_id": str(payload.user_id)})
+
+
+@router.delete("/{role_id}/assignments/{user_id}", status_code=204)
+def unassign_role(
+    role_id: UUID,
+    user_id: UUID,
+    request: Request,
+    principal: Principal = Depends(require_permission("grant.manage")),
+    db: Session = Depends(get_db),
+) -> Response:
+    role = roles_service.unassign_role_from_user(
+        db,
+        role_id=role_id,
+        organization_id=principal.organization_id,
+        user_id=user_id,
+    )
+    audit_service.record(
+        db,
+        actor_user_id=principal.user.id,
+        action="role.unassigned",
+        resource_type="role",
+        resource_id=str(role.id),
+        request_id=getattr(request.state, "request_id", None),
+        details={"user_id": str(user_id), "role_code": role.code},
+    )
+    db.commit()
+    return Response(status_code=204)
