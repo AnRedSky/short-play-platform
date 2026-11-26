@@ -25,7 +25,7 @@
 | ID | 任务 | 关键内容 | 验收 |
 | --- | --- | --- | --- |
 | B-13 | 数据源切换收口（完成，本轮） | `video/contract.ts` 映射中文状态与 `ep/shot/kind → capability/parameters`；`projects/registry.ts` 缓存 `code → record_id`；任务号缓存回 UUID；页面不改 | 前端单测 21 passed；`check`/`test:e2e`/`check:size` 全绿；详见 `docs/04-api/WEB-SWITCH-CONTRACT.md` |
-| B-14 | 契约测试 | 对每个 service 函数做请求/响应快照测试，mock 与真实实现共用断言 | CI 中契约测试通过 |
+| B-14 | 契约测试（完成，本轮） | `service-contract.test.ts` 覆盖 13 个 service 模块 / 58 个函数；mock 与 real 分支共用请求与响应断言，结构快照落 `.snap`；后端新增 `test_service_surface_contract.py` 校验 real 分支依赖的路由 | 前端契约 2 passed（含通知 POST 回归）；后端 surface 1 passed；`npm run check` / `npm test` 全绿；详见 `docs/04-api/SERVICE-CONTRACT.md` |
 | B-15 | 迁移与种子数据 | 真实库初始化：部门、角色、权限、能力字典、供应商；演示项目可导入 | 空库可一键初始化并跑通闭环 |
 
 ## 三、顺序与依赖

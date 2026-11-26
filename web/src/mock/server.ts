@@ -694,7 +694,11 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: 'POST', pattern: /^\/scripts\/([^/]+)\/review$/, handler: ({ id, body }) => scriptReview(id, body) },
   { method: 'POST', pattern: /^\/generation\/tasks$/, handler: ({ body }) => createTask(body) },
   { method: 'POST', pattern: /^\/generation\/tasks\/([^/]+)\/(retry|cancel|pause)$/, handler: ({ id, parts }) => taskAction(id, parts[3] as 'retry' | 'cancel' | 'pause') },
-  { method: 'GET', pattern: /^\/generation\/tasks\/([^/]+)\/attempts$/, handler: ({ id }) => ok(rows('attempts').filter((row) => row.task === id)) },
+  { method: 'GET', pattern: /^\/generation\/tasks\/([^/]+)\/attempts$/, handler: ({ id }) => ok(rows('attempts').filter((row) => row.task === id).map((row, index) => ({
+    ...row,
+    n: row.n ?? row.attempt ?? index + 1,
+    fail: row.fail ?? row.reason ?? '—',
+  }))) },
   { method: 'POST', pattern: /^\/quality\/run$/, handler: ({ body }) => runQuality(body) },
   { method: 'POST', pattern: /^\/reviews\/([^/]+)\/recheck$/, handler: ({ id, body }) => {
     const issue = byId('qualityIssues', id)
@@ -704,7 +708,7 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   } },
   { method: 'POST', pattern: /^\/reviews$/, handler: ({ body }) => finalReview(body) },
   { method: 'POST', pattern: /^\/deliveries$/, handler: ({ body }) => delivery(body) },
-  { method: 'GET', pattern: /^\/notifications\/([^/]+)\/read$/, handler: ({ id }) => {
+  { method: 'POST', pattern: /^\/notifications\/([^/]+)\/read$/, handler: ({ id }) => {
     const row = byId('notifications', id)
     row.unread = false
     row.state = '已处理'

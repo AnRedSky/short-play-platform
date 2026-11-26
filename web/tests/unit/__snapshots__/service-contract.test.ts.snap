@@ -1,0 +1,551 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`B-14 service contract > runs every service function against mock and real with shared assertions > service shapes 1`] = `
+{
+  "access.identities": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "analytics.get": {
+    "kind": "object",
+  },
+  "assets.categories": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [],
+  },
+  "assets.create": {
+    "kind": "object",
+  },
+  "assets.list": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "creation.briefModes": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "creation.briefs": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "creation.createScript": {
+    "kind": "object",
+  },
+  "creation.reviewChecklist": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "creation.reviewScript": {
+    "kind": "object",
+  },
+  "creation.reviews": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "creation.scriptDiffs": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "creation.scripts": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "creation.updateBrief": {
+    "kind": "object",
+  },
+  "director.createTask": {
+    "kind": "object",
+  },
+  "director.shots": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "ops.config": {
+    "kind": "object",
+  },
+  "ops.overview": {
+    "kind": "object",
+  },
+  "orgs.departments": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "orgs.enterprise": {
+    "kind": "object",
+  },
+  "orgs.users": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "post.createDelivery": {
+    "kind": "object",
+  },
+  "post.createReview": {
+    "kind": "object",
+  },
+  "post.deliveries": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "post.deliveryChecklist": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "post.episodes": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "post.outputEpisode": {
+    "kind": "object",
+  },
+  "post.reviews": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "post.runQuality": {
+    "kind": "object",
+  },
+  "post.timelines": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "post.tracks": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "projects.create": {
+    "kind": "object",
+  },
+  "projects.departments": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "projects.list": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+      [
+        "name",
+        "string",
+      ],
+    ],
+  },
+  "projects.pipeline": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "projects.states": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "projects.summary": {
+    "kind": "object",
+  },
+  "projects.timeline": {
+    "kind": "array",
+    "row": [],
+  },
+  "projects.transition": {
+    "kind": "object",
+  },
+  "projects.update": {
+    "kind": "object",
+  },
+  "projects.users": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "projects.workflow": {
+    "kind": "object",
+  },
+  "quality.issues": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "quality.levels": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "quality.reports": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "quality.run": {
+    "kind": "object",
+  },
+  "spec.list": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+  "video.attempts": {
+    "kind": "array",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+      [
+        "n",
+        "number",
+      ],
+      [
+        "status",
+        "string",
+      ],
+      [
+        "fail",
+        "string",
+      ],
+    ],
+  },
+  "video.cancel": {
+    "kind": "object",
+  },
+  "video.createTask": {
+    "kind": "object",
+  },
+  "video.retry": {
+    "kind": "object",
+  },
+  "video.tasks": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+      [
+        "status",
+        "string",
+      ],
+      [
+        "kind",
+        "string",
+      ],
+    ],
+  },
+  "video.updateTask": {
+    "kind": "object",
+  },
+  "workspace.costSummary": {
+    "kind": "object",
+  },
+  "workspace.createTask": {
+    "kind": "object",
+  },
+  "workspace.home": {
+    "kind": "object",
+  },
+  "workspace.notifications": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
+}
+`;
