@@ -25,6 +25,8 @@ class TaskAttemptRead(BaseModel):
     provider_task_id: str | None
     error_code: str | None
     duration_ms: int | None
+    started_at: datetime | None
+    finished_at: datetime | None
 
 
 class GenerationTaskRead(BaseModel):
@@ -37,6 +39,7 @@ class GenerationTaskRead(BaseModel):
     model_code: str
     status: str
     idempotency_key: str
+    request_payload: dict
     result_payload: dict
     error_code: str | None
     error_message: str | None
@@ -46,6 +49,7 @@ class GenerationTaskRead(BaseModel):
     lease_expires_at: datetime | None
     paused_at: datetime | None
     finished_at: datetime | None
+    created_at: datetime
 
 
 class GenerationTaskDetailRead(GenerationTaskRead):

@@ -12,8 +12,8 @@
 | B-04 | 剧本与审核（完成 `85b095e`） | 审核记录 + 剧本状态 + 项目状态迁移 + 审计同事务，版本唯一键禁止二次审核 | `tests/domains/creation/test_script_review.py` 3 条通过 |
 | B-05 | 生成任务与队列（完成，本轮） | 入队/派发/退避重试/暂停恢复/取消/供应商回调/租约回收；`(task_id, callback_id)` 幂等；迁移 `0011` | 生成域 16 passed；乱序与重复回调不双写；详见 `docs/04-api/GENERATION-QUEUE.md` |
 | B-05a | 项目设定持久化（完成，本轮） | PATCH 落库 `genre/audience/episodes/duration/ratio/language/style/constraints/budget`，未知字段 422 | `test_project_dto.py` 校验 PATCH 后重新读取仍保留全部 brief |
-| B-06 | 成本与预算 | 每次调用记账（含失败成本）、预算阈值、超限策略、对账状态；金额用 decimal | 台账与调用记录可逐条对上 |
-| B-07 | 质检 | 规则集、单集/整剧级、报告与问题项、阻断项回退映射 | 阻断项必触发退回后期 |
+| B-06 | 成本与预算（完成，本轮） | `usage_records` 唯一台账：attempt 唯一键、成功/失败/回收均记账；预算 85% 预警 / 100% 拦截；`actual/estimated` 回写项目 DTO；迁移 `0012` | 成本域 5 passed；台账与每次 attempt 逐条对应；详见 `docs/04-api/COST-BUDGET.md` |
+| B-07 | 质检（完成，本轮） | 4 层 16 条规则；单集/整剧级报告；FAIL 阻断同事务触发 `failQc` 回退后期；迁移 `0013` | 质检域 6 passed；阻断项必触发退回后期；详见 `docs/04-api/QUALITY-REPORTS.md` |
 | B-08 | 后期与交付 | 时间线版本、分集输出、终审、交付包冻结与校验和 | 交付后版本不可覆盖 |
 | B-09 | 资产与存储 | 对象存储直传、版本、校验和、授权标记、引用计数 | 资产登记→质检→正式版闭环 |
 | B-10 | 组织与授权 | 部门、成员、项目授权、离职交接与回收；授权即时生效 | 停用账号同步回收授权 |
@@ -24,7 +24,7 @@
 
 | ID | 任务 | 关键内容 | 验收 |
 | --- | --- | --- | --- |
-| B-13 | 数据源开关 | `VITE_DATA_MODE=api` 时 service 走真实 HTTP；mock 保留给演示与 E2E | 同一页面两种模式行为一致 |
+| B-13 | 数据源切换收口（完成，本轮） | `video/contract.ts` 映射中文状态与 `ep/shot/kind → capability/parameters`；`projects/registry.ts` 缓存 `code → record_id`；任务号缓存回 UUID；页面不改 | 前端单测 21 passed；`check`/`test:e2e`/`check:size` 全绿；详见 `docs/04-api/WEB-SWITCH-CONTRACT.md` |
 | B-14 | 契约测试 | 对每个 service 函数做请求/响应快照测试，mock 与真实实现共用断言 | CI 中契约测试通过 |
 | B-15 | 迁移与种子数据 | 真实库初始化：部门、角色、权限、能力字典、供应商；演示项目可导入 | 空库可一键初始化并跑通闭环 |
 

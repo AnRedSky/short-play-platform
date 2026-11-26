@@ -112,6 +112,19 @@ def count_projects(
     return int(db.scalar(count_query) or 0)
 
 
+def list_accessible_project_ids(
+    db: Session, organization_id: UUID, *, user_id: UUID, manage: bool
+) -> list[UUID]:
+    """Project ids the principal may read, reused by cross-project ledgers."""
+    query = select(Project.id).where(Project.organization_id == organization_id)
+    if not manage:
+        query = query.join(ProjectMember, ProjectMember.project_id == Project.id).where(
+            ProjectMember.user_id == user_id,
+            ProjectMember.is_active.is_(True),
+        )
+    return list(db.scalars(query).all())
+
+
 def list_members(db: Session, project_id: UUID) -> list[ProjectMember]:
     return list(
         db.scalars(

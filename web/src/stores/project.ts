@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { http } from '../api/client'
 import type { Row } from '../mock/db'
+import { projectApi } from '../services/projects'
 
 const STORAGE_KEY = 'sp_studio_project'
 
@@ -16,7 +16,7 @@ export const useProjectStore = defineStore('project', () => {
   async function load() {
     loading.value = true
     try {
-      const result = await http.list<Row>('/projects', { limit: 100 })
+      const result = await projectApi.list({ limit: 100 })
       projects.value = result.rows
       if (!projects.value.some((row) => row.id === currentId.value) && projects.value[0]) {
         select(String(projects.value[0].id))

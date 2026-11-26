@@ -87,7 +87,9 @@ class Settings(BaseSettings):
     api_port: int = Field(default=8000, validation_alias="API_PORT")
     api_v1_prefix: str = Field(default="/api/v1", validation_alias="API_V1_PREFIX")
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
-    public_base_url: str = Field(default="http://localhost:8000", validation_alias="PUBLIC_BASE_URL")
+    public_base_url: str = Field(
+        default="http://localhost:8000", validation_alias="PUBLIC_BASE_URL"
+    )
 
     # Infrastructure
     database_url: str = Field(
@@ -112,8 +114,12 @@ class Settings(BaseSettings):
     # First-run administrator provisioning. Disabled in code by default; the
     # checked-in development template opts in with explicitly documented local
     # credentials. Production must opt in and supply its own credentials.
-    bootstrap_admin_enabled: bool = Field(default=False, validation_alias="BOOTSTRAP_ADMIN_ENABLED")
-    bootstrap_admin_email: str = Field(default="admin@localhost", validation_alias="BOOTSTRAP_ADMIN_EMAIL")
+    bootstrap_admin_enabled: bool = Field(
+        default=False, validation_alias="BOOTSTRAP_ADMIN_ENABLED"
+    )
+    bootstrap_admin_email: str = Field(
+        default="admin@localhost", validation_alias="BOOTSTRAP_ADMIN_EMAIL"
+    )
     bootstrap_admin_password: str = Field(default="", validation_alias="BOOTSTRAP_ADMIN_PASSWORD")
     bootstrap_admin_full_name: str = Field(
         default="Platform Administrator", validation_alias="BOOTSTRAP_ADMIN_FULL_NAME"

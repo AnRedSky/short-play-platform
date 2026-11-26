@@ -34,12 +34,20 @@ export const http = {
       page_size: Number(meta.page_size ?? envelope.data?.length ?? 0),
     }
   },
-  async post<T>(path: string, body: unknown = {}): Promise<T> {
-    const envelope = await apiRequest<ApiEnvelope<T>>(path, { method: 'POST', body: JSON.stringify(body) })
+  async post<T>(path: string, body: unknown = {}, headers?: Record<string, string>): Promise<T> {
+    const envelope = await apiRequest<ApiEnvelope<T>>(path, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers,
+    })
     return envelope.data
   },
-  async patch<T>(path: string, body: unknown = {}): Promise<T> {
-    const envelope = await apiRequest<ApiEnvelope<T>>(path, { method: 'PATCH', body: JSON.stringify(body) })
+  async patch<T>(path: string, body: unknown = {}, headers?: Record<string, string>): Promise<T> {
+    const envelope = await apiRequest<ApiEnvelope<T>>(path, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+      headers,
+    })
     return envelope.data
   },
   async del<T>(path: string): Promise<T> {

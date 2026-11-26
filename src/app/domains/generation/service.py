@@ -12,6 +12,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.domains.costs import service as cost_service
 from app.domains.creation import service as creation_service
 from app.domains.generation import repository as generation_repo
 from app.domains.generation.constants import (
@@ -22,6 +23,7 @@ from app.domains.generation.constants import (
 )
 from app.domains.generation.models import GenerationTask, TaskAttempt
 from app.domains.generation.schemas import GenerationTaskRead, ProviderCallback
+from app.domains.projects.models import Project
 from app.infrastructure.providers.base import (
     Capability,
     GenerationRequest,
@@ -101,6 +103,11 @@ def create_task(
     if existing is not None:
         return existing, False
 
+    project = db.get(Project, project_id)
+    if project is None:
+        raise not_found("Project not found")
+    cost_service.assert_budget_available(db, project)
+
     payload: dict = {"prompt": prompt, "parameters": parameters}
     if shot_id is not None:
         creation_service.get_shot_or_404(db, shot_id)
@@ -146,6 +153,15 @@ def _record_success(
     task.lease_expires_at = None
     task.next_run_at = None
 
+    cost_service.record_attempt_usage(
+        db,
+        task=task,
+        attempt=attempt,
+        failure=False,
+        usage=result.usage,
+        source="provider",
+    )
+
     if task.status == "cancel_requested":
         task.status = "cancelled"
         task.finished_at = finished_at
@@ -156,16 +172,6 @@ def _record_success(
     task.error_code = None
     task.error_message = None
     task.finished_at = finished_at
-    usage = result.usage or {}
-    generation_repo.add_usage_row(
-        db,
-        task_id=task.id,
-        provider_code=task.provider_code,
-        model_code=task.model_code,
-        unit=str(usage.get("unit", "call")),
-        quantity=int(usage.get("quantity", 1)),
-        source=str(usage.get("source", "provider")),
-    )
 
 
 def _record_failure(
@@ -177,6 +183,7 @@ def _record_failure(
     message: str,
     retryable: bool,
     finished_at: datetime,
+    usage: dict | None = None,
 ) -> None:
     attempt.status = "failed"
     attempt.error_code = code
@@ -186,6 +193,15 @@ def _record_failure(
     task.error_message = message
     task.lease_expires_at = None
     task.next_run_at = None
+
+    cost_service.record_attempt_usage(
+        db,
+        task=task,
+        attempt=attempt,
+        failure=True,
+        usage=usage,
+        source="provider",
+    )
 
     if task.status == "cancel_requested":
         task.status = "cancelled"
@@ -236,6 +252,7 @@ def _run_claimed(
             message=(provider_error.message if provider_error else "Provider call failed"),
             retryable=bool(provider_error.retryable) if provider_error else True,
             finished_at=finished_at,
+            usage=result.usage,
         )
     db.flush()
     return task
@@ -388,6 +405,14 @@ def recover_expired_tasks(db: Session, *, limit: int = 20) -> list[GenerationTas
             attempt.error_code = ErrorCode.PROVIDER_TIMEOUT
             attempt.finished_at = now
             attempt.duration_ms = _attempt_duration(attempt, now)
+            cost_service.record_attempt_usage(
+                db,
+                task=task,
+                attempt=attempt,
+                failure=True,
+                usage=None,
+                source="provider",
+            )
         task.attempt_count = max(task.attempt_count, attempt.attempt_number if attempt else 0)
         task.error_code = ErrorCode.PROVIDER_TIMEOUT
         task.error_message = "Worker lease expired before a provider callback"
@@ -573,6 +598,7 @@ def handle_provider_callback(
             message=error.message if error else "Provider call failed",
             retryable=bool(error.retryable) if error else False,
             finished_at=occurred_at,
+            usage=payload.usage,
         )
     outcome = _record_callback(db, task, payload, occurred_at=occurred_at, applied=True, reason="")
     outcome["duplicate"] = False
