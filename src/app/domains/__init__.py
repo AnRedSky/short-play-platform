@@ -14,6 +14,7 @@ from app.domains.audit import models as audit_models  # noqa: F401
 from app.domains.auth import models as auth_models  # noqa: F401
 from app.domains.costs import models as costs_models  # noqa: F401
 from app.domains.creation import models as creation_models  # noqa: F401
+from app.domains.delivery import models as delivery_models  # noqa: F401
 from app.domains.generation import models as generation_models  # noqa: F401
 from app.domains.organizations import models as organizations_models  # noqa: F401
 from app.domains.projects import models as projects_models  # noqa: F401
@@ -28,6 +29,7 @@ MODEL_MODULES = (
     auth_models,
     costs_models,
     creation_models,
+    delivery_models,
     generation_models,
     organizations_models,
     projects_models,

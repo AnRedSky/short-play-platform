@@ -14,7 +14,7 @@
 | B-05a | 项目设定持久化（完成，本轮） | PATCH 落库 `genre/audience/episodes/duration/ratio/language/style/constraints/budget`，未知字段 422 | `test_project_dto.py` 校验 PATCH 后重新读取仍保留全部 brief |
 | B-06 | 成本与预算（完成，本轮） | `usage_records` 唯一台账：attempt 唯一键、成功/失败/回收均记账；预算 85% 预警 / 100% 拦截；`actual/estimated` 回写项目 DTO；迁移 `0012` | 成本域 5 passed；台账与每次 attempt 逐条对应；详见 `docs/04-api/COST-BUDGET.md` |
 | B-07 | 质检（完成，本轮） | 4 层 16 条规则；单集/整剧级报告；FAIL 阻断同事务触发 `failQc` 回退后期；迁移 `0013` | 质检域 6 passed；阻断项必触发退回后期；详见 `docs/04-api/QUALITY-REPORTS.md` |
-| B-08 | 后期与交付 | 时间线版本、分集输出、终审、交付包冻结与校验和 | 交付后版本不可覆盖 |
+| B-08 | 后期与交付（完成，本轮） | 时间线版本冻结、分集成片引用冻结版本、终审与项目迁移同事务、确定性 ZIP 交付包与 sha256 校验；迁移 `0014` | 交付域 6 passed；交付后版本不可覆盖；详见 `docs/04-api/POST-DELIVERY.md` |
 | B-09 | 资产与存储 | 对象存储直传、版本、校验和、授权标记、引用计数 | 资产登记→质检→正式版闭环 |
 | B-10 | 组织与授权 | 部门、成员、项目授权、离职交接与回收；授权即时生效 | 停用账号同步回收授权 |
 | B-11 | 通知与审计 | 通知 link 跳转、已读状态、同对象合并；审计只追加不可改 | 每条通知可定位处理页 |

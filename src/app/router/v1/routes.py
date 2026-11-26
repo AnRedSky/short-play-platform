@@ -7,6 +7,7 @@ from app.domains.audit.router import router as audit_router
 from app.domains.auth.router import router as auth_router
 from app.domains.costs.router import router as costs_router
 from app.domains.creation.router import router as creation_router
+from app.domains.delivery.router import router as delivery_router
 from app.domains.generation.router import router as generation_router
 from app.domains.health.router import router as health_router
 from app.domains.organizations.router import router as organizations_router
@@ -29,6 +30,7 @@ for domain_router in (
     generation_router,
     costs_router,
     quality_router,
+    delivery_router,
     workflow_router,
     assets_router,
     audit_router,
