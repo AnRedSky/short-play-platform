@@ -4,6 +4,7 @@
  */
 import seedJson from './seed.json'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock 行是无 schema 的异构 JSON
 export type Row = Record<string, any>
 export type Rows = Record<string, Row[]>
 
@@ -13,8 +14,8 @@ type Persisted = { entities: Rows; identityId: string; rev: number }
 
 const seed = seedJson as unknown as {
   entities: Rows
-  dicts: Record<string, any>
-  meta: Record<string, any>
+  dicts: Record<string, Row>
+  meta: { generatedAt: string; source: string; version: string }
 }
 
 function clone<T>(value: T): T {

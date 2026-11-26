@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import menuData from '../../mock/menu.json'
 import routesMeta from '../../mock/routes.json'
@@ -84,6 +84,7 @@ import { isMockMode } from '../../api'
 import { useSessionStore } from '../../stores/session'
 import { useProjectStore } from '../../stores/project'
 import { useUiStore } from '../../stores/ui'
+import type { Row } from '../../mock/db'
 import DialogHost from '../ui/DialogHost.vue'
 
 const session = useSessionStore()
@@ -94,12 +95,16 @@ const router = useRouter()
 const unread = ref(0)
 const isMock = isMockMode
 
-const menu = (menuData as { menu: any[] }).menu
+interface MenuEntry { id?: string; path: string; label?: string; hidden?: boolean; perm?: string }
+interface MenuSection { id?: string; label?: string; items: MenuEntry[] }
+interface MenuGroup { id?: string; label?: string; children: MenuSection[] }
+
+const menu = (menuData as { menu: MenuGroup[] }).menu
 const meta = routesMeta as Array<{ group: string; path: string; title: string }>
 
 const currentTitle = computed(() => meta.find((item) => `/${item.path}` === route.path)?.title ?? '')
 const currentGroup = computed(() => {
-  const group = menu.find((item: any) => item.children.some((sub: any) => sub.items.some((entry: any) => `/${entry.path}` === route.path)))
+  const group = menu.find((item) => item.children.some((sub) => sub.items.some((entry) => `/${entry.path}` === route.path)))
   return group?.label ?? '短剧制作'
 })
 
@@ -132,13 +137,27 @@ async function resetMock() {
 }
 
 async function loadUnread() {
-  const result = await http.list('/notifications', { limit: 100 })
-  unread.value = result.rows.filter((row: any) => row.unread).length
+  const result = await http.list<Row>('/notifications', { limit: 100 })
+  unread.value = result.rows.filter((row) => row.unread).length
 }
 
+function onUnhandledRejection(event: PromiseRejectionEvent) {
+  const reason = event.reason
+  const message = reason instanceof Error ? reason.message : String(reason ?? '未知错误')
+  ui.toast(`操作失败 · ${message}`, 'bad')
+}
+
+let unreadTimer: number | undefined
+
 onMounted(async () => {
+  window.addEventListener('unhandledrejection', onUnhandledRejection)
   if (!session.ready) await session.login()
   await Promise.all([session.loadIdentities(), project.load(), loadUnread()])
-  window.setInterval(loadUnread, 20000)
+  unreadTimer = window.setInterval(loadUnread, 20000)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('unhandledrejection', onUnhandledRejection)
+  if (unreadTimer) window.clearInterval(unreadTimer)
 })
 </script>

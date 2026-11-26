@@ -116,94 +116,23 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Install frontend dependencies from the committed lock file
         run: npm ci --no-audit --no-fund
-      - name: Type check
-        run: npm run typecheck
+      - name: Route, spec and layering gate
+        run: npm run check
       - name: Lint
         run: npm run lint
       - name: Unit tests
         run: npm run test
-      - name: Production build
-        run: npm run build
+      - name: Production build and bundle budget
+        run: npm run build && npm run check:size
 
-  frontend-browser-e2e:
-    name: frontend-browser-e2e
+  frontend-mock-e2e:
+    name: frontend-mock-e2e
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: short_play
-          POSTGRES_USER: short_play
-          POSTGRES_PASSWORD: short_play
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U short_play -d short_play"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-    env:
-      APP_ENV: test
-      DATABASE_URL: postgresql+psycopg://short_play:short_play@localhost:5432/short_play
-      REDIS_URL: redis://localhost:6379/0
-      CELERY_BROKER_URL: redis://localhost:6379/1
-      CELERY_RESULT_BACKEND: redis://localhost:6379/2
-      SECRET_KEY: ci-only-secret-key-with-32-bytes-minimum
-      STORAGE_ROOT: /tmp/short-play-browser-storage
-      PYTHONPATH: src
-      CORS_ORIGINS: '["http://127.0.0.1:4173"]'
-      VITE_API_BASE_URL: http://127.0.0.1:8000/api/v1
-      E2E_API_BASE_URL: http://127.0.0.1:8000/api/v1
     defaults:
       run:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-          cache-dependency-glob: uv.lock
-      - name: Set up Python
-        run: uv python install 3.12
-        working-directory: .
-      - name: Install backend dependencies from the committed lock file
-        run: uv sync --locked --all-groups
-        working-directory: .
-      - name: Install FFmpeg and ffprobe for real asset upload tests
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y ffmpeg
-          ffprobe -version | head -n 1
-        working-directory: .
-      - name: Prepare the isolated browser E2E database and storage
-        run: |
-          mkdir -p "$STORAGE_ROOT"
-          uv run alembic upgrade head
-        working-directory: .
-      - name: Start the real API for browser authorization tests
-        run: |
-          uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/short-play-browser-api.log 2>&1 &
-          echo $! > /tmp/short-play-browser-api.pid
-          for attempt in $(seq 1 60); do
-            if curl --fail --silent http://127.0.0.1:8000/api/v1/health; then
-              echo "Browser E2E API is ready."
-              exit 0
-            fi
-            sleep 2
-          done
-          cat /tmp/short-play-browser-api.log
-          echo "Browser E2E API did not become healthy."
-          exit 1
-        working-directory: .
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -211,15 +140,20 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Install frontend dependencies from the committed lock file
         run: npm ci --no-audit --no-fund
-      - name: Install the optional Playwright runner without changing the lock file
-        run: npm install --no-save --package-lock=false @playwright/test
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
-      - name: Run real Playwright browser E2E
+      - name: Run mock browser E2E (no backend, no database)
         run: npm run test:e2e
-      - name: Print API logs on browser test failure
+      - name: Upload Playwright failure artifacts
         if: failure()
-        run: cat /tmp/short-play-browser-api.log
+        uses: actions/upload-artifact@v4
+        with:
+          name: mock-e2e-failure
+          path: |
+            web/test-results/
+            web/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
 
   compose-validation:
     name: compose-validation

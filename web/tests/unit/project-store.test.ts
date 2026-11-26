@@ -2,58 +2,41 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useProjectStore } from '../../src/stores/project'
 
+function memoryStorage(): Storage {
+  const values = new Map<string, string>()
+  return {
+    get length() {
+      return values.size
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
+    removeItem: (key) => void values.delete(key),
+    setItem: (key, value) => void values.set(key, value),
+  }
+}
+
 describe('project context store', () => {
   beforeEach(() => {
+    vi.stubGlobal('localStorage', memoryStorage())
     setActivePinia(createPinia())
   })
 
-  it('starts without an active project', () => {
+  it('starts from the default project when storage is empty', () => {
     const store = useProjectStore()
-    expect(store.currentProjectId).toBeNull()
+    expect(store.currentId).toBe('SP-26031')
   })
 
-  it('sets and clears the active project context', () => {
+  it('selects a project and persists the choice', () => {
     const store = useProjectStore()
-    store.setCurrentProject('project-123')
-    expect(store.currentProjectId).toBe('project-123')
-
-    store.clearCurrentProject()
-    expect(store.currentProjectId).toBeNull()
+    store.select('SP-26028')
+    expect(store.currentId).toBe('SP-26028')
+    expect(localStorage.getItem('sp_studio_project')).toBe('SP-26028')
   })
 
-  it('aborts in-flight requests and invalidates stale responses on project switch', () => {
-    const store = useProjectStore()
-    store.setCurrentProject('project-a')
-    const request = store.createRequestContext()
-    const previousVersion = store.contextVersion
-
-    store.setCurrentProject('project-b')
-
-    expect(request.signal.aborted).toBe(true)
-    expect(request.isCurrent()).toBe(false)
-    expect(store.contextVersion).toBe(previousVersion + 1)
-    request.release()
-  })
-
-  it('runs and clears registered project-scoped subscriptions on switch', () => {
-    const store = useProjectStore()
-    const unsubscribe = vi.fn()
-    store.setCurrentProject('project-a')
-    store.registerCleanup(unsubscribe)
-
-    store.setCurrentProject('project-b')
-
-    expect(unsubscribe).toHaveBeenCalledOnce()
-  })
-
-  it('does not invalidate requests when the same project is selected again', () => {
-    const store = useProjectStore()
-    store.setCurrentProject('project-a')
-    const request = store.createRequestContext()
-
-    store.setCurrentProject('project-a')
-
-    expect(request.signal.aborted).toBe(false)
-    expect(request.isCurrent()).toBe(true)
+  it('restores the persisted project on the next store instance', () => {
+    localStorage.setItem('sp_studio_project', 'SP-26019')
+    setActivePinia(createPinia())
+    expect(useProjectStore().currentId).toBe('SP-26019')
   })
 })

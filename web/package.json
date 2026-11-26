@@ -11,6 +11,7 @@
     "check:specs": "node scripts/check-specs.mjs",
     "check:layering": "node scripts/check-layering.mjs",
     "check": "npm run typecheck && node scripts/check-routes.mjs && node scripts/check-specs.mjs && node scripts/check-layering.mjs",
+    "check:size": "node scripts/check-bundle-size.mjs",
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "npm run build && node scripts/run-e2e.mjs"

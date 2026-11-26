@@ -2,7 +2,7 @@
  * Mock API 服务：与真实后端同构的 REST 契约（/api/v1）。
  * 前端只调 api 层；VITE_DATA_MODE=mock 时请求进入这里，切到 real 时同一份代码改用后端。
  */
-import { nextId, now, store, today, type Row } from './db'
+import { nextId, now, store, type Row } from './db'
 import { GATE_ACTIONS, allowedActions, permissionsOf, progressOf, stageChain } from './state'
 
 export interface Envelope<T = unknown> {
@@ -486,7 +486,6 @@ function workspaceHome(): Envelope {
   const notifications = rows('notifications')
   const active = projects.filter((row) => !['已交付', '已归档', '已终止', '草稿'].includes(row.status))
   const running = tasks.filter((row) => ['执行中', '排队中'].includes(row.status))
-  const blocked = projects.filter((row) => ['异常中', '已暂停'].includes(row.status))
   return ok({
     identity: currentIdentity(),
     permissions: currentPermissions(),

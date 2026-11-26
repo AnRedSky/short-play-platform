@@ -6,9 +6,9 @@ export const projectApi = {
   list: (params: Record<string, unknown> = { limit: 100 }) => http.list<Row>('/projects', params),
   create: (payload: Record<string, unknown>) => http.post<Row>('/projects', payload),
   update: (id: string, patch: Record<string, unknown>) => http.patch(`/projects/${id}`, patch),
-  summary: (id: string) => http.get<Record<string, any>>(`/projects/${id}/summary`),
-  workflow: (id: string) => http.get<Record<string, any>>(`/projects/${id}/workflow`),
-  timeline: (id: string) => http.get<any[]>(`/projects/${id}/timeline`),
+  summary: (id: string) => http.get<Row>(`/projects/${id}/summary`),
+  workflow: (id: string) => http.get<Row>(`/projects/${id}/workflow`),
+  timeline: (id: string) => http.get<Row[]>(`/projects/${id}/timeline`),
   transition: (id: string, action: string, reason?: string) =>
     http.post(`/projects/${id}/transitions`, reason ? { action, reason } : { action }),
   states: () => http.list<Row>('/project-states'),

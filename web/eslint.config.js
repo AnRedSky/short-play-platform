@@ -25,4 +25,10 @@ export default [
     files: ['**/*.ts', '**/*.vue'],
     rules: { 'vue/multi-word-component-names': 'off' },
   },
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: { process: 'readonly', console: 'readonly', URL: 'readonly', fetch: 'readonly' },
+    },
+  },
 ]

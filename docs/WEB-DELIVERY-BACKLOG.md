@@ -22,12 +22,12 @@
 | P-01 | 跳转/弹窗规范落地：跨页用路由、查看/编辑用抽屉、不可逆用 confirm | 完成（本轮） | 24 页核对完毕；`window.prompt` 清零，终止/交付/归档为危险确认 |
 | P-02 | SpecPage 规格页瘦身：同构页按域合并，目标 ≤15 条 | 完成（本轮） | 33 条规格归为 13 个域组，组内标签切换，56 路由覆盖不变 |
 | P-03 | 域内 composables 抽取（项目范围、权限、列表筛选） | 完成（本轮） | 3 个共享 composable：useProjectScope / usePermission / useTableQuery，3 个页面已接入 |
-| P-04 | 交互文案与空态统一（按钮主次、空态、危险色） | 待开始 | 设计走查清单全通过 |
+| P-04 | 交互文案与空态统一（按钮主次、空态、危险色） | 完成（本轮） | 24 页走查完成，清单见 `docs/PAGE-CONTENT-AUDIT.md`；16 处裸空态收敛到 EmptyState；交付/终止/归档/退回/取消为危险确认 |
 | F-01 | 全流程 E2E：立项→创意→剧本→镜头→生产→后期→质检→交付 | 完成（本轮） | 新建项目从三步表单走完 10 个关卡至交付；存量项目后期→质检→终审→交付闭环；`npm run test:e2e` 退出码 0 |
 | F-02 | 权限矩阵快照测试：各身份可访问路由 | 完成（本轮） | 6 身份 × 56 路由快照生成并可回归；owner 41、staff 35、admin 31、dept 24、auditor 21、ops 6 |
 | F-03 | mock 契约字段映射草案（为将来真实 API 预留） | 待开始 | 文档列出字段差异与适配点，不改代码 |
-| Q-01 | CI 接入 `npm run check` + 构建 + E2E | 待开始 | PR/推送自动执行并阻断失败 |
-| Q-02 | 性能预算：主包 ≤450KB，SpecPage 独立 chunk | 待开始 | 构建报告达标（当前 469.41KB / gzip 99.00KB） |
+| Q-01 | CI 接入 `npm run check` + 构建 + E2E | 完成（本轮） | `frontend-quality` 串联 check/lint/test/build/check:size；mock E2E 与真实 API 验收拆为独立 job；ESLint 51 errors → 0 |
+| Q-02 | 性能预算：主包 ≤450KB，SpecPage 独立 chunk | 完成（本轮） | 入口包 469.51KB → 22.72KB；vendor-vue 102.89KB、mock 343.92KB 独立；`npm run check:size` 在 CI 阻断超预算 |
 
 ## 三、推进顺序
 

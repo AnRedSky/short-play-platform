@@ -15,6 +15,23 @@ export default defineConfig(({ mode }) => {
       // Development proxies to the local API so the browser talks to one origin.
       proxy: { '/api': { target: proxyTarget, changeOrigin: true } },
     },
-    build: { outDir: 'dist', sourcemap: false },
+    build: {
+      outDir: 'dist',
+      sourcemap: false,
+      manifest: true,
+      rollupOptions: {
+        output: {
+          // 首屏只需要框架与 mock 适配层；页面靠 import.meta.glob 按路由懒加载。
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('/vue/') || id.includes('vue-router') || id.includes('pinia') || id.includes('@vue/')) return 'vendor-vue'
+              return undefined
+            }
+            if (id.includes('/src/mock/')) return 'mock'
+            return undefined
+          },
+        },
+      },
+    },
   }
 })
