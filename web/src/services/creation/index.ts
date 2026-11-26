@@ -5,6 +5,7 @@ import type { Row } from '../../mock/db'
 export const creationApi = {
   briefs: (project: string) => http.list<Row>('/briefs', { project }),
   briefModes: () => http.list<Row>('/brief-modes'),
+  creativePlans: (project: string) => http.list<Row>('/creative-plans', { project }),
   updateBrief: (id: string, payload: Record<string, unknown>) => http.patch(`/briefs/${id}`, payload),
   scripts: (project: string) => http.list<Row>('/scripts', { project }),
   scriptDiffs: () => http.list<Row>('/script-diffs'),

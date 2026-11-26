@@ -81,6 +81,21 @@ exports[`B-14 service contract > runs every service function against mock and re
   "creation.createScript": {
     "kind": "object",
   },
+  "creation.creativePlans": {
+    "envelope": [
+      "rows",
+      "total",
+      "page",
+      "page_size",
+    ],
+    "kind": "page",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+    ],
+  },
   "creation.reviewChecklist": {
     "envelope": [
       "rows",

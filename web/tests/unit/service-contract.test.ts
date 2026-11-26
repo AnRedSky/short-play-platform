@@ -120,6 +120,14 @@ const specs: ContractSpec[] = [
     rowKeys: ['id'],
   },
   {
+    name: 'creation.creativePlans',
+    invoke: (s) => s.creation.creativePlans(PROJECT_CODE),
+    mock: request('GET', `/creative-plans?project=${PROJECT_CODE}`),
+    real: request('GET', `/creative-plans?project=${PROJECT_CODE}`),
+    kind: 'page',
+    rowKeys: ['id'],
+  },
+  {
     name: 'creation.updateBrief',
     invoke: (s) => s.creation.updateBrief('CB-26031-03', { note: 'contract' }),
     mock: request('PATCH', '/briefs/CB-26031-03'),

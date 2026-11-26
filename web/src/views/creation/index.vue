@@ -120,6 +120,7 @@ const ui = useUiStore()
 
 const versions = ref<Row[]>([])
 const modes = ref<Row[]>([])
+const plans = ref<Row[]>([])
 const current = ref<Row | null>(null)
 const message = ref('')
 const briefPanel = useRoutePanel('creation-brief')
@@ -128,11 +129,13 @@ const briefPanelOpen = briefPanel.isOpen
 const form = reactive({ genre: '', audience: '', style: '', episodes: '', constraints: '', note: '' })
 
 const activeBrief = computed(() => versions.value.find((row) => String(row.id) === briefPanel.activeId.value) ?? null)
+const chosenPlans = computed(() => plans.value.filter((row) => Boolean(row.chosen)))
 const missingInputs = computed(() => {
   const missing: string[] = []
   if (!form.note.trim()) missing.push('创意说明')
   if (!form.constraints.trim()) missing.push('内容约束')
   if (!form.audience.trim() || !form.style.trim()) missing.push('受众与风格')
+  if (chosenPlans.value.length !== 1) missing.push('唯一已选方案')
   return missing
 })
 const canConfirm = computed(() => session.can('creation.write') && projectStore.current?.status === '创意策划中')
@@ -152,12 +155,14 @@ function applyActiveBrief() {
 }
 
 async function load() {
-  const [briefs, modeRows] = await Promise.all([
+  const [briefs, modeRows, planRows] = await Promise.all([
     creationApi.briefs(projectStore.currentId),
     creationApi.briefModes(),
+    creationApi.creativePlans(projectStore.currentId),
   ])
   versions.value = briefs.rows
   modes.value = modeRows.rows
+  plans.value = planRows.rows
   current.value = briefs.rows[0] ?? null
   form.note = String(briefs.rows[0]?.note ?? '')
   const project = projectStore.current
