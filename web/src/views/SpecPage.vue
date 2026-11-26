@@ -49,7 +49,7 @@
         >
           <template v-if="spec.rowActions || rowPanel" #actions="{ row }">
             <button v-if="rowPanel" type="button" class="link-btn" @click="openRow(row)">详情</button>
-            <button v-for="action in (spec.rowActions?.(row) || [])" :key="action.label" class="link-btn" :class="{ danger: action.danger }" @click="run(action)">
+            <button v-for="action in visibleRowActions(row)" :key="action.label" class="link-btn" :class="{ danger: action.danger }" @click="run(action)">
               {{ action.label }}
             </button>
           </template>
@@ -147,6 +147,10 @@ function openRow(row: Row) {
     return
   }
   spec.value.rowClick?.(row, ctx)
+}
+
+function visibleRowActions(row: Row) {
+  return (spec.value.rowActions?.(row) ?? []).filter((action) => !action.permission || session.can(action.permission))
 }
 
 function displayField(row: Row, key: string) {

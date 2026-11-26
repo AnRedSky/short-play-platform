@@ -4,6 +4,7 @@
  */
 import { http } from '../api/client'
 import { findBreakdownIssues, findShotContractIssues, formatBreakdownIssue, formatShotContractIssue } from '../composables/breakdownGate'
+import { budgetText, budgetUsedUp, findActiveTask } from '../composables/videoGate'
 import type { Row } from '../mock/db'
 import type { DialogField } from '../stores/ui'
 import type { Column } from '../components/ui/DataTable.vue'
@@ -45,7 +46,7 @@ export interface SpecRowPanel {
 
 export interface SpecContext {
   rows: Row[]
-  project: { currentId: string }
+  project: { currentId: string; current?: Row }
   reload: () => Promise<void>
   /** 把列表收敛到指定行，用于阻断项定位；由规格页实现，未实现时安全跳过。 */
   locate?: (rowId: string) => void
@@ -72,7 +73,7 @@ export interface PageSpec {
   }
   side?: (rows: Row[], ctx: SpecContext) => SpecPanel[]
   actions?: PageAction[]
-  rowActions?: (row: Row) => Array<{ label: string; danger?: boolean; run?: (ctx: SpecContext) => void }>
+  rowActions?: (row: Row) => Array<{ label: string; danger?: boolean; permission?: string; run?: (ctx: SpecContext) => void }>
   rowClick?: (row: Row, ctx: SpecContext) => void
   rowPanel?: SpecRowPanel
 }
@@ -212,6 +213,44 @@ async function freezePlan(ctx: SpecContext) {
   } finally {
     planFreezeBusy = false
   }
+}
+
+async function regenerateShot(row: Row, ctx: SpecContext) {
+  const project = ctx.project.current
+  if (budgetUsedUp(project)) {
+    ctx.ui.toast(`预算已用 100%（${budgetText(project)}），不能重新生成`, 'bad')
+    return
+  }
+  const issues = findShotContractIssues([row])
+  if (issues.length) {
+    ctx.ui.toast(formatShotContractIssue(issues[0]), 'bad')
+    return
+  }
+  const tasks = await http.list<Row>('/generation-tasks', { project: ctx.project.currentId, limit: 100 })
+  const active = findActiveTask(tasks.rows, row.ep, row.no)
+  if (active) {
+    ctx.ui.toast(`镜头 ${row.no} 已有进行中的视频生成任务 ${active.id}，不能重复提交`, 'bad')
+    return
+  }
+  const est = parseInt(String(row.duration ?? ''), 10) * 6 || 30
+  const yes = await ctx.ui.confirm(
+    '重新生成镜头',
+    `将为第 ${row.ep} 集 ${row.no} 新建一次视频生成任务，预估 ${est} 秒；当前预算占用 ${budgetText(project)}。旧版本保留，可对比后再选定。`,
+  )
+  if (!yes) return
+  await http.post('/generation/tasks', {
+    project: ctx.project.currentId,
+    ep: row.ep,
+    scene: row.scene,
+    shot: row.no,
+    kind: '视频生成',
+    model: row.model,
+    input: row.refs,
+    output: `MP4 1080×1920 · ${row.duration}`,
+    est,
+  })
+  ctx.ui.toast(`镜头 ${row.no} 已提交重新生成`)
+  await ctx.reload()
 }
 
 const projectOptions = ['SP-26031', 'SP-26028', 'SP-26019', 'SP-26015', 'SP-26011', 'SP-26007', 'SP-26004']
@@ -1202,7 +1241,45 @@ export const SPECS: Record<string, PageSpec> = {
         col('status', '状态', { pill: true }),
       ],
     },
-    side: () => [{ title: '抽检口径', type: 'checklist', items: [{ label: '人物一致性', on: true }, { label: '画面异常', on: true }, { label: '时长合规', on: true }, { label: '抽检比例', value: '每集 ≥ 10%' }] }],
+    rowPanel: {
+      title: '镜头预览详情',
+      hint: '重新生成会新建任务并保留旧版本；提交前校验镜头契约、预算与进行中任务。',
+      fields: [
+        { key: 'id', label: '镜头 ID' },
+        { key: 'ep', label: '集号' },
+        { key: 'scene', label: '场号' },
+        { key: 'no', label: '镜号' },
+        { key: 'desc', label: '画面描述' },
+        { key: 'frame', label: '景别' },
+        { key: 'angle', label: '机位' },
+        { key: 'move', label: '运镜' },
+        { key: 'duration', label: '时长' },
+        { key: 'chars', label: '人物' },
+        { key: 'model', label: '模型' },
+        { key: 'refs', label: '引用资产' },
+        { key: 'quality', label: '质检项' },
+        { key: 'version', label: '版本' },
+        { key: 'status', label: '状态' },
+      ],
+    },
+    rowActions: (row) => [
+      { label: '重生成', permission: 'production.write', run: (ctx) => { void regenerateShot(row, ctx) } },
+    ],
+    side: (rows, ctx) => {
+      const issues = findShotContractIssues(rows)
+      return [
+        {
+          title: '预算与准入',
+          type: 'kv',
+          items: [
+            { label: '预算占用', value: budgetText(ctx.project.current) },
+            { label: '本页契约', value: `${rows.length - issues.length} / ${rows.length} 通过` },
+            { label: '阻断镜头', value: issues.length ? `${issues.length} 条` : '无' },
+          ],
+        },
+        { title: '抽检口径', type: 'checklist', items: [{ label: '人物一致性', on: true }, { label: '画面异常', on: true }, { label: '时长合规', on: true }, { label: '抽检比例', value: '每集 ≥ 10%' }] },
+      ]
+    },
   },
 }
 
