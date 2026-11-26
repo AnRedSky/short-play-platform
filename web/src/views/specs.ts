@@ -472,7 +472,7 @@ export const SPECS: Record<string, PageSpec> = {
       { label: '镜头数', value: rows.length },
       { label: '已进入生产', value: countOf(rows, 'status', '执行中') },
       { label: '待生成', value: countOf(rows, 'status', '待生成') },
-      { label: '阻断项', value: findBreakdownIssues(rows).length },
+      { label: '本页阻断项', value: findBreakdownIssues(rows).length },
     ],
     table: {
       endpoint: '/shots',
@@ -493,13 +493,20 @@ export const SPECS: Record<string, PageSpec> = {
         label: '校验拆解',
         permission: 'creation.write',
         run: (ctx) => {
-          const issues = findBreakdownIssues(ctx.rows)
-          if (!issues.length) {
-            ctx.ui.toast(`拆解校验通过：${ctx.rows.length} 个镜头字段完整`)
-            return
-          }
-          ctx.ui.toast(`${formatBreakdownIssue(issues[0])}；共 ${issues.length} 条阻断`, 'bad')
-          ctx.locate?.(issues[0].rowId)
+          void (async () => {
+            try {
+              const all = await http.list<Row>('/shots', { project: ctx.project.currentId, limit: 999 })
+              const issues = findBreakdownIssues(all.rows)
+              if (!issues.length) {
+                ctx.ui.toast(`拆解校验通过：${all.rows.length} 个镜头字段完整`)
+                return
+              }
+              ctx.ui.toast(`${formatBreakdownIssue(issues[0])}；全量共 ${issues.length} 条阻断`, 'bad')
+              ctx.locate?.(issues[0].rowId)
+            } catch {
+              ctx.ui.toast('拆解校验失败，请稍后重试', 'bad')
+            }
+          })()
         },
       },
     ],
@@ -508,14 +515,14 @@ export const SPECS: Record<string, PageSpec> = {
       return [
         { title: '拆解质量', type: 'kv', items: [{ label: '场景覆盖', value: `${new Set(rows.map((row) => row.scene)).size} 场` }, { label: '人物覆盖', value: `${new Set(rows.map((row) => row.chars)).size} 组` }, { label: '口径', value: '以锁定剧本为唯一基准' }] },
         {
-          title: '生产准入',
+          title: '本页准入',
           type: 'list',
           items: issues.length
             ? [
                 ...issues.slice(0, 6).map((issue) => ({ label: `${issue.no || issue.rowId} · 缺${issue.label}`, value: `第 ${issue.ep || '—'} 集 / 场 ${issue.scene || '—'}` })),
                 ...(issues.length > 6 ? [{ label: '其余阻断', value: `${issues.length - 6} 条，校验时会定位首个` }] : []),
               ]
-            : [{ label: '校验结果', value: '字段完整，可进入生产' }],
+            : [{ label: '本页无阻断', value: '校验时按全量镜头执行' }],
         },
       ]
     },
@@ -541,7 +548,27 @@ export const SPECS: Record<string, PageSpec> = {
     },
     side: () => [{ title: '固化前置', type: 'checklist', items: [{ label: '镜头契约完整', on: true }, { label: '视觉资产就绪', on: true }, { label: '成本估算通过', on: true }, { label: '并行组无循环依赖', on: true }] }],
     actions: [
-      { label: '固化计划', tone: 'primary', permission: 'director.write', run: (ctx) => { ctx.ui.toast('已固化镜头计划：下游任务可派发', 'ok'); ctx.reload() } },
+      {
+        label: '固化计划',
+        tone: 'primary',
+        permission: 'director.write',
+        run: (ctx) => {
+          void (async () => {
+            try {
+              const all = await http.list<Row>('/shots', { project: ctx.project.currentId, limit: 999 })
+              const issues = findBreakdownIssues(all.rows)
+              if (issues.length) {
+                ctx.ui.toast(`固化被阻断：${formatBreakdownIssue(issues[0])}；全量共 ${issues.length} 条`, 'bad')
+                return
+              }
+              ctx.ui.toast('已固化镜头计划：下游任务可派发', 'ok')
+              ctx.reload()
+            } catch {
+              ctx.ui.toast('固化前校验失败，请稍后重试', 'bad')
+            }
+          })()
+        },
+      },
     ],
   },
 
