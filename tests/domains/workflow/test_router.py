@@ -27,7 +27,9 @@ def _start_run(client, admin, project_id, key: str | None = None) -> dict:
 
 def test_default_workflow_definition_is_materialised(client, admin):
     project = _project(client, admin)
-    response = client.get(f"/api/v1/projects/{project['id']}/workflows", headers=admin["headers"])
+    response = client.get(
+        f"/api/v1/projects/{project['record_id']}/workflows", headers=admin["headers"]
+    )
     assert response.status_code == 200, response.text
     data = response.json()["data"]
     assert data["code"] == "episode-production"
@@ -39,7 +41,7 @@ def test_default_workflow_definition_is_materialised(client, admin):
 
 def test_starting_run_expands_nodes_and_writes_outbox(client, admin, db_session):
     project = _project(client, admin)
-    response = _start_run(client, admin, project["id"])
+    response = _start_run(client, admin, project["record_id"])
     run = response["data"]
     assert response["meta"]["created"] is True
     assert run["status"] == "running"
@@ -60,8 +62,8 @@ def test_starting_run_expands_nodes_and_writes_outbox(client, admin, db_session)
 def test_run_idempotency_key_returns_same_run(client, admin):
     project = _project(client, admin)
     key = uuid.uuid4().hex
-    first = _start_run(client, admin, project["id"], key)
-    second = _start_run(client, admin, project["id"], key)
+    first = _start_run(client, admin, project["record_id"], key)
+    second = _start_run(client, admin, project["record_id"], key)
     assert first["data"]["id"] == second["data"]["id"]
     assert second["meta"]["created"] is False
 
@@ -73,7 +75,7 @@ def test_run_idempotency_key_returns_same_run(client, admin):
 
 def test_workflow_executes_each_node_to_completion(client, admin, db_session):
     project = _project(client, admin)
-    run = _start_run(client, admin, project["id"])["data"]
+    run = _start_run(client, admin, project["record_id"])["data"]
     registry = build_registry()
 
     processed = []
@@ -97,7 +99,7 @@ def test_workflow_executes_each_node_to_completion(client, admin, db_session):
 def test_failed_provider_keeps_node_retryable_then_fails_after_budget(client, admin, db_session):
     project = _project(client, admin)
     workflow, _version = workflow_service.get_or_create_workflow(
-        db_session, uuid.UUID(project["id"])
+        db_session, uuid.UUID(project["record_id"])
     )
     definition = {
         "nodes": [
@@ -119,7 +121,7 @@ def test_failed_provider_keeps_node_retryable_then_fails_after_budget(client, ad
 
     run, _created = workflow_service.create_run(
         db_session,
-        project_id=uuid.UUID(project["id"]),
+        project_id=uuid.UUID(project["record_id"]),
         idempotency_key=uuid.uuid4().hex,
         triggered_by=None,
     )
@@ -157,7 +159,7 @@ def test_failed_provider_keeps_node_retryable_then_fails_after_budget(client, ad
 
 def test_orphaned_lease_is_recovered_without_false_success(client, admin, db_session):
     project = _project(client, admin)
-    run = _start_run(client, admin, project["id"])["data"]
+    run = _start_run(client, admin, project["record_id"])["data"]
     run_id = uuid.UUID(run["id"])
 
     node = workflow_service.claim_next_node(db_session, run_id, "doomed-worker", lease_seconds=1)
@@ -194,7 +196,7 @@ def test_orphaned_lease_is_recovered_without_false_success(client, admin, db_ses
 
 def test_recovery_endpoint_reports_counts(client, admin):
     project = _project(client, admin)
-    run = _start_run(client, admin, project["id"])["data"]
+    run = _start_run(client, admin, project["record_id"])["data"]
     response = client.post(f"/api/v1/workflow-runs/{run['id']}/recover", headers=admin["headers"])
     assert response.status_code == 200, response.text
     assert response.json()["data"]["recovered"] == 0
@@ -202,7 +204,7 @@ def test_recovery_endpoint_reports_counts(client, admin):
 
 def test_cancel_workflow_run(client, admin):
     project = _project(client, admin)
-    run = _start_run(client, admin, project["id"])["data"]
+    run = _start_run(client, admin, project["record_id"])["data"]
     response = client.post(f"/api/v1/workflow-runs/{run['id']}/cancel", headers=admin["headers"])
     assert response.status_code == 200, response.text
     assert response.json()["data"]["status"] == "cancelled"
@@ -242,7 +244,7 @@ def test_workflow_is_denied_for_non_project_members(client, admin):
     headers = {"Authorization": f"Bearer {token}", "Idempotency-Key": uuid.uuid4().hex}
 
     denied = client.post(
-        f"/api/v1/projects/{project['id']}/workflow-runs", headers=headers, json={}
+        f"/api/v1/projects/{project['record_id']}/workflow-runs", headers=headers, json={}
     )
     assert denied.status_code == 403
     assert denied.json()["error"]["code"] == "PERMISSION_DENIED"
@@ -253,11 +255,10 @@ def test_backoff_grows(attempt, expected_floor):
     assert workflow_service.backoff_seconds(attempt) == expected_floor
 
 
-
 def test_project_member_cannot_read_or_cancel_another_projects_workflow(client, admin):
     project_a = _project(client, admin)
     project_b = _project(client, admin)
-    foreign_run = _start_run(client, admin, project_b["id"])["data"]
+    foreign_run = _start_run(client, admin, project_b["record_id"])["data"]
 
     role = client.post(
         "/api/v1/roles",
@@ -280,20 +281,18 @@ def test_project_member_cannot_read_or_cancel_another_projects_workflow(client, 
             "role_ids": [role["id"]],
         },
     ).json()["data"]
-    token = client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    ).json()["data"]["access_token"]
+    token = client.post("/api/v1/auth/login", json={"email": email, "password": password}).json()[
+        "data"
+    ]["access_token"]
     member_headers = {"Authorization": f"Bearer {token}"}
     membership = client.post(
-        f"/api/v1/projects/{project_a['id']}/members",
+        f"/api/v1/projects/{project_a['record_id']}/members",
         headers=admin["headers"],
         json={"user_id": user["id"], "project_role": "artist"},
     )
     assert membership.status_code == 201, membership.text
 
-    detail = client.get(
-        f"/api/v1/workflow-runs/{foreign_run['id']}", headers=member_headers
-    )
+    detail = client.get(f"/api/v1/workflow-runs/{foreign_run['id']}", headers=member_headers)
     assert detail.status_code == 403
     assert detail.json()["error"]["code"] == "PERMISSION_DENIED"
 

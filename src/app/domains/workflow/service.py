@@ -415,11 +415,12 @@ def execute_node_run(
         provider_code=str(payload.get("provider_code", "mock")),
         idempotency_key=f"wf:{run.id}:{node.node_key}:{node.attempt_count}",
         requested_by=run.triggered_by,
+        max_attempts=1,
     )
     node.generation_task_id = task.id
     db.flush()
 
-    task = generation_service.execute_task(db, registry, task)
+    task = generation_service.execute_task_now(db, registry, task)
     if task.status != "succeeded":
         return fail_node(
             db,
