@@ -25,9 +25,9 @@
 | P-04 | 交互文案与空态统一（按钮主次、空态、危险色） | 完成（本轮） | 24 页走查完成，清单见 `docs/PAGE-CONTENT-AUDIT.md`；16 处裸空态收敛到 EmptyState；交付/终止/归档/退回/取消为危险确认 |
 | F-01 | 全流程 E2E：立项→创意→剧本→镜头→生产→后期→质检→交付 | 完成（本轮） | 新建项目从三步表单走完 10 个关卡至交付；存量项目后期→质检→终审→交付闭环；`npm run test:e2e` 退出码 0 |
 | F-02 | 权限矩阵快照测试：各身份可访问路由 | 完成（本轮） | 6 身份 × 56 路由快照生成并可回归；owner 41、staff 35、admin 31、dept 24、auditor 21、ops 6 |
-| F-03 | mock 契约字段映射草案（为将来真实 API 预留） | 待开始 | 文档列出字段差异与适配点，不改代码 |
+| F-03 | mock 契约字段映射（为将来真实 API 预留） | 完成 `2125f74` | `services/projects/contract.ts` 收敛 `code/title ↔ id/name`、UUID `record_id`、旧状态回填与请求载荷映射；页面 0 改动；4 条单测通过 |
 | Q-01 | CI 接入 `npm run check` + 构建 + E2E | 完成（本轮） | `frontend-quality` 串联 check/lint/test/build/check:size；mock E2E 与真实 API 验收拆为独立 job；ESLint 51 errors → 0 |
-| Q-02 | 性能预算：主包 ≤450KB，SpecPage 独立 chunk | 完成（本轮） | 入口包 469.51KB → 22.72KB；vendor-vue 102.89KB、mock 343.92KB 独立；`npm run check:size` 在 CI 阻断超预算 |
+| Q-02 | 性能预算：主包 ≤450KB，SpecPage 独立 chunk | 完成（本轮） | 入口包 469.51KB → 23.00KB；vendor-vue 102.89KB、mock 343.92KB 独立；`npm run check:size` 在 CI 阻断超预算 |
 
 ## 三、推进顺序
 
@@ -49,3 +49,4 @@
 - 全链路：`cd web && npm run test:e2e`，由 `scripts/run-e2e.mjs` 构建后启动 4173 预览并在结束时回收，不留下常驻进程。
 - 权限基线：`tests/e2e/__snapshots__/permission-matrix.spec.ts/permission-matrix.json`；仅权限规则有意变更时执行 `npx playwright test tests/e2e/permission-matrix.spec.ts --update-snapshots`，并在提交说明中解释差异，CI 禁止自动更新。
 - E2E 只依赖 mock；新增页面若改权限或主流程，必须同步更新快照或用例断言。
+

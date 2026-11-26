@@ -7,9 +7,9 @@
 | ID | 任务 | 关键内容 | 验收 |
 | --- | --- | --- | --- |
 | B-01 | 项目域契约定稿（完成，草案见 `docs/04-api/openapi-projects.yaml`） | `projects` 列表/详情/汇总/流水线/时间线；字段统一（code/title 与前端 id/name 的映射层） | OpenAPI 草案 + 与 mock 响应结构一致 |
-| B-02 | 状态机服务端化（完成） | 15 状态、动作键、权限、原因校验；`POST /projects/{id}/transitions`；`PATCH` 禁止改 status；`Idempotency-Key` 落库 | `tests/domains/projects/test_transitions.py` 7 条通过，重复提交不双写 |
-| B-03 | 身份与权限（完成） | 36 个点号权限码、六身份模板；接口级 + 项目成员双重鉴权 | 6 身份 × 56 路由矩阵 336 项与前端快照一致 |
-| B-04 | 剧本与审核（完成） | 审核记录 + 剧本状态 + 项目状态迁移 + 审计同事务，版本唯一键禁止二次审核 | `tests/domains/creation/test_script_review.py` 3 条通过 |
+| B-02 | 状态机服务端化（完成 `85b095e`） | 15 状态、动作键、权限、原因校验；`POST /projects/{id}/transitions`；`PATCH` 禁止改 status；`Idempotency-Key` 落库 | `tests/domains/projects/test_transitions.py` 7 条通过，重复提交不双写 |
+| B-03 | 身份与权限（完成 `85b095e`） | 36 个点号权限码、六身份模板；接口级 + 项目成员双重鉴权 | 6 身份 × 56 路由矩阵 336 项与前端快照一致 |
+| B-04 | 剧本与审核（完成 `85b095e`） | 审核记录 + 剧本状态 + 项目状态迁移 + 审计同事务，版本唯一键禁止二次审核 | `tests/domains/creation/test_script_review.py` 3 条通过 |
 | B-05 | 生成任务与队列 | 任务创建、排队、重试、取消、暂停；供应商回调；`maxAttempts` 与超时回收 | 重试/取消/回调乱序均幂等 |
 | B-06 | 成本与预算 | 每次调用记账（含失败成本）、预算阈值、超限策略、对账状态；金额用 decimal | 台账与调用记录可逐条对上 |
 | B-07 | 质检 | 规则集、单集/整剧级、报告与问题项、阻断项回退映射 | 阻断项必触发退回后期 |
@@ -32,3 +32,4 @@
 `B-01 → B-02 → B-03 → B-04 → B-05 → B-06/B-07 → B-08 → B-09 → B-10 → B-11/B-12 → B-13 → B-14 → B-15`。
 
 B-03 是其余任务的前置；B-13/B-14 可与 B-05 之后并行准备。每项完成需更新本表状态，并在 `docs/WEB-DELIVERY-BACKLOG.md` 记录对应前端联调任务。
+
