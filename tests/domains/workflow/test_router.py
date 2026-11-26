@@ -221,7 +221,7 @@ def test_workflow_is_denied_for_non_project_members(client, admin):
     role = client.post(
         "/api/v1/roles",
         headers=admin["headers"],
-        json={"code": "outsider", "name": "Outsider", "permissions": ["projects:read"]},
+        json={"code": "outsider", "name": "Outsider", "permissions": ["project.read"]},
     ).json()["data"]
     email = f"outsider-{uuid.uuid4().hex[:8]}@example.com"
     password = "MemberPassword1"
@@ -265,7 +265,7 @@ def test_project_member_cannot_read_or_cancel_another_projects_workflow(client, 
         json={
             "code": f"workflow-member-{uuid.uuid4().hex[:8]}",
             "name": "Workflow member",
-            "permissions": ["projects:read", "projects:write"],
+            "permissions": ["project.read", "creation.write"],
         },
     ).json()["data"]
     email = f"workflow-member-{uuid.uuid4().hex[:8]}@example.com"

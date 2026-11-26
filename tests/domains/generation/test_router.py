@@ -114,7 +114,7 @@ def test_generation_is_denied_for_non_project_members(client, admin):
     role = client.post(
         "/api/v1/roles",
         headers=admin["headers"],
-        json={"code": "reader", "name": "Reader", "permissions": ["projects:read"]},
+        json={"code": "reader", "name": "Reader", "permissions": ["project.read"]},
     ).json()["data"]
     email = f"reader-{uuid.uuid4().hex[:8]}@example.com"
     password = "MemberPassword1"
@@ -176,7 +176,7 @@ def test_generation_task_cannot_reference_shot_from_another_project(client, admi
         json={
             "code": f"generation-member-{uuid.uuid4().hex[:8]}",
             "name": "Generation member",
-            "permissions": ["projects:read", "projects:write"],
+            "permissions": ["project.read", "creation.write"],
         },
     ).json()["data"]
     email = f"generation-member-{uuid.uuid4().hex[:8]}@example.com"

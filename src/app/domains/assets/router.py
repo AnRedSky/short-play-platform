@@ -30,7 +30,7 @@ def _project(
     principal: Principal,
     project_id: UUID,
     *,
-    need: str = "projects:read",
+    need: str = "project.read",
 ):
     return projects_service.get_accessible_project(
         db,
@@ -46,10 +46,10 @@ def upload_asset(
     project_id: UUID,
     file: UploadFile = File(...),
     title: str | None = Form(default=None),
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
-    _project(db, principal, project_id, need="projects:write")
+    _project(db, principal, project_id, need="creation.write")
     asset = assets_service.create_from_upload(
         db,
         project_id=project_id,
@@ -67,7 +67,7 @@ def upload_asset(
 def list_assets(
     project_id: UUID,
     kind: str | None = None,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _project(db, principal, project_id)
@@ -78,7 +78,7 @@ def list_assets(
 @router.get("/assets/{asset_id}")
 def read_asset(
     asset_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     asset = assets_service.get_asset_or_404(db, asset_id)
@@ -94,7 +94,7 @@ def read_asset(
 @router.get("/assets/{asset_id}/download")
 def download_asset(
     asset_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> FileResponse:
     asset = assets_service.get_asset_or_404(db, asset_id)
@@ -117,11 +117,11 @@ def upload_asset_version(
     asset_id: UUID,
     file: UploadFile = File(...),
     note: str | None = Form(default=None),
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     asset = assets_service.get_asset_or_404(db, asset_id)
-    _project(db, principal, asset.project_id, need="projects:write")
+    _project(db, principal, asset.project_id, need="creation.write")
     version = assets_service.add_version(db, asset, file.file.read(), note=note)
     db.commit()
     return envelope(AssetVersionRead.model_validate(version).model_dump(mode="json"))
@@ -131,10 +131,10 @@ def upload_asset_version(
 def create_export(
     project_id: UUID,
     payload: ExportRequest,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
-    _project(db, principal, project_id, need="projects:write")
+    _project(db, principal, project_id, need="creation.write")
     job, asset = assets_service.export_slideshow(
         db,
         project_id=project_id,

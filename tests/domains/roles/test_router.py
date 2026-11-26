@@ -48,7 +48,7 @@ def test_administrator_assigns_role_and_permission_takes_effect(client, admin):
             "code": "writer",
             "name": "Writer",
             "description": "Writes episodes",
-            "permissions": ["projects:read", "projects:write"],
+            "permissions": ["project.read", "creation.write"],
         },
     )
     assert role.status_code == 201, role.text
@@ -60,7 +60,7 @@ def test_administrator_assigns_role_and_permission_takes_effect(client, admin):
 
     me = client.get("/api/v1/auth/me", headers=headers)
     assert me.status_code == 200
-    assert sorted(me.json()["data"]["permissions"]) == ["projects:read", "projects:write"]
+    assert sorted(me.json()["data"]["permissions"]) == ["creation.write", "project.read"]
 
     assert client.get("/api/v1/projects", headers=headers).status_code == 200
     assert client.get("/api/v1/roles", headers=headers).status_code == 403
@@ -116,7 +116,7 @@ def test_role_assignment_cannot_target_user_from_another_organization(client, ad
         json={
             "code": f"scoped-{uuid.uuid4().hex[:8]}",
             "name": "Scoped",
-            "permissions": ["projects:read"],
+            "permissions": ["project.read"],
         },
     ).json()["data"]
     other_org = Organization(name="Other studio", slug=f"other-{uuid.uuid4().hex[:8]}")
@@ -162,7 +162,7 @@ def test_permissions_from_another_organization_do_not_leak_into_current_context(
     db_session.add(foreign_role)
     db_session.flush()
     manage_permission = db_session.scalar(
-        select(Permission).where(Permission.code == "projects:manage")
+        select(Permission).where(Permission.code == "project.manage")
     )
     assert manage_permission is not None
     db_session.add(RolePermission(role_id=foreign_role.id, permission_id=manage_permission.id))
@@ -176,4 +176,4 @@ def test_permissions_from_another_organization_do_not_leak_into_current_context(
     )
     assert me.status_code == 200
     assert me.json()["data"]["organization_id"] == admin["organization_id"]
-    assert "projects:manage" not in me.json()["data"]["permissions"]
+    assert "project.manage" not in me.json()["data"]["permissions"]

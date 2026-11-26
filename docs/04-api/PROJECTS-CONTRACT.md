@@ -1,6 +1,8 @@
-# 项目域契约（B-01 定稿草案）
+# 项目域契约（B-01 定稿，B-02/B-03 已实施）
 
 机器可读契约：[`openapi-projects.yaml`](./openapi-projects.yaml)。基线为前端 mock 的 `/projects` 系列响应，目标是不改页面、只替换 `web/src/services/projects/index.ts` 的实现。
+
+B-02/B-03/B-04 实现记录见本文件第七节、[`SCRIPT-REVIEW.md`](./SCRIPT-REVIEW.md)。
 
 ## 一、字段裁决
 
@@ -49,7 +51,7 @@
 
 1. `GET /projects` 当前返回 `code/title/summary/status`，缺 `name/genre/episodes/budget/owner/...`；需扩展 DTO，不改表结构即可从现有列与关联取数。
 2. `summary`、`workflow`、`timeline` 三个聚合接口尚未在真实后端注册，需按本契约新增只读路由。
-3. 真实后端状态写入走 `PATCH /projects/{id}`，绕过状态机；B-02 必须收敛到 `POST /transitions`，并限制 PATCH 不允许改 `status`。
+3. 真实后端状态写入已收敛到 `POST /projects/{id}/transitions`；`PATCH /projects/{id}` 携带 `status` 返回 422，不再能绕过状态机。
 4. E2E 目前只跑 mock；B-01 完成后增加契约测试，对同一组 service 函数分别断言 mock 与真实响应形状一致。
 
 ## 六、验收
@@ -58,3 +60,27 @@
 - 每个响应字段都能在 mock 响应中找到同名同类型来源。
 - 前端 `projectApi` 的 `list/detail/summary/workflow/timeline/transition` 六个函数与契约一一对应。
 - B-02/B-03 的请求、错误码、权限码已在本文件冻结，后续实现不得改形状。
+
+## 七、B-02/B-03 实施记录（2026-11-26）
+
+### 状态机
+
+- 15 个中文状态直存 `projects.status`；旧五态在迁移 `0008` 回填并在读取时兼容；
+- `POST /projects/{id}/transitions` 接受 `action / reason / expected_state`，服务端从 `status + action` 重算合法迁移；
+- 错误码：`409 ILLEGAL_TRANSITION`、`409 STATE_CONFLICT`、`422 REASON_REQUIRED`、`403 PERMISSION_DENIED`；
+- `Idempotency-Key` 落库到 `project_transitions`，同一项目同一 key 返回首次结果，不重复写审计；
+- 暂停时记录 `previous_status`，`resume` 精确恢复；终止、交付、归档、退回、暂停必须填写原因；
+- `PATCH /projects/{id}` 只允许 `title/summary`，请求体出现 `status` 返回 422。
+
+### 权限
+
+- 权限目录收敛为 36 个点号码（`src/app/domains/roles/constants.py`），旧的冒号码全部移除；
+- 六个身份模板 `ops/admin/dept/owner/staff/auditor` 与前端 mock 角色权限逐码一致；
+- 所有项目资源接口执行接口权限 + 项目成员双重校验；`project.manage` 才可绕过成员检查，URL 的 `project_id` 不构成授权；
+- 验收：`tests/domains/roles/test_permission_matrix.py` 覆盖 6 身份 × 56 路由 = 336 个判定，与前端快照逐项一致；`tests/domains/projects/test_transitions.py` 覆盖成员缺失、权限缺失、非法迁移、重复提交与缺原因。
+
+### 迁移与测试
+
+- `0008_project_state_machine.py`：状态回填、`previous_status`、迁移明细/幂等表；
+- `0009_script_reviews.py`：剧本审核表（B-04）；
+- 本地全量后端：`133 passed`（独立测试库 + `APP_ENV=test`）。

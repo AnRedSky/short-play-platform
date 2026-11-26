@@ -19,7 +19,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("")
 def list_users(
     pagination: PaginationParams = Depends(get_pagination),
-    principal: Principal = Depends(require_permission("users:read")),
+    principal: Principal = Depends(require_permission("org.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     rows, total = users_service.list_users(db, principal.organization_id, pagination)
@@ -33,7 +33,7 @@ def list_users(
 def create_user(
     payload: UserCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("users:write")),
+    principal: Principal = Depends(require_permission("org.manage")),
     db: Session = Depends(get_db),
 ) -> dict:
     user = users_service.create_user(
@@ -61,7 +61,7 @@ def create_user(
 @router.get("/{user_id}")
 def read_user(
     user: User = Depends(get_user_from_path),
-    principal: Principal = Depends(require_permission("users:read")),
+    principal: Principal = Depends(require_permission("org.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     users_service.assert_user_in_organization(db, user, principal.organization_id)
@@ -78,7 +78,7 @@ def update_user(
     payload: UserUpdate,
     request: Request,
     user: User = Depends(get_user_from_path),
-    principal: Principal = Depends(require_permission("users:write")),
+    principal: Principal = Depends(require_permission("org.manage")),
     db: Session = Depends(get_db),
 ) -> dict:
     users_service.assert_user_in_organization(db, user, principal.organization_id)

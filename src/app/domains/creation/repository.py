@@ -15,6 +15,7 @@ from app.domains.creation.models import (
     SceneVersion,
     Script,
     ScriptDialogue,
+    ScriptReview,
     ScriptScene,
     ScriptVersion,
     Shot,
@@ -254,4 +255,20 @@ def project_asset_name_exists(db: Session, model: type, project_id: UUID, name: 
     return (
         db.scalar(select(model.id).where(model.project_id == project_id, model.name == name))
         is not None
+    )
+
+
+def get_script_review(db: Session, version_id: UUID) -> ScriptReview | None:
+    return db.scalar(
+        select(ScriptReview).where(ScriptReview.script_version_id == version_id)
+    )
+
+
+def list_script_reviews(db: Session, script_id: UUID) -> list[ScriptReview]:
+    return list(
+        db.scalars(
+            select(ScriptReview)
+            .where(ScriptReview.script_id == script_id)
+            .order_by(ScriptReview.created_at.desc())
+        ).all()
     )

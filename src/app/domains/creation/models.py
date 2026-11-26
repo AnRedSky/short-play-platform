@@ -227,6 +227,34 @@ class Shot(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft")
 
 
+class ScriptReview(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    """One immutable review decision per script version.
+
+    The unique version key is what makes "move the project only once" enforceable
+    at the database level, not just in service code.
+    """
+
+    __tablename__ = "script_reviews"
+    __table_args__ = (
+        UniqueConstraint("script_version_id", name="uq_script_reviews_version"),
+    )
+
+    project_id: Mapped[UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    script_id: Mapped[UUID] = mapped_column(
+        ForeignKey("scripts.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    script_version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("script_versions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    decision: Mapped[str] = mapped_column(String(20), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    actor_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+
 class ShotContract(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "shot_contracts"
     __table_args__ = (

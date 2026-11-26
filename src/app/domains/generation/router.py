@@ -27,7 +27,7 @@ router = APIRouter(tags=["generation"])
 
 @router.get("/models/providers")
 def list_providers(
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     registry: ProviderRegistry = Depends(get_registry),
 ) -> dict:
     return envelope(
@@ -44,7 +44,7 @@ def create_generation_task(
     payload: GenerationTaskCreate,
     request: Request,
     idempotency_key: str | None = Header(default=None, alias=IDEMPOTENCY_KEY_HEADER),
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
     registry: ProviderRegistry = Depends(get_registry),
 ) -> dict:
@@ -53,7 +53,7 @@ def create_generation_task(
         project_id,
         user_id=principal.user.id,
         permissions=principal.permissions,
-        permission_needed="projects:write",
+        permission_needed="creation.write",
     )
     capability = generation_service.resolve_capability(payload.capability)
     generation_service.assert_provider_supports(registry, capability, payload.provider_code)
@@ -95,7 +95,7 @@ def create_generation_task(
 @router.get("/generation/tasks/{task_id}")
 def read_generation_task(
     task_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     task = generation_service.get_task_or_404(db, task_id)
@@ -118,7 +118,7 @@ def read_generation_task(
 @router.post("/generation/tasks/{task_id}/cancel")
 def cancel_generation_task(
     task_id: UUID,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     task = generation_service.get_task_or_404(db, task_id)
@@ -127,7 +127,7 @@ def cancel_generation_task(
         task.project_id,
         user_id=principal.user.id,
         permissions=principal.permissions,
-        permission_needed="projects:write",
+        permission_needed="creation.write",
     )
     generation_service.request_cancel(db, task)
     db.commit()

@@ -16,6 +16,7 @@ from app.domains.creation.models import (
     SceneVersion,
     Script,
     ScriptDialogue,
+    ScriptReview,
     ScriptScene,
     ScriptVersion,
     Shot,
@@ -24,7 +25,11 @@ from app.domains.creation.models import (
     StoryBible,
     Storyboard,
 )
-from app.public.exceptions import conflict, not_found, permission_denied
+from app.domains.projects import service as projects_service
+from app.domains.projects.models import Project
+from app.domains.projects.state_machine import normalize_status
+from app.public.constants import ErrorCode
+from app.public.exceptions import AppError, conflict, not_found, permission_denied
 
 # kind -> (row model, version model, version owner column, "not found" label)
 _ASSET_SPEC: dict[str, tuple[type, type, Any, str]] = {
@@ -185,6 +190,10 @@ def list_script_versions(db: Session, script_id: UUID) -> list[ScriptVersion]:
 
 def list_script_scenes(db: Session, version_id: UUID) -> list[ScriptScene]:
     return creation_repo.list_script_scenes(db, version_id)
+
+
+def list_script_reviews(db: Session, script_id: UUID) -> list[ScriptReview]:
+    return creation_repo.list_script_reviews(db, script_id)
 
 
 def list_project_assets(db: Session, kind: str, project_id: UUID) -> list:
@@ -376,3 +385,70 @@ def create_shot_contract(
         created_by=created_by,
     )
     return creation_repo.add_row(db, contract)
+
+# --- script review ------------------------------------------------------------
+
+
+def review_script_version(
+    db: Session,
+    version: ScriptVersion,
+    *,
+    project: Project,
+    decision: str,
+    reason: str,
+    actor_user_id: UUID,
+    permissions: frozenset[str],
+    request_id: str | None = None,
+) -> tuple[ScriptReview, dict]:
+    """Review one script version and move the project in the same transaction.
+
+    The version row has a database-level unique review, so a repeated or racing
+    approval cannot move the project twice. The caller commits once, after both
+    the review row and the state transition (plus audit) are written.
+    """
+    existing = creation_repo.get_script_review(db, version.id)
+    if existing is not None:
+        raise AppError(
+            "该剧本版本已完成审核，不能重复提交",
+            code=ErrorCode.REVIEW_ALREADY_DECIDED,
+            status_code=409,
+            details={"script_version_id": str(version.id), "decision": existing.decision},
+        )
+
+    current = normalize_status(project.status)
+    if current != "待剧本审核":
+        raise AppError(
+            f"项目状态「{current}」不允许剧本审核",
+            code=ErrorCode.ILLEGAL_TRANSITION,
+            status_code=409,
+            details={"status": current, "action": "reviewScript"},
+        )
+
+    reason_text = (reason or "").strip()
+    action = "approveScript" if decision == "approve" else "rejectScript"
+    review = ScriptReview(
+        project_id=project.id,
+        script_id=version.script_id,
+        script_version_id=version.id,
+        decision=decision,
+        reason=reason_text,
+        actor_user_id=actor_user_id,
+    )
+    creation_repo.add_row(db, review)
+
+    version.status = "approved" if decision == "approve" else "rejected"
+    script = get_script_or_404(db, version.script_id)
+    script.status = version.status
+
+    transition = projects_service.transition_project(
+        db,
+        project,
+        action=action,
+        reason=reason_text,
+        expected_state=None,
+        permissions=permissions,
+        actor_user_id=actor_user_id,
+        request_id=request_id,
+    )
+    db.flush()
+    return review, transition

@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -76,6 +77,25 @@ class ScriptVersionRead(BaseModel):
     version_number: int
     content: str
     status: str
+
+
+class ScriptReviewCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    decision: Literal["approve", "reject"]
+    reason: str = Field(default="", max_length=2000)
+
+
+class ScriptReviewRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    project_id: UUID
+    script_id: UUID
+    script_version_id: UUID
+    decision: str
+    reason: str
+    actor_user_id: UUID | None
 
 
 class ScriptSceneCreate(BaseModel):

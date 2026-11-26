@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Header, Request, Response
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth import Principal, require_permission
@@ -16,6 +16,7 @@ from app.domains.projects.schemas import (
     ProjectMemberRead,
     ProjectRead,
     ProjectUpdate,
+    TransitionRequest,
 )
 from app.public.schemas import envelope
 
@@ -25,7 +26,7 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 @router.get("")
 def list_projects(
     pagination: PaginationParams = Depends(get_pagination),
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     rows, total = projects_service.list_projects(
@@ -45,7 +46,7 @@ def list_projects(
 def create_project(
     payload: ProjectCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("project.create")),
     db: Session = Depends(get_db),
 ) -> dict:
     project = projects_service.create_project(
@@ -72,7 +73,7 @@ def create_project(
 @router.get("/{project_id}")
 def read_project(
     project_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     project = projects_service.get_accessible_project(
@@ -80,6 +81,7 @@ def read_project(
         project_id,
         user_id=principal.user.id,
         permissions=principal.permissions,
+        permission_needed="project.read",
     )
     return envelope(ProjectRead.model_validate(project).model_dump(mode="json"))
 
@@ -89,7 +91,7 @@ def update_project(
     project_id: UUID,
     payload: ProjectUpdate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     project = projects_service.get_accessible_project(
@@ -97,7 +99,7 @@ def update_project(
         project_id,
         user_id=principal.user.id,
         permissions=principal.permissions,
-        permission_needed="projects:write",
+        permission_needed="project.manage",
     )
     changes = payload.model_dump(exclude_none=True)
     projects_service.update_project(db, project, changes)
@@ -114,10 +116,50 @@ def update_project(
     return envelope(ProjectRead.model_validate(project).model_dump(mode="json"))
 
 
+@router.post("/{project_id}/transitions")
+def transition_project(
+    project_id: UUID,
+    payload: TransitionRequest,
+    request: Request,
+    principal: Principal = Depends(require_permission("project.read")),
+    db: Session = Depends(get_db),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key", max_length=128),
+) -> dict:
+    project = projects_service.get_accessible_project(
+        db,
+        project_id,
+        user_id=principal.user.id,
+        permissions=principal.permissions,
+        permission_needed="project.read",
+        for_update=True,
+    )
+
+    if idempotency_key:
+        replay = projects_service.replay_transition(
+            db, project_id=project.id, idempotency_key=idempotency_key
+        )
+        if replay is not None:
+            return envelope(replay.result_payload)
+
+    result = projects_service.transition_project(
+        db,
+        project,
+        action=payload.action,
+        reason=payload.reason,
+        expected_state=payload.expected_state,
+        permissions=principal.permissions,
+        actor_user_id=principal.user.id,
+        request_id=getattr(request.state, "request_id", None),
+        idempotency_key=idempotency_key,
+    )
+    db.commit()
+    return envelope(result)
+
+
 @router.get("/{project_id}/members")
 def list_project_members(
     project_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     project = projects_service.get_accessible_project(
@@ -125,6 +167,7 @@ def list_project_members(
         project_id,
         user_id=principal.user.id,
         permissions=principal.permissions,
+        permission_needed="project.read",
     )
     rows = projects_service.list_members(db, project.id)
     return envelope(
@@ -137,7 +180,7 @@ def add_project_member(
     project_id: UUID,
     payload: ProjectMemberAdd,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:manage")),
+    principal: Principal = Depends(require_permission("project.manage")),
     db: Session = Depends(get_db),
 ) -> dict:
     project = projects_service.get_accessible_project(
@@ -145,13 +188,14 @@ def add_project_member(
         project_id,
         user_id=principal.user.id,
         permissions=principal.permissions,
+        permission_needed="project.manage",
     )
     member = projects_service.add_member(
         db,
         project_id=project.id,
         organization_id=project.organization_id,
         user_id=payload.user_id,
-        project_role=payload.project_role
+        project_role=payload.project_role,
     )
     audit_service.record(
         db,
@@ -171,7 +215,7 @@ def remove_project_member(
     project_id: UUID,
     user_id: UUID,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:manage")),
+    principal: Principal = Depends(require_permission("project.manage")),
     db: Session = Depends(get_db),
 ) -> Response:
     project = projects_service.get_accessible_project(
@@ -179,7 +223,7 @@ def remove_project_member(
         project_id,
         user_id=principal.user.id,
         permissions=principal.permissions,
-        permission_needed="projects:manage",
+        permission_needed="project.manage",
     )
     projects_service.remove_member(db, project_id=project.id, user_id=user_id)
     audit_service.record(

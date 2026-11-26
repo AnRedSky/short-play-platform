@@ -38,7 +38,7 @@ def test_project_access_requires_membership(client, admin):
     role = client.post(
         "/api/v1/roles",
         headers=admin["headers"],
-        json={"code": "artist", "name": "Artist", "permissions": ["projects:read"]},
+        json={"code": "artist", "name": "Artist", "permissions": ["project.read"]},
     ).json()["data"]
     email, password, user = _create_user(client, admin, role["id"])
     member = _login(client, email, password)
@@ -47,7 +47,7 @@ def test_project_access_requires_membership(client, admin):
     visible = _create_project(client, admin, "alpha")
     hidden = _create_project(client, admin, "beta")
 
-    # The user is a valid organization member with projects:read, but not a project member.
+    # The user is a valid organization member with project.read, but not a project member.
     denied = client.get(f"/api/v1/projects/{hidden['id']}", headers=headers)
     assert denied.status_code == 403
     assert denied.json()["error"]["code"] == "PERMISSION_DENIED"
@@ -79,7 +79,7 @@ def test_project_access_requires_membership(client, admin):
     )
     assert patch.status_code == 403
 
-    # Adding members is a projects:manage action, which this user does not hold.
+    # Adding members is a project.manage action, which this user does not hold.
     add_denied = client.post(
         f"/api/v1/projects/{visible['id']}/members",
         headers=headers,

@@ -1,8 +1,9 @@
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.domains.projects.constants import PROJECT_ROLES, PROJECT_STATUSES
+from app.domains.projects.constants import PROJECT_ROLES
+from app.domains.projects.state_machine import PROJECT_STATUSES, normalize_status
 
 
 class ProjectCreate(BaseModel):
@@ -12,16 +13,19 @@ class ProjectCreate(BaseModel):
 
 
 class ProjectUpdate(BaseModel):
+    """PATCH only edits descriptive fields; status changes go through transitions."""
+
+    model_config = ConfigDict(extra="ignore")
+
     title: str | None = Field(default=None, min_length=1, max_length=200)
     summary: str | None = Field(default=None, max_length=2000)
-    status: str | None = None
 
-    @field_validator("status")
+    @model_validator(mode="before")
     @classmethod
-    def _known_status(cls, value: str | None) -> str | None:
-        if value is not None and value not in PROJECT_STATUSES:
-            raise ValueError(f"status must be one of {PROJECT_STATUSES}")
-        return value
+    def _reject_status(cls, data):
+        if isinstance(data, dict) and "status" in data:
+            raise ValueError("status cannot be patched; use POST /projects/{id}/transitions")
+        return data
 
 
 class ProjectRead(BaseModel):
@@ -33,6 +37,32 @@ class ProjectRead(BaseModel):
     title: str
     summary: str
     status: str
+
+    @field_validator("status")
+    @classmethod
+    def _canonical_status(cls, value: str) -> str:
+        return normalize_status(value)
+
+
+class TransitionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: str = Field(min_length=1, max_length=80)
+    reason: str = Field(default="", max_length=2000)
+    expected_state: str | None = None
+
+    @field_validator("expected_state")
+    @classmethod
+    def _known_state(cls, value: str | None) -> str | None:
+        if value is not None and value not in PROJECT_STATUSES:
+            raise ValueError(f"expected_state must be one of {PROJECT_STATUSES}")
+        return value
+
+
+class TransitionResult(BaseModel):
+    project: ProjectRead
+    allowed_actions: list[dict]
+    message: str
 
 
 class ProjectMemberAdd(BaseModel):

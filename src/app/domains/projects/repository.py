@@ -6,11 +6,29 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.dependencies.pagination import PaginationParams
-from app.domains.projects.models import Project, ProjectMember
+from app.domains.projects.models import Project, ProjectMember, ProjectTransition
 
 
 def get_project(db: Session, project_id: UUID) -> Project | None:
     return db.get(Project, project_id)
+
+
+def get_project_for_update(db: Session, project_id: UUID) -> Project | None:
+    """Row lock: serializes concurrent transitions for optimistic checking."""
+    return db.scalar(
+        select(Project).where(Project.id == project_id).with_for_update()
+    )
+
+
+def find_transition(
+    db: Session, project_id: UUID, idempotency_key: str
+) -> ProjectTransition | None:
+    return db.scalar(
+        select(ProjectTransition).where(
+            ProjectTransition.project_id == project_id,
+            ProjectTransition.idempotency_key == idempotency_key,
+        )
+    )
 
 
 def get_project_by_code(db: Session, organization_id: UUID, code: str) -> Project | None:

@@ -31,8 +31,8 @@ def test_bootstrap_login_and_me(client):
     assert me.status_code == 200, me.text
     body = me.json()["data"]
     assert body["user"]["email"] == payload["email"]
-    assert "users:write" in body["permissions"]
-    assert "projects:manage" in body["permissions"]
+    assert "org.manage" in body["permissions"]
+    assert "project.manage" in body["permissions"]
 
 
 def test_bootstrap_is_single_use(client):

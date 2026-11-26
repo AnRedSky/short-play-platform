@@ -152,7 +152,7 @@ def test_upload_is_denied_for_non_project_members(client, admin, tmp_path):
     role = client.post(
         "/api/v1/roles",
         headers=admin["headers"],
-        json={"code": "asset-outsider", "name": "Outsider", "permissions": ["projects:read"]},
+        json={"code": "asset-outsider", "name": "Outsider", "permissions": ["project.read"]},
     ).json()["data"]
     email = f"asset-outsider-{uuid.uuid4().hex[:8]}@example.com"
     password = "MemberPassword1"
@@ -196,7 +196,7 @@ def test_project_member_cannot_read_or_mutate_another_projects_asset(client, adm
         json={
             "code": f"asset-reader-{uuid.uuid4().hex[:8]}",
             "name": "Project asset reader",
-            "permissions": ["projects:read", "projects:write"],
+            "permissions": ["project.read", "creation.write"],
         },
     )
     assert role.status_code == 201, role.text
@@ -261,7 +261,7 @@ def test_export_cannot_reference_another_projects_assets(client, admin, tmp_path
         json={
             "code": f"export-member-{uuid.uuid4().hex[:8]}",
             "name": "Export member",
-            "permissions": ["projects:read", "projects:write"],
+            "permissions": ["project.read", "creation.write"],
         },
     ).json()["data"]
     email = f"export-member-{uuid.uuid4().hex[:8]}@example.com"

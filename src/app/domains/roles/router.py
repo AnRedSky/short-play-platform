@@ -19,7 +19,7 @@ router = APIRouter(prefix="/roles", tags=["roles"])
 @router.get("")
 def list_roles(
     pagination: PaginationParams = Depends(get_pagination),
-    principal: Principal = Depends(require_permission("roles:read")),
+    principal: Principal = Depends(require_permission("grant.manage")),
     db: Session = Depends(get_db),
 ) -> dict:
     rows, total = roles_service.list_roles(db, principal.organization_id, pagination)
@@ -33,7 +33,7 @@ def list_roles(
 def create_role(
     payload: RoleCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("roles:write")),
+    principal: Principal = Depends(require_permission("grant.manage")),
     db: Session = Depends(get_db),
 ) -> dict:
     role = roles_service.create_role(
@@ -65,7 +65,7 @@ def create_role(
 @router.get("/{role_id}")
 def read_role(
     role_id: UUID,
-    principal: Principal = Depends(require_permission("roles:read")),
+    principal: Principal = Depends(require_permission("grant.manage")),
     db: Session = Depends(get_db),
 ) -> dict:
     role = roles_service.get_role_in_organization(db, role_id, principal.organization_id)
@@ -82,7 +82,7 @@ def assign_role(
     role_id: UUID,
     payload: RoleAssignment,
     request: Request,
-    principal: Principal = Depends(require_permission("roles:write")),
+    principal: Principal = Depends(require_permission("grant.manage")),
     db: Session = Depends(get_db),
 ) -> dict:
     role = roles_service.assign_role_to_user(

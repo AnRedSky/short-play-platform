@@ -23,7 +23,7 @@ router = APIRouter(prefix="/organizations", tags=["organizations"])
 
 @router.get("")
 def list_organizations(
-    principal: Principal = Depends(require_permission("organizations:read")),
+    principal: Principal = Depends(require_permission("org.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     rows = organizations_service.list_user_organizations(db, principal.user.id)
@@ -37,7 +37,7 @@ def list_organizations(
 @router.get("/departments")
 def list_departments(
     pagination: PaginationParams = Depends(get_pagination),
-    principal: Principal = Depends(require_permission("organizations:read")),
+    principal: Principal = Depends(require_permission("org.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     rows, total = organizations_service.list_departments(
@@ -53,7 +53,7 @@ def list_departments(
 def create_department(
     payload: DepartmentCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("organizations:write")),
+    principal: Principal = Depends(require_permission("org.manage")),
     db: Session = Depends(get_db),
 ) -> dict:
     department = organizations_service.create_department(
@@ -78,7 +78,7 @@ def create_department(
 @router.get("/members")
 def list_members(
     pagination: PaginationParams = Depends(get_pagination),
-    principal: Principal = Depends(require_permission("organizations:read")),
+    principal: Principal = Depends(require_permission("org.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     rows, total = organizations_service.list_members(db, principal.organization_id, pagination)
@@ -91,7 +91,7 @@ def list_members(
 @router.get("/{organization_id}")
 def read_organization(
     organization_id: UUID,
-    principal: Principal = Depends(require_permission("organizations:read")),
+    principal: Principal = Depends(require_permission("org.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     organization = organizations_service.get_organization_for_member_or_404(

@@ -228,7 +228,7 @@ def test_creation_domain_denies_non_project_members(client, admin):
     role = client.post(
         "/api/v1/roles",
         headers=admin["headers"],
-        json={"code": "outsider", "name": "Outsider", "permissions": ["projects:read"]},
+        json={"code": "outsider", "name": "Outsider", "permissions": ["project.read"]},
     ).json()["data"]
     email = f"outsider-{uuid.uuid4().hex[:8]}@example.com"
     password = "MemberPassword1"
@@ -301,7 +301,7 @@ def test_shot_cannot_reference_scene_from_another_project(client, admin):
         json={
             "code": f"creation-member-{uuid.uuid4().hex[:8]}",
             "name": "Creation member",
-            "permissions": ["projects:read", "projects:write"],
+            "permissions": ["project.read", "creation.write"],
         },
     ).json()["data"]
     email = f"creation-member-{uuid.uuid4().hex[:8]}@example.com"

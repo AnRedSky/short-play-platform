@@ -17,7 +17,7 @@ router = APIRouter(prefix="/audit-logs", tags=["audit"])
 def list_audit_logs(
     pagination: PaginationParams = Depends(get_pagination),
     action: str | None = Query(default=None),
-    principal: Principal = Depends(require_permission("audit:read")),
+    principal: Principal = Depends(require_permission("audit.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     rows, total = audit_service.list_logs(

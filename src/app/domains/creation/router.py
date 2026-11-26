@@ -21,6 +21,8 @@ from app.domains.creation.schemas import (
     ScriptDialogueCreate,
     ScriptDialogueRead,
     ScriptRead,
+    ScriptReviewCreate,
+    ScriptReviewRead,
     ScriptSceneCreate,
     ScriptSceneRead,
     ScriptVersionCreate,
@@ -43,7 +45,7 @@ router = APIRouter(tags=["creation"])
 
 
 def _access(
-    db: Session, principal: Principal, project_id: UUID, *, need: str = "projects:read"
+    db: Session, principal: Principal, project_id: UUID, *, need: str = "project.read"
 ):
     return projects_service.get_accessible_project(
         db,
@@ -66,7 +68,7 @@ def list_episodes(
     project_id: UUID,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, project_id)
@@ -84,10 +86,10 @@ def create_episode(
     project_id: UUID,
     payload: EpisodeCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
-    _access(db, principal, project_id, need="projects:write")
+    _access(db, principal, project_id, need="creation.write")
     episode = creation_service.create_episode(
         db,
         project_id=project_id,
@@ -111,7 +113,7 @@ def create_episode(
 @router.get("/episodes/{episode_id}")
 def read_episode(
     episode_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     episode = creation_service.get_episode_or_404(db, episode_id)
@@ -125,7 +127,7 @@ def read_episode(
 @router.get("/projects/{project_id}/stories")
 def list_stories(
     project_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, project_id)
@@ -138,10 +140,10 @@ def create_story(
     project_id: UUID,
     payload: StoryCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
-    _access(db, principal, project_id, need="projects:write")
+    _access(db, principal, project_id, need="creation.write")
     story = creation_service.create_story(
         db,
         project_id=project_id,
@@ -164,7 +166,7 @@ def create_story(
 @router.get("/projects/{project_id}/story-bibles")
 def list_story_bibles(
     project_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, project_id)
@@ -177,10 +179,10 @@ def create_story_bible(
     project_id: UUID,
     payload: StoryBibleCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
-    _access(db, principal, project_id, need="projects:write")
+    _access(db, principal, project_id, need="creation.write")
     bible = creation_service.create_story_bible(
         db, project_id=project_id, content=payload.content, created_by=principal.user.id
     )
@@ -205,11 +207,11 @@ def create_script(
     episode_id: UUID,
     payload: ScriptCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(
-        db, principal, creation_service.project_of_episode(db, episode_id), need="projects:write"
+        db, principal, creation_service.project_of_episode(db, episode_id), need="creation.write"
     )
     script = creation_service.create_script(db, episode_id=episode_id, title=payload.title)
     audit_service.record(
@@ -227,7 +229,7 @@ def create_script(
 @router.get("/scripts/{script_id}/versions")
 def list_script_versions(
     script_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, creation_service.project_of_script(db, script_id))
@@ -240,11 +242,11 @@ def create_script_version(
     script_id: UUID,
     payload: ScriptVersionCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(
-        db, principal, creation_service.project_of_script(db, script_id), need="projects:write"
+        db, principal, creation_service.project_of_script(db, script_id), need="creation.write"
     )
     version = creation_service.create_script_version(
         db, script_id=script_id, content=payload.content, created_by=principal.user.id
@@ -262,10 +264,82 @@ def create_script_version(
     return envelope(ScriptVersionRead.model_validate(version).model_dump(mode="json"))
 
 
+@router.get("/scripts/{script_id}/reviews")
+def list_script_reviews(
+    script_id: UUID,
+    principal: Principal = Depends(require_permission("script.review")),
+    db: Session = Depends(get_db),
+) -> dict:
+    _access(
+        db,
+        principal,
+        creation_service.project_of_script(db, script_id),
+        need="script.review",
+    )
+    rows = creation_service.list_script_reviews(db, script_id)
+    return envelope([ScriptReviewRead.model_validate(row).model_dump(mode="json") for row in rows])
+
+
+@router.post("/script-versions/{version_id}/reviews", status_code=201)
+def review_script_version(
+    version_id: UUID,
+    payload: ScriptReviewCreate,
+    request: Request,
+    principal: Principal = Depends(require_permission("script.review")),
+    db: Session = Depends(get_db),
+) -> dict:
+    project_id = creation_service.project_of_script_version(db, version_id)
+    project = projects_service.get_accessible_project(
+        db,
+        project_id,
+        user_id=principal.user.id,
+        permissions=principal.permissions,
+        permission_needed="script.review",
+        for_update=True,
+    )
+    version = creation_service.get_script_version_or_404(db, version_id)
+    try:
+        review, transition = creation_service.review_script_version(
+            db,
+            version,
+            project=project,
+            decision=payload.decision,
+            reason=payload.reason,
+            actor_user_id=principal.user.id,
+            permissions=principal.permissions,
+            request_id=_request_id(request),
+        )
+        audit_service.record(
+            db,
+            actor_user_id=principal.user.id,
+            action="script.reviewed",
+            resource_type="script_review",
+            resource_id=str(review.id),
+            request_id=_request_id(request),
+            details={
+                "script_id": str(review.script_id),
+                "script_version_id": str(version_id),
+                "decision": review.decision,
+                "project_id": str(project.id),
+            },
+        )
+        # One commit for review row, script/version status, project transition and audit.
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return envelope(
+        {
+            "review": ScriptReviewRead.model_validate(review).model_dump(mode="json"),
+            "transition": transition,
+        }
+    )
+
+
 @router.get("/script-versions/{version_id}/scenes")
 def list_script_scenes(
     version_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, creation_service.project_of_script_version(db, version_id))
@@ -277,14 +351,14 @@ def list_script_scenes(
 def create_script_scene(
     version_id: UUID,
     payload: ScriptSceneCreate,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(
         db,
         principal,
         creation_service.project_of_script_version(db, version_id),
-        need="projects:write",
+        need="creation.write",
     )
     scene = creation_service.create_script_scene(
         db,
@@ -302,14 +376,14 @@ def create_script_scene(
 def create_dialogue(
     scene_id: UUID,
     payload: ScriptDialogueCreate,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(
         db,
         principal,
         creation_service.project_of_script_scene(db, scene_id),
-        need="projects:write",
+        need="creation.write",
     )
     dialogue = creation_service.create_dialogue(
         db,
@@ -328,7 +402,7 @@ def create_dialogue(
 @router.get("/projects/{project_id}/characters")
 def list_characters(
     project_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, project_id)
@@ -345,7 +419,7 @@ def create_character(
     project_id: UUID,
     payload: AssetCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     return _create_asset(db, principal, project_id, payload, "character", request)
@@ -355,7 +429,7 @@ def create_character(
 def create_character_version(
     character_id: UUID,
     payload: AssetVersionCreate,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     return _create_asset_version(db, principal, "character", character_id, payload)
@@ -364,7 +438,7 @@ def create_character_version(
 @router.get("/characters/{character_id}")
 def read_character(
     character_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     character = creation_service.get_character_or_404(db, character_id)
@@ -381,7 +455,7 @@ def read_character(
 @router.get("/projects/{project_id}/scenes")
 def list_production_scenes(
     project_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, project_id)
@@ -398,7 +472,7 @@ def create_production_scene(
     project_id: UUID,
     payload: AssetCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     return _create_asset(db, principal, project_id, payload, "scene", request)
@@ -408,7 +482,7 @@ def create_production_scene(
 def create_scene_version(
     scene_id: UUID,
     payload: AssetVersionCreate,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     return _create_asset_version(db, principal, "scene", scene_id, payload)
@@ -417,7 +491,7 @@ def create_scene_version(
 @router.get("/projects/{project_id}/props")
 def list_props(
     project_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, project_id)
@@ -434,7 +508,7 @@ def create_prop(
     project_id: UUID,
     payload: AssetCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     return _create_asset(db, principal, project_id, payload, "prop", request)
@@ -444,7 +518,7 @@ def create_prop(
 def create_prop_version(
     prop_id: UUID,
     payload: AssetVersionCreate,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     return _create_asset_version(db, principal, "prop", prop_id, payload)
@@ -458,7 +532,7 @@ def _create_asset(
     kind: str,
     request: Request,
 ) -> dict:
-    _access(db, principal, project_id, need="projects:write")
+    _access(db, principal, project_id, need="creation.write")
     asset = creation_service.create_production_asset(
         db, kind=kind, project_id=project_id, name=payload.name, description=payload.description
     )
@@ -482,7 +556,7 @@ def _create_asset_version(
     payload: AssetVersionCreate,
 ) -> dict:
     asset = creation_service.get_asset_or_404(db, kind, asset_id)
-    _access(db, principal, asset.project_id, need="projects:write")
+    _access(db, principal, asset.project_id, need="creation.write")
     version = creation_service.create_production_asset_version(
         db,
         kind=kind,
@@ -503,11 +577,11 @@ def create_storyboard(
     episode_id: UUID,
     payload: StoryboardCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(
-        db, principal, creation_service.project_of_episode(db, episode_id), need="projects:write"
+        db, principal, creation_service.project_of_episode(db, episode_id), need="creation.write"
     )
     storyboard = creation_service.create_storyboard(
         db, episode_id=episode_id, version_number=payload.version_number
@@ -528,7 +602,7 @@ def create_storyboard(
 @router.get("/storyboards/{storyboard_id}/shots")
 def list_shots(
     storyboard_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, creation_service.project_of_storyboard(db, storyboard_id))
@@ -541,14 +615,14 @@ def create_shot(
     storyboard_id: UUID,
     payload: ShotCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(
         db,
         principal,
         creation_service.project_of_storyboard(db, storyboard_id),
-        need="projects:write",
+        need="creation.write",
     )
     shot = creation_service.create_shot(
         db,
@@ -574,7 +648,7 @@ def create_shot(
 @router.get("/shots/{shot_id}/contracts")
 def list_shot_contracts(
     shot_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, creation_service.project_of_shot(db, shot_id))
@@ -587,10 +661,10 @@ def create_shot_contract(
     shot_id: UUID,
     payload: ShotContractCreate,
     request: Request,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
-    _access(db, principal, creation_service.project_of_shot(db, shot_id), need="projects:write")
+    _access(db, principal, creation_service.project_of_shot(db, shot_id), need="creation.write")
     contract = creation_service.create_shot_contract(
         db, shot_id=shot_id, payload=payload.payload, created_by=principal.user.id
     )

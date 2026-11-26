@@ -23,7 +23,7 @@ from app.public.schemas import envelope
 router = APIRouter(tags=["workflow"])
 
 
-def _access(db: Session, principal: Principal, project_id: UUID, *, need: str = "projects:read"):
+def _access(db: Session, principal: Principal, project_id: UUID, *, need: str = "project.read"):
     return projects_service.get_accessible_project(
         db,
         project_id,
@@ -36,7 +36,7 @@ def _access(db: Session, principal: Principal, project_id: UUID, *, need: str = 
 @router.get("/projects/{project_id}/workflows")
 def read_workflow_definition(
     project_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, project_id)
@@ -60,10 +60,10 @@ def start_workflow_run(
     project_id: UUID,
     payload: WorkflowRunCreate,
     idempotency_key: str | None = Header(default=None, alias=IDEMPOTENCY_KEY_HEADER),
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
-    _access(db, principal, project_id, need="projects:write")
+    _access(db, principal, project_id, need="creation.write")
     run, created = workflow_service.create_run(
         db,
         project_id=project_id,
@@ -81,7 +81,7 @@ def start_workflow_run(
 @router.get("/projects/{project_id}/workflow-runs")
 def list_workflow_runs(
     project_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     _access(db, principal, project_id)
@@ -92,7 +92,7 @@ def list_workflow_runs(
 @router.get("/workflow-runs/{run_id}")
 def read_workflow_run(
     run_id: UUID,
-    principal: Principal = Depends(require_permission("projects:read")),
+    principal: Principal = Depends(require_permission("project.read")),
     db: Session = Depends(get_db),
 ) -> dict:
     run = workflow_service.get_run_or_404(db, run_id)
@@ -108,11 +108,11 @@ def read_workflow_run(
 @router.post("/workflow-runs/{run_id}/cancel")
 def cancel_workflow_run(
     run_id: UUID,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     run = workflow_service.get_run_or_404(db, run_id)
-    _access(db, principal, run.project_id, need="projects:write")
+    _access(db, principal, run.project_id, need="creation.write")
     workflow_service.cancel_run(db, run)
     db.commit()
     return envelope(WorkflowRunRead.model_validate(run).model_dump(mode="json"))
@@ -121,12 +121,12 @@ def cancel_workflow_run(
 @router.post("/workflow-runs/{run_id}/recover")
 def recover_workflow_run(
     run_id: UUID,
-    principal: Principal = Depends(require_permission("projects:write")),
+    principal: Principal = Depends(require_permission("creation.write")),
     db: Session = Depends(get_db),
 ) -> dict:
     """Reclaim orphaned nodes for an operator-initiated recovery."""
     run = workflow_service.get_run_or_404(db, run_id)
-    _access(db, principal, run.project_id, need="projects:write")
+    _access(db, principal, run.project_id, need="creation.write")
     recovered = workflow_service.recover_orphans(db, run.id)
     promoted = workflow_service.promote_retries(db, run.id)
     db.commit()
