@@ -36,6 +36,12 @@ export interface SpecPanel {
   items: Array<{ label: string; value?: string | number; on?: boolean }>
 }
 
+export interface SpecRowPanel {
+  title: string
+  hint?: string
+  fields: Array<{ key: string; label: string }>
+}
+
 export interface SpecContext {
   rows: Row[]
   project: { currentId: string }
@@ -65,6 +71,7 @@ export interface PageSpec {
   actions?: PageAction[]
   rowActions?: (row: Row) => Array<{ label: string; danger?: boolean; run?: (ctx: SpecContext) => void }>
   rowClick?: (row: Row, ctx: SpecContext) => void
+  rowPanel?: SpecRowPanel
 }
 
 const col = (key: string, label: string, extra: Partial<Column> = {}): Column => ({ key, label, ...extra })
@@ -434,6 +441,20 @@ export const SPECS: Record<string, PageSpec> = {
         col('hook', '开场钩子'),
         col('score', '评分'),
         col('chosen', '已选', { format: (row: Row) => (row.chosen ? '是' : '—') }),
+      ],
+    },
+    rowPanel: {
+      title: '创意方案详情',
+      hint: '多方案对比保留在本页；详情只读单个方案，确认动作在创意设定页完成。',
+      fields: [
+        { key: 'id', label: '方案 ID' },
+        { key: 'title', label: '标题' },
+        { key: 'selling', label: '卖点' },
+        { key: 'theme', label: '主题' },
+        { key: 'hook', label: '开场钩子' },
+        { key: 'score', label: '评分' },
+        { key: 'chosen', label: '选择状态' },
+        { key: 'risk', label: '已知风险' },
       ],
     },
     side: () => [{ title: '确认口径', type: 'kv', items: [{ label: '可确认方案数', value: '1' }, { label: '确认后状态', value: '剧本创作中' }, { label: '重生成', value: '保留历史方案' }] }],

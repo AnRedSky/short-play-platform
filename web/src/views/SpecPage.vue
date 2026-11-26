@@ -41,14 +41,15 @@
           :rows="rows"
           :row-key="spec.table.rowKey || 'id'"
           :loading="loading"
-          :clickable="!!spec.rowClick"
+          :clickable="!!spec.rowPanel || !!spec.rowClick"
           wide
           :empty-title="spec.emptyTitle || '暂无数据'"
           :empty-hint="spec.emptyHint || '调整筛选条件或先创建一条记录。'"
-          @row-click="spec.rowClick?.($event, ctx)"
+          @row-click="openRow"
         >
-          <template v-if="spec.rowActions" #actions="{ row }">
-            <button v-for="action in spec.rowActions(row)" :key="action.label" class="link-btn" :class="{ danger: action.danger }" @click="run(action)">
+          <template v-if="spec.rowActions || rowPanel" #actions="{ row }">
+            <button v-if="rowPanel" type="button" class="link-btn" @click="openRow(row)">详情</button>
+            <button v-for="action in (spec.rowActions?.(row) || [])" :key="action.label" class="link-btn" :class="{ danger: action.danger }" @click="run(action)">
               {{ action.label }}
             </button>
           </template>
@@ -80,6 +81,23 @@
         </div>
       </aside>
     </div>
+
+    <AppDrawer
+      v-if="rowPanel"
+      :open="panelOpen"
+      :title="rowPanel.title"
+      :subtitle="activeRow ? String(activeRow[rowKey] ?? '') : '未找到该记录'"
+      @close="panel.close"
+    >
+      <p v-if="rowPanel.hint" class="muted">{{ rowPanel.hint }}</p>
+      <dl v-if="activeRow" class="kv-lite">
+        <template v-for="field in rowPanel.fields" :key="field.key">
+          <dt>{{ field.label }}</dt>
+          <dd>{{ displayField(activeRow, field.key) }}</dd>
+        </template>
+      </dl>
+      <p v-else class="muted">记录不存在：链接中的记录可能已删除，或当前筛选下不可见。</p>
+    </AppDrawer>
   </section>
 </template>
 
@@ -95,6 +113,8 @@ import PageHeader from '../components/ui/PageHeader.vue'
 import HeadActions from '../components/ui/HeadActions.vue'
 import StatCards from '../components/ui/StatCards.vue'
 import DataTable from '../components/ui/DataTable.vue'
+import AppDrawer from '../components/ui/AppDrawer.vue'
+import { useRoutePanel } from '../composables/useRoutePanel'
 import { SPECS, type PageAction } from './specs'
 import { groupFor } from './spec-groups'
 
@@ -112,6 +132,28 @@ const loading = ref(false)
 const error = ref('')
 const search = ref('')
 const filterValues = reactive<Record<string, string>>({})
+const panel = useRoutePanel('spec-row')
+const panelOpen = panel.isOpen
+const rowPanel = computed(() => spec.value.rowPanel)
+const rowKey = computed(() => spec.value.table.rowKey || 'id')
+const activeRow = computed(() => {
+  if (!panel.activeId.value) return null
+  return rows.value.find((row) => String(row[rowKey.value] ?? '') === panel.activeId.value) ?? null
+})
+
+function openRow(row: Row) {
+  if (rowPanel.value) {
+    panel.open(String(row[rowKey.value] ?? ''))
+    return
+  }
+  spec.value.rowClick?.(row, ctx)
+}
+
+function displayField(row: Row, key: string) {
+  if (key === 'chosen') return row.chosen ? '已选' : '未选'
+  const value = row[key]
+  return value === undefined || value === null || value === '' ? '—' : String(value)
+}
 
 const ctx = {
   get rows() { return rows.value },
@@ -178,6 +220,7 @@ watch([search, () => ({ ...filterValues })], () => {
 watch(() => route.path, () => {
   search.value = ''
   for (const key of Object.keys(filterValues)) delete filterValues[key]
+  if (panel.isOpen.value) panel.close()
   reload()
 })
 

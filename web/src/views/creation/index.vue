@@ -58,7 +58,7 @@
         </div>
         <div class="card">
           <div class="card-head"><h3 class="card-title">历史版本</h3></div>
-          <button v-for="version in versions" :key="version.id" class="list-row row-click" style="width: 100%; text-align: left; background: transparent; border: 0" @click="pick(version)">
+          <button v-for="version in versions" :key="version.id" class="list-row row-click" style="width: 100%; text-align: left; background: transparent; border: 0" @click="briefPanel.open(String(version.id))">
             <span class="k">{{ version.version }}</span>
             <span class="v"><StatusPill :status="version.status" /> {{ version.at }}</span>
           </button>
@@ -66,18 +66,42 @@
         <div class="card">
           <div class="card-head"><h3 class="card-title">确认前置</h3></div>
           <div class="checklist">
-            <div class="ck"><i :class="{ on: !!form.note }">{{ form.note ? '✓' : '' }}</i><span>创意说明完整</span></div>
-            <div class="ck"><i :class="{ on: !!form.constraints }">{{ form.constraints ? '✓' : '' }}</i><span>约束与禁区已声明</span></div>
-            <div class="ck"><i class="on">✓</i><span>受众与风格已确定</span></div>
+            <div class="ck"><i :class="{ on: !!form.note.trim() }">{{ form.note.trim() ? '✓' : '' }}</i><span>创意说明完整</span></div>
+            <div class="ck"><i :class="{ on: !!form.constraints.trim() }">{{ form.constraints.trim() ? '✓' : '' }}</i><span>约束与禁区已声明</span></div>
+            <div class="ck"><i :class="{ on: !!form.audience.trim() && !!form.style.trim() }">{{ form.audience.trim() && form.style.trim() ? '✓' : '' }}</i><span>受众与风格已确定</span></div>
           </div>
+          <p v-if="missingInputs.length" class="muted" style="margin-top: 8px">确认前需补全：{{ missingInputs.join('、') }}</p>
         </div>
       </aside>
     </div>
+
+    <AppDrawer
+      :open="briefPanelOpen"
+      :title="activeBrief ? `${activeBrief.version} 版本详情` : '版本详情'"
+      :subtitle="activeBrief ? `${activeBrief.mode} · 由 ${activeBrief.by} 维护` : '未找到该版本'"
+      @close="briefPanel.close"
+    >
+      <template v-if="activeBrief">
+        <dl class="kv-lite">
+          <dt>版本</dt><dd>{{ activeBrief.version }}</dd>
+          <dt>状态</dt><dd><StatusPill :status="activeBrief.status" /></dd>
+          <dt>输入方式</dt><dd>{{ activeBrief.mode }}</dd>
+          <dt>维护人</dt><dd>{{ activeBrief.by }}</dd>
+          <dt>维护时间</dt><dd>{{ activeBrief.at }}</dd>
+          <dt>创意说明</dt><dd>{{ activeBrief.note || '未填写' }}</dd>
+        </dl>
+        <div class="modal-foot" style="gap: 8px">
+          <button type="button" class="btn" @click="briefPanel.close">关闭</button>
+          <button type="button" class="btn primary" @click="applyActiveBrief">载入到编辑区</button>
+        </div>
+      </template>
+      <p v-else class="muted">记录不存在：链接中的版本可能已删除，或当前项目下不可见。</p>
+    </AppDrawer>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { creationApi } from '../../services/creation'
 import { projectApi } from '../../services/projects'
 import { useSessionStore } from '../../stores/session'
@@ -87,6 +111,8 @@ import type { Row } from '../../mock/db'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import HeadActions from '../../components/ui/HeadActions.vue'
 import StatusPill from '../../components/ui/StatusPill.vue'
+import AppDrawer from '../../components/ui/AppDrawer.vue'
+import { useRoutePanel } from '../../composables/useRoutePanel'
 
 const session = useSessionStore()
 const projectStore = useProjectStore()
@@ -96,14 +122,33 @@ const versions = ref<Row[]>([])
 const modes = ref<Row[]>([])
 const current = ref<Row | null>(null)
 const message = ref('')
+const briefPanel = useRoutePanel('creation-brief')
+const briefPanelOpen = briefPanel.isOpen
 
 const form = reactive({ genre: '', audience: '', style: '', episodes: '', constraints: '', note: '' })
 
+const activeBrief = computed(() => versions.value.find((row) => String(row.id) === briefPanel.activeId.value) ?? null)
+const missingInputs = computed(() => {
+  const missing: string[] = []
+  if (!form.note.trim()) missing.push('创意说明')
+  if (!form.constraints.trim()) missing.push('内容约束')
+  if (!form.audience.trim() || !form.style.trim()) missing.push('受众与风格')
+  return missing
+})
 const canConfirm = computed(() => session.can('creation.write') && projectStore.current?.status === '创意策划中')
 
-function pick(row: Row) {
-  current.value = row
-  form.note = String(row.note ?? '')
+watch(
+  () => [form.note, form.constraints, form.audience, form.style].join('|'),
+  () => {
+    if (message.value.startsWith('确认前需补全')) message.value = ''
+  },
+)
+
+function applyActiveBrief() {
+  if (!activeBrief.value) return
+  form.note = String(activeBrief.value.note ?? '')
+  message.value = `已将 ${activeBrief.value.version} 的创意说明载入编辑区；保存后写入当前版本。`
+  briefPanel.close()
 }
 
 async function load() {
@@ -133,11 +178,18 @@ async function save() {
 }
 
 async function confirmBrief() {
-  const yes = await ui.confirm('确认创意方案', '确认后项目进入「剧本创作中」，创意设定成为下游唯一基准。')
+  if (!canConfirm.value) return
+  if (missingInputs.value.length) {
+    message.value = `确认前需补全：${missingInputs.value.join('、')}。`
+    return
+  }
+  const yes = await ui.confirm('确认创意方案', '确认后项目进入「剧本创作中」，当前方案成为下游唯一基准；后续修改需新建版本。', true)
   if (!yes) return
   await projectApi.transition(projectStore.currentId, 'confirmBrief')
+  message.value = '创意方案已确认，项目进入剧本创作。'
   ui.toast('创意方案已确认，项目进入剧本创作')
   await projectStore.load()
+  await load()
 }
 
 onMounted(load)
