@@ -61,6 +61,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { opsApi } from '../../../services/ops'
+import type { Row } from '../../../mock/db'
 import { useSessionStore } from '../../../stores/session'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
@@ -68,7 +69,7 @@ import DataTable from '../../../components/ui/DataTable.vue'
 import StatusPill from '../../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()
-const config = ref<Record<string, any>>({})
+const config = ref<Row>({})
 
 const storage = computed<Record<string, string>>(() => config.value.storage || {})
 

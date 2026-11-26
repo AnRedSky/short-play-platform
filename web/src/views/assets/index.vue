@@ -40,7 +40,7 @@
         </div>
         <div class="card-sub" style="margin-top: 6px">{{ asset.rights }}</div>
       </div>
-      <div v-if="!visible.length" class="empty" style="grid-column: 1/-1">没有符合条件的资产</div>
+      <EmptyState v-if="!visible.length" title="没有匹配的资产" desc="调整分类或质检筛选，或重新搜索资产名与编号。" icon="▦" style="grid-column: 1/-1" />
     </div>
 
     <AppDrawer :open="!!selected" :title="selected?.name || ''" :subtitle="selected ? `${selected.id} · ${selected.cat}` : ''" @close="selected = null">
@@ -77,6 +77,7 @@ import type { Row } from '../../mock/db'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import HeadActions from '../../components/ui/HeadActions.vue'
 import AppDrawer from '../../components/ui/AppDrawer.vue'
+import EmptyState from '../../components/ui/EmptyState.vue'
 import StatusPill from '../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()

@@ -36,7 +36,7 @@
               <span class="k">{{ script.version }} · {{ script.id }}</span>
               <span class="v"><StatusPill :status="script.status" /> {{ script.shots }} 镜</span>
             </div>
-            <div v-if="!(summary.scripts || []).length" class="empty">暂无剧本版本</div>
+            <EmptyState v-if="!(summary.scripts || []).length" title="暂无剧本版本" desc="进入剧本页创建首个版本后，这里会显示版本链。" compact />
           </div>
           <div class="card">
             <div class="card-head"><h3 class="card-title">成本流水</h3></div>
@@ -44,7 +44,7 @@
               <span class="k">{{ cost.cap }} · E{{ cost.ep }}</span>
               <span class="v">¥{{ cost.actual }}</span>
             </div>
-            <div v-if="!(summary.costs || []).length" class="empty">暂无成本记录</div>
+            <EmptyState v-if="!(summary.costs || []).length" title="暂无成本记录" desc="生成任务产生调用后，成本会自动记账。" compact />
           </div>
         </div>
       </div>
@@ -75,16 +75,18 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { projectApi } from '../../../services/projects'
+import type { Row } from '../../../mock/db'
 import { useProjectStore } from '../../../stores/project'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
 import StatCards from '../../../components/ui/StatCards.vue'
 import StageRail from '../../../components/ui/StageRail.vue'
 import DataTable from '../../../components/ui/DataTable.vue'
+import EmptyState from '../../../components/ui/EmptyState.vue'
 import StatusPill from '../../../components/ui/StatusPill.vue'
 
 const projectStore = useProjectStore()
-const summary = ref<Record<string, any>>({})
+const summary = ref<Row>({})
 
 async function load() {
   summary.value = await projectApi.summary(projectStore.currentId)

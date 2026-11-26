@@ -47,7 +47,7 @@
             <b>{{ diff.version }} · {{ diff.change }}</b>
             <p>{{ diff.detail }}（{{ diff.scenes }} 场 / {{ diff.lines }} 行）</p>
           </div>
-          <div v-if="!diffs.length" class="empty">暂无版本差异记录</div>
+          <EmptyState v-if="!diffs.length" title="暂无版本差异" desc="创建新版本后，逐场与逐行差异会显示在这里。" compact />
         </div>
       </div>
 
@@ -84,6 +84,7 @@ import type { Row } from '../../../mock/db'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
 import DataTable, { type Column } from '../../../components/ui/DataTable.vue'
+import EmptyState from '../../../components/ui/EmptyState.vue'
 import StatusPill from '../../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()

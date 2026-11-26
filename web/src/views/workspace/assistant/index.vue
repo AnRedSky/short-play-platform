@@ -20,7 +20,7 @@
 
         <div class="card">
           <div class="card-head"><h3 class="card-title">执行记录</h3><span class="card-sub">本次会话</span></div>
-          <div v-if="!logs.length" class="empty">尚未执行指令</div>
+          <EmptyState v-if="!logs.length" title="尚未执行指令" desc="输入指令并执行后，这里会保留结果与时间。" compact />
           <div v-for="log in logs" :key="log.id" class="list-row">
             <span class="k">{{ log.at }} · {{ log.prompt }}</span>
             <span class="v"><StatusPill :status="log.status" /> {{ log.result }}</span>
@@ -58,6 +58,7 @@ import { useUiStore } from '../../../stores/ui'
 import { useRouter } from 'vue-router'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
+import EmptyState from '../../../components/ui/EmptyState.vue'
 import StatusPill from '../../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()

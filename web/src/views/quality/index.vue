@@ -32,7 +32,7 @@
             <span class="k">{{ issue.dim }} · {{ issue.where }}</span>
             <span class="v"><StatusPill :status="issue.level" /> {{ issue.action }}</span>
           </div>
-          <div v-if="!issues.length" class="empty">该报告无问题项</div>
+          <EmptyState v-if="!issues.length" title="本报告无问题项" desc="全部阻断项检查通过，可进入终审。" compact />
         </div>
         <div class="card">
           <div class="card-head"><h3 class="card-title">检测层级</h3></div>
@@ -56,6 +56,7 @@ import type { Row } from '../../mock/db'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import HeadActions from '../../components/ui/HeadActions.vue'
 import DataTable, { type Column } from '../../components/ui/DataTable.vue'
+import EmptyState from '../../components/ui/EmptyState.vue'
 import StatusPill from '../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()

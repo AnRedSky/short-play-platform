@@ -204,7 +204,7 @@ async function submit() {
     ui.toast(`项目《${created.name}》已创建（${created.id}）`)
     router.push('/projects/workflow')
   } catch (err) {
-    error.value = (err as Error).message
+    error.value = (err as Error).message || '创建失败，请稍后重试'
   } finally {
     saving.value = false
   }

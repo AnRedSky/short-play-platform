@@ -29,7 +29,7 @@
         <div class="grid grid-2" style="gap: 14px">
           <div class="card">
             <div class="card-head"><h3 class="card-title">运行中的任务</h3><button class="btn ghost" @click="go('tasks/list')">任务台</button></div>
-            <div v-if="!(data.tasks || []).length" class="empty">暂无运行任务</div>
+            <EmptyState v-if="!(data.tasks || []).length" title="暂无运行任务" desc="从创意或视频页发起生成任务后，这里会跟踪执行状态。" compact />
             <div v-for="task in data.tasks || []" :key="task.id" class="list-row">
               <span class="k">{{ task.kind }} · {{ task.project }}</span>
               <span class="v"><StatusPill :status="task.status" /> {{ task.est }}s</span>
@@ -37,7 +37,7 @@
           </div>
           <div class="card">
             <div class="card-head"><h3 class="card-title">待办与通知</h3><button class="btn ghost" @click="go('notify/inbox')">全部</button></div>
-            <div v-if="!(data.notifications || []).length" class="empty">没有待处理事项</div>
+            <EmptyState v-if="!(data.notifications || []).length" title="暂无待处理事项" desc="审批、异常与交付提醒会出现在这里。" compact />
             <div v-for="item in data.notifications || []" :key="item.id" class="list-row">
               <span class="k">{{ item.title }}</span>
               <span class="v"><StatusPill :status="item.state" /></span>
@@ -70,23 +70,25 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { workspaceApi } from '../../services/workspace'
+import type { Row } from '../../mock/db'
 import { useSessionStore } from '../../stores/session'
 import { useProjectStore } from '../../stores/project'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import HeadActions from '../../components/ui/HeadActions.vue'
 import StatCards from '../../components/ui/StatCards.vue'
 import DataTable, { type Column } from '../../components/ui/DataTable.vue'
+import EmptyState from '../../components/ui/EmptyState.vue'
 import StageRail from '../../components/ui/StageRail.vue'
 import StatusPill from '../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()
 const project = useProjectStore()
 const router = useRouter()
-const data = ref<Record<string, any>>({})
+const data = ref<Row>({})
 const loading = ref(false)
 
 const metrics = computed(() => data.value.metrics ?? [])
-const blocking = computed(() => (data.value.notifications || []).filter((item: any) => item.unread).length)
+const blocking = computed(() => (data.value.notifications || []).filter((item: Row) => item.unread).length)
 
 const projectColumns: Column[] = [
   { key: 'name', label: '项目' },
@@ -101,7 +103,7 @@ function go(path: string, id?: string) {
   router.push(`/${path}`)
 }
 
-function openProject(row: Record<string, any>) {
+function openProject(row: Row) {
   project.select(String(row.id))
   router.push('/projects/workflow')
 }

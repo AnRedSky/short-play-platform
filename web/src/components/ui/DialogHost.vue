@@ -26,7 +26,7 @@
         </div>
         <div class="modal-foot">
           <button type="button" class="btn" @click="ui.closeDialog()">取消</button>
-          <button type="submit" class="btn primary" :disabled="submitting">{{ submitting ? '提交中…' : ui.dialog.submitLabel || '确认提交' }}</button>
+          <button type="submit" class="btn" :class="ui.dialog.danger ? 'danger' : 'primary'" :disabled="submitting">{{ submitting ? '提交中…' : ui.dialog.submitLabel || '确认提交' }}</button>
         </div>
       </form>
     </div>
@@ -41,7 +41,7 @@
         </div>
         <div class="modal-foot">
           <button class="btn" @click="ui.settleConfirm(false)">取消</button>
-          <button class="btn primary" :class="{ 'text-bad': ui.confirmState.danger }" @click="ui.settleConfirm(true)">确认</button>
+          <button class="btn" :class="ui.confirmState.danger ? 'danger' : 'primary'" @click="ui.settleConfirm(true)">确认</button>
         </div>
       </div>
     </div>
@@ -57,6 +57,7 @@ import { reactive, ref, watch } from 'vue'
 import { useUiStore } from '../../stores/ui'
 
 const ui = useUiStore()
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- 动态表单字段值类型由 DialogField 决定
 const values = reactive<Record<string, any>>({})
 const error = ref('')
 const submitting = ref(false)

@@ -83,7 +83,7 @@ import DataTable from '../../components/ui/DataTable.vue'
 import StatusPill from '../../components/ui/StatusPill.vue'
 
 const { can } = usePermission()
-const payload = ref<Record<string, any>>({})
+const payload = ref<Row>({})
 
 const queues = computed<Row[]>(() => payload.value.queues || [])
 const services = computed<Row[]>(() => payload.value.services || [])

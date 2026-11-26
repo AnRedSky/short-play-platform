@@ -46,7 +46,7 @@
               <b style="font-size: 12px">{{ action.label }}</b>
               <div class="card-sub">{{ action.next === '__prev__' ? '回到暂停前状态' : `进入「${action.next}」` }} · 需要 {{ action.permission }}</div>
             </div>
-            <button class="btn" :class="{ primary: action.tone === 'primary' }" @click="runAction(action)">{{ action.label }}</button>
+            <button class="btn" :class="{ primary: action.tone === 'primary' && !isDanger(action.key), danger: isDanger(action.key) }" @click="runAction(action)">{{ action.label }}</button>
           </div>
         </div>
 
@@ -63,7 +63,7 @@
 
         <div class="card">
           <div class="card-head"><h3 class="card-title">动作与审核历史</h3></div>
-          <div v-if="!timeline.length" class="empty">尚无历史记录</div>
+          <EmptyState v-if="!timeline.length" title="尚无动作记录" desc="执行关卡动作后，操作人、时间与结果会在此留痕。" compact />
           <div v-for="item in timeline" :key="item.at + item.title" class="timeline-item">
             <time>{{ item.at }}</time>
             <b>{{ item.title }}</b>
@@ -88,7 +88,7 @@
         </div>
         <div class="card">
           <div class="card-head"><h3 class="card-title">待处理</h3><span class="pill warn">{{ blockers.length }}</span></div>
-          <div v-if="!blockers.length" class="empty">本项目无阻塞项</div>
+          <EmptyState v-if="!blockers.length" title="当前无阻塞项" desc="项目可继续推进；异常与待办会在此列出。" compact />
           <div v-for="item in blockers" :key="item.id" class="list-row">
             <span class="k">{{ item.title }}</span>
             <span class="v">{{ item.impact }}</span>
@@ -112,11 +112,14 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { projectApi } from '../../../services/projects'
 import { workspaceApi } from '../../../services/workspace'
+import type { Row } from '../../../mock/db'
+import type { GateAction } from '../../../mock/state'
 import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
+import EmptyState from '../../../components/ui/EmptyState.vue'
 import StageRail from '../../../components/ui/StageRail.vue'
 
 const session = useSessionStore()
@@ -124,9 +127,13 @@ const projectStore = useProjectStore()
 const ui = useUiStore()
 const router = useRouter()
 
-const data = ref<Record<string, any>>({})
-const timeline = ref<any[]>([])
-const blockers = ref<any[]>([])
+const data = ref<Row>({})
+const DANGER_ACTIONS = ['terminate', 'archive', 'deliver']
+function isDanger(key: unknown) {
+  return DANGER_ACTIONS.includes(String(key))
+}
+const timeline = ref<Row[]>([])
+const blockers = ref<Row[]>([])
 
 const projectRow = computed(() => data.value.project)
 const nodes = [
@@ -155,11 +162,12 @@ async function reload() {
   blockers.value = notifications.rows.filter((row) => row.unread)
 }
 
-async function runAction(action: any) {
+async function runAction(action: GateAction) {
   if (action.needReason) {
     ui.openDialog({
       title: action.label,
       subtitle: `当前状态「${projectRow.value?.status}」→「${action.next === '__prev__' ? '暂停前状态' : action.next}」；必须填写原因。`,
+      danger: action.key === 'terminate',
       fields: [{ key: 'reason', label: '原因', type: 'textarea', required: true, placeholder: '说明为什么执行该动作' }],
       submitLabel: '确认执行',
       onSubmit: async (values) => {
@@ -171,7 +179,7 @@ async function runAction(action: any) {
     })
     return
   }
-  const danger = ['terminate', 'deliver', 'archive'].includes(String(action.key))
+  const danger = isDanger(action.key)
   const yes = await ui.confirm(action.label, `将项目状态推进到「${action.next === '__prev__' ? '暂停前状态' : action.next}」。动作会写入审计日志。`, danger)
   if (!yes) return
   await projectApi.transition(projectStore.currentId, action.key)

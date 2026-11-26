@@ -3,8 +3,8 @@
     <PageHeader kicker="CREATION / REVIEW A" title="剧本审核" desc="节点 A：审核结论决定项目能否进入生产准备；通过即锁定正式版本，退回必须写明原因。">
       <HeadActions>
         <button class="btn" @click="$router.push('/creation/script')">查看剧本版本</button>
-        <button class="btn" v-if="session.can('script.review') && reviewing" @click="decide('通过')">通过并锁定</button>
-        <button class="btn" v-if="session.can('script.review') && reviewing" @click="decide('退回')">退回修订</button>
+        <button class="btn primary" v-if="session.can('script.review') && reviewing" @click="decide('通过')">通过并锁定</button>
+        <button class="btn danger" v-if="session.can('script.review') && reviewing" @click="decide('退回')">退回修订</button>
       </HeadActions>
     </PageHeader>
 
@@ -55,7 +55,7 @@
             <span class="k">{{ review.at }} · {{ review.auditor }}</span>
             <span class="v"><StatusPill :status="review.result" /> {{ review.note }}</span>
           </div>
-          <div v-if="!history.length" class="empty">暂无审核记录</div>
+          <EmptyState v-if="!history.length" title="暂无审核记录" desc="提交剧本审核后，结论与意见会在这里留痕。" compact />
         </div>
       </aside>
     </div>
@@ -71,6 +71,7 @@ import { useUiStore } from '../../../stores/ui'
 import type { Row } from '../../../mock/db'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
+import EmptyState from '../../../components/ui/EmptyState.vue'
 import StatusPill from '../../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()

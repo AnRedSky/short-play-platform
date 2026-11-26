@@ -12,7 +12,7 @@
         <span class="k">{{ identity.name }}<em class="muted"> · {{ identity.dept }}</em></span>
         <span class="v"><button class="link-btn" @click="use(identity)">切换并打开</button></span>
       </div>
-      <div v-if="!candidates.length" class="empty">没有其他身份可用于该页面</div>
+      <EmptyState v-if="!candidates.length" title="没有其他可切换身份" desc="请联系管理员补充该页面所需权限。" compact />
     </div>
   </section>
 </template>
@@ -26,6 +26,7 @@ import { useUiStore } from '../../stores/ui'
 import { accessApi } from '../../services/access'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import HeadActions from '../../components/ui/HeadActions.vue'
+import EmptyState from '../../components/ui/EmptyState.vue'
 
 const route = useRoute()
 const router = useRouter()

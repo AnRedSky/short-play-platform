@@ -53,7 +53,7 @@ const route = useRoute()
 const router = useRouter()
 
 const scope = computed(() => (String(route.path).endsWith('/me') ? 'me' : 'enterprise'))
-const payload = ref<Record<string, any>>({})
+const payload = ref<Row>({})
 
 const kpis = computed<Record<string, string>>(() => {
   const raw = payload.value.kpis || {}

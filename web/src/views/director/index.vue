@@ -33,10 +33,13 @@
           <span class="tag">{{ shot.chars }}</span>
         </div>
       </div>
-      <div v-if="!visible.length" class="empty" style="grid-column: 1/-1">
-        <b>没有符合条件的镜头</b>
-        <p>调整集数或搜索条件；若项目尚未拆解，请先完成剧本拆解。</p>
-      </div>
+      <EmptyState
+        v-if="!visible.length"
+        title="没有符合条件的镜头"
+        desc="调整集数或搜索条件；若项目尚未拆解，请先完成剧本拆解。"
+        icon="▤"
+        style="grid-column: 1/-1"
+      />
     </div>
 
     <AppDrawer :open="!!selected" :title="selected ? `E${selected.ep} · ${selected.no}` : ''" :subtitle="selected?.id" @close="selected = null">
@@ -75,6 +78,7 @@ import type { Row } from '../../mock/db'
 import PageHeader from '../../components/ui/PageHeader.vue'
 import HeadActions from '../../components/ui/HeadActions.vue'
 import AppDrawer from '../../components/ui/AppDrawer.vue'
+import EmptyState from '../../components/ui/EmptyState.vue'
 import StatusPill from '../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()

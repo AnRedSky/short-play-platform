@@ -3,8 +3,8 @@
     <PageHeader kicker="POST / FINAL REVIEW" title="最终成片审核" desc="节点 B：终审结论直接决定交付；通过后状态进入「已完成」，退回则回到后期返工。">
       <HeadActions>
         <button class="btn" @click="$router.push('/quality/reports')">质量报告</button>
-        <button class="btn" v-if="session.can('final.review') && projectStore.current?.status === '待最终审核'" @click="decide('通过')">终审通过</button>
-        <button class="btn" v-if="session.can('final.review') && projectStore.current?.status === '待最终审核'" @click="decide('退回')">退回返工</button>
+        <button class="btn primary" v-if="session.can('final.review') && projectStore.current?.status === '待最终审核'" @click="decide('通过')">终审通过</button>
+        <button class="btn danger" v-if="session.can('final.review') && projectStore.current?.status === '待最终审核'" @click="decide('退回')">退回返工</button>
       </HeadActions>
     </PageHeader>
 
@@ -43,7 +43,7 @@
             <b>{{ review.node }} · {{ review.result }}</b>
             <p>{{ review.auditor }} · {{ review.note }}</p>
           </div>
-          <div v-if="!reviews.length" class="empty">暂无审核记录</div>
+          <EmptyState v-if="!reviews.length" title="暂无审核记录" desc="终审通过或退回后，结论与操作人会在这里留痕。" compact />
         </div>
       </div>
 
@@ -75,6 +75,7 @@ import { useUiStore } from '../../../stores/ui'
 import type { Row } from '../../../mock/db'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
+import EmptyState from '../../../components/ui/EmptyState.vue'
 import StatusPill from '../../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()

@@ -3,7 +3,7 @@
     <PageHeader kicker="POST / DELIVERY" title="交付包" desc="交付执行：清单齐备、终审通过、校验和留存后冻结版本；交付后不可回退。">
       <HeadActions>
         <button class="btn" @click="$router.push('/post/review')">最终审核</button>
-        <button class="btn primary" v-if="session.can('delivery.execute') && projectStore.current?.status === '已完成'" @click="deliver">生成并交付</button>
+        <button class="btn danger" v-if="session.can('delivery.execute') && projectStore.current?.status === '已完成'" @click="deliver">生成并交付</button>
       </HeadActions>
     </PageHeader>
 
@@ -102,7 +102,7 @@ async function deliver() {
     ui.toast('交付清单存在缺项，无法交付', 'bad')
     return
   }
-  const yes = await ui.confirm('生成并交付', `将为《${projectStore.current?.name}》生成 ${projectStore.current?.episodes} 集交付包并冻结版本 V1。交付后不可回退。`)
+  const yes = await ui.confirm('生成并交付', `将为《${projectStore.current?.name}》生成 ${projectStore.current?.episodes} 集交付包并冻结版本 V1。交付后不可回退。`, true)
   if (!yes) return
   await postApi.createDelivery({ project: projectStore.currentId, episodes: projectStore.current?.episodes, receiver: '企业内容库' })
   ui.toast('交付包已生成并冻结')

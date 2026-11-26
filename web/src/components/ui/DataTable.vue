@@ -9,14 +9,11 @@
       </thead>
       <tbody>
         <tr v-if="loading">
-          <td :colspan="columns.length + 1"><div class="empty"><b>正在读取数据…</b><p>接口返回后本表自动刷新。</p></div></td>
+          <td :colspan="columns.length + 1"><EmptyState title="正在读取数据…" desc="接口返回后本表自动刷新。" icon="…" /></td>
         </tr>
         <tr v-else-if="!rows.length">
           <td :colspan="columns.length + 1">
-            <div class="empty">
-              <b>{{ emptyTitle }}</b>
-              <p>{{ emptyHint }}</p>
-            </div>
+            <EmptyState :title="emptyTitle" :desc="emptyHint" icon="∅" />
           </td>
         </tr>
         <template v-else>
@@ -37,6 +34,7 @@
 
 <script setup lang="ts">
 import StatusPill from './StatusPill.vue'
+import EmptyState from './EmptyState.vue'
 import type { Row } from '../../mock/db'
 
 export interface Column {
@@ -49,7 +47,7 @@ export interface Column {
   format?: (row: Row) => string | number
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   columns: Column[]
   rows: Row[]
   rowKey?: string
@@ -58,7 +56,13 @@ const props = defineProps<{
   wide?: boolean
   emptyTitle?: string
   emptyHint?: string
-}>()
+}>(), {
+  loading: false,
+  clickable: false,
+  wide: false,
+  emptyTitle: '暂无记录',
+  emptyHint: '调整筛选条件或稍后重试。',
+})
 void props
 
 defineEmits<{ (event: 'row-click', row: Row): void }>()

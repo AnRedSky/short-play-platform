@@ -27,7 +27,7 @@
             <span class="tag">尝试 {{ task.attempt }}/{{ task.maxAttempts }}</span>
           </div>
         </div>
-        <div v-if="!column.rows.length" class="empty" style="padding: 10px">空</div>
+        <EmptyState v-if="!column.rows.length" title="本栏暂无任务" desc="切换集数或等待任务进入该状态。" compact />
       </div>
     </div>
 
@@ -71,7 +71,7 @@
             <span class="k">#{{ attempt.n }} · {{ attempt.at }}</span>
             <span class="v"><StatusPill :status="attempt.status" /> {{ attempt.fail }}</span>
           </div>
-          <div v-if="!attempts.length" class="empty">暂无尝试记录</div>
+          <EmptyState v-if="!attempts.length" title="暂无尝试记录" desc="任务执行后，每次尝试与失败原因会记录在此。" compact />
         </div>
       </div>
     </AppDrawer>
@@ -90,6 +90,7 @@ import HeadActions from '../../components/ui/HeadActions.vue'
 import StatCards from '../../components/ui/StatCards.vue'
 import DataTable, { type Column } from '../../components/ui/DataTable.vue'
 import AppDrawer from '../../components/ui/AppDrawer.vue'
+import EmptyState from '../../components/ui/EmptyState.vue'
 import StatusPill from '../../components/ui/StatusPill.vue'
 
 const session = useSessionStore()

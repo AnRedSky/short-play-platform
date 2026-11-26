@@ -11,7 +11,7 @@
           <p class="card-sub">{{ current?.name }} · {{ current?.status }}</p>
         </div>
         <div class="act-bar">
-          <button v-for="action in allowed" :key="action.key" class="btn" :class="{ primary: action.tone === 'primary' }" @click="run(action)">{{ action.label }}</button>
+          <button v-for="action in allowed" :key="action.key" class="btn" :class="{ primary: action.tone === 'primary' && !isDanger(action.key), danger: isDanger(action.key) }" @click="run(action)">{{ action.label }}</button>
         </div>
       </div>
       <StageRail :stages="stages" />
@@ -35,7 +35,7 @@
             <div v-for="action in actionsOf(selectedState?.name || current?.status)" :key="action.key" class="ck">
               <i class="on">→</i><span>{{ action.label }} → {{ action.next === '__prev__' ? '暂停前状态' : action.next }}<em class="muted"> · {{ action.permission }}</em></span>
             </div>
-            <div v-if="!actionsOf(selectedState?.name || current?.status).length" class="empty">该状态为终态或需要系统自动迁移</div>
+            <EmptyState v-if="!actionsOf(selectedState?.name || current?.status).length" title="该状态无人工出口" desc="终态不可回退，或由系统自动迁移。" compact />
           </div>
         </div>
         <div class="card">
@@ -55,10 +55,11 @@ import { computed, onMounted, ref } from 'vue'
 import { projectApi } from '../../../services/projects'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
-import { GATE_ACTIONS } from '../../../mock/state'
+import { GATE_ACTIONS, type GateAction, type StageRow } from '../../../mock/state'
 import type { Row } from '../../../mock/db'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
+import EmptyState from '../../../components/ui/EmptyState.vue'
 import StageRail from '../../../components/ui/StageRail.vue'
 import DataTable, { type Column } from '../../../components/ui/DataTable.vue'
 
@@ -66,8 +67,12 @@ const projectStore = useProjectStore()
 const ui = useUiStore()
 const states = ref<Row[]>([])
 const pipeline = ref<Row[]>([])
-const stages = ref<any[]>([])
-const allowed = ref<any[]>([])
+const stages = ref<StageRow[]>([])
+const allowed = ref<GateAction[]>([])
+const DANGER_ACTIONS = ['terminate', 'archive', 'deliver']
+function isDanger(key: unknown) {
+  return DANGER_ACTIONS.includes(String(key))
+}
 const selectedState = ref<Row | null>(null)
 
 const current = computed(() => projectStore.current)
@@ -92,11 +97,12 @@ function preview(row: Row) {
   ui.toast(`「${row.name}」出口 ${actionsOf(String(row.name)).length} 个`, 'info')
 }
 
-async function run(action: any) {
+async function run(action: GateAction) {
   if (action.needReason) {
     ui.openDialog({
       title: action.label,
       subtitle: `当前状态「${current.value?.status}」→「${action.next === '__prev__' ? '暂停前状态' : action.next}」；必须填写原因。`,
+      danger: isDanger(action.key),
       fields: [{ key: 'reason', label: '原因', type: 'textarea', required: true, placeholder: '说明为什么执行该动作' }],
       submitLabel: '确认执行',
       onSubmit: async (values) => {
@@ -122,8 +128,8 @@ async function load() {
   ])
   states.value = stateRows.rows
   pipeline.value = pipelineRows.rows
-  stages.value = workflow.stages
-  allowed.value = workflow.allowed_actions
+  stages.value = (workflow.stages ?? []) as StageRow[]
+  allowed.value = (workflow.allowed_actions ?? []) as GateAction[]
   selectedState.value = stateRows.rows.find((row) => row.name === workflow.project?.status) ?? null
 }
 

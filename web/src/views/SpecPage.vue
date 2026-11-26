@@ -2,7 +2,7 @@
   <section class="page">
     <PageHeader :kicker="spec.kicker" :title="title" :desc="spec.desc">
       <HeadActions>
-        <button v-for="action in visibleActions" :key="action.label" class="btn" :class="{ primary: action.tone === 'primary' }" @click="run(action)">
+        <button v-for="action in visibleActions" :key="action.label" class="btn" :class="{ primary: action.tone === 'primary', danger: action.danger }" @click="run(action)">
           {{ action.label }}
         </button>
         <button class="btn" @click="reload">刷新</button>
@@ -29,7 +29,7 @@
       </select>
       <span class="filter-count">{{ rows.length }} / {{ total }} 条</span>
       <span class="grow"></span>
-      <span v-if="error" class="text-bad" style="font-size: 11px">{{ error }}</span>
+      <span v-if="error" class="pill bad">加载失败 · {{ error }}</span>
     </div>
 
     <StatCards v-if="stats.length" :items="stats" />

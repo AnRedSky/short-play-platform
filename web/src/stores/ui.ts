@@ -18,6 +18,7 @@ export interface DialogField {
 export interface DialogConfig {
   title: string
   subtitle?: string
+  danger?: boolean
   fields?: DialogField[]
   submitLabel?: string
   wide?: boolean
