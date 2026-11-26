@@ -6,11 +6,12 @@
 
 | ID | 任务 | 关键内容 | 验收 |
 | --- | --- | --- | --- |
-| B-01 | 项目域契约定稿（完成，草案见 `docs/04-api/openapi-projects.yaml`） | `projects` 列表/详情/汇总/流水线/时间线；字段统一（code/title 与前端 id/name 的映射层） | OpenAPI 草案 + 与 mock 响应结构一致 |
+| B-01 | 项目域契约与 DTO（完成，本轮） | 页面 DTO：`record_id + id(=code) + name(=title) + brief + 状态/阶段 + owner + budgetState + 时间/版本`；列表/详情/创建/PATCH/迁移共用 `serialize_project()` | `ProjectRead` 字段齐备；项目与创作域 20 passed，后端全量 143 passed |
 | B-02 | 状态机服务端化（完成 `85b095e`） | 15 状态、动作键、权限、原因校验；`POST /projects/{id}/transitions`；`PATCH` 禁止改 status；`Idempotency-Key` 落库 | `tests/domains/projects/test_transitions.py` 7 条通过，重复提交不双写 |
 | B-03 | 身份与权限（完成 `85b095e`） | 36 个点号权限码、六身份模板；接口级 + 项目成员双重鉴权 | 6 身份 × 56 路由矩阵 336 项与前端快照一致 |
 | B-04 | 剧本与审核（完成 `85b095e`） | 审核记录 + 剧本状态 + 项目状态迁移 + 审计同事务，版本唯一键禁止二次审核 | `tests/domains/creation/test_script_review.py` 3 条通过 |
-| B-05 | 生成任务与队列 | 任务创建、排队、重试、取消、暂停；供应商回调；`maxAttempts` 与超时回收 | 重试/取消/回调乱序均幂等 |
+| B-05 | 生成任务与队列（完成，本轮） | 入队/派发/退避重试/暂停恢复/取消/供应商回调/租约回收；`(task_id, callback_id)` 幂等；迁移 `0011` | 生成域 16 passed；乱序与重复回调不双写；详见 `docs/04-api/GENERATION-QUEUE.md` |
+| B-05a | 项目设定持久化（完成，本轮） | PATCH 落库 `genre/audience/episodes/duration/ratio/language/style/constraints/budget`，未知字段 422 | `test_project_dto.py` 校验 PATCH 后重新读取仍保留全部 brief |
 | B-06 | 成本与预算 | 每次调用记账（含失败成本）、预算阈值、超限策略、对账状态；金额用 decimal | 台账与调用记录可逐条对上 |
 | B-07 | 质检 | 规则集、单集/整剧级、报告与问题项、阻断项回退映射 | 阻断项必触发退回后期 |
 | B-08 | 后期与交付 | 时间线版本、分集输出、终审、交付包冻结与校验和 | 交付后版本不可覆盖 |
