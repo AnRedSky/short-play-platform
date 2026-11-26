@@ -131,6 +131,7 @@ class Settings(BaseSettings):
     # Storage / media
     storage_root: str = "storage"
     max_upload_size: int = 500 * 1024 * 1024
+    direct_upload_ttl_minutes: int = 15
     ffmpeg_binary: str = "ffmpeg"
     ffprobe_binary: str = "ffprobe"
 

@@ -12,6 +12,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.domains.assets import service as assets_service
 from app.domains.audit import service as audit_service
 from app.domains.creation.models import Episode
 from app.domains.delivery import repository as delivery_repo
@@ -307,6 +308,13 @@ def create_output(
     )
     db.add(output)
     db.flush()
+    assets_service.add_reference(
+        db,
+        asset=asset,
+        ref_type="episode_output",
+        ref_id=output.id,
+        note=f"E{episode_number:02d} 分集成片",
+    )
     episodes_done = len({row.episode_number for row in delivery_repo.list_outputs(db, project.id)})
     project.done_episodes = episodes_done
     db.flush()

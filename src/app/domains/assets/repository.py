@@ -5,7 +5,14 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.domains.assets.models import AssetReference, AssetVersion, ExportJob, MediaAsset
+from app.domains.assets.models import (
+    AssetQualityCheck,
+    AssetReference,
+    AssetUploadSession,
+    AssetVersion,
+    ExportJob,
+    MediaAsset,
+)
 
 
 def get_asset(db: Session, asset_id: UUID) -> MediaAsset | None:
@@ -84,3 +91,58 @@ def create_export_job(
     db.add(job)
     db.flush()
     return job
+
+
+def latest_version(db: Session, asset_id: UUID) -> AssetVersion | None:
+    return db.scalar(
+        select(AssetVersion)
+        .where(AssetVersion.asset_id == asset_id)
+        .order_by(AssetVersion.version_number.desc())
+        .limit(1)
+    )
+
+
+def list_references(db: Session, asset_id: UUID) -> list[AssetReference]:
+    return list(
+        db.scalars(
+            select(AssetReference)
+            .where(AssetReference.asset_id == asset_id)
+            .order_by(AssetReference.created_at)
+        ).all()
+    )
+
+
+def find_reference(
+    db: Session, *, asset_id: UUID, ref_type: str, ref_id: UUID
+) -> AssetReference | None:
+    return db.scalar(
+        select(AssetReference).where(
+            AssetReference.asset_id == asset_id,
+            AssetReference.ref_type == ref_type,
+            AssetReference.ref_id == ref_id,
+        )
+    )
+
+
+def get_reference(db: Session, reference_id: UUID) -> AssetReference | None:
+    return db.get(AssetReference, reference_id)
+
+
+def list_quality_checks(db: Session, asset_id: UUID) -> list[AssetQualityCheck]:
+    return list(
+        db.scalars(
+            select(AssetQualityCheck)
+            .where(AssetQualityCheck.asset_id == asset_id)
+            .order_by(AssetQualityCheck.created_at.desc())
+        ).all()
+    )
+
+
+def get_upload_session(db: Session, upload_id: UUID) -> AssetUploadSession | None:
+    return db.get(AssetUploadSession, upload_id)
+
+
+def find_upload_by_token_hash(db: Session, token_hash: str) -> AssetUploadSession | None:
+    return db.scalar(
+        select(AssetUploadSession).where(AssetUploadSession.token_hash == token_hash)
+    )
