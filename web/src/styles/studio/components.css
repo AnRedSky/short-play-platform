@@ -202,7 +202,8 @@
 .thread{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 
 /* ---------- 弹窗 / 抽屉 / 提示 ---------- */
-.modal-backdrop{position:fixed;inset:0;background:rgba(24,23,20,.42);display:grid;place-items:center;padding:18px;z-index:70}
+.modal-backdrop{position:fixed;inset:0;background:rgba(24,23,20,.42);display:grid;place-items:center;padding:18px;z-index:92}
+.modal-backdrop.drawer-backdrop{z-index:90}
 /* 弹窗改为「头部固定 + 表单区滚动 + 底部操作吸附」：
    1280×800 下高表单（如导入小说 12 个字段）整窗滚动会把提交按钮滚出视口，用户看不到怎么提交。 */
 .modal{background:var(--surface);border-radius:var(--r-card);width:min(620px,100%);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;padding:var(--sp-5);box-shadow:var(--shadow-pop);border:1px solid var(--line)}
@@ -212,7 +213,7 @@
 .modal-head p{font-size:var(--fs-label);color:var(--muted);margin-top:3px}
 #app-form{display:flex;flex-direction:column;min-height:0;flex:1 1 auto;overflow:auto;margin:0 -4px;padding:0 4px}
 .modal-foot{display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;z-index:2;margin-top:var(--sp-4);padding-top:12px;padding-bottom:2px;border-top:1px solid var(--line);background:var(--surface)}
-.toast-root{position:fixed;right:18px;bottom:18px;z-index:90;display:grid;gap:8px;justify-items:end}
+.toast-root{position:fixed;right:18px;bottom:18px;z-index:100;display:grid;gap:8px;justify-items:end}
 .toast{background:var(--ink);color:#f6f2e9;padding:9px 14px;border-radius:9px;font-size:var(--fs-note);box-shadow:var(--shadow-pop);max-width:340px;animation:toast-in .16s ease}
 .toast.bad{background:var(--bad)}
 @keyframes toast-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}

@@ -34,15 +34,20 @@
     ]" />
 
     <div style="margin-top: 18px">
-      <DataTable :columns="columns" :rows="visible" row-key="id" :loading="loading" clickable wide @row-click="open">
+      <DataTable :columns="columns" :rows="visible" row-key="id" :loading="loading" clickable wide @row-click="openRow">
         <template #actions="{ row }">
           <button class="link-btn" @click="goto(row, 'projects/workflow')">流水线</button>
-          <button class="link-btn" @click="open(row)">详情</button>
+          <button class="link-btn" @click="openRow(row)">详情</button>
         </template>
       </DataTable>
     </div>
 
-    <AppDrawer :open="!!selected" :title="selected?.name || ''" :subtitle="selected ? `${selected.id} · ${selected.status}` : ''" @close="selected = null">
+    <AppDrawer
+      :open="isOpen"
+      :title="selected?.name || '项目详情'"
+      :subtitle="selected ? `${selected.id} · ${selected.status}` : '正在读取项目…'"
+      @close="closePanel"
+    >
       <div v-if="selected">
         <div class="act-bar">
           <button class="btn primary" @click="goto(selected, 'projects/workflow')">进入制作流水线</button>
@@ -72,9 +77,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { projectApi } from '../../services/projects'
+import { useRoutePanel } from '../../composables/useRoutePanel'
 import { useTableQuery } from '../../composables/useTableQuery'
 import { useSessionStore } from '../../stores/session'
 import { useProjectStore } from '../../stores/project'
@@ -90,7 +96,8 @@ const projectStore = useProjectStore()
 const router = useRouter()
 const projects = ref<Row[]>([])
 const loading = ref(false)
-const selected = ref<Row | null>(null)
+const { activeId, isOpen, open: openPanel, close: closePanel } = useRoutePanel('project')
+const selected = computed(() => projects.value.find((row) => String(row.id) === activeId.value) ?? null)
 const { search, filters: query, visible } = useTableQuery(projects, {
   search: (row) => `${row.name}${row.id}${row.genre}`,
   filter: (row, filters) => {
@@ -148,13 +155,9 @@ function goto(row: Row, path: string) {
   router.push(`/${path}`)
 }
 
-function open(row: Row) {
-  selected.value = row
+function openRow(row: Row) {
+  openPanel(String(row.id))
 }
-
-watch(() => projectStore.currentId, () => {
-  if (selected.value) selected.value = projects.value.find((row) => row.id === selected.value?.id) ?? null
-})
 
 onMounted(load)
 </script>

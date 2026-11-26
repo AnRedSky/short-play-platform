@@ -106,7 +106,12 @@ for (const record of routes) {
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior: () => ({ top: 0 }),
+  scrollBehavior: (to, from, saved) => {
+    if (saved) return saved
+    // 同路径的抽屉/筛选 query 变化不回到顶部，避免打开详情后丢失列表浏览位置。
+    if (to.path === from.path) return false
+    return { top: 0 }
+  },
 })
 
 router.beforeEach(async (to) => {
