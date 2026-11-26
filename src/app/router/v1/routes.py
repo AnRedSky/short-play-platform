@@ -10,6 +10,8 @@ from app.domains.creation.router import router as creation_router
 from app.domains.delivery.router import router as delivery_router
 from app.domains.generation.router import router as generation_router
 from app.domains.health.router import router as health_router
+from app.domains.notifications.router import router as notifications_router
+from app.domains.ops.router import router as ops_router
 from app.domains.organizations.router import router as organizations_router
 from app.domains.projects.router import router as projects_router
 from app.domains.quality.router import router as quality_router
@@ -34,5 +36,7 @@ for domain_router in (
     workflow_router,
     assets_router,
     audit_router,
+    notifications_router,
+    ops_router,
 ):
     router.include_router(domain_router)

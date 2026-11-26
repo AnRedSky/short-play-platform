@@ -19,6 +19,8 @@ V3.0 已合并并替代《完整项目业务方案（V1.0）》与《项目业�
 - [API 规范](04-api/API_CONVENTIONS.md)
 - [API 实际覆盖矩阵](04-api/API_COVERAGE_MATRIX.md)：当前已注册路由、缺失接口和代码偏差。
 - [组织与授权治理](04-api/ORG-GOVERNANCE.md)：部门、成员、项目授权、角色撤销、离职交接与即时失效。
+- [通知收件箱与审计只追加](04-api/NOTIFICATIONS-AUDIT.md)：同对象合并、已读、处理页 link 与不可改写审计。
+- [运维接口](04-api/OPS-CONSOLE.md)：健康、队列深度、日志查询、备份触发与结果。
 - [AI Provider 规范](05-ai-provider/PROVIDER_SPEC.md)
 - [工作流与任务](06-workflow/WORKFLOW_AND_TASKS.md)
 - [安全基线](07-security/SECURITY_BASELINE.md)

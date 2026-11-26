@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.dependencies.pagination import PaginationParams
 from app.domains.audit import service as audit_service
+from app.domains.notifications import service as notifications_service
 from app.domains.organizations import repository as organizations_repo
 from app.domains.projects import repository as projects_repo
 from app.domains.projects.constants import PROJECT_WRITE_ROLES
@@ -383,6 +384,13 @@ def transition_project(
             "reason": reason_text,
             "expected_state": expected_state,
         },
+    )
+    notifications_service.notify_project_transition(
+        db,
+        project=project,
+        action=action,
+        actor_user_id=actor_user_id,
+        reason=reason_text,
     )
     db.flush()
     return payload

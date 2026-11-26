@@ -66,7 +66,15 @@
 | Workflow | GET | /workflow-runs/{run_id} | 运行详情 |
 | Workflow | POST | /workflow-runs/{run_id}/cancel | 取消运行 |
 | Workflow | POST | /workflow-runs/{run_id}/recover | 恢复运行 |
-| Audit | GET | /audit-logs | 审计日志查询 |
+| Audit | GET | /audit-logs | 审计日志查询；只追加，支持 action/resource_type/result/q |
+| Notifications | GET | /notifications | 当前用户收件箱；project/unread/state/type/q/limit |
+| Notifications | POST | /notifications/{notification_id}/read | 单条已读 |
+| Notifications | POST | /notifications/read-all | 批量已读；project/type 限定 |
+| Ops | GET | /ops/health | API/PostgreSQL/Redis/调度器/存储健康快照 |
+| Ops | GET | /ops/overview | 队列、服务、存储、提供方、事件聚合 |
+| Ops | GET | /ops/queues | 按 capability 的队列深度与 P95 |
+| Ops | GET | /ops/logs | 失败任务/备份/审计聚合日志查询 |
+| Ops | GET/POST | /ops/backups | 备份记录查询/同步触发 |
 | Health | GET | /health | Liveness |
 | Health | GET | /health/ready | PostgreSQL/Redis readiness |
 
@@ -80,7 +88,6 @@
 | 完整导出管理 | 仅 assets 域创建导出入口 | ExportJob 列表/详情/取消/下载/验证报告 |
 | Provider 配置与凭据 | 仅 Provider 列表/健康路由 | Mork 配置、密钥引用、模型配置、Capability Catalog |
 | 用量/预算 | 未发现完整路由 | UsageRecord、预算、项目用量报表 |
-| 通知/事件 | 未发现面向业务用户的完整事件 API | 站内通知；SSE 若需要仅作通知，快照 API 为事实 |
 | 项目内搜索 | 未发现完整搜索 API | 仅项目范围内检索，禁止跨项目资产搜索 |
 
 ## 3. 已知 API/业务偏差

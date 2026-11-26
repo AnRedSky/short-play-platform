@@ -135,6 +135,11 @@ class Settings(BaseSettings):
     ffmpeg_binary: str = "ffmpeg"
     ffprobe_binary: str = "ffprobe"
 
+    # Operations backups. With no command configured the API writes a verifiable
+    # logical metadata snapshot; supply e.g. "pg_dump -Fc -f {output} <conn>" in
+    # deployments that require a restore-ready database dump.
+    backup_command: str = Field(default="", validation_alias="OPS_BACKUP_COMMAND")
+
     @field_validator("app_env", mode="before")
     @classmethod
     def _normalize_environment(cls, value: object) -> object:

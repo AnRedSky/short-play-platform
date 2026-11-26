@@ -19,6 +19,8 @@ from app.domains.costs import models as costs_models  # noqa: F401
 from app.domains.creation import models as creation_models  # noqa: F401
 from app.domains.delivery import models as delivery_models  # noqa: F401
 from app.domains.generation import models as generation_models  # noqa: F401
+from app.domains.notifications import models as notifications_models  # noqa: F401
+from app.domains.ops import models as ops_models  # noqa: F401
 from app.domains.organizations import models as organizations_models  # noqa: F401
 from app.domains.projects import models as projects_models  # noqa: F401
 from app.domains.quality import models as quality_models  # noqa: F401

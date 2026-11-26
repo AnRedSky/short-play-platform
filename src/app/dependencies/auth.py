@@ -15,6 +15,7 @@ from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 from app.dependencies.db import get_db
+from app.domains.audit.context import current_organization_id as audit_organization_id
 from app.domains.organizations import repository as organizations_repo
 from app.domains.roles.service import permission_codes_for_user
 from app.domains.users.models import User
@@ -52,6 +53,7 @@ def _bearer_claims(request: Request) -> dict:
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
+    audit_organization_id.set(None)
     claims = _bearer_claims(request)
     user = get_user_by_id(db, UUID(str(claims["sub"])))
     if user is None or not user.is_active:
@@ -65,6 +67,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
         except ValueError:
             organization_id = None
     request.state.organization_id = organization_id
+    audit_organization_id.set(organization_id)
     if organization_id is not None and not organizations_repo.is_active_member(
         db, organization_id, user.id
     ):

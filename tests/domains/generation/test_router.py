@@ -166,6 +166,17 @@ def test_provider_failure_returns_to_queue_until_attempt_budget_is_used(client, 
     detail = _task_detail(client, admin, task_id)
     assert [row["status"] for row in detail["attempts"]] == ["failed", "failed"]
 
+    inbox = client.get(
+        "/api/v1/notifications",
+        headers=admin["headers"],
+        params={"type": "任务失败", "project": project["id"]},
+    )
+    assert inbox.status_code == 200, inbox.text
+    notifications = inbox.json()["data"]
+    assert len(notifications) == 1
+    assert notifications[0]["link"] == f"tasks/list?project={project['id']}&task={task_id}"
+    assert notifications[0]["reason"]
+
 
 def test_pause_blocks_claim_and_resume_requeues(client, admin):
     project = _project(client, admin)

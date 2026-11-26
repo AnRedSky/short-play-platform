@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 
 from app.dependencies.pagination import PaginationParams
 from app.domains.audit.models import AuditLog
-from app.domains.organizations.models import OrganizationMember
 
 
 def add_log(
@@ -18,12 +17,14 @@ def add_log(
     action: str,
     resource_type: str,
     resource_id: str | None,
+    organization_id: UUID | None = None,
     result: str = "success",
     request_id: str | None = None,
     details: dict[str, Any] | None = None,
 ) -> AuditLog:
     log = AuditLog(
         actor_user_id=actor_user_id,
+        organization_id=organization_id,
         action=action,
         resource_type=resource_type,
         resource_id=resource_id,
@@ -49,27 +50,31 @@ def find_by_action_and_resource(
 
 
 def list_logs(
-    db: Session, *, organization_id: UUID, action: str | None, pagination: PaginationParams
+    db: Session,
+    *,
+    organization_id: UUID,
+    action: str | None,
+    resource_type: str | None,
+    result: str | None,
+    query_text: str | None,
+    pagination: PaginationParams,
 ) -> tuple[list[AuditLog], int]:
-    query = (
-        select(AuditLog)
-        .join(OrganizationMember, OrganizationMember.user_id == AuditLog.actor_user_id)
-        .where(
-            OrganizationMember.organization_id == organization_id,
-            OrganizationMember.is_active.is_(True),
-        )
-    )
-    count_query = (
-        select(func.count(AuditLog.id))
-        .join(OrganizationMember, OrganizationMember.user_id == AuditLog.actor_user_id)
-        .where(
-            OrganizationMember.organization_id == organization_id,
-            OrganizationMember.is_active.is_(True),
-        )
-    )
+    filters = [AuditLog.organization_id == organization_id]
     if action:
-        query = query.where(AuditLog.action == action)
-        count_query = count_query.where(AuditLog.action == action)
+        filters.append(AuditLog.action == action)
+    if resource_type:
+        filters.append(AuditLog.resource_type == resource_type)
+    if result:
+        filters.append(AuditLog.result == result)
+    if query_text:
+        pattern = f"%{query_text.strip()}%"
+        filters.append(
+            AuditLog.action.ilike(pattern)
+            | AuditLog.resource_type.ilike(pattern)
+            | AuditLog.resource_id.ilike(pattern)
+        )
+    query = select(AuditLog).where(*filters)
+    count_query = select(func.count(AuditLog.id)).where(*filters)
     rows = db.scalars(
         query.order_by(AuditLog.created_at.desc())
         .offset(pagination.offset)

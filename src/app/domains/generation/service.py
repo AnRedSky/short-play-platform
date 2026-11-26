@@ -23,6 +23,7 @@ from app.domains.generation.constants import (
 )
 from app.domains.generation.models import GenerationTask, TaskAttempt
 from app.domains.generation.schemas import GenerationTaskRead, ProviderCallback
+from app.domains.notifications import service as notifications_service
 from app.domains.projects.models import Project
 from app.infrastructure.providers.base import (
     Capability,
@@ -174,6 +175,20 @@ def _record_success(
     task.finished_at = finished_at
 
 
+def _notify_failed_task(db: Session, task: GenerationTask) -> None:
+    project = db.get(Project, task.project_id)
+    if project is None:
+        return
+    notifications_service.notify_generation_failure(
+        db,
+        project=project,
+        task_id=task.id,
+        capability=task.capability,
+        error_code=task.error_code,
+        error_message=task.error_message,
+    )
+
+
 def _record_failure(
     db: Session,
     task: GenerationTask,
@@ -216,6 +231,7 @@ def _record_failure(
 
     task.status = "failed"
     task.finished_at = finished_at
+    _notify_failed_task(db, task)
 
 
 def _provider_request(task: GenerationTask) -> GenerationRequest:
@@ -425,6 +441,7 @@ def recover_expired_tasks(db: Session, *, limit: int = 20) -> list[GenerationTas
             task.status = "failed"
             task.finished_at = now
             task.next_run_at = None
+            _notify_failed_task(db, task)
         db.flush()
         recovered.append(task)
     return recovered
