@@ -407,6 +407,18 @@ const specs: ContractSpec[] = [
     kind: 'array',
   },
   {
+    name: 'projects.episodeAction',
+    invoke: (s) =>
+      s.projects.episodeAction(PROJECT_CODE, 19, {
+        action: 'lockAssets',
+        model: '视频模型 A',
+        note: 'contract',
+      }),
+    ...projectPath('/episodes/19/actions', 'POST'),
+    kind: 'object',
+    realData: { state: { currentStep: 'E3' } },
+  },
+  {
     name: 'projects.transition',
     invoke: (s) => s.projects.transition(PROJECT_CODE, 'toPost', 'contract'),
     ...projectPath('/transitions', 'POST'),

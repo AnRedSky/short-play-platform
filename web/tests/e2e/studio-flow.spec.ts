@@ -239,6 +239,39 @@ test.describe('工作室 mock 全流程', () => {
     await expect(page.locator('.batch-board')).toBeVisible()
   })
 
+  test('E2 锁定资产后生成镜头任务，并可为镜头换模型生成新 take', async ({ page }) => {
+    await resetStudio(page)
+    await page.goto('/projects/workflow?view=episode&batch=4&episode=19&step=E2')
+    await expect(page.locator('main h1')).toContainText('第 19 集')
+    await expect(page.locator('.ep-action-bar')).toContainText('锁定资产与模型')
+
+    await page.getByRole('button', { name: '锁定资产与模型' }).click()
+    const lockModal = page.locator('.modal').last()
+    await expect(lockModal).toContainText('模型基线')
+    await lockModal.locator('#dlg-model').selectOption('视频模型 B')
+    await lockModal.locator('#dlg-note').fill('E19 镜头契约与关键资产锁定')
+    await lockModal.getByRole('button', { name: '锁定并进入 E3' }).click()
+    await expect(page.getByText('E2 资产与模型锁定 已完成')).toBeVisible()
+
+    await page.locator('.ep-step').filter({ hasText: 'E3' }).click()
+    await expect(page.getByRole('button', { name: '生成镜头任务' })).toBeVisible()
+    await page.getByRole('button', { name: '生成镜头任务' }).click()
+    const startModal = page.locator('.modal').last()
+    await startModal.locator('#dlg-note').fill('先派发 18 个镜头任务')
+    await startModal.getByRole('button', { name: '生成镜头任务' }).click()
+    await expect(page.getByText('E3 素材生产启动 已完成')).toBeVisible()
+    await expect(page.locator('tbody tr')).toHaveCount(18)
+
+    await page.locator('tbody tr').first().getByRole('button', { name: '换模型' }).click()
+    const modelModal = page.locator('.modal').last()
+    await modelModal.locator('#dlg-model').selectOption('视频模型 A（图生视频）')
+    await modelModal.locator('#dlg-note').fill('人物连续性不足，换参考视频模型重跑')
+    await modelModal.getByRole('button', { name: '生成新 take' }).click()
+    await expect(page.getByText('换模型生成新 take 已完成')).toBeVisible()
+    await expect(page.locator('tbody tr').filter({ hasText: '已替代' }).first()).toBeVisible()
+    await expect(page.locator('tbody tr').filter({ hasText: 'T2' }).first()).toBeVisible()
+  })
+
   test('创意策划的方案、版本与确认门禁都走居中弹窗', async ({ page }) => {
     await resetStudio(page)
     await page.goto('/projects/workflow?stage=brief')

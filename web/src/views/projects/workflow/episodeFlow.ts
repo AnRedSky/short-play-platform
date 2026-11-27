@@ -41,6 +41,41 @@ export interface EpisodeCard {
   flow: EpisodeFlow
 }
 
+export interface EpisodeState {
+  id?: string
+  project?: string
+  ep?: number
+  batch?: number
+  currentStep: EpisodeStepKey
+  status?: string
+  blocked?: boolean
+  inputConfirmed: boolean
+  scriptLocked: boolean
+  assetsLocked: boolean
+  productionStarted: boolean
+  qcPassed?: boolean
+  delivered?: boolean
+  modelBaseline?: string
+  owner?: string
+  updated?: string
+}
+
+export interface EpisodeEvent {
+  id?: string
+  project?: string
+  ep?: number
+  action?: string
+  actor?: string
+  at?: string
+  note?: string
+  step?: string
+}
+
+export function episodeStateOf(summary: Row, no: number): EpisodeState | null {
+  const states = (summary.episodeStates as EpisodeState[] | undefined) ?? []
+  return states.find((item) => Number(item.ep ?? item.id?.match(/-(\d+)$/)?.[1]) === no) ?? null
+}
+
 export interface BatchGroup {
   index: number
   label: string

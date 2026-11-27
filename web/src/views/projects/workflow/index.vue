@@ -245,8 +245,10 @@
           :batch="activeBatch"
           :episode="activeEpisode"
           :step="activeStep"
+          :revision="dataRevision"
           @select-step="selectEpisodeStep"
           @open-episode="openEpisodeWorkspace"
+          @refresh="reload"
           @back="openBatch(activeBatch.index)"
         />
 

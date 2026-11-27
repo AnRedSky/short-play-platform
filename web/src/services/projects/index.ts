@@ -34,6 +34,8 @@ export const projectApi = {
     toProjectSummary(await http.get<Record<string, unknown>>(`/projects/${projectRef(id)}/summary`)),
   workflow: (id: string) => http.get<Row>(`/projects/${projectRef(id)}/workflow`),
   timeline: (id: string) => http.get<Row[]>(`/projects/${projectRef(id)}/timeline`),
+  episodeAction: (id: string, ep: number, payload: Record<string, unknown>) =>
+    http.post<Row>(`/projects/${projectRef(id)}/episodes/${ep}/actions`, payload),
   transition: async (id: string, action: string, reason?: string, expectedState?: string) => {
     const body: Record<string, unknown> = { action }
     if (reason) body.reason = reason

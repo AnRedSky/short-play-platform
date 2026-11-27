@@ -382,6 +382,9 @@ exports[`B-14 service contract > runs every service function against mock and re
       ],
     ],
   },
+  "projects.episodeAction": {
+    "kind": "object",
+  },
   "projects.list": {
     "envelope": [
       "rows",

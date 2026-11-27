@@ -64,6 +64,255 @@ function projectOf(id: string): Row {
 }
 
 /* ------------------------------------------------------------------ *
+ * 单集状态：在旧数据上补齐 E0–E7、批次、模型基线与 take 的最小契约
+ * ------------------------------------------------------------------ */
+
+function pad2(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+function episodeStateKey(projectId: string, ep: number): string {
+  return `ES-${projectId}-${pad2(ep)}`
+}
+
+function defaultEpisodeState(project: Row, episode: Row): Row {
+  const ep = Number(episode.no ?? 0)
+  const status = String(episode.status ?? '')
+  const qc = String(episode.qc ?? '')
+  const shot = rows('shots').find((row) => row.project === project.id && Number(row.ep) === ep)
+  let currentStep = 'E0'
+  let inputConfirmed = false
+  let scriptLocked = false
+  let assetsLocked = false
+  let productionStarted = false
+  let qcPassed = false
+  let delivered = false
+  let blocked = false
+
+  if (status.includes('已交付')) {
+    currentStep = 'E7'
+    inputConfirmed = scriptLocked = assetsLocked = productionStarted = qcPassed = delivered = true
+  } else if (status.includes('已输出')) {
+    currentStep = 'E7'
+    inputConfirmed = scriptLocked = assetsLocked = productionStarted = qcPassed = true
+  } else if (status.includes('已通过质检') || qc === 'PASS') {
+    currentStep = 'E7'
+    inputConfirmed = scriptLocked = assetsLocked = productionStarted = qcPassed = true
+  } else if (status.includes('异常') || status.includes('失败')) {
+    currentStep = 'E3'
+    inputConfirmed = scriptLocked = assetsLocked = productionStarted = true
+    blocked = true
+  } else if (status.includes('生产中') || status.includes('制作中') || status.includes('后期')) {
+    currentStep = status.includes('后期') ? 'E4' : 'E3'
+    inputConfirmed = scriptLocked = assetsLocked = productionStarted = true
+  } else if (status.includes('待生产')) {
+    currentStep = 'E2'
+    inputConfirmed = scriptLocked = true
+  } else if (status.includes('质量') || status.includes('质检')) {
+    currentStep = 'E6'
+    inputConfirmed = scriptLocked = assetsLocked = productionStarted = true
+  } else if (status.includes('审核')) {
+    currentStep = 'E1'
+    inputConfirmed = true
+  }
+
+  return {
+    id: episodeStateKey(project.id, ep),
+    project: project.id,
+    ep,
+    batch: Math.ceil(ep / 6),
+    currentStep,
+    status: status || '待生产',
+    blocked,
+    inputConfirmed,
+    scriptLocked,
+    assetsLocked,
+    productionStarted,
+    qcPassed,
+    delivered,
+    modelBaseline: String(shot?.model ?? '视频模型 A'),
+    owner: project.owner ?? '',
+    updated: episode.updatedAt ?? now(),
+  }
+}
+
+/** 新集合缺失时从现有分集状态派生；只补不改，保证旧缓存也能升级。 */
+function ensureEpisodeStates(projectId: string): Row[] {
+  const project = projectOf(projectId)
+  const episodes = rows('episodes').filter((row) => row.project === projectId)
+  const states = rows('episodeStates')
+  let changed = false
+  for (const episode of episodes) {
+    const ep = Number(episode.no ?? 0)
+    if (!ep) continue
+    if (states.some((row) => row.project === projectId && Number(row.ep) === ep)) continue
+    states.push(defaultEpisodeState(project, episode))
+    changed = true
+  }
+  if (changed) store.persist()
+  return states.filter((row) => row.project === projectId)
+}
+
+function episodeEvent(projectId: string, ep: number, action: string, note: string, step: string) {
+  rows('episodeEvents').unshift({
+    id: nextId('EE', 'episodeEvents'),
+    project: projectId,
+    ep,
+    action,
+    actor: String(currentIdentity().name ?? '').split(' · ')[0],
+    at: now(),
+    note,
+    step,
+  })
+}
+
+function episodeAction(projectId: string, ep: number, body: Row): Envelope {
+  const project = projectOf(projectId)
+  const episode = rows('episodes').find((row) => row.project === projectId && Number(row.no) === ep)
+  if (!episode) throw new MockHttpError(404, 'episode_not_found', `项目 ${projectId} 没有第 ${ep} 集`)
+  const states = ensureEpisodeStates(projectId)
+  const state = states.find((row) => Number(row.ep) === ep)
+  if (!state) throw new MockHttpError(404, 'episode_state_not_found', `第 ${ep} 集缺少状态记录`)
+  const action = String(body.action ?? '')
+  const reason = String(body.reason ?? '').trim()
+
+  const requireStep = (step: string) => {
+    if (String(state.currentStep) !== step) {
+      throw new MockHttpError(409, 'episode_step_conflict', `第 ${ep} 集当前在 ${state.currentStep}，不能执行 ${action}`)
+    }
+  }
+  const touch = (step: string, status: string, note: string) => {
+    state.currentStep = step
+    state.status = status
+    state.updated = now()
+    episode.status = status
+    episode.updatedAt = now()
+    project.updated = now()
+    episodeEvent(projectId, ep, action, note, step)
+  }
+
+  if (action === 'confirmInput') {
+    if (state.inputConfirmed) return ok({ state, message: '输入已确认' })
+    requireStep('E0')
+    state.inputConfirmed = true
+    touch('E1', '待剧本审核', reason || '分集任务单与前后集衔接已确认')
+  } else if (action === 'lockScript') {
+    if (!state.inputConfirmed) throw new MockHttpError(409, 'episode_input_gate', '请先确认 E0 输入')
+    if (state.scriptLocked) return ok({ state, message: '剧本已锁定' })
+    requireStep('E1')
+    state.scriptLocked = true
+    touch('E2', '待生产', reason || '单集剧本定稿并锁定')
+  } else if (action === 'lockAssets') {
+    if (!state.scriptLocked) throw new MockHttpError(409, 'episode_script_gate', '请先锁定 E1 剧本')
+    if (state.assetsLocked) return ok({ state, message: '资产已锁定' })
+    requireStep('E2')
+    state.assetsLocked = true
+    state.modelBaseline = String(body.model ?? state.modelBaseline ?? '视频模型 A')
+    touch('E3', '生产中', reason || `镜头契约与资产已锁定；模型基线 ${state.modelBaseline}`)
+  } else if (action === 'startProduction') {
+    if (!state.assetsLocked) throw new MockHttpError(409, 'episode_asset_gate', '请先锁定 E2 镜头与资产')
+    const shots = rows('shots').filter((row) => row.project === projectId && Number(row.ep) === ep)
+    if (!shots.length) throw new MockHttpError(409, 'episode_shot_empty', '本集没有可生产的镜头')
+    const activeTasks = rows('tasks').filter(
+      (row) => row.project === projectId && Number(row.ep) === ep && !['已替代', '已取消'].includes(String(row.status)),
+    )
+    if (!activeTasks.length) {
+      for (const shot of shots) {
+        rows('tasks').unshift({
+          id: nextId('T', 'tasks'),
+          project: projectId,
+          ep,
+          shotId: shot.id,
+          scene: shot.scene,
+          shot: shot.no,
+          kind: '视频生成',
+          stage: '视频生产',
+          status: '排队中',
+          priority: '中',
+          deps: [],
+          parallelGroup: `E${pad2(ep)}-A`,
+          input: shot.refs ?? '—',
+          output: 'MP4 1080×1920',
+          model: state.modelBaseline,
+          config: 'PRV-01',
+          executor: project.owner ?? '林知远',
+          resourceOwner: project.owner ?? '林知远',
+          attempt: 1,
+          maxAttempts: 3,
+          take: 1,
+          parentTask: '',
+          est: 30,
+          actual: 0,
+          failedCost: 0,
+          submitAt: now().slice(11),
+          failReason: '—',
+          qc: '待检',
+        })
+      }
+    }
+    state.productionStarted = true
+    touch('E3', '生产中', reason || `已按 ${shots.length} 个镜头派发素材生产任务`)
+  } else if (action === 'retryTask') {
+    const taskId = String(body.taskId ?? '')
+    if (!taskId) throw new MockHttpError(422, 'task_required', '缺少任务 ID')
+    taskAction(taskId, 'retry')
+    touch('E3', '生产中', reason || `重试任务 ${taskId}`)
+  } else if (action === 'changeModel') {
+    const task = byId('tasks', String(body.taskId ?? ''))
+    if (task.project !== projectId || Number(task.ep) !== ep) {
+      throw new MockHttpError(409, 'task_episode_mismatch', '任务不属于当前集')
+    }
+    const model = String(body.model ?? '').trim()
+    if (!model) throw new MockHttpError(422, 'model_required', '请选择新的模型')
+    const takes = rows('tasks').filter((row) => row.project === projectId && Number(row.ep) === ep && row.shot === task.shot)
+    const nextTake = Math.max(...takes.map((row) => Number(row.take ?? 1)), 1) + 1
+    const previousStatus = String(task.status ?? '')
+    task.status = '已替代'
+    task.updatedAt = now()
+    const newTask = {
+      ...task,
+      id: nextId('T', 'tasks'),
+      status: '排队中',
+      model,
+      attempt: 1,
+      take: nextTake,
+      parentTask: String(task.id),
+      failReason: '—',
+      submitAt: now().slice(11),
+      updatedAt: now(),
+    }
+    rows('tasks').unshift(newTask)
+    state.productionStarted = true
+    touch('E3', '生产中', reason || `镜头 ${task.shot} 从「${previousStatus}」换模型为「${model}」，生成 take ${nextTake}`)
+  } else if (action === 'acceptTake') {
+    const task = byId('tasks', String(body.taskId ?? ''))
+    if (task.project !== projectId || Number(task.ep) !== ep) {
+      throw new MockHttpError(409, 'task_episode_mismatch', '任务不属于当前集')
+    }
+    task.status = '已通过'
+    task.qc = 'PASS'
+    task.updatedAt = now()
+    const shot = rows('shots').find((row) => row.id === task.shotId || (row.project === projectId && Number(row.ep) === ep && row.no === task.shot))
+    if (shot) {
+      shot.status = '已通过'
+      shot.version = `take ${task.take ?? 1}`
+    }
+    const shots = rows('shots').filter((row) => row.project === projectId && Number(row.ep) === ep)
+    const allAccepted = shots.length > 0 && shots.every((row) => String(row.status) === '已通过')
+    if (allAccepted) {
+      touch('E4', '后期', reason || '本集镜头素材已全部接受，进入剪辑')
+    } else {
+      touch('E3', '生产中', reason || `接受镜头 ${task.shot} take ${task.take ?? 1}`)
+    }
+  } else {
+    throw new MockHttpError(422, 'episode_action_unknown', `未知的单集动作 ${action}`)
+  }
+
+  store.persist()
+  return ok({ state, episode, message: `${action} 已完成` })
+}
+
+/* ------------------------------------------------------------------ *
  * 通用集合路由
  * ------------------------------------------------------------------ */
 
@@ -1183,6 +1432,7 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/workflow$/, handler: ({ id }) => workflow(id) },
   { method: 'POST', pattern: /^\/projects\/([^/]+)\/transitions$/, handler: ({ id, body }) => transition(id, body) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/timeline$/, handler: ({ id }) => projectTimeline(id) },
+  { method: 'POST', pattern: /^\/projects\/([^/]+)\/episodes\/([^/]+)\/actions$/, handler: ({ id, parts, body }) => episodeAction(id, Number(parts[3]), body) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/members$/, handler: ({ id }) => ok(projectOf(id).members ?? []) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/summary$/, handler: ({ id }) => {
     const project = projectOf(id)
@@ -1191,6 +1441,8 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
     return ok({
       project,
       stages: stageChain(project),
+      episodeStates: ensureEpisodeStates(id).sort((a, b) => Number(a.ep) - Number(b.ep)),
+      episodeEvents: rows('episodeEvents').filter((row) => row.project === id).slice(0, 40),
       scripts: rows('scripts').filter((row) => row.project === id),
       episodes: rows('episodes').filter((row) => row.project === id).slice(0, 30),
       assets: rows('assets').filter((row) => row.project === id),
