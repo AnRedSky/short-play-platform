@@ -110,6 +110,21 @@ describe('episode E0–E3 contract', () => {
 
     const timeline = (await act('buildTimeline', { note: '建立 E19 时间线' })).data.state
     expect(timeline).toMatchObject({ currentStep: 'E4', timelineLocked: false })
+    const clips = store.table('timelineClips').filter((row) => row.project === 'SP-26031' && row.ep === 19)
+    expect(clips).toHaveLength(18)
+
+    const replaced = (await act('replaceClip', {
+      clipId: clips[2].id,
+      model: '视频模型 B',
+      note: 'SH-03 换模型替换片段',
+    })).data.state
+    expect(replaced).toMatchObject({ currentStep: 'E4', timelineLocked: false })
+    expect(clips[2].stale).toBe(true)
+    expect(store.table('timelines').find((row) => row.project === 'SP-26031' && row.ep === 19)?.stale).toBe(1)
+    const rebuilt = (await act('rebuildTimeline', { note: '重建 E19 时间线' })).data.state
+    expect(rebuilt).toMatchObject({ currentStep: 'E4', timelineLocked: false })
+    expect(clips[2].stale).toBe(false)
+
     const lockedTimeline = (await act('lockTimeline', { note: '锁定 E19 时间线' })).data.state
     expect(lockedTimeline).toMatchObject({ currentStep: 'E5', timelineLocked: true })
 
@@ -122,14 +137,23 @@ describe('episode E0–E3 contract', () => {
     const mix = (await act('checkMix', { note: '混音检查通过' })).data.state
     expect(mix).toMatchObject({ currentStep: 'E6', mixPassed: true })
 
-    const qc = (await act('runEpisodeQc', { note: '单集 QC 执行' })).data.state
-    expect(qc).toMatchObject({ currentStep: 'E6', qcPassed: false })
+    const qcFail = (await act('failEpisodeQc', { note: '字幕错字，记录 QC 阻断' })).data.state
+    expect(qcFail).toMatchObject({ currentStep: 'E6', qcPassed: false })
+    const failedReport = store
+      .table('qualityReports')
+      .find((row) => row.project === 'SP-26031' && String(row.object).includes('第 19 集'))
+    expect(failedReport).toMatchObject({ result: 'FAIL', fail: 1 })
+    expect(store.table('qualityIssues').some((row) => row.report === failedReport?.id)).toBe(true)
 
     const rework = (await act('reworkEpisode', { target: 'E5', note: '字幕错字，退回声音字幕' })).data.state
-    expect(rework).toMatchObject({ currentStep: 'E5', qcPassed: false, mixPassed: false })
-    expect(
-      store.table('qualityReports').find((row) => row.project === 'SP-26031' && String(row.object).includes('第 19 集'))?.archived,
-    ).toBe(true)
+    expect(rework).toMatchObject({
+      currentStep: 'E5',
+      qcPassed: false,
+      mixPassed: false,
+      subtitleApproved: false,
+      lipSyncPassed: false,
+    })
+    expect(failedReport?.archived).toBe(true)
 
     await act('generateAudio', { note: '返工后重新生成字幕' })
     await act('approveSubtitle', { note: '返工后字幕确认' })

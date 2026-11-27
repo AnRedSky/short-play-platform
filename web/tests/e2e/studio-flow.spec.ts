@@ -300,6 +300,19 @@ test.describe('工作室 mock 全流程', () => {
     await actionModal.getByRole('button', { name: '建立时间线' }).click()
     await expect(page.getByText('建立时间线 已完成')).toBeVisible()
 
+    await page.getByRole('button', { name: '替换' }).first().click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-model').selectOption('视频模型 B')
+    await actionModal.locator('#dlg-note').fill('E19 SH-01 换模型替换片段')
+    await actionModal.getByRole('button', { name: '替换片段' }).click()
+    await expect(page.getByText('E4 片段替换 已完成')).toBeVisible()
+
+    await page.getByRole('button', { name: '重建时间线' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 替换片段后重建')
+    await actionModal.getByRole('button', { name: '重建时间线' }).click()
+    await expect(page.getByText('重建时间线 已完成')).toBeVisible()
+
     await page.getByRole('button', { name: '锁定时间线' }).click()
     actionModal = page.locator('.modal').last()
     await actionModal.locator('#dlg-note').fill('E19 精剪完成')
@@ -332,9 +345,42 @@ test.describe('工作室 mock 全流程', () => {
     await expect(page.getByText('混音检查并进入 QC 已完成')).toBeVisible()
 
     await page.locator('.ep-step').filter({ hasText: 'E6' }).click()
+    await page.getByRole('button', { name: '记录 QC 阻断' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 字幕错字，QC 阻断')
+    await actionModal.getByRole('button', { name: '记录 QC 阻断' }).click()
+    await expect(page.getByText('记录 QC 阻断 已完成')).toBeVisible()
+    await expect(page.getByRole('button', { name: '退回返工' })).toBeVisible()
+
+    await page.getByRole('button', { name: '退回返工' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 退回 E5 返工')
+    await actionModal.getByRole('button', { name: '创建返工' }).click()
+    await expect(page.getByText('E6 退回返工 已完成')).toBeVisible()
+
+    await page.locator('.ep-step').filter({ hasText: 'E5' }).click()
+    await page.getByRole('button', { name: '确认字幕' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 返工后字幕确认')
+    await actionModal.getByRole('button', { name: '确认字幕' }).click()
+    await expect(page.getByText('确认字幕 已完成')).toBeVisible()
+
+    await page.getByRole('button', { name: '执行口型同步' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 返工后口型复检')
+    await actionModal.getByRole('button', { name: '执行口型同步' }).click()
+    await expect(page.getByText('执行口型同步 已完成')).toBeVisible()
+
+    await page.getByRole('button', { name: '混音检查并进入 QC' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 返工后混音复检')
+    await actionModal.getByRole('button', { name: '混音检查并进入 QC' }).click()
+    await expect(page.getByText('混音检查并进入 QC 已完成')).toBeVisible()
+
+    await page.locator('.ep-step').filter({ hasText: 'E6' }).click()
     await page.getByRole('button', { name: '执行单集 QC' }).click()
     actionModal = page.locator('.modal').last()
-    await actionModal.locator('#dlg-note').fill('E19 单集 QC')
+    await actionModal.locator('#dlg-note').fill('E19 返工后 QC 复检')
     await actionModal.getByRole('button', { name: '执行单集 QC' }).click()
     await expect(page.getByText('执行单集 QC 已完成')).toBeVisible()
 

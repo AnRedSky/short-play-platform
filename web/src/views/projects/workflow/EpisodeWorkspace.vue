@@ -54,6 +54,10 @@ function list(key: string): Row[] {
 const epShots = computed(() => list('shots').filter((row) => Number(row.ep) === no.value))
 const epTasks = computed(() => list('tasks').filter((row) => Number(row.ep) === no.value))
 const epTimelines = computed(() => list('timelines').filter((row) => Number(row.ep) === no.value))
+const epTimelineClips = computed(() =>
+  list('timelineClips').filter((row) => Number(row.ep) === no.value),
+)
+const staleClips = computed(() => epTimelineClips.value.filter((row) => Boolean(row.stale)))
 const hasTimeline = computed(() => {
   void props.revision
   return epTimelines.value.length > 0
@@ -242,6 +246,37 @@ function buildTimeline() {
   )
 }
 
+function rebuildTimeline() {
+  stageActionDialog(
+    `重建第 ${no.value} 集时间线`,
+    '替换片段后必须重建，才能把新 take 对齐回时间线并重新锁定。',
+    'rebuildTimeline',
+    '重建时间线',
+    '例：SH-03 已换 T2，重建后确认入出点与总时长。',
+  )
+}
+
+function replaceClip(clip: Row) {
+  ui.openDialog({
+    title: `替换第 ${no.value} 集片段 ${clip.shot}`,
+    subtitle: '替换会生成新 take，旧 take 保留；时间线标记待重建，不会静默覆盖已锁定版本。',
+    fields: [
+      {
+        key: 'model',
+        label: '替换模型',
+        type: 'select' as const,
+        required: true,
+        value: String(epState.value?.modelBaseline ?? modelOptions.value[0]?.value ?? '视频模型 A'),
+        options: modelOptions.value,
+      },
+      ...actionFields('例：人物连续性不足，换视频模型 B 重跑该片段。'),
+    ],
+    submitLabel: '替换片段',
+    onSubmit: (values) =>
+      submitEpisodeAction('replaceClip', { clipId: clip.id, model: values.model, note: values.note }, 'E4 片段替换'),
+  })
+}
+
 function lockTimeline() {
   stageActionDialog(
     `锁定第 ${no.value} 集时间线`,
@@ -299,6 +334,16 @@ function runEpisodeQc() {
     'runEpisodeQc',
     '执行单集 QC',
     '例：按单集 QC 模板执行 42 项检查。',
+  )
+}
+
+function failEpisodeQc() {
+  stageActionDialog(
+    `记录第 ${no.value} 集 QC 阻断`,
+    '记录一条 FAIL 报告与阻断项；随后必须退回 E4 或 E5 返工，旧报告会归档。',
+    'failEpisodeQc',
+    '记录 QC 阻断',
+    '例：字幕第 3 行错字，口型偏移 80ms。',
   )
 }
 
@@ -526,6 +571,15 @@ const timelineColumns: Column[] = [
   { key: 'locked', label: '锁定', format: (row) => (row.locked ? '是' : '否') },
   { key: 'status', label: '状态', pill: true },
 ]
+const clipColumns: Column[] = [
+  { key: 'shot', label: '镜号' },
+  { key: 'scene', label: '场' },
+  { key: 'in', label: '入点' },
+  { key: 'out', label: '出点' },
+  { key: 'duration', label: '时长' },
+  { key: 'source', label: '来源' },
+  { key: 'status', label: '状态', pill: true },
+]
 const dialogueColumns: Column[] = [
   { key: 'char', label: '角色' },
   { key: 'text', label: '台词' },
@@ -662,7 +716,15 @@ function openSibling(item: EpisodeCard | null) {
           建立时间线
         </button>
         <button
-          v-if="currentStateStep === 'E4' && hasTimeline && !epState.timelineLocked"
+          v-if="currentStateStep === 'E4' && hasTimeline && staleTimelines.length > 0"
+          class="btn primary"
+          :disabled="actionBusy"
+          @click="rebuildTimeline"
+        >
+          重建时间线
+        </button>
+        <button
+          v-if="currentStateStep === 'E4' && hasTimeline && staleTimelines.length === 0 && !epState.timelineLocked"
           class="btn primary"
           :disabled="actionBusy"
           @click="lockTimeline"
@@ -716,6 +778,14 @@ function openSibling(item: EpisodeCard | null) {
           执行单集 QC
         </button>
         <button
+          v-if="currentStateStep === 'E6' && !epState.qcPassed && epQualityReports.length === 0"
+          class="btn"
+          :disabled="actionBusy"
+          @click="failEpisodeQc"
+        >
+          记录 QC 阻断
+        </button>
+        <button
           v-if="currentStateStep === 'E6' && !epState.qcPassed && latestQcPass"
           class="btn primary"
           :disabled="actionBusy"
@@ -724,7 +794,7 @@ function openSibling(item: EpisodeCard | null) {
           确认 QC 通过
         </button>
         <button
-          v-if="currentStateStep === 'E6' && !epState.qcPassed"
+          v-if="currentStateStep === 'E6' && !epState.qcPassed && epQualityReports.length > 0"
           class="btn"
           :disabled="actionBusy"
           @click="reworkEpisode"
@@ -907,6 +977,17 @@ function openSibling(item: EpisodeCard | null) {
           <div class="card">
             <div class="card-head"><h3 class="card-title">本集时间线</h3><span class="pill" :class="{ warn: staleTimelines.length }">{{ staleTimelines.length }} 个过期片段</span></div>
             <DataTable :columns="timelineColumns" :rows="epTimelines" row-key="version" wide empty-title="暂无本集时间线" />
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h3 class="card-title">时间线片段</h3>
+              <span class="pill" :class="{ warn: staleClips.length }">{{ staleClips.length }} 个待重建</span>
+            </div>
+            <DataTable :columns="clipColumns" :rows="epTimelineClips" row-key="id" wide empty-title="暂无时间线片段">
+              <template #actions="{ row }">
+                <button class="btn" :disabled="actionBusy || Boolean(epState?.delivered)" @click="replaceClip(row)">替换</button>
+              </template>
+            </DataTable>
           </div>
           <div class="card">
             <div class="card-head"><h3 class="card-title">剪辑检查</h3></div>

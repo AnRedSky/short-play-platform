@@ -75,6 +75,55 @@ function episodeStateKey(projectId: string, ep: number): string {
   return `ES-${projectId}-${pad2(ep)}`
 }
 
+function seconds(value: unknown): number {
+  const digits = String(value ?? '').replace(/[^\d]/g, '')
+  return digits ? Number(digits) : 0
+}
+
+function timecode(total: number): string {
+  const minutes = Math.floor(total / 60)
+  const secs = total % 60
+  return `${pad2(minutes)}:${pad2(secs)}`
+}
+
+function ensureTimelineClips(projectId: string, ep: number, version: string): Row[] {
+  const existing = rows('timelineClips').filter(
+    (row) => row.project === projectId && Number(row.ep) === ep && row.timeline === version,
+  )
+  if (existing.length) return existing
+  const shots = rows('shots').filter((row) => row.project === projectId && Number(row.ep) === ep)
+  const accepted = rows('tasks').filter(
+    (row) => row.project === projectId && Number(row.ep) === ep && String(row.status) === '已通过',
+  )
+  let cursor = 0
+  for (const shot of shots) {
+    const duration = seconds(shot.duration) || 5
+    const task = accepted
+      .filter((row) => row.shotId === shot.id || Number(row.shot) === Number(shot.no))
+      .sort((a, b) => Number(b.take ?? 1) - Number(a.take ?? 1))[0]
+    rows('timelineClips').push({
+      id: `CL-${version}-${String(shot.no ?? '').padStart(2, '0')}`,
+      project: projectId,
+      ep,
+      timeline: version,
+      shotId: shot.id,
+      shot: shot.no,
+      scene: shot.scene,
+      in: timecode(cursor),
+      out: timecode(cursor + duration),
+      duration: `${duration} 秒`,
+      source: task ? `T${task.take ?? 1} · ${task.model}` : '待补',
+      status: task ? '已对齐' : '待补',
+      stale: false,
+      createdAt: now(),
+    })
+    cursor += duration
+  }
+  return rows('timelineClips').filter(
+    (row) => row.project === projectId && Number(row.ep) === ep && row.timeline === version,
+  )
+}
+
 function defaultEpisodeState(project: Row, episode: Row): Row {
   const ep = Number(episode.no ?? 0)
   const status = String(episode.status ?? '')
@@ -356,6 +405,7 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
     const existing = rows('timelines').find((row) => row.project === projectId && Number(row.ep) === ep)
     if (existing) {
       state.timelineLocked = false
+      ensureTimelineClips(projectId, ep, existing.version)
       touch('E4', '后期', reason || `复用已有时间线 ${existing.version}`)
     } else {
       const shots = rows('shots').filter((row) => row.project === projectId && Number(row.ep) === ep)
@@ -376,9 +426,71 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
         locked: false,
         builtAt: now(),
       })
+      ensureTimelineClips(projectId, ep, version)
       state.timelineLocked = false
       touch('E4', '后期', reason || `按 ${shots.length} 镜建立单集时间线 ${version}`)
     }
+  } else if (action === 'replaceClip') {
+    requireStep('E4')
+    const timeline = rows('timelines').find((row) => row.project === projectId && Number(row.ep) === ep)
+    if (!timeline) throw new MockHttpError(409, 'episode_timeline_missing', '请先生成时间线')
+    const clip = rows('timelineClips').find(
+      (row) => row.project === projectId && Number(row.ep) === ep && String(row.id) === String(body.clipId ?? ''),
+    )
+    if (!clip) throw new MockHttpError(404, 'episode_clip_missing', '时间线片段不存在')
+    const model = String(body.model ?? state.modelBaseline ?? '视频模型 A')
+    const shot = rows('shots').find((row) => row.id === clip.shotId)
+    const latestTask = rows('tasks')
+      .filter((row) => row.project === projectId && Number(row.ep) === ep && row.shotId === clip.shotId)
+      .sort((a, b) => Number(b.take ?? 1) - Number(a.take ?? 1))[0]
+    const take = Number(latestTask?.take ?? 1) + 1
+    rows('tasks').unshift({
+      ...(latestTask ?? {}),
+      id: nextId('T', 'tasks'),
+      project: projectId,
+      ep,
+      shotId: clip.shotId,
+      scene: shot?.scene ?? clip.scene,
+      shot: shot?.no ?? clip.shot,
+      kind: '视频生成',
+      stage: '视频生产',
+      status: '已通过',
+      qc: 'PASS',
+      model,
+      take,
+      parentTask: latestTask?.id ?? '',
+      attempt: 1,
+      actual: Number(shot?.duration ?? clip.duration ?? '5').toString().replace(/[^\d]/g, '') || 5,
+      failReason: '—',
+      updatedAt: now(),
+    })
+    clip.source = `T${take} · ${model}`
+    clip.status = '待重建'
+    clip.stale = true
+    clip.replacedAt = now()
+    timeline.stale = rows('timelineClips').filter((row) => row.timeline === timeline.version && row.stale).length
+    timeline.status = '待重建'
+    timeline.locked = false
+    state.timelineLocked = false
+    touch('E4', '后期', reason || `片段 ${clip.shot} 替换为 T${take} · ${model}，时间线待重建`)
+  } else if (action === 'rebuildTimeline') {
+    requireStep('E4')
+    const timeline = rows('timelines').find((row) => row.project === projectId && Number(row.ep) === ep)
+    if (!timeline) throw new MockHttpError(409, 'episode_timeline_missing', '请先生成时间线')
+    const clips = rows('timelineClips').filter((row) => row.timeline === timeline.version && row.stale)
+    if (!clips.length) return ok({ state, message: '时间线没有待重建片段' })
+    for (const clip of clips) {
+      clip.status = '已对齐'
+      clip.stale = false
+      clip.rebuiltAt = now()
+    }
+    timeline.stale = 0
+    timeline.status = '已输出'
+    timeline.rebuilds = Number(timeline.rebuilds ?? 0) + 1
+    timeline.rebuiltAt = now()
+    timeline.locked = false
+    state.timelineLocked = false
+    touch('E4', '后期', reason || `重建时间线 ${timeline.version}，${clips.length} 个片段已对齐`)
   } else if (action === 'lockTimeline') {
     requireStep('E4')
     const timeline = rows('timelines').find((row) => row.project === projectId && Number(row.ep) === ep)
@@ -518,9 +630,43 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
     rows('qualityReports').unshift(report)
     episode.qc = 'PASS'
     touch('E6', '质检', reason || `单集 QC ${report.id} 通过，待确认`)
+  } else if (action === 'failEpisodeQc') {
+    requireStep('E6')
+    if (!state.mixPassed) throw new MockHttpError(409, 'episode_mix_gate', '请先完成混音检查')
+    const report = {
+      id: nextId('QR', 'qualityReports'),
+      project: projectId,
+      ep,
+      object: `${project.id} / 第 ${ep} 集成片`,
+      level: '单集级',
+      version: `EP${pad2(ep)} v1`,
+      result: 'FAIL',
+      items: 42,
+      issues: 1,
+      review: 0,
+      fail: 1,
+      engine: '质检模型 Q1（独立检测能力）',
+      at: now(),
+      note: reason || '单集 QC 阻断：字幕错字与口型偏移',
+    }
+    rows('qualityReports').unshift(report)
+    rows('qualityIssues').unshift({
+      id: nextId('QI', 'qualityIssues'),
+      report: report.id,
+      dim: '字幕与口型',
+      where: `E${pad2(ep)} / S01 / SH-01 · 00:03`,
+      level: '高',
+      action: '退回 E5 校对字幕并重做口型；复检通过后再确认 QC',
+      auto: '是',
+    })
+    state.qcPassed = false
+    episode.qc = 'FAIL'
+    touch('E6', '质检', reason || `单集 QC ${report.id} 阻断，等待退回返工`)
   } else if (action === 'acceptEpisodeQc') {
     requireStep('E6')
-    const report = rows('qualityReports').find((row) => row.project === projectId && String(row.object ?? '').includes(`第 ${ep} 集`))
+    const report = rows('qualityReports').find(
+      (row) => row.project === projectId && String(row.object ?? '').includes(`第 ${ep} 集`) && !row.archived,
+    )
     if (!report) throw new MockHttpError(409, 'episode_qc_missing', '请先执行单集 QC')
     if (String(report.result) === 'FAIL') throw new MockHttpError(409, 'episode_qc_failed', 'QC 存在阻断项，需返工后再确认')
     state.qcPassed = true
@@ -553,7 +699,25 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
     })
     state.qcPassed = false
     state.mixPassed = false
-    if (target === 'E4') state.timelineLocked = false
+    if (target === 'E4') {
+      state.timelineLocked = false
+      const timeline = rows('timelines').find((row) => row.project === projectId && Number(row.ep) === ep)
+      if (timeline) {
+        timeline.locked = false
+        timeline.stale = Math.max(1, Number(timeline.stale ?? 0))
+        timeline.status = '待重建'
+        const clip = rows('timelineClips').find(
+          (row) => row.timeline === timeline.version && Number(row.ep) === ep,
+        )
+        if (clip) {
+          clip.stale = true
+          clip.status = '待重建'
+        }
+      }
+    } else {
+      state.subtitleApproved = false
+      state.lipSyncPassed = false
+    }
     touch(target, target === 'E4' ? '后期' : '声音字幕', reason || `单集 QC 退回 ${target} 返工`)
   } else if (action === 'approveEpisode') {
     requireStep('E7')
@@ -1734,6 +1898,8 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
     const reports = rows('qualityReports').filter(
       (row) => row.project === id || String(row.object ?? '').includes(id),
     )
+    const timelines = rows('timelines').filter((row) => row.project === id)
+    for (const timeline of timelines) ensureTimelineClips(id, Number(timeline.ep), String(timeline.version))
     const projectCode = id.split('-')[1] ?? id
     return ok({
       project,
@@ -1764,7 +1930,8 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
       audioAssets: rows('audioAssets').filter((row) => row.project === id),
       subtitles: rows('subtitles').filter((row) => row.project === id).slice(0, 30),
       lipSync: rows('lipSync').filter((row) => String(row.line ?? '').includes(projectCode) || String(row.shot ?? '').includes(projectCode)),
-      timelines: rows('timelines').filter((row) => row.project === id),
+      timelines,
+      timelineClips: rows('timelineClips').filter((row) => row.project === id),
       qualityIssues: rows('qualityIssues').filter((row) => reports.some((report) => report.id === row.report)),
       qualityLevels: rows('qualityLevels'),
       qualityMatrix: rows('qualityMatrix'),
