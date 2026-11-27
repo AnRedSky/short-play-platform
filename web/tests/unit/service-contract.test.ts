@@ -425,6 +425,20 @@ const specs: ContractSpec[] = [
     kind: 'object',
   },
   {
+    name: 'quality.acceptReport',
+    invoke: (s) => s.quality.acceptReport('QR-26031-E17-03', { note: '已核对问题项' }),
+    mock: request('POST', '/quality-reports/QR-26031-E17-03/accept'),
+    real: request('POST', '/quality-reports/QR-26031-E17-03/accept'),
+    kind: 'object',
+  },
+  {
+    name: 'quality.createRework',
+    invoke: (s) => s.quality.createRework({ project: PROJECT_CODE, target: 'SH-26031-E17-06', type: '人物不一致' }),
+    mock: request('POST', '/rework'),
+    real: request('POST', `/projects/${PROJECT_RECORD}/quality/reworks`),
+    kind: 'object',
+  },
+  {
     name: 'spec.list',
     invoke: (s) => s.spec.list('/projects', { limit: 5 }),
     mock: request('GET', '/projects?limit=5'),

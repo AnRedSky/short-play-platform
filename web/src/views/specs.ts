@@ -5,6 +5,8 @@
 import { http } from '../api/client'
 import { findBreakdownIssues, findShotContractIssues, formatBreakdownIssue, formatShotContractIssue } from '../composables/breakdownGate'
 import { budgetText, budgetUsedUp, findActiveTask } from '../composables/videoGate'
+import { reworkCreateBlockReason } from '../composables/qualityGate'
+import { qualityApi } from '../services/quality'
 import {
   audioAssetBlockReason,
   dialogueBatchBlockReason,
@@ -1490,6 +1492,7 @@ export const SPECS: Record<string, PageSpec> = {
     stats: (rows) => [
       { label: '返工单', value: rows.length },
       { label: '进行中', value: countOf(rows, 'status', '进行中') },
+      { label: '转人工', value: countOf(rows, 'status', '转人工') },
       { label: '返工成本', value: `¥${rows.reduce((sum, row) => sum + Number(row.cost ?? 0), 0).toLocaleString('zh-CN')}` },
     ],
     table: {
@@ -1504,7 +1507,80 @@ export const SPECS: Record<string, PageSpec> = {
         col('at', '时间', { mono: true }),
       ],
     },
-    side: () => [{ title: '返工规则', type: 'kv', items: [{ label: '单镜上限', value: '3 轮' }, { label: '超限', value: '转人工决策' }, { label: '旧版本', value: '保留，不覆盖' }] }],
+    actions: [{
+      label: '新建返工',
+      tone: 'primary',
+      permission: 'quality.operate',
+      dialog: {
+        title: '新建返工',
+        subtitle: '轮次与成本由系统计算；同一对象只允许一个进行中返工，满 3 轮转人工。',
+        wide: true,
+        fields: [
+          { key: 'target', label: '返工对象', required: true, placeholder: '镜头 / 分集 / 音频 ID，如 SH-26031-E17-06' },
+          {
+            key: 'type',
+            label: '返工原因',
+            type: 'select',
+            options: ['人物不一致', '合规风险', '口型同步', '音频质量', '剪辑质量'].map((value) => ({ value, label: value })),
+            value: '人物不一致',
+          },
+          { key: 'report', label: '关联质检报告', placeholder: '可选，如 QR-26031-E17-03' },
+          { key: 'note', label: '返工说明', type: 'textarea', required: true, rows: 3, placeholder: '写明问题位置、修复口径与验收标准' },
+        ],
+        submitLabel: '创建返工',
+      },
+      post: async (values, ctx) => {
+        const target = String(values.target ?? '').trim()
+        const type = String(values.type ?? '').trim()
+        const blocked = reworkCreateBlockReason(target, type, ctx.rows, ctx.project.current)
+        if (blocked) throw new Error(blocked)
+        return qualityApi.createRework({
+          project: ctx.project.currentId,
+          target,
+          type,
+          report: values.report,
+          note: values.note,
+        })
+      },
+      toast: '返工单已创建，上一版本保留',
+    }],
+    rowPanel: {
+      title: '返工单详情',
+      hint: '返工对象、轮次、成本与旧版本保留情况；超过 3 轮必须转人工。',
+      fields: [
+        { key: 'id', label: '返工单' },
+        { key: 'project', label: '项目' },
+        { key: 'target', label: '返工对象' },
+        { key: 'type', label: '返工原因' },
+        { key: 'round', label: '轮次' },
+        { key: 'cost', label: '成本（元）' },
+        { key: 'old', label: '旧版本' },
+        { key: 'report', label: '关联报告' },
+        { key: 'note', label: '返工说明' },
+        { key: 'status', label: '状态' },
+        { key: 'at', label: '创建时间' },
+      ],
+    },
+    side: (rows) => [
+      {
+        title: '返工规则',
+        type: 'kv',
+        items: [
+          { label: '单镜上限', value: '3 轮' },
+          { label: '超限', value: '转人工决策' },
+          { label: '旧版本', value: '保留，不覆盖' },
+        ],
+      },
+      {
+        title: '当前风险',
+        type: 'kv',
+        items: [
+          { label: '进行中', value: `${countOf(rows, 'status', '进行中')} 单` },
+          { label: '转人工', value: `${countOf(rows, 'status', '转人工')} 单` },
+          { label: '满 3 轮', value: rows.some((row) => Number(row.round ?? 0) >= 3) ? '不可继续新建' : '未触发' },
+        ],
+      },
+    ],
   },
 
   '/tasks/queue': {

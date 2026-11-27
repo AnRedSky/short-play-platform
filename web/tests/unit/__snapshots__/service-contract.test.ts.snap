@@ -422,6 +422,12 @@ exports[`B-14 service contract > runs every service function against mock and re
   "projects.workflow": {
     "kind": "object",
   },
+  "quality.acceptReport": {
+    "kind": "object",
+  },
+  "quality.createRework": {
+    "kind": "object",
+  },
   "quality.issues": {
     "envelope": [
       "rows",

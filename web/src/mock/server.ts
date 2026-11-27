@@ -399,7 +399,7 @@ function runQuality(body: Row): Envelope {
   const project = projectOf(String(body.project ?? ''))
   const report: Row = {
     id: nextId('QR', 'qualityReports'),
-    object: `${project.id} / 第 ${body.ep ?? 1} 集成片`,
+    object: body.object ?? `${project.id} / 第 ${body.ep ?? 1} 集成片`,
     level: body.level ?? '单集级',
     version: body.version ?? `EP${body.ep ?? 1} v1`,
     result: body.result ?? 'PASS',
@@ -409,12 +409,92 @@ function runQuality(body: Row): Envelope {
     fail: 0,
     engine: '质检模型 Q1（独立检测能力）',
     at: now(),
-    note: '本地 mock 质检执行完成；阻断项 0。',
+    note: body.note ?? '本地 mock 质检执行完成；阻断项 0。',
     project: project.id,
   }
   rows('qualityReports').unshift(report)
   store.persist()
   return ok(report)
+}
+
+function acceptQualityReport(id: string, body: Row): Envelope {
+  const report = byId('qualityReports', id)
+  if (String(report.result ?? '') === 'PASS') {
+    throw new MockHttpError(409, 'report_already_passed', '该报告已通过，无需重复确认')
+  }
+  const issues = rows('qualityIssues').filter((row) => row.report === report.id)
+  const high = issues.filter((row) => (
+    String(row.level ?? '') === '高'
+    && !['已修复', '已关闭', '已确认', '已豁免'].includes(String(row.status ?? '待处理'))
+  ))
+  if (high.length) {
+    throw new MockHttpError(
+      409,
+      'high_risk_open',
+      `报告仍有 ${high.length} 项高风险问题未关闭，请完成返工并重新质检后再通过`,
+    )
+  }
+  if (!issues.length && Number(report.fail ?? 0) > 0) {
+    throw new MockHttpError(409, 'issue_detail_missing', '报告有阻断项但问题明细未同步，暂不能通过')
+  }
+  report.result = 'PASS'
+  report.review = 0
+  report.fail = 0
+  report.acceptedAt = now()
+  report.acceptedBy = String(currentIdentity().name ?? '').split(' · ')[0]
+  report.note = `${report.note ?? ''}｜人工确认通过：${body.note ?? '已核对问题项'}`
+  store.persist()
+  return ok(report)
+}
+
+function createRework(body: Row): Envelope {
+  const project = projectOf(String(body.project ?? ''))
+  const target = String(body.target ?? '').trim()
+  const type = String(body.type ?? '').trim()
+  if (!target) throw new MockHttpError(400, 'target_required', '请填写返工对象（镜头、分集或音频 ID）')
+  if (!type) throw new MockHttpError(400, 'type_required', '请选择返工原因')
+  const same = rows('reworkLedger').filter((row) => (
+    row.project === project.id && String(row.target ?? '').trim() === target
+  ))
+  const active = same.find((row) => String(row.status ?? '') === '进行中')
+  if (active) throw new MockHttpError(409, 'rework_active', `对象 ${target} 已有进行中的返工单 ${active.id}，完成或转人工后再创建`)
+  const manual = same.find((row) => String(row.status ?? '') === '转人工')
+  if (manual) throw new MockHttpError(409, 'rework_manual', `对象 ${target} 已有转人工返工单 ${manual.id}，需人工决策`)
+  const maxRound = same.reduce((max, row) => Math.max(max, Number(row.round ?? 0)), 0)
+  if (maxRound >= 3) throw new MockHttpError(409, 'rework_limit', `对象 ${target} 已返工 ${maxRound} 轮，达到 3 轮上限`)
+  const budget = Number(project.budget ?? 0)
+  const actual = Number(project.actual ?? 0)
+  if (budget > 0 && actual >= budget) {
+    throw new MockHttpError(409, 'budget_exhausted', `项目预算已用尽（¥${actual} / ¥${budget}），不能新建返工`)
+  }
+  const costByType: Record<string, number> = {
+    人物不一致: 44,
+    合规风险: 86.4,
+    口型同步: 12,
+    音频质量: 3.2,
+    剪辑质量: 8,
+  }
+  const code = project.id.replace(/^SP-/, '')
+  const maxSeq = rows('reworkLedger')
+    .filter((row) => row.project === project.id)
+    .reduce((max, row) => Math.max(max, Number(String(row.id ?? '').split('-').pop() ?? 0)), 0)
+  const row: Row = {
+    id: `RW-${code}-${String(maxSeq + 1).padStart(3, '0')}`,
+    project: project.id,
+    target,
+    type,
+    round: maxRound + 1,
+    cost: costByType[type] ?? 20,
+    old: '上一版本保留',
+    report: body.report ? String(body.report) : '',
+    note: body.note ? String(body.note) : '',
+    status: '进行中',
+    at: now(),
+    createdAt: now(),
+  }
+  rows('reworkLedger').unshift(row)
+  store.persist()
+  return ok(row)
 }
 
 function outputEpisode(body: Row): Envelope {
@@ -723,6 +803,8 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
     fail: row.fail ?? row.reason ?? '—',
   }))) },
   { method: 'POST', pattern: /^\/quality\/run$/, handler: ({ body }) => runQuality(body) },
+  { method: 'POST', pattern: /^\/quality-reports\/([^/]+)\/accept$/, handler: ({ id, body }) => acceptQualityReport(id, body) },
+  { method: 'POST', pattern: /^\/rework$/, handler: ({ body }) => createRework(body) },
   { method: 'POST', pattern: /^\/reviews\/([^/]+)\/recheck$/, handler: ({ id, body }) => {
     const issue = byId('qualityIssues', id)
     issue.status = body.status ?? '已修复'

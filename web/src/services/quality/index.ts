@@ -35,4 +35,22 @@ export const qualityApi = {
       },
     )
   },
+  /** 人工确认报告结论：只有高风险项关闭后才允许通过。 */
+  acceptReport: (id: string, payload: Record<string, unknown>) => http.post(
+    `/quality-reports/${encodeURIComponent(id)}/accept`,
+    { note: payload.note ? String(payload.note) : undefined },
+  ),
+  /** 返工单由服务端计算轮次与成本，避免前端重复计数。 */
+  createRework: (payload: Record<string, unknown>) => {
+    if (isMockMode) return http.post('/rework', payload)
+    return http.post(
+      `/projects/${projectRef(String(payload.project ?? ''))}/quality/reworks`,
+      {
+        target: String(payload.target ?? ''),
+        type: String(payload.type ?? ''),
+        report: payload.report ? String(payload.report) : undefined,
+        note: payload.note ? String(payload.note) : undefined,
+      },
+    )
+  },
 }
