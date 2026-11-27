@@ -55,6 +55,27 @@ const qcProfiles = computed(() => list('qualityProfiles'))
 
 const epShots = computed(() => list('shots').filter((row) => Number(row.ep) === no.value))
 const epTasks = computed(() => list('tasks').filter((row) => Number(row.ep) === no.value))
+const epTakeRows = computed(() => {
+  const latest = new Map<string, number>()
+  for (const task of epTasks.value) {
+    const key = String(task.shotId ?? task.shot ?? '')
+    latest.set(key, Math.max(latest.get(key) ?? 0, Number(task.take ?? 1)))
+  }
+  return epTasks.value
+    .slice()
+    .sort(
+      (a, b) =>
+        String(a.shot ?? '').localeCompare(String(b.shot ?? ''), undefined, { numeric: true }) ||
+        Number(b.take ?? 1) - Number(a.take ?? 1),
+    )
+    .map((task): Row => ({
+      ...task,
+      takeLabel: `T${Number(task.take ?? 1)}`,
+      takeSource: task.parentTask ? `由 ${String(task.parentTask)}` : '首版',
+      takeCurrent: Number(task.take ?? 1) === latest.get(String(task.shotId ?? task.shot ?? '')),
+    }))
+})
+const takeShotCount = computed(() => new Set(epTakeRows.value.map((row) => String(row.shotId ?? row.shot))).size)
 const epTimelines = computed(() => list('timelines').filter((row) => Number(row.ep) === no.value))
 const epTimelineClips = computed(() =>
   list('timelineClips').filter((row) => Number(row.ep) === no.value),
@@ -594,6 +615,15 @@ const taskColumns: Column[] = [
   { key: 'model', label: '模型' },
   { key: 'failReason', label: '失败原因' },
 ]
+const takeColumns: Column[] = [
+  { key: 'shot', label: '镜号' },
+  { key: 'takeLabel', label: '版本' },
+  { key: 'model', label: '模型' },
+  { key: 'status', label: '状态', pill: true },
+  { key: 'takeSource', label: '来源' },
+  { key: 'takeCurrent', label: '位置', format: (row) => (row.takeCurrent ? '当前' : '历史') },
+  { key: 'updatedAt', label: '更新时间', format: (row) => String(row.updatedAt ?? row.submitAt ?? '—') },
+]
 const timelineColumns: Column[] = [
   { key: 'version', label: '版本' },
   { key: 'tracks', label: '轨道' },
@@ -997,11 +1027,18 @@ function openSibling(item: EpisodeCard | null) {
               </template>
             </DataTable>
           </div>
+          <div class="card">
+            <div class="card-head">
+              <div><h3 class="card-title">Take 版本树</h3><p class="card-sub">同一镜头保留全部 take；换模型只新增版本，不覆盖旧任务。已接受 take 才回写镜头状态。</p></div>
+              <span class="pill">{{ epTakeRows.length }} 个版本 / {{ takeShotCount }} 镜</span>
+            </div>
+            <DataTable :columns="takeColumns" :rows="epTakeRows" row-key="id" wide empty-title="本集暂无 take 版本" />
+          </div>
           <div class="ep-kpis">
             <div class="ep-kpi"><span>任务</span><b>{{ epTasks.length }}</b><small>本集镜头任务</small></div>
             <div class="ep-kpi"><span>执行中</span><b>{{ epTasks.filter((row) => row.status === '执行中').length }}</b><small>受并发约束</small></div>
             <div class="ep-kpi"><span>已通过</span><b>{{ epShots.filter((row) => row.status === '已通过').length }}</b><small>镜头级</small></div>
-            <div class="ep-kpi"><span>Take</span><b>未接入</b><small>版本树待补</small></div>
+            <div class="ep-kpi"><span>Take</span><b>{{ epTakeRows.length }}</b><small>{{ takeShotCount }} 个镜头有版本</small></div>
           </div>
         </template>
 
