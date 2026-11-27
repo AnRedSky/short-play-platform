@@ -1066,6 +1066,10 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
       tasks: rows('tasks').filter((row) => row.project === id),
       reviews: rows('reviews').filter((row) => row.project === id),
       notifications: rows('notifications').filter((row) => row.project === id),
+      briefs: rows('briefs').filter((row) => row.project === id),
+      plans: rows('plans').filter((row) => row.project === id),
+      deliveries: rows('deliveries').filter((row) => row.project === id),
+      qualityReports: rows('qualityReports').filter((row) => row.project === id),
     })
   } },
   { method: 'POST', pattern: /^\/scripts\/([^/]+)\/review$/, handler: ({ id, body }) => scriptReview(id, body) },

@@ -96,7 +96,7 @@
       <div v-if="selected">
         <div class="act-bar">
           <button class="btn primary" @click="go('projects/workflow', selected.id)">进入制作流水线</button>
-          <button class="btn" @click="go('projects/detail', selected.id)">项目详情</button>
+          <button class="btn" @click="go('projects/workflow', selected.id)">项目详情</button>
           <button class="btn" @click="go('creation/script', selected.id)">剧本版本</button>
         </div>
         <dl class="kv-lite">

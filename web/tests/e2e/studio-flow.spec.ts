@@ -126,4 +126,34 @@ test.describe('工作室 mock 全流程', () => {
     await page.goto('/post/delivery')
     await expect(page.locator('tbody tr').filter({ hasText: code! }).first()).toContainText('已交付')
   })
+
+  test('项目详情合并流水线：阶段管线固定顶部并可按阶段切换', async ({ page }) => {
+    await resetStudio(page)
+    await page.goto('/projects/workflow')
+    await expect(page.locator('main h1')).toContainText('· 项目详情')
+
+    const dock = page.locator('.stage-dock')
+    await expect(dock.locator('.stage-card')).toHaveCount(8)
+    await expect(dock.locator('.stage-card.active')).toContainText('视频生产')
+
+    await dock.locator('.stage-card').filter({ hasText: '剧本创作' }).click()
+    await expect(page).toHaveURL(/stage=script/)
+    await expect(page.locator('.card-title', { hasText: '剧本创作 · 阶段工作区' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /剧本版本 →/ })).toBeVisible()
+
+    await dock.locator('.stage-card').filter({ hasText: '后期合成' }).click()
+    await expect(page.locator('.stage-body')).toContainText('分集状态')
+
+    await page.mouse.wheel(0, 900)
+    await expect
+      .poll(() => dock.evaluate((el) => el.getBoundingClientRect().top))
+      .toBeLessThan(120)
+
+    await dock.locator('.stage-card').filter({ hasText: '终审交付' }).click()
+    await expect(page.locator('.stage-body')).toContainText('DP-26031-00')
+
+    await page.goto('/projects/detail')
+    await expect(page).toHaveURL(/\/projects\/workflow/)
+    await expect(page.locator('main h1')).toContainText('· 项目详情')
+  })
 })
