@@ -205,6 +205,100 @@ function deleteRow(collection: Collection, id: string): Envelope {
  * 领域动作
  * ------------------------------------------------------------------ */
 
+function assetReferenceKind(asset: Row): string {
+  const cat = String(asset.cat ?? '')
+  if (cat.includes('成片')) return '成片引用'
+  if (cat.includes('字幕')) return '字幕轨引用'
+  if (cat.includes('创意')) return '剧本引用'
+  if (cat.includes('音频')) return '音频轨引用'
+  if (cat.includes('分镜')) return '镜头参考'
+  return '镜头参考'
+}
+
+/** 资产引用关系：有镜头数据时返回真实镜头对象，其余按资产类型补项目/分集/交付引用。 */
+function assetReferences(id: string): Envelope {
+  const asset = byId('assets', id)
+  const total = Math.max(0, Number(asset.refs ?? 0))
+  if (!total) return ok([], { total: 0 })
+
+  const project = rows('projects').find((row) => row.id === asset.project)
+  const projectName = String(project?.name ?? asset.project ?? '未归属项目')
+  const useShots = !['成片', '字幕', '创意'].some((token) => String(asset.cat ?? '').includes(token))
+  const shots = useShots
+    ? rows('shots').filter((row) => row.project === asset.project).slice(0, Math.min(total, 3))
+    : []
+  const result: Row[] = shots.map((shot) => ({
+    asset: asset.id,
+    project: asset.project,
+    projectName,
+    object: shot.id,
+    kind: assetReferenceKind(asset),
+    detail: shot.desc ?? '镜头契约引用',
+    status: shot.status ?? '—',
+    at: asset.at ?? '—',
+  }))
+  const fallback = [
+    { object: `${projectName} / 项目资产库`, kind: '项目引用', detail: '项目级资产登记与共享引用' },
+    { object: `${projectName} / 第 ${Number(project?.done ?? 0) + 1} 集`, kind: assetReferenceKind(asset), detail: '当前制作集引用' },
+    { object: `${projectName} / 交付包`, kind: '交付引用', detail: '交付清单与回查引用' },
+  ]
+  while (result.length < Math.min(total, 3)) {
+    const item = fallback[result.length]
+    result.push({
+      asset: asset.id,
+      project: asset.project,
+      projectName,
+      object: item.object,
+      kind: item.kind,
+      detail: item.detail,
+      status: asset.status ?? '—',
+      at: asset.at ?? '—',
+    })
+  }
+  return ok(result, { total })
+}
+
+function createAsset(body: Row): Envelope {
+  const name = String(body.name ?? '').trim()
+  const cat = String(body.cat ?? '').trim()
+  const type = String(body.type ?? '').trim()
+  const origin = String(body.origin ?? '').trim()
+  const rights = String(body.rights ?? '').trim()
+  if (!name) throw new MockHttpError(422, 'asset_name_required', '请填写资产名')
+  if (!cat) throw new MockHttpError(422, 'asset_category_required', '请选择资产分类')
+  if (!type) throw new MockHttpError(422, 'asset_type_required', '请填写资产类型')
+  if (!origin) throw new MockHttpError(422, 'asset_origin_required', '请填写资产来源或生成方式')
+  if (!rights) throw new MockHttpError(422, 'asset_rights_required', '请填写授权标记')
+  const expiry = String(body.rightsExpiry ?? '').trim()
+  if (expiry && expiry < now().slice(0, 10)) {
+    throw new MockHttpError(422, 'asset_rights_expired', `授权到期日 ${expiry} 早于今天`)
+  }
+
+  const row: Row = {
+    ...body,
+    id: String(body.id ?? nextId('A', 'assets')),
+    name,
+    cat,
+    type,
+    origin,
+    rights,
+    version: String(body.version ?? 'v1'),
+    versions: Number(body.versions ?? 1),
+    qc: String(body.qc ?? '待检'),
+    status: String(body.status ?? '待检'),
+    refs: Number(body.refs ?? 0),
+    formal: Boolean(body.formal ?? false),
+    creator: String(body.creator ?? currentIdentity().name ?? '当前用户'),
+    executor: String(body.executor ?? currentIdentity().name ?? '当前用户'),
+    checksum: String(body.checksum ?? `sha256:${Math.random().toString(16).slice(2, 10)}`),
+    at: String(body.at ?? now()),
+    createdAt: now(),
+  }
+  rows('assets').unshift(row)
+  store.persist()
+  return ok(row)
+}
+
 function workflow(id: string): Envelope {
   const project = projectOf(id)
   const permissions = currentPermissions()
@@ -776,6 +870,8 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: 'POST', pattern: /^\/mock\/identity$/, handler: ({ body }) => login({ identity_id: body.identity_id }) },
   { method: 'POST', pattern: /^\/mock\/reset$/, handler: () => { store.reset(); return ok({ reset: true }) } },
   { method: 'GET', pattern: /^\/workspace\/home$/, handler: () => workspaceHome() },
+  { method: 'GET', pattern: /^\/assets\/([^/]+)\/references$/, handler: ({ id }) => assetReferences(decodeURIComponent(id)) },
+  { method: 'POST', pattern: /^\/assets$/, handler: ({ body }) => createAsset(body) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/workflow$/, handler: ({ id }) => workflow(id) },
   { method: 'POST', pattern: /^\/projects\/([^/]+)\/transitions$/, handler: ({ id, body }) => transition(id, body) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/timeline$/, handler: ({ id }) => projectTimeline(id) },

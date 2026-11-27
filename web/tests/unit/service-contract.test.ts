@@ -98,10 +98,25 @@ const specs: ContractSpec[] = [
   },
   {
     name: 'assets.create',
-    invoke: (s) => s.assets.create({ name: 'contract asset' }),
+    invoke: (s) => s.assets.create({
+      name: 'contract asset',
+      cat: '人物资产',
+      type: '人物参考图',
+      origin: '契约测试',
+      rights: 'AI 生成 · 无需真人授权',
+    }),
     mock: request('POST', '/assets'),
     real: request('POST', '/assets'),
     kind: 'object',
+  },
+  {
+    name: 'assets.references',
+    invoke: (s) => s.assets.references('A-1201'),
+    mock: request('GET', '/assets/A-1201/references'),
+    real: request('GET', '/assets/A-1201/references'),
+    kind: 'array',
+    rowKeys: ['project', 'object', 'kind'],
+    realData: [{ project: 'SP-26031', object: 'SH-26031-E17-04', kind: '镜头参考', status: '执行中' }],
   },
   {
     name: 'creation.briefs',

@@ -48,6 +48,23 @@ exports[`B-14 service contract > runs every service function against mock and re
       ],
     ],
   },
+  "assets.references": {
+    "kind": "array",
+    "row": [
+      [
+        "project",
+        "string",
+      ],
+      [
+        "object",
+        "string",
+      ],
+      [
+        "kind",
+        "string",
+      ],
+    ],
+  },
   "creation.briefModes": {
     "envelope": [
       "rows",
