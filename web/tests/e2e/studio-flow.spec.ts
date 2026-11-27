@@ -599,9 +599,9 @@ test.describe('工作室 mock 全流程', () => {
     await novelModal.getByPlaceholder('例：雾城来信（原著）').fill('E2E 小说来源')
     await novelModal.locator('textarea').fill('第一章 雨夜\n雨夜错认来信。\n第二章 旧城\n旧城里的第二把钥匙。\n第三章 回信\n最后一封信没有寄件人。')
     await expect(novelModal).toContainText('识别 3 章')
-    await novelModal.getByRole('button', { name: '登记小说来源' }).click()
+    await novelModal.getByRole('button', { name: '导入并解析小说' }).click()
     await expect(workspace).toContainText('小说改编')
-    await expect(workspace).toContainText('已登记 3 章')
+    await expect(workspace).toContainText('已解析 3 章')
 
     await workspace.locator('.script-source-tab').nth(0).click()
     await workspace.getByRole('button', { name: '用模型生成剧本' }).click()
@@ -610,5 +610,47 @@ test.describe('工作室 mock 全流程', () => {
     await generateModal.getByRole('button', { name: '开始生成' }).click()
     await expect(workspace).toContainText('3 / 16')
     await expect(page.locator('.script-episode-item')).toHaveCount(3)
+  })
+
+  test('小说改编完成章节解析、章节映射并生成分集稿', async ({ page }) => {
+    test.setTimeout(120_000)
+    await resetStudio(page)
+    await page.goto('/projects/workflow?id=SP-26011&stage=script')
+
+    const workspace = page.locator('.script-workspace')
+    await workspace.locator('.script-source-tab').nth(2).click()
+    await workspace.getByRole('button', { name: '导入小说 / 章节' }).click()
+    const novelModal = page.locator('.script-novel-modal')
+    await novelModal.getByPlaceholder('例：雾城来信（原著）').fill('E2E 改编小说')
+    await novelModal.locator('textarea').fill(
+      '第一章 雨夜\n雨夜错认来信，顾沉在邮筒里摸到一封没有邮戳的信。\n信封上只写着苏眠的名字。\n'
+      + '第二章 旧城\n旧城的第二把钥匙藏在门框后面，苏眠找到了它。\n门从里面反锁。\n'
+      + '第三章 回信\n最后一封信没有寄件人，只有一张旧城区地图。\n地图上被划掉的地址，正是他们站的地方。',
+    )
+    await expect(novelModal).toContainText('识别 3 章')
+    await expect(novelModal).toContainText('已解析每章正文')
+    await novelModal.getByRole('button', { name: '导入并解析小说' }).click()
+    await expect(workspace).toContainText('已解析 3 章')
+
+    await workspace.getByRole('button', { name: '章节映射', exact: true }).click()
+    const mapModal = page.locator('.script-map-modal')
+    await expect(mapModal).toBeVisible()
+    await expect(mapModal.locator('.script-map-list .script-map-row:not(.script-map-head)')).toHaveCount(3)
+    await expect(mapModal).toContainText('将生成 16 集')
+    await expect(mapModal).toContainText('覆盖 E01–E16')
+    await mapModal.getByRole('button', { name: '生成 16 集分集稿' }).click()
+
+    await expect(page.locator('.script-map-modal')).toHaveCount(0)
+    await expect(workspace).toContainText('16 / 16')
+    await expect(page.locator('.script-episode-item')).toHaveCount(16)
+    await expect(page.locator('.script-episode-detail')).toContainText('雨夜')
+    await expect(page.locator('.script-episode-detail')).toContainText('拆章改编 · 1/6')
+    await expect(page.locator('.script-episode-detail')).toContainText('原著人物')
+
+    await workspace.getByRole('button', { name: '提交剧本审核' }).click()
+    const confirm = page.locator('[role="alertdialog"]')
+    await expect(confirm).toContainText('16 集将送审')
+    await confirm.getByRole('button', { name: '确认' }).click()
+    await expect(page.locator('main')).toContainText('· 待剧本审核 ·')
   })
 })

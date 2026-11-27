@@ -2281,6 +2281,229 @@ function createBlankScript(body: Row): Envelope {
   return ok(script)
 }
 
+interface NovelChapterInput {
+  no: number
+  title: string
+  words?: number
+  content: string
+}
+
+interface ChapterMappingInput {
+  chapterNo: number
+  fromEpisode: number
+  episodeCount: number
+  episodeNo?: number
+}
+
+interface NovelSegment {
+  chapter: NovelChapterInput
+  part: number
+  total: number
+  content: string
+}
+
+function splitNovelContent(text: string, count: number): string[] {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  if (!clean) return Array.from({ length: count }, () => '')
+  const units = clean.split(/(?<=[。！？!?；;])/).map((item) => item.trim()).filter(Boolean)
+  if (units.length >= count) {
+    return Array.from({ length: count }, (_, index) => {
+      const start = Math.floor(index * units.length / count)
+      const end = Math.floor((index + 1) * units.length / count)
+      return units.slice(start, Math.max(start + 1, end)).join('')
+    })
+  }
+  const size = Math.max(1, Math.ceil(clean.length / count))
+  return Array.from({ length: count }, (_, index) => clean.slice(index * size, (index + 1) * size).trim())
+}
+
+function novelSceneChunks(text: string): string[] {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  if (!clean) return ['', '', '']
+  const units = clean.split(/(?<=[。！？!?；;])/).map((item) => item.trim()).filter(Boolean)
+  if (units.length >= 3) {
+    return [0, 1, 2].map((index) => {
+      const start = Math.floor(index * units.length / 3)
+      const end = Math.floor((index + 1) * units.length / 3)
+      return units.slice(start, Math.max(start + 1, end)).join('')
+    })
+  }
+  const size = Math.max(1, Math.ceil(clean.length / 3))
+  return [0, 1, 2].map((index) => clean.slice(index * size, (index + 1) * size).trim())
+}
+
+function buildNovelEpisode(segments: NovelSegment[], ep: number, strength: string): DraftEpisode {
+  const first = segments[0]
+  const baseTitle = first?.chapter.title || `第 ${ep} 集`
+  const episodeTitle = first.total > 1 && segments.length === 1
+    ? `${baseTitle}（${first.part}/${first.total}）`
+    : baseTitle
+  const sceneText = segments.map((segment) => segment.content).join(' ').trim()
+  const clean = sceneText.replace(/\s+/g, ' ').trim()
+  const chunks = novelSceneChunks(clean)
+  const hookSource = clean.split(/(?<=[。！？!?])/).filter(Boolean).pop() ?? clean
+  const mode = segments.length > 1 ? `合章改编 · ${segments.length} 章` : first.total > 1 ? `拆章改编 · ${first.part}/${first.total}` : '单章改编'
+  return {
+    no: ep,
+    title: episodeTitle.slice(0, 28),
+    logline: `${mode}｜${clean.slice(0, 72)}${clean.length > 72 ? '…' : ''}`,
+    hook: hookSource.slice(-48),
+    scenes: chunks.map((chunk, index) => ({
+      no: pad2(index + 1),
+      location: `${baseTitle.slice(0, 12)} · 场景 ${index + 1}`,
+      time: '日 / 内',
+      chars: '原著人物',
+      action: `原著画面：${chunk.slice(0, 62)}${chunk.length > 62 ? '…' : ''}`,
+      lines: [{ char: '旁白', text: chunk || `（${strength}）第 ${ep} 集场景 ${index + 1}` }],
+    })),
+  }
+}
+
+function adaptNovel(body: Row): Envelope {
+  const projectId = String(body.project ?? '')
+  if (!projectId) throw new MockHttpError(422, 'missing_project', '缺少项目编号')
+  const project = projectOf(projectId)
+  const model = requireText(body.model, '改编模型')
+  if (!SCRIPT_MODELS.includes(model)) {
+    throw new MockHttpError(422, 'script_model_unknown', `未登记的剧本模型：${model}`)
+  }
+  const strength = String(body.strength ?? '标准改编')
+  const totalEpisodes = Math.max(1, Number(project.episodes ?? 1))
+  const mergeId = String(body.scriptId ?? '')
+  let script: Row | null = null
+  if (mergeId) {
+    const found = byId('scripts', mergeId)
+    if (found.project !== projectId) throw new MockHttpError(422, 'project_mismatch', '剧本版本不属于当前项目')
+    if (!found.locked) script = found
+  }
+
+  const rawChapters = (body.chapters ?? script?.source?.chapters ?? []) as NovelChapterInput[]
+  const chapters = Array.isArray(rawChapters) ? rawChapters.filter((chapter) => chapter && chapter.title) : []
+  if (!chapters.length) throw new MockHttpError(422, 'novel_chapters_empty', '没有可改编的章节')
+  if (chapters.some((chapter) => !String(chapter.content ?? '').trim())) {
+    throw new MockHttpError(422, 'novel_content_missing', '章节缺少正文；请重新导入小说全文')
+  }
+
+  const rawMapping = (body.mapping ?? []) as ChapterMappingInput[]
+  const mapping = Array.isArray(rawMapping) ? rawMapping.map((item) => {
+    const fromEpisode = Math.round(Number(item.fromEpisode ?? item.episodeNo ?? 1))
+    return {
+      chapterNo: Math.round(Number(item.chapterNo)),
+      fromEpisode,
+      episodeCount: Math.max(1, Math.round(Number(item.episodeCount ?? 1))),
+    }
+  }) : []
+  if (!mapping.length) throw new MockHttpError(422, 'novel_mapping_empty', '请先完成章节映射')
+  const chapterNos = new Set(chapters.map((chapter) => chapter.no))
+  const missing = chapters.filter((chapter) => !mapping.some((item) => item.chapterNo === chapter.no))
+  if (missing.length) throw new MockHttpError(422, 'novel_mapping_incomplete', `还有 ${missing.length} 章未映射`)
+  if (mapping.some((item) =>
+    !chapterNos.has(item.chapterNo)
+    || item.fromEpisode < 1
+    || item.fromEpisode + item.episodeCount - 1 > totalEpisodes,
+  )) {
+    throw new MockHttpError(422, 'novel_mapping_invalid', `映射区间必须在 1–${totalEpisodes} 集内`)
+  }
+
+  const grouped = new Map<number, NovelSegment[]>()
+  for (const item of mapping) {
+    const chapter = chapters.find((row) => row.no === item.chapterNo)
+    if (!chapter) continue
+    const pieces = splitNovelContent(chapter.content, item.episodeCount)
+    pieces.forEach((content, index) => {
+      const episodeNo = item.fromEpisode + index
+      const list = grouped.get(episodeNo) ?? []
+      list.push({ chapter, part: index + 1, total: item.episodeCount, content })
+      grouped.set(episodeNo, list)
+    })
+  }
+  const drafts = [...grouped.entries()]
+    .map(([episodeNo, list]) => buildNovelEpisode(list.sort((a, b) => a.chapter.no - b.chapter.no || a.part - b.part), episodeNo, strength))
+    .sort((left, right) => left.no - right.no)
+  if (!drafts.length) throw new MockHttpError(422, 'novel_mapping_empty', '没有生成任何分集稿')
+
+  if (!script) {
+    const projectCode = projectId.split('-')[1] ?? projectId
+    const versions = rows('scripts').filter((row) => row.project === projectId)
+    const versionNo = versions.reduce((max, row) => Math.max(max, Number(String(row.version ?? '').replace(/\D/g, '')) || 0), 0) + 1
+    script = {
+      id: `SCR-${projectCode}-V${versionNo}`,
+      project: projectId,
+      version: `v${versionNo}`,
+      status: '草稿',
+      episodes: totalEpisodes,
+      scenes: 0,
+      lines: 0,
+      shots: 0,
+      by: String(currentIdentity().name ?? '项目负责人').split('·')[0].trim(),
+      at: now(),
+      note: '',
+      locked: false,
+      revision: 0,
+      source: { kind: 'novel', label: '小说改编' },
+    }
+    rows('scripts').unshift(script)
+  }
+
+  const counts = scriptCounts(drafts)
+  const bodySource = body.source && typeof body.source === 'object' ? body.source as Row : {}
+  const source = {
+    ...(script.source && typeof script.source === 'object' ? script.source as Row : {}),
+    ...bodySource,
+    kind: 'novel',
+    label: '小说改编',
+    model,
+    chapters: chapters.map((chapter) => ({
+      no: chapter.no,
+      title: chapter.title,
+      words: Number(chapter.words ?? chapter.content.replace(/\s/g, '').length),
+      content: chapter.content,
+    })),
+    mapping,
+    adaptedAt: now(),
+    note: `已改编 ${drafts.length} 集 / ${chapters.length} 章`,
+  }
+  Object.assign(script, {
+    status: '草稿',
+    episodes: totalEpisodes,
+    writtenEpisodes: drafts.length,
+    scenes: counts.scenes,
+    lines: counts.lines,
+    shots: 0,
+    episodeDrafts: drafts,
+    revision: Number(script.revision ?? 0) + 1,
+    updatedAt: now(),
+    note: `小说改编 ${drafts.length} 集 · ${strength} · ${chapters.length} 章映射`,
+    source,
+    generation: {
+      model,
+      prompt: '按小说章节映射改编分集稿',
+      strength,
+      scope: 'novel',
+      from: drafts[0].no,
+      count: drafts.length,
+      elapsed: `${(drafts.length * 2.6 + 1.8).toFixed(1)}s`,
+      tokens: Math.round(chapters.reduce((sum, chapter) => sum + chapter.content.length, 0) / 2),
+      cost: Number((drafts.length * 0.11).toFixed(2)),
+      at: now(),
+    },
+  })
+
+  rows('audits').unshift({
+    id: nextId('AUD', 'audits'),
+    time: now(),
+    actor: String(currentIdentity().name ?? '').split('·')[0].trim(),
+    object: `剧本 ${script.id}`,
+    action: `小说改编 ${drafts.length} 集（${chapters.length} 章 · ${model}）`,
+    result: '成功',
+    src: '本地 mock · 剧本创作台',
+    link: projectId,
+    reason: `章节映射：${mapping.map((item) => `${item.chapterNo}→E${pad2(item.fromEpisode)}–E${pad2(item.fromEpisode + item.episodeCount - 1)}`).join('，')}`,
+  })
+  store.persist()
+  return ok(script)
+}
+
 function generateScript(body: Row): Envelope {
   const projectId = String(body.project ?? '')
   if (!projectId) throw new MockHttpError(422, 'missing_project', '缺少项目编号')
@@ -2436,6 +2659,7 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: 'POST', pattern: /^\/creative-plans\/generate$/, handler: ({ body }) => generateCreativePlans(body) },
   { method: 'POST', pattern: /^\/creative-plans\/([^/]+)\/select$/, handler: ({ id, body }) => selectCreativePlan(decodeURIComponent(id), body) },
   { method: 'POST', pattern: /^\/scripts\/blank$/, handler: ({ body }) => createBlankScript(body) },
+  { method: 'POST', pattern: /^\/scripts\/adapt$/, handler: ({ body }) => adaptNovel(body) },
   { method: 'POST', pattern: /^\/providers\/test-all$/, handler: () => testAllProviders() },
   { method: 'POST', pattern: /^\/providers\/([^/]+)\/test$/, handler: ({ id }) => testProvider(decodeURIComponent(id)) },
   { method: 'POST', pattern: /^\/model-profiles$/, handler: ({ body }) => createModelProfile(body) },

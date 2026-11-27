@@ -14,6 +14,7 @@ export const creationApi = {
   scriptDiffs: () => http.list<Row>('/script-diffs'),
   createScript: (payload: Record<string, unknown>) => http.post<Row>('/scripts', payload),
   createBlankScript: (payload: Record<string, unknown>) => http.post<Row>('/scripts/blank', payload),
+  adaptNovel: (payload: Record<string, unknown>) => http.post<Row>('/scripts/adapt', payload),
   generateScript: (payload: Record<string, unknown>) => http.post<Row>('/scripts/generate', payload),
   updateScript: (id: string, payload: Record<string, unknown>) => http.patch<Row>(`/scripts/${id}`, payload),
   reviews: (project: string) => http.list<Row>('/reviews', { project }),

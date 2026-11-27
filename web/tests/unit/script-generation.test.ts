@@ -122,6 +122,42 @@ describe('script creation contract', () => {
     expect((result.data.source.chapters as unknown[]).length).toBe(2)
   })
 
+  it('maps novel chapters into episode drafts with stored full-text source', async () => {
+    const { handleMock } = await loadMock()
+    const result = (await call(handleMock, '/api/v1/scripts/adapt', {
+      project: 'SP-26011',
+      model: MODEL,
+      strength: '贴稿改编',
+      chapters: [
+        { no: 1, title: '雨夜', content: '雨夜错认来信。顾沉在邮筒里摸到一封信。信封上只写着苏眠的名字。' },
+        { no: 2, title: '旧城', content: '旧城的第二把钥匙藏在门框后面。苏眠找到了它。门从里面反锁。' },
+      ],
+      mapping: [
+        { chapterNo: 1, fromEpisode: 1, episodeCount: 2 },
+        { chapterNo: 2, fromEpisode: 3, episodeCount: 2 },
+      ],
+    })) as {
+      data: {
+        version: string
+        writtenEpisodes: number
+        scenes: number
+        lines: number
+        episodeDrafts: Array<{ no: number; title: string; logline: string; scenes: unknown[] }>
+        source: { kind: string; mapping: unknown[]; adaptedAt: string }
+        generation: { scope: string; model: string }
+      }
+    }
+    expect(result.data.version).toBe('v2')
+    expect(result.data.writtenEpisodes).toBe(4)
+    expect(result.data.scenes).toBe(12)
+    expect(result.data.lines).toBe(12)
+    expect(result.data.episodeDrafts[0]).toMatchObject({ no: 1, title: '雨夜（1/2）' })
+    expect(result.data.episodeDrafts[0].logline).toContain('拆章改编 · 1/2')
+    expect(result.data.source).toMatchObject({ kind: 'novel', adaptedAt: expect.any(String) })
+    expect(result.data.source.mapping).toHaveLength(2)
+    expect(result.data.generation).toMatchObject({ scope: 'novel', model: MODEL })
+  })
+
   it('fills the whole series while preserving manual edits', async () => {
     const { handleMock, store } = await loadMock()
     const pilot = (await call(handleMock, '/api/v1/scripts/generate', {

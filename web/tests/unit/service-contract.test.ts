@@ -220,6 +220,19 @@ const specs: ContractSpec[] = [
     kind: 'object',
   },
   {
+    name: 'creation.adaptNovel',
+    invoke: (s) => s.creation.adaptNovel({
+      project: PROJECT_CODE,
+      model: '剧本模型 A · 长篇结构',
+      strength: '贴稿改编',
+      chapters: [{ no: 1, title: '雨夜', content: 'contract novel chapter' }],
+      mapping: [{ chapterNo: 1, fromEpisode: 1, episodeCount: 2 }],
+    }),
+    mock: request('POST', '/scripts/adapt'),
+    real: request('POST', '/scripts/adapt'),
+    kind: 'object',
+  },
+  {
     name: 'creation.generateScript',
     invoke: (s) => s.creation.generateScript({
       project: PROJECT_CODE,
