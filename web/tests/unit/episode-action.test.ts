@@ -175,7 +175,8 @@ describe('episode E0–E3 contract', () => {
     expect(store.table('episodes').find((row) => row.project === 'SP-26031' && row.no === 19)?.status).toBe('已交付')
   })
 
-  it('locks E2 assets, starts E3 tasks, retries and opens a new take when model changes', async () => {    const { handleMock, store } = await loadMock()
+  it('locks E2 assets, starts E3 tasks, retries and opens a new take when model changes', async () => {
+    const { handleMock, store } = await loadMock()
 
     const locked = (await call(handleMock, '/api/v1/projects/SP-26031/episodes/19/actions', {
       action: 'lockAssets',
@@ -232,5 +233,40 @@ describe('episode E0–E3 contract', () => {
       parentTask: first.id,
       take: 2,
     })
+  })
+
+  it('creates a 3-episode batch trial gate without advancing episodes', async () => {
+    const { handleMock } = await loadMock()
+    await call(handleMock, '/api/v1/projects/SP-26031/summary')
+    const result = (await call(handleMock, '/api/v1/projects/SP-26031/batches/4/trial', {
+      size: 3,
+    })) as { data: Record<string, unknown> }
+    expect(result.data).toMatchObject({
+      id: 'BT-26031-B4',
+      batch: 4,
+      size: 3,
+      episodes: [19, 20, 21],
+      status: '待补齐',
+      gate: '2/3 开工项通过',
+      deliveryGate: '0/3 集已交付',
+    })
+    expect((result.data.checks as Array<Record<string, unknown>>).map((check) => check.key)).toEqual([
+      'script',
+      'assets',
+      'model',
+      'delivery',
+    ])
+    expect((result.data.checks as Array<Record<string, unknown>>)[1]).toMatchObject({
+      key: 'assets',
+      pass: false,
+      detail: '0/3',
+    })
+
+    const summary = (await call(handleMock, '/api/v1/projects/SP-26031/summary')) as {
+      data: { batchTrials: Array<Record<string, unknown>>; episodeStates: Array<Record<string, unknown>> }
+    }
+    expect(summary.data.batchTrials).toHaveLength(1)
+    expect(summary.data.batchTrials[0]).toMatchObject({ id: 'BT-26031-B4' })
+    expect(summary.data.episodeStates.find((state) => state.ep === 19)?.currentStep).toBe('E2')
   })
 })

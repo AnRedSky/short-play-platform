@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { Row } from '../../../mock/db'
 import type { BatchGroup, EpisodeCard } from './episodeFlow'
+import { projectApi } from '../../../services/projects'
+import { useUiStore } from '../../../stores/ui'
 import EmptyState from '../../../components/ui/EmptyState.vue'
 import StatusPill from '../../../components/ui/StatusPill.vue'
 
@@ -9,13 +11,18 @@ const props = defineProps<{
   project: Row | null
   batches: BatchGroup[]
   activeIndex: number
+  trials?: Row[]
 }>()
 
 const emit = defineEmits<{
   (event: 'select-batch', index: number): void
   (event: 'open-episode', item: EpisodeCard): void
+  (event: 'trial-started'): void
   (event: 'back'): void
 }>()
+
+const ui = useUiStore()
+const starting = ref(false)
 
 const currentBatch = computed(
   () => props.batches.find((batch) => batch.index === props.activeIndex) ?? props.batches[0] ?? null,
@@ -26,6 +33,30 @@ const doneCount = computed(() => currentBatch.value?.doneCount ?? 0)
 const qcCount = computed(() => currentBatch.value?.qcCount ?? 0)
 const activeCount = computed(() => currentBatch.value?.activeCount ?? 0)
 const progress = computed(() => currentBatch.value?.progress ?? 0)
+const currentTrial = computed(
+  () => (props.trials ?? []).find((trial) => Number(trial.batch) === currentBatch.value?.index) ?? null,
+)
+const trialEpisodes = computed(() => (currentTrial.value?.episodes as number[] | undefined) ?? [])
+const trialChecks = computed(
+  () => (currentTrial.value?.checks as Array<Record<string, unknown>> | undefined) ?? [],
+)
+
+async function startTrial() {
+  if (!currentBatch.value || !props.project || starting.value) return
+  starting.value = true
+  try {
+    const trial = await projectApi.batchTrial(String(props.project.id), currentBatch.value.index, {
+      size: 3,
+    })
+    const eps = (trial.episodes as number[] | undefined) ?? []
+    ui.toast(`已生成 ${currentBatch.value.label} 试跑单：${eps.map((no) => `E${String(no).padStart(2, '0')}`).join(' / ')}`)
+    emit('trial-started')
+  } catch (error) {
+    ui.toast(error instanceof Error ? error.message : '试跑单生成失败', 'bad')
+  } finally {
+    starting.value = false
+  }
+}
 </script>
 
 <template>
@@ -36,6 +67,9 @@ const progress = computed(() => currentBatch.value?.progress ?? 0)
         <p class="board-sub">批次只做分组、资产锁、模型版本与交付控制；单集仍是实际交互和制作单位。</p>
       </div>
       <div class="board-actions">
+        <button class="btn primary" :disabled="starting || !currentBatch" @click="startTrial">
+          {{ starting ? '生成中…' : currentTrial ? '重算试跑门禁' : '创建 3 集试跑' }}
+        </button>
         <button class="btn" @click="emit('back')">项目概览</button>
       </div>
     </div>
@@ -81,19 +115,45 @@ const progress = computed(() => currentBatch.value?.progress ?? 0)
         <div class="batch-gates">
           <div class="batch-gate">
             <span>开工门禁</span>
-            <b>剧本 / 资产 / 模型基线待接入</b>
+            <b>{{ currentTrial?.gate || '尚未创建试跑单' }}</b>
           </div>
           <div class="batch-gate">
             <span>交付门禁</span>
-            <b>{{ doneCount }} / {{ totalEpisodes }} 集已输出</b>
+            <b>{{ doneCount }} / {{ totalEpisodes }} 集已交付</b>
           </div>
           <div class="batch-gate">
             <span>模型基线</span>
-            <b>未接入 · 参考现有任务模型</b>
+            <b>{{ currentTrial?.model || '随试跑单锁定' }}</b>
           </div>
         </div>
-        <div class="notice">
-          当前为阶段 1 只读壳：集状态由现有 episode 状态推断；E0–E7 的写入动作将在后续阶段接入。
+
+        <div v-if="currentTrial" class="trial-card">
+          <div class="trial-head">
+            <div>
+              <b>{{ currentTrial.status }}</b>
+              <span>{{ currentTrial.range }} · {{ currentTrial.size }} 集试跑</span>
+            </div>
+            <span class="pill" :class="{ ok: currentTrial.status === '可开工', warn: currentTrial.status !== '可开工' }">
+              {{ currentTrial.deliveryGate }}
+            </span>
+          </div>
+          <div class="trial-episodes">
+            <span v-for="no in trialEpisodes" :key="no">E{{ String(no).padStart(2, '0') }}</span>
+          </div>
+          <div class="trial-checks">
+            <span
+              v-for="check in trialChecks"
+              :key="String(check.key)"
+              :class="{ pass: check.pass, fail: !check.pass }"
+            >
+              <b>{{ check.label }}</b>
+              <em>{{ check.detail }}</em>
+            </span>
+          </div>
+          <p class="trial-note">{{ currentTrial.note }}</p>
+        </div>
+        <div v-else class="notice">
+          批次试跑只做门禁预检：先锁定剧本、镜头与资产、模型基线，再进单集执行；不会自动推进任何一集。
         </div>
       </div>
 
@@ -269,6 +329,78 @@ const progress = computed(() => currentBatch.value?.progress ?? 0)
   line-height: 1.45;
   font-weight: 600;
 }
+.trial-card {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 11px 12px;
+}
+.trial-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.trial-head b {
+  color: var(--ink);
+  font-size: 12px;
+}
+.trial-head span {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.trial-episodes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+}
+.trial-episodes span {
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 2px 8px;
+  color: var(--ink);
+  font-size: 11px;
+}
+.trial-checks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 9px;
+}
+.trial-checks span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  border-left: 2px solid var(--line);
+  padding-left: 7px;
+}
+.trial-checks span.pass {
+  border-left-color: var(--accent);
+}
+.trial-checks span.fail {
+  border-left-color: var(--warn);
+}
+.trial-checks b {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+.trial-checks em {
+  color: var(--ink);
+  font-size: 11px;
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
+.trial-note {
+  margin: 9px 0 0;
+  color: var(--faint);
+  font-size: 10px;
+  line-height: 1.5;
+}
 .batch-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -356,6 +488,9 @@ const progress = computed(() => currentBatch.value?.progress ?? 0)
   .batch-grid,
   .batch-gates {
     grid-template-columns: 1fr;
+  }
+  .trial-checks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

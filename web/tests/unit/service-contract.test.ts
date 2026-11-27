@@ -419,6 +419,13 @@ const specs: ContractSpec[] = [
     realData: { state: { currentStep: 'E3' } },
   },
   {
+    name: 'projects.batchTrial',
+    invoke: (s) => s.projects.batchTrial(PROJECT_CODE, 4, { size: 3 }),
+    ...projectPath('/batches/4/trial', 'POST'),
+    kind: 'object',
+    realData: { trial: { id: 'BT-26031-B4', batch: 4, size: 3 } },
+  },
+  {
     name: 'projects.transition',
     invoke: (s) => s.projects.transition(PROJECT_CODE, 'toPost', 'contract'),
     ...projectPath('/transitions', 'POST'),

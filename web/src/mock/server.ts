@@ -35,6 +35,7 @@ type Handler = (ctx: {
 }) => Envelope | unknown
 
 const LATENCY = 60
+const BATCH_SIZE = 6
 
 function ok<T>(data: T, meta?: Record<string, unknown>): Envelope<T> {
   return meta ? { data, meta } : { data }
@@ -188,7 +189,7 @@ function defaultEpisodeState(project: Row, episode: Row): Row {
     id: episodeStateKey(project.id, ep),
     project: project.id,
     ep,
-    batch: Math.ceil(ep / 6),
+    batch: Math.ceil(ep / BATCH_SIZE),
     currentStep,
     status: status || '待生产',
     blocked,
@@ -238,6 +239,65 @@ function episodeEvent(projectId: string, ep: number, action: string, note: strin
     note,
     step,
   })
+}
+
+/**
+ * 批次 3 集试跑：只建立门禁预检单，不自动推进任何单集。
+ * 单集仍是执行单位，试跑单用于提前暴露剧本、资产与模型基线缺口。
+ */
+function batchTrial(projectId: string, batch: number, body: Row): Envelope {
+  const project = projectOf(projectId)
+  const states = ensureEpisodeStates(projectId)
+  const episodes = rows('episodes')
+    .filter((row) => row.project === projectId)
+    .filter((row) => Math.ceil(Number(row.no ?? 0) / BATCH_SIZE) === batch)
+    .sort((a, b) => Number(a.no) - Number(b.no))
+  if (!episodes.length) throw new MockHttpError(404, 'batch_not_found', `项目 ${projectId} 没有 B${batch}`)
+  const size = Math.max(1, Math.min(3, Number(body.size ?? 3)))
+  const delivered = episodes.filter((row) => {
+    const state = states.find((item) => Number(item.ep) === Number(row.no))
+    return Boolean(state?.delivered)
+  })
+  const pending = episodes.filter((row) => !delivered.includes(row))
+  const selected = (pending.length >= size ? pending : episodes).slice(0, size)
+  const selectedStates = selected
+    .map((row) => states.find((item) => Number(item.ep) === Number(row.no)))
+    .filter(Boolean) as Row[]
+  const models = [...new Set(selectedStates.map((state) => String(state.modelBaseline ?? '')).filter(Boolean))]
+  const model = models[0] ?? ''
+  const locked = selectedStates.filter((state) => state.scriptLocked).length
+  const assets = selectedStates.filter((state) => state.assetsLocked).length
+  const packages = selectedStates.filter((state) => state.delivered).length
+  const gatePass = locked === selected.length && assets === selected.length && Boolean(model)
+  const checks = [
+    { key: 'script', label: '剧本锁定', pass: locked === selected.length, detail: `${locked}/${selected.length}` },
+    { key: 'assets', label: '镜头/资产锁定', pass: assets === selected.length, detail: `${assets}/${selected.length}` },
+    { key: 'model', label: '模型基线', pass: Boolean(model), detail: model || '未记录' },
+    { key: 'delivery', label: '单集包', pass: packages === selected.length, detail: `${packages}/${selected.length}` },
+  ]
+  const id = `BT-${String(projectId).split('-')[1] ?? projectId}-B${batch}`
+  const existing = rows('batchTrials').find((row) => row.id === id)
+  const trial: Row = {
+    id,
+    project: projectId,
+    batch,
+    size: selected.length,
+    episodes: selected.map((row) => Number(row.no)),
+    range: `E${pad2(Number(selected[0]?.no ?? 0))}–E${pad2(Number(selected[selected.length - 1]?.no ?? 0))}`,
+    status: gatePass ? '可开工' : '待补齐',
+    gate: `${checks.slice(0, 3).filter((check) => check.pass).length}/3 开工项通过`,
+    deliveryGate: `${packages}/${selected.length} 集已交付`,
+    model: model || '未记录',
+    checks,
+    createdAt: existing?.createdAt ?? now(),
+    updatedAt: now(),
+    note: String(body.note ?? '批次 3 集试跑门禁预检；不自动推进单集。'),
+  }
+  if (existing) Object.assign(existing, trial)
+  else rows('batchTrials').unshift(trial)
+  project.updated = now()
+  store.persist()
+  return ok(trial)
 }
 
 function episodeAction(projectId: string, ep: number, body: Row): Envelope {
@@ -1892,6 +1952,7 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: 'POST', pattern: /^\/projects\/([^/]+)\/transitions$/, handler: ({ id, body }) => transition(id, body) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/timeline$/, handler: ({ id }) => projectTimeline(id) },
   { method: 'POST', pattern: /^\/projects\/([^/]+)\/episodes\/([^/]+)\/actions$/, handler: ({ id, parts, body }) => episodeAction(id, Number(parts[3]), body) },
+  { method: 'POST', pattern: /^\/projects\/([^/]+)\/batches\/([^/]+)\/trial$/, handler: ({ id, parts, body }) => batchTrial(id, Number(parts[3]), body) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/members$/, handler: ({ id }) => ok(projectOf(id).members ?? []) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/summary$/, handler: ({ id }) => {
     const project = projectOf(id)
@@ -1906,6 +1967,7 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
       stages: stageChain(project),
       episodeStates: ensureEpisodeStates(id).sort((a, b) => Number(a.ep) - Number(b.ep)),
       episodeEvents: rows('episodeEvents').filter((row) => row.project === id).slice(0, 40),
+      batchTrials: rows('batchTrials').filter((row) => row.project === id),
       scripts: rows('scripts').filter((row) => row.project === id),
       episodes: rows('episodes').filter((row) => row.project === id).slice(0, 30),
       assets: rows('assets').filter((row) => row.project === id),

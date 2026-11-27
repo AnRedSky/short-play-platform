@@ -239,6 +239,25 @@ test.describe('工作室 mock 全流程', () => {
     await expect(page.locator('.batch-board')).toBeVisible()
   })
 
+  test('批次看板可创建 3 集试跑门禁单，且不自动推进单集', async ({ page }) => {
+    await resetStudio(page)
+    await page.goto('/projects/workflow?view=batch&batch=4')
+    await expect(page.locator('.batch-board')).toContainText('批次只做分组、资产锁、模型版本与交付控制')
+    const start = page.getByRole('button', { name: '创建 3 集试跑' })
+    await expect(start).toBeVisible()
+    await start.click()
+    await expect(page.locator('.trial-card')).toContainText('待补齐')
+    await expect(page.locator('.trial-card')).toContainText('E19–E21')
+    await expect(page.locator('.trial-card')).toContainText('E19')
+    await expect(page.locator('.trial-episodes span')).toHaveCount(3)
+    await expect(page.locator('.trial-checks')).toContainText('剧本锁定')
+    await expect(page.locator('.trial-checks')).toContainText('镜头/资产锁定')
+    await expect(page.locator('.batch-gate').first()).toContainText('2/3 开工项通过')
+    await page.locator('.episode-card').first().click()
+    await expect(page.locator('.ep-stage-head')).toContainText('镜头与资产')
+    await expect(page.locator('.ep-stage-head')).toContainText('镜头契约、资产与模型基线')
+  })
+
   test('E2 锁定资产后生成镜头任务，并可为镜头换模型生成新 take', async ({ page }) => {
     await resetStudio(page)
     await page.goto('/projects/workflow?view=episode&batch=4&episode=19&step=E2')
