@@ -468,7 +468,20 @@ function createTask(body: Row): Envelope {
 function taskAction(id: string, kind: 'retry' | 'cancel' | 'pause'): Envelope {
   const task = byId('tasks', id)
   if (kind === 'retry') {
-    task.attempt = Number(task.attempt ?? 1) + 1
+    const status = String(task.status ?? '')
+    if (!['失败', '待人工处理'].includes(status)) {
+      throw new MockHttpError(409, 'task_retry_status', `任务 ${id} 当前为“${status || '未知'}”，只有失败或待人工处理任务可以重试`)
+    }
+    const attempt = Number(task.attempt ?? 1)
+    const max = Math.max(1, Number(task.maxAttempts ?? 3))
+    if (attempt >= max) {
+      throw new MockHttpError(409, 'task_retry_limit', `任务 ${id} 已尝试 ${attempt}/${max} 次，达到上限`)
+    }
+    const reason = String(task.failReason ?? '')
+    if (reason.includes('不可重试') || reason.includes('合规检测阻断')) {
+      throw new MockHttpError(409, 'task_retry_blocked', `任务 ${id} 的失败原因不可直接重试，需修改输入或资产`)
+    }
+    task.attempt = attempt + 1
     task.status = '排队中'
     task.failReason = '—'
     rows('attempts').unshift({
@@ -477,14 +490,30 @@ function taskAction(id: string, kind: 'retry' | 'cancel' | 'pause'): Envelope {
       n: task.attempt,
       at: now(),
       status: '排队中',
+      reason: '—',
       fail: '—',
       cost: 0,
-      by: '林知远',
+      by: currentIdentity().name,
     })
   }
-  if (kind === 'cancel') task.status = '已取消'
+  if (kind === 'cancel') {
+    if (['成功', '已完成', '已交付', '已取消'].includes(String(task.status ?? ''))) {
+      throw new MockHttpError(409, 'task_cancel_status', `任务 ${id} 当前为“${task.status}”，不能取消`)
+    }
+    task.status = '已取消'
+  }
   if (kind === 'pause') task.status = '已暂停'
   task.updatedAt = now()
+  rows('audits').unshift({
+    id: nextId('AUD', 'audits'),
+    time: now(),
+    actor: String(currentIdentity().name ?? '').split(' · ')[0],
+    object: `任务 ${task.id}`,
+    action: kind === 'retry' ? '重试任务' : kind === 'cancel' ? '取消任务' : '暂停任务',
+    result: '成功',
+    src: '本地 mock · 桌面端',
+    link: String(task.id),
+  })
   store.persist()
   return ok(task)
 }

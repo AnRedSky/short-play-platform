@@ -491,8 +491,8 @@ const specs: ContractSpec[] = [
   },
   {
     name: 'video.retry',
-    invoke: (s, mode) => s.video.retry(mode === 'mock' ? 'T-8842' : TASK_RECORD),
-    mock: request('POST', '/generation/tasks/T-8842/retry'),
+    invoke: (s, mode) => s.video.retry(mode === 'mock' ? 'T-8824' : TASK_RECORD),
+    mock: request('POST', '/generation/tasks/T-8824/retry'),
     real: request('POST', `/generation/tasks/${TASK_RECORD}/retry`),
     kind: 'object',
   },

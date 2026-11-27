@@ -5,6 +5,14 @@
 import { http } from '../api/client'
 import { findBreakdownIssues, findShotContractIssues, formatBreakdownIssue, formatShotContractIssue } from '../composables/breakdownGate'
 import { budgetText, budgetUsedUp, findActiveTask } from '../composables/videoGate'
+import {
+  taskCancelBlockReason,
+  taskCancelImpact,
+  taskCostTotal,
+  taskDownstreamCount,
+  taskRetryBlockReason,
+  taskRetryImpact,
+} from '../composables/taskGate'
 import { reworkCreateBlockReason } from '../composables/qualityGate'
 import { qualityApi } from '../services/quality'
 import {
@@ -90,6 +98,100 @@ export interface PageSpec {
 }
 
 const col = (key: string, label: string, extra: Partial<Column> = {}): Column => ({ key, label, ...extra })
+
+const taskDetailPanel: SpecRowPanel = {
+  title: '任务详情',
+  hint: 'L1 只读详情；重试与取消在列表行操作中执行，均先走门禁与不可逆确认。',
+  fields: [
+    { key: 'id', label: '任务' },
+    { key: 'project', label: '项目' },
+    { key: 'ep', label: '集' },
+    { key: 'scene', label: '场' },
+    { key: 'shot', label: '镜号' },
+    { key: 'kind', label: '能力类型' },
+    { key: 'stage', label: '阶段' },
+    { key: 'status', label: '状态' },
+    { key: 'priority', label: '优先级' },
+    { key: 'deps', label: '上游依赖' },
+    { key: 'parallelGroup', label: '并行组' },
+    { key: 'input', label: '输入' },
+    { key: 'output', label: '输出' },
+    { key: 'model', label: '模型' },
+    { key: 'config', label: '配置 / 提示词' },
+    { key: 'executor', label: '执行人' },
+    { key: 'resourceOwner', label: '资源归属' },
+    { key: 'attempt', label: '当前尝试' },
+    { key: 'maxAttempts', label: '尝试上限' },
+    { key: 'est', label: '预估秒数' },
+    { key: 'actual', label: '实际秒数' },
+    { key: 'failedCost', label: '已产生失败成本' },
+    { key: 'submitAt', label: '提交时间' },
+    { key: 'failReason', label: '失败原因' },
+    { key: 'qc', label: '质检' },
+  ],
+}
+
+const invocationDetailPanel: SpecRowPanel = {
+  title: '调用详情',
+  hint: 'L1 只读；用量与费用以供应商回执为准，差异进入对账争议队列。',
+  fields: [
+    { key: 'id', label: '调用' },
+    { key: 'task', label: '任务' },
+    { key: 'provider', label: '供应商' },
+    { key: 'model', label: '模型' },
+    { key: 'vendorTask', label: '供应商任务' },
+    { key: 'cap', label: '能力' },
+    { key: 'input', label: '输入' },
+    { key: 'usage', label: '用量' },
+    { key: 'cost', label: '成本' },
+    { key: 'status', label: '状态' },
+    { key: 'at', label: '时间' },
+  ],
+}
+
+async function loadTaskAttempts(id: string): Promise<Row[]> {
+  try {
+    return await http.get<Row[]>(`/generation/tasks/${id}/attempts`)
+  } catch {
+    return []
+  }
+}
+
+async function retryTask(row: Row, ctx: SpecContext) {
+  const blocked = taskRetryBlockReason(row)
+  if (blocked) {
+    ctx.ui.toast(`任务 ${row.id} ${blocked}`, 'bad')
+    return
+  }
+  const attempts = await loadTaskAttempts(String(row.id))
+  const cost = taskCostTotal(row, attempts)
+  const yes = await ctx.ui.confirm('重试任务', taskRetryImpact(row, cost), true)
+  if (!yes) return
+  await http.post(`/generation/tasks/${row.id}/retry`)
+  ctx.ui.toast(`任务 ${row.id} 已重试（第 ${Number(row.attempt) + 1} 次尝试）`)
+  await ctx.reload()
+}
+
+async function cancelTask(row: Row, ctx: SpecContext) {
+  const blocked = taskCancelBlockReason(row)
+  if (blocked) {
+    ctx.ui.toast(`任务 ${row.id} ${blocked}`, 'bad')
+    return
+  }
+  const attempts = await loadTaskAttempts(String(row.id))
+  const cost = taskCostTotal(row, attempts)
+  const downstream = taskDownstreamCount(row, ctx.rows)
+  const yes = await ctx.ui.confirm('取消任务', taskCancelImpact(row, cost, downstream), true)
+  if (!yes) return
+  await http.post(`/generation/tasks/${row.id}/cancel`)
+  ctx.ui.toast(`任务 ${row.id} 已取消`)
+  await ctx.reload()
+}
+
+const taskRowActions = (row: Row) => [
+  { label: '重试', permission: 'production.write', run: (ctx: SpecContext) => { void retryTask(row, ctx) } },
+  { label: '取消', permission: 'production.write', danger: true, run: (ctx: SpecContext) => { void cancelTask(row, ctx) } },
+]
 const countOf = (rows: Row[], key: string, value: string) => rows.filter((row) => String(row[key] ?? '').includes(value)).length
 
 function nextVersion(version: unknown): string {
@@ -1600,12 +1702,14 @@ export const SPECS: Record<string, PageSpec> = {
         col('attempt', '尝试'),
         col('est', '预估'),
       ],
-      filters: [{ key: 'status', label: '队列', options: ['排队中', '执行中', '失败'] }],
+      filters: [{ key: 'status', label: '队列', options: ['待执行', '排队中', '执行中', '待人工处理', '已取消'] }],
     },
+    rowPanel: taskDetailPanel,
+    rowActions: taskRowActions,
     stats: (rows) => [
       { label: '积压', value: countOf(rows, 'status', '排队中') },
       { label: '执行中', value: countOf(rows, 'status', '执行中') },
-      { label: '失败', value: countOf(rows, 'status', '失败') },
+      { label: '待人工', value: countOf(rows, 'status', '待人工处理') },
       { label: '并发上限', value: '6' },
     ],
     side: () => [
@@ -1622,7 +1726,7 @@ export const SPECS: Record<string, PageSpec> = {
       { label: '任务数', value: rows.length },
       { label: '执行中', value: countOf(rows, 'status', '执行中') },
       { label: '排队中', value: countOf(rows, 'status', '排队中') },
-      { label: '失败', value: countOf(rows, 'status', '失败') },
+      { label: '待人工', value: countOf(rows, 'status', '待人工处理') },
     ],
     table: {
       endpoint: '/generation-tasks',
@@ -1638,13 +1742,11 @@ export const SPECS: Record<string, PageSpec> = {
         col('attempt', '尝试'),
         col('est', '预估'),
       ],
-      filters: [{ key: 'status', label: '状态', options: ['排队中', '执行中', '失败', '已完成'] }],
+      filters: [{ key: 'status', label: '状态', options: ['排队中', '执行中', '失败', '已取消', '待人工处理', '成功'] }],
     },
-    rowActions: (row) => [
-      { label: '重试', run: async (ctx) => { await http.post(`/generation/tasks/${row.id}/retry`); ctx.ui.toast(`任务 ${row.id} 已重试`); ctx.reload() } },
-      { label: '取消', danger: true, run: async (ctx) => { await http.post(`/generation/tasks/${row.id}/cancel`); ctx.ui.toast(`任务 ${row.id} 已取消`); ctx.reload() } },
-    ],
-    side: () => [{ title: '调度口径', type: 'kv', items: [{ label: '幂等键', value: 'project + shot + attempt' }, { label: '超时回收', value: '30 分钟' }, { label: '失败重试', value: '≤ maxAttempts' }] }],
+    rowPanel: taskDetailPanel,
+    rowActions: taskRowActions,
+    side: () => [{ title: '调度口径', type: 'kv', items: [{ label: '幂等键', value: 'project + shot + attempt' }, { label: '超时回收', value: '30 分钟' }, { label: '失败重试', value: '失败 / 待人工，且未超 maxAttempts' }, { label: '不可重试', value: '合规阻断、无镜头对象、成功或已取消' }] }],
   },
 
   '/tasks/attempt': {
@@ -1664,6 +1766,7 @@ export const SPECS: Record<string, PageSpec> = {
         col('at', '时间', { mono: true }),
       ],
     },
+    rowPanel: invocationDetailPanel,
     side: () => [{ title: '对账口径', type: 'kv', items: [{ label: '用量来源', value: '供应商回执' }, { label: '失败计费', value: '按合同' }, { label: '差异', value: '进争议队列' }] }],
   },
 
