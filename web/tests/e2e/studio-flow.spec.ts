@@ -127,27 +127,36 @@ test.describe('工作室 mock 全流程', () => {
     await expect(page.locator('tbody tr').filter({ hasText: code! }).first()).toContainText('已交付')
   })
 
-  test('项目详情合并流水线：阶段管线固定顶部并可按阶段切换', async ({ page }) => {
+  test('项目概览汇总详情，阶段管线固定顶部并可切换', async ({ page }) => {
     await resetStudio(page)
     await page.goto('/projects/workflow')
     await expect(page.locator('main h1')).toContainText('· 项目详情')
 
     const dock = page.locator('.stage-dock')
-    await expect(dock.locator('.stage-card')).toHaveCount(8)
-    await expect(dock.locator('.stage-card.active')).toContainText('视频生产')
+    await expect(dock.locator('.stage-card')).toHaveCount(9)
+    await expect(dock.locator('.stage-card.active')).toContainText('项目概览')
+    await expect(page.locator('.overview-grid')).toContainText('基本档案')
+    await expect(page.locator('.overview-grid')).toContainText('制作设定')
+    await expect(page.locator('.overview-grid')).toContainText('预算与产出')
+    await expect(page.locator('.spec-side')).not.toContainText('项目信息')
+
+    const scroll = page.locator('.cockpit-scroll')
+    const head = page.locator('.cockpit-head')
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight))
+      .toBe(0)
+    await scroll.evaluate((el) => el.scrollTo({ top: 700 }))
+    await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
+    await expect.poll(() => head.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(64)
 
     await dock.locator('.stage-card').filter({ hasText: '剧本创作' }).click()
     await expect(page).toHaveURL(/stage=script/)
     await expect(page.locator('.card-title', { hasText: '剧本创作 · 阶段工作区' })).toBeVisible()
+    await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBe(0)
     await expect(page.getByRole('button', { name: /剧本版本 →/ })).toBeVisible()
 
-    await dock.locator('.stage-card').filter({ hasText: '后期合成' }).click()
-    await expect(page.locator('.stage-body')).toContainText('分集状态')
-
     await page.mouse.wheel(0, 900)
-    await expect
-      .poll(() => dock.evaluate((el) => el.getBoundingClientRect().top))
-      .toBeLessThan(120)
+    await expect.poll(() => head.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(64)
 
     await dock.locator('.stage-card').filter({ hasText: '终审交付' }).click()
     await expect(page.locator('.stage-body')).toContainText('DP-26031-00')

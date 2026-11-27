@@ -65,7 +65,7 @@
         </div>
       </header>
 
-      <main class="content">
+      <main class="content" :class="{ 'content-cockpit': isCockpit }">
         <router-view />
       </main>
     </div>
@@ -105,6 +105,7 @@ const menu = (menuData as { menu: MenuGroup[] }).menu
 const meta = routesMeta as Array<{ group: string; path: string; title: string }>
 
 const currentTitle = computed(() => meta.find((item) => `/${item.path}` === route.path)?.title ?? '')
+const isCockpit = computed(() => route.path === '/projects/workflow')
 const currentGroup = computed(() => {
   const group = menu.find((item) => item.children.some((sub) => sub.items.some((entry) => `/${entry.path}` === route.path)))
   return group?.label ?? '短剧制作'

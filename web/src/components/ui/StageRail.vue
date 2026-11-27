@@ -12,7 +12,7 @@
       @keydown.enter="interactive && emit('select', stage)"
       @keydown.space.prevent="interactive && emit('select', stage)"
     >
-      <div class="k">{{ stage.state === 'done' ? 'DONE' : stage.state === 'now' ? 'NOW' : stage.state === 'blocked' ? 'BLOCKED' : 'TODO' }}</div>
+      <div class="k">{{ stage.state === 'overview' ? 'INFO' : stage.state === 'done' ? 'DONE' : stage.state === 'now' ? 'NOW' : stage.state === 'blocked' ? 'BLOCKED' : 'TODO' }}</div>
       <div class="n">{{ stage.name }}</div>
       <div class="g">关口 · {{ stage.gate }}</div>
     </div>
@@ -50,5 +50,12 @@ const emit = defineEmits<{ (event: 'select', stage: StageRow): void }>()
 }
 .stage-card.active .k {
   color: var(--accent);
+}
+.stage-card.overview {
+  border-color: var(--line-strong);
+  background: linear-gradient(135deg, var(--surface-2), var(--surface-3));
+}
+.stage-card.overview .k {
+  color: var(--accent-ink);
 }
 </style>

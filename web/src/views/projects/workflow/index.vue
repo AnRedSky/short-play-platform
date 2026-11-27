@@ -1,36 +1,137 @@
 <template>
-  <section class="page">
-    <PageHeader
-      kicker="PROJECTS / COCKPIT"
-      :title="projectRow ? `${projectRow.name} · 项目详情` : '项目详情'"
-      :desc="projectRow ? `${projectRow.id} · ${projectRow.status} · 当前阶段 ${projectRow.phase}` : '读取项目详情…'"
-    >
-      <HeadActions>
-        <button class="btn" @click="$router.push('/workspace/home')">返回工作台</button>
-        <button class="btn" @click="$router.push('/projects/lifecycle')">生命周期</button>
-        <button class="btn" @click="reload">刷新</button>
-      </HeadActions>
-    </PageHeader>
+  <section class="page cockpit-page">
+    <div class="cockpit-head">
+      <div class="cockpit-frame">
+        <PageHeader
+          kicker="PROJECTS / COCKPIT"
+          :title="projectRow ? `${projectRow.name} · 项目详情` : '项目详情'"
+          :desc="projectRow ? `${projectRow.id} · ${projectRow.status} · 当前阶段 ${projectRow.phase}` : '读取项目详情…'"
+        >
+          <HeadActions>
+            <button class="btn" @click="$router.push('/workspace/home')">返回工作台</button>
+            <button class="btn" @click="$router.push('/projects/lifecycle')">生命周期</button>
+            <button class="btn" @click="reload">刷新</button>
+          </HeadActions>
+        </PageHeader>
 
-    <div class="card stage-dock">
-      <div class="stage-dock-head">
-        <div class="stage-dock-title">
-          阶段管线
-          <span class="card-sub">点击阶段切换下方工作区，关卡动作按当前状态开放</span>
-        </div>
-        <div class="stage-dock-meta">
-          <span class="pill accent">当前 {{ currentStage?.name || '—' }}</span>
-          <span class="pill">进度 {{ data.progress ?? 0 }}%</span>
+        <div class="card stage-dock">
+          <div class="stage-dock-head">
+            <div class="stage-dock-title">
+              阶段管线
+              <span class="card-sub">项目概览汇总档案与进度，点击阶段切换下方工作区</span>
+            </div>
+            <div class="stage-dock-meta">
+              <span class="pill accent">当前 {{ currentStage?.name || '—' }}</span>
+              <span class="pill">进度 {{ data.progress ?? 0 }}%</span>
+            </div>
+          </div>
+          <StageRail :stages="railStages" interactive :active-key="stageKey" @select="selectStage" />
         </div>
       </div>
-      <StageRail :stages="stages" interactive :active-key="stageKey" @select="selectStage" />
     </div>
 
-    <StatCards :items="kpis" />
+    <div ref="scrollRef" class="cockpit-scroll">
+      <div class="cockpit-frame cockpit-body">
+        <div class="spec-grid cockpit-grid">
+          <div class="cockpit-main">
+            <template v-if="stageKey === 'overview'">
+              <StatCards :items="kpis" />
 
-    <div class="spec-grid" style="grid-template-columns: minmax(0, 1.6fr) minmax(330px, 1fr); margin-top: 16px">
-      <div style="display: grid; gap: 14px; align-content: start">
-        <div v-if="selectedStage" class="card">
+              <div class="card">
+                <div class="card-head">
+                  <div>
+                    <h3 class="card-title">项目概览</h3>
+                    <p class="card-sub">项目档案、制作设定、预算与产出统一在此查看</p>
+                  </div>
+                  <span class="pill accent">进度 {{ data.progress ?? 0 }}%</span>
+                </div>
+                <div class="overview-progress">
+                  <div class="bar"><i :style="{ width: `${data.progress ?? 0}%` }" /></div>
+                  <span>{{ projectRow?.done ?? 0 }} / {{ projectRow?.episodes ?? 0 }} 集已完成</span>
+                </div>
+
+                <div class="overview-grid">
+                  <section class="overview-block">
+                    <div class="stage-block-title">基本档案</div>
+                    <dl class="kv-lite">
+                      <dt>项目编号</dt><dd>{{ projectRow?.id }}</dd>
+                      <dt>状态</dt><dd>{{ projectRow?.status }}</dd>
+                      <dt>当前阶段</dt><dd>{{ projectRow?.phase }}</dd>
+                      <dt>题材</dt><dd>{{ projectRow?.genre }}</dd>
+                      <dt>集数</dt><dd>{{ projectRow?.done ?? 0 }} / {{ projectRow?.episodes ?? 0 }}</dd>
+                      <dt>负责人</dt><dd>{{ projectRow?.owner }}</dd>
+                      <dt>所属部门</dt><dd>{{ projectRow?.dept }}</dd>
+                    </dl>
+                  </section>
+
+                  <section class="overview-block">
+                    <div class="stage-block-title">制作设定</div>
+                    <dl class="kv-lite">
+                      <dt>目标受众</dt><dd>{{ projectRow?.audience || '不限定' }}</dd>
+                      <dt>单集时长</dt><dd>{{ projectRow?.duration }}</dd>
+                      <dt>画幅</dt><dd>{{ projectRow?.ratio }}</dd>
+                      <dt>语言</dt><dd>{{ projectRow?.language }}</dd>
+                      <dt>影像风格</dt><dd>{{ projectRow?.style || '不限定' }}</dd>
+                      <dt>内容约束</dt><dd>{{ projectRow?.constraints }}</dd>
+                    </dl>
+                  </section>
+
+                  <section class="overview-block">
+                    <div class="stage-block-title">预算与产出</div>
+                    <dl class="kv-lite">
+                      <dt>预算总额</dt><dd>¥{{ Number(projectRow?.budget || 0).toLocaleString('zh-CN') }}</dd>
+                      <dt>已用预算</dt><dd>¥{{ Number(projectRow?.actual || 0).toLocaleString('zh-CN') }}</dd>
+                      <dt>剩余预算</dt><dd>¥{{ Math.max(0, Number(projectRow?.budget || 0) - Number(projectRow?.actual || 0)).toLocaleString('zh-CN') }}</dd>
+                      <dt>项目质量</dt><dd>{{ projectRow?.quality || '未检测' }}</dd>
+                      <dt>资产</dt><dd>{{ assets.length }} 个</dd>
+                      <dt>审核</dt><dd>{{ reviews.length }} 次</dd>
+                      <dt>任务</dt><dd>{{ allTasks.length }} 个</dd>
+                    </dl>
+                  </section>
+                </div>
+              </div>
+
+              <div class="overview-split">
+                <div class="card">
+                  <div class="card-head">
+                    <h3 class="card-title">待处理</h3>
+                    <span class="pill warn">{{ blockers.length }}</span>
+                  </div>
+                  <EmptyState v-if="!blockers.length" title="当前无阻塞项" desc="项目可继续推进；异常与待办会在此列出。" compact />
+                  <div v-for="item in blockers" :key="item.id" class="list-row">
+                    <span class="k">{{ item.title }}</span>
+                    <span class="v">{{ item.impact }}</span>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <div class="card-head"><h3 class="card-title">最近成本</h3><span class="card-sub">{{ costs.length }} 笔</span></div>
+                  <button
+                    v-for="cost in costs.slice(0, 5)"
+                    :key="cost.id"
+                    class="list-row row-click stage-row-btn"
+                    @click="openCost(cost)"
+                  >
+                    <span class="k">{{ cost.cap }} · E{{ cost.ep }}</span>
+                    <span class="v">¥{{ cost.actual }}</span>
+                  </button>
+                  <EmptyState v-if="!costs.length" title="暂无成本记录" desc="生成任务产生调用后，成本会自动记账。" compact />
+                  <div class="act-bar"><button class="btn" @click="go('/cost/ledger')">成本台账</button></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-head"><h3 class="card-title">动作与审核历史</h3></div>
+                <EmptyState v-if="!timeline.length" title="尚无动作记录" desc="执行关卡动作后，操作人、时间与结果会在此留痕。" compact />
+                <div v-for="item in timeline" :key="item.at + item.title" class="timeline-item">
+                  <time>{{ item.at }}</time>
+                  <b>{{ item.title }}</b>
+                  <p>{{ item.by }} · {{ item.kind }} · {{ item.note }}</p>
+                </div>
+              </div>
+            </template>
+
+            <div v-else-if="selectedStage" class="card">
           <div class="card-head">
             <div>
               <h3 class="card-title">{{ selectedStage.name }} · 阶段工作区</h3>
@@ -168,16 +269,6 @@
             </button>
           </div>
         </div>
-
-        <div class="card">
-          <div class="card-head"><h3 class="card-title">动作与审核历史</h3></div>
-          <EmptyState v-if="!timeline.length" title="尚无动作记录" desc="执行关卡动作后，操作人、时间与结果会在此留痕。" compact />
-          <div v-for="item in timeline" :key="item.at + item.title" class="timeline-item">
-            <time>{{ item.at }}</time>
-            <b>{{ item.title }}</b>
-            <p>{{ item.by }} · {{ item.kind }} · {{ item.note }}</p>
-          </div>
-        </div>
       </div>
 
       <aside class="spec-side">
@@ -211,52 +302,9 @@
             </button>
           </div>
         </div>
-
-        <div class="card">
-          <div class="card-head"><h3 class="card-title">项目信息</h3></div>
-          <dl class="kv-lite">
-            <dt>项目编号</dt><dd>{{ projectRow?.id }}</dd>
-            <dt>状态</dt><dd>{{ projectRow?.status }}</dd>
-            <dt>当前阶段</dt><dd>{{ projectRow?.phase }}</dd>
-            <dt>题材</dt><dd>{{ projectRow?.genre }}</dd>
-            <dt>集数</dt><dd>{{ projectRow?.done ?? 0 }} / {{ projectRow?.episodes ?? 0 }}</dd>
-            <dt>负责人</dt><dd>{{ projectRow?.owner }} / {{ projectRow?.dept }}</dd>
-            <dt>预算</dt><dd>¥{{ Number(projectRow?.actual || 0).toLocaleString('zh-CN') }} / ¥{{ Number(projectRow?.budget || 0).toLocaleString('zh-CN') }}</dd>
-            <dt>质量</dt><dd>{{ projectRow?.quality }}</dd>
-            <dt>受众</dt><dd>{{ projectRow?.audience || '不限定' }}</dd>
-            <dt>单集时长</dt><dd>{{ projectRow?.duration }}</dd>
-            <dt>画幅</dt><dd>{{ projectRow?.ratio }}</dd>
-            <dt>语言</dt><dd>{{ projectRow?.language }}</dd>
-            <dt>风格</dt><dd>{{ projectRow?.style || '不限定' }}</dd>
-            <dt>约束</dt><dd>{{ projectRow?.constraints }}</dd>
-            <dt>资产 / 审核 / 任务</dt><dd>{{ assets.length }} / {{ reviews.length }} / {{ allTasks.length }}</dd>
-          </dl>
-        </div>
-
-        <div class="card">
-          <div class="card-head"><h3 class="card-title">待处理</h3><span class="pill warn">{{ blockers.length }}</span></div>
-          <EmptyState v-if="!blockers.length" title="当前无阻塞项" desc="项目可继续推进；异常与待办会在此列出。" compact />
-          <div v-for="item in blockers" :key="item.id" class="list-row">
-            <span class="k">{{ item.title }}</span>
-            <span class="v">{{ item.impact }}</span>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-head"><h3 class="card-title">最近成本</h3><span class="card-sub">{{ costs.length }} 笔</span></div>
-          <button
-            v-for="cost in costs.slice(0, 5)"
-            :key="cost.id"
-            class="list-row row-click stage-row-btn"
-            @click="openCost(cost)"
-          >
-            <span class="k">{{ cost.cap }} · E{{ cost.ep }}</span>
-            <span class="v">¥{{ cost.actual }}</span>
-          </button>
-          <EmptyState v-if="!costs.length" title="暂无成本记录" desc="生成任务产生调用后，成本会自动记账。" compact />
-          <div class="act-bar"><button class="btn" @click="go('/cost/ledger')">成本台账</button></div>
-        </div>
       </aside>
+    </div>
+    </div>
     </div>
 
     <AppDrawer :open="drawerOpen" :title="drawerTitle" :subtitle="drawerSubtitle" @close="closeDrawer">
@@ -274,7 +322,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { projectApi } from '../../../services/projects'
 import { workspaceApi } from '../../../services/workspace'
@@ -307,6 +355,7 @@ const data = ref<Row>({})
 const summary = ref<Row>({})
 const timeline = ref<Row[]>([])
 const blockers = ref<Row[]>([])
+const scrollRef = ref<HTMLElement | null>(null)
 
 const stageLinksMap: Record<string, Array<{ label: string; path: string }>> = {
   brief: [
@@ -362,23 +411,27 @@ const stageTaskLabels: Record<string, string[]> = {
 
 const projectRow = computed(() => (data.value.project as Row | undefined) ?? (summary.value.project as Row | undefined) ?? null)
 const stages = computed<StageRow[]>(() => (data.value.stages as StageRow[] | undefined) ?? [])
+const overviewStage = computed<StageRow>(() => ({
+  key: 'overview',
+  name: '项目概览',
+  owner: '项目管理',
+  gate: '项目档案与基线',
+  out: '进度 / 预算 / 质量 / 成本',
+  state: 'overview',
+}))
+const railStages = computed<StageRow[]>(() => [overviewStage.value, ...stages.value])
 const currentStage = computed(() => stages.value.find((stage) => stage.state === 'now') ?? null)
-const defaultStageKey = computed(() => {
-  const current = stages.value.find((stage) => stage.state === 'now')
-  const blocked = stages.value.find((stage) => stage.state === 'blocked')
-  const done = [...stages.value].reverse().find((stage) => stage.state === 'done')
-  return (current ?? blocked ?? done ?? stages.value[0])?.key ?? ''
-})
+const defaultStageKey = computed(() => 'overview')
 const stageKey = computed({
   get() {
     const query = String(route.query.stage ?? '')
-    return stages.value.some((stage) => stage.key === query) ? query : defaultStageKey.value
+    return railStages.value.some((stage) => stage.key === query) ? query : defaultStageKey.value
   },
   set(key: string) {
     void router.replace({ query: { ...route.query, stage: key } })
   },
 })
-const selectedStage = computed(() => stages.value.find((stage) => stage.key === stageKey.value) ?? null)
+const selectedStage = computed(() => railStages.value.find((stage) => stage.key === stageKey.value) ?? null)
 
 const kpis = computed(() =>
   ((data.value.kpis as Array<{ label: string; value: string }> | undefined) ?? []).map((item) => ({
@@ -407,6 +460,7 @@ const showStageTasks = computed(() => stageTasks.value.length > 0 && stageKey.va
 const stageLinks = computed(() => stageLinksMap[stageKey.value] ?? [])
 
 function stageStateText(state?: StageRow['state']) {
+  if (state === 'overview') return '项目汇总'
   if (state === 'done') return '已完成'
   if (state === 'now') return '进行中'
   if (state === 'blocked') return '阻塞'
@@ -416,6 +470,11 @@ function stageStateText(state?: StageRow['state']) {
 function selectStage(stage: StageRow) {
   stageKey.value = stage.key
 }
+
+watch(stageKey, async () => {
+  await nextTick()
+  scrollRef.value?.scrollTo({ top: 0 })
+})
 
 const episodePanel = useRoutePanel('project-episode')
 const scriptPanel = useRoutePanel('project-script')
@@ -547,13 +606,97 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.cockpit-page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cockpit-head {
+  flex: none;
+  position: relative;
+  z-index: 15;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+}
+.cockpit-frame {
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 var(--sp-6);
+}
+.cockpit-head .cockpit-frame {
+  padding-top: 20px;
+  padding-bottom: 14px;
+}
+.cockpit-head .page-head {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+}
 .stage-dock {
-  position: sticky;
-  top: calc(var(--topbar-h) + 10px);
-  z-index: 14;
-  margin-bottom: 16px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
+  margin: 0;
+  padding: 12px 14px;
   background: var(--surface);
+  box-shadow: none;
+}
+.stage-dock :deep(.stage-rail) {
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  overflow-x: hidden;
+}
+.stage-dock :deep(.stage-card) {
+  min-width: 0;
+}
+.cockpit-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+.cockpit-body {
+  padding-top: 16px;
+  padding-bottom: 56px;
+}
+.cockpit-grid {
+  grid-template-columns: minmax(0, 1fr) 330px;
+  align-items: start;
+}
+.cockpit-main {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-width: 0;
+}
+.overview-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.overview-progress .bar {
+  flex: 1;
+}
+.overview-progress span {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.overview-block {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 10px 12px;
+}
+.overview-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 .stage-dock-head {
   display: flex;
@@ -657,15 +800,29 @@ onMounted(async () => {
   padding: 10px 0;
   border-bottom: 1px solid var(--line);
 }
+@media (max-width: 1100px) {
+  .stage-dock :deep(.stage-rail) {
+    grid-template-columns: repeat(9, 112px);
+    overflow-x: auto;
+  }
+}
 @media (max-width: 1180px) {
-  .stage-dock {
-    top: calc(var(--topbar-h) + 6px);
+  .cockpit-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cockpit-head .cockpit-frame {
+    padding-top: 14px;
+    padding-bottom: 10px;
   }
 }
 @media (max-width: 900px) {
   .stage-meta,
-  .stage-facts {
+  .stage-facts,
+  .overview-split {
     grid-template-columns: 1fr;
+  }
+  .cockpit-frame {
+    padding: 0 var(--sp-4);
   }
 }
 </style>

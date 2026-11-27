@@ -93,7 +93,7 @@ export interface StageRow {
   owner: string
   gate: string
   out: string
-  state: 'done' | 'now' | 'blocked' | 'todo'
+  state: 'overview' | 'done' | 'now' | 'blocked' | 'todo'
 }
 
 export function stageChain(project: Row): StageRow[] {
