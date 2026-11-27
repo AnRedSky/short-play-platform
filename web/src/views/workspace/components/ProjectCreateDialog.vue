@@ -34,20 +34,25 @@
             </div>
             <div class="field-wrap">
               <label class="field-label" for="np-genre">题材 <span class="text-bad">*</span></label>
-              <input
+              <select
                 id="np-genre"
                 v-model="form.genre"
                 class="field"
                 :class="{ invalid: errors.genre }"
-                placeholder="悬疑 / 都市"
                 :aria-invalid="!!errors.genre"
                 :aria-describedby="errors.genre ? 'np-genre-error' : undefined"
-              />
+              >
+                <option value="">请选择题材</option>
+                <option v-for="genre in genreOptions" :key="genre" :value="genre">{{ genre }}</option>
+              </select>
               <small v-if="errors.genre" id="np-genre-error" class="field-error">{{ errors.genre }}</small>
             </div>
             <div class="field-wrap">
               <label class="field-label" for="np-audience">目标受众</label>
-              <input id="np-audience" v-model="form.audience" class="field" placeholder="18–30 岁都市女性" />
+              <select id="np-audience" v-model="form.audience" class="field">
+                <option value="">不限定（按剧本受众）</option>
+                <option v-for="audience in audienceOptions" :key="audience" :value="audience">{{ audience }}</option>
+              </select>
             </div>
             <div class="field-wrap">
               <label class="field-label" for="np-episodes">集数 <span class="text-bad">*</span></label>
@@ -76,19 +81,28 @@
           <div class="fields">
             <div class="field-wrap">
               <label class="field-label" for="np-duration">单集时长</label>
-              <input id="np-duration" v-model="form.duration" class="field" placeholder="90 秒 / 集" />
+              <select id="np-duration" v-model="form.duration" class="field">
+                <option v-for="duration in durationOptions" :key="duration" :value="duration">{{ duration }}</option>
+              </select>
             </div>
             <div class="field-wrap">
               <label class="field-label" for="np-ratio">画幅与分辨率</label>
-              <input id="np-ratio" v-model="form.ratio" class="field" placeholder="9:16 · 1080×1920" />
+              <select id="np-ratio" v-model="form.ratio" class="field">
+                <option v-for="item in ratioOptions" :key="item.value" :value="item.value">{{ item.label }}</option>
+              </select>
             </div>
             <div class="field-wrap">
               <label class="field-label" for="np-language">语言</label>
-              <input id="np-language" v-model="form.language" class="field" placeholder="普通话" />
+              <select id="np-language" v-model="form.language" class="field">
+                <option v-for="language in languageOptions" :key="language" :value="language">{{ language }}</option>
+              </select>
             </div>
             <div class="field-wrap">
               <label class="field-label" for="np-style">影像风格</label>
-              <input id="np-style" v-model="form.style" class="field" placeholder="冷灰低饱和 · 手持近景" />
+              <select id="np-style" v-model="form.style" class="field">
+                <option value="">不限定（沿用导演设定）</option>
+                <option v-for="style in styleOptions" :key="style" :value="style">{{ style }}</option>
+              </select>
             </div>
             <div class="field-wrap full">
               <label class="field-label" for="np-constraints">内容约束与禁区</label>
@@ -170,6 +184,7 @@ import { projectApi } from '../../../services/projects'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
 import type { Row } from '../../../mock/db'
+import { audienceOptions, durationOptions, genreOptions, languageOptions, ratioOptions, styleOptions } from './projectOptions'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (event: 'close'): void }>()
