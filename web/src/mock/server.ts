@@ -417,6 +417,29 @@ function runQuality(body: Row): Envelope {
   return ok(report)
 }
 
+function outputEpisode(body: Row): Envelope {
+  const project = projectOf(String(body.project ?? ''))
+  const no = Number(body.episode ?? body.no ?? 0)
+  const episode = rows('episodes').find((row) => row.project === project.id && Number(row.no) === no)
+  if (!episode) throw new MockHttpError(404, 'episode_not_found', `未找到第 ${no} 集`)
+  episode.status = '已输出'
+  episode.updatedAt = now()
+  store.persist()
+  return ok(episode)
+}
+
+function rebuildTimeline(body: Row): Envelope {
+  const project = projectOf(String(body.project ?? ''))
+  const version = String(body.version ?? '')
+  const timeline = rows('timelines').find((row) => row.project === project.id && String(row.version) === version)
+  if (!timeline) throw new MockHttpError(404, 'timeline_not_found', `未找到时间线 ${version}`)
+  timeline.stale = 0
+  timeline.status = '已输出'
+  timeline.rebuiltAt = now()
+  store.persist()
+  return ok(timeline)
+}
+
 function finalReview(body: Row): Envelope {
   const project = projectOf(String(body.project ?? ''))
   const result = String(body.result ?? '通过')
@@ -706,6 +729,8 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
     store.persist()
     return ok(issue)
   } },
+  { method: 'POST', pattern: /^\/episodes\/([^/]+)\/output$/, handler: ({ id, body }) => outputEpisode({ ...body, no: decodeURIComponent(id) }) },
+  { method: 'POST', pattern: /^\/timelines\/([^/]+)\/rebuild$/, handler: ({ id, body }) => rebuildTimeline({ ...body, version: decodeURIComponent(id) }) },
   { method: 'POST', pattern: /^\/reviews$/, handler: ({ body }) => finalReview(body) },
   { method: 'POST', pattern: /^\/deliveries$/, handler: ({ body }) => delivery(body) },
   { method: 'POST', pattern: /^\/notifications\/([^/]+)\/read$/, handler: ({ id }) => {

@@ -273,6 +273,9 @@ exports[`B-14 service contract > runs every service function against mock and re
   "post.outputEpisode": {
     "kind": "object",
   },
+  "post.rebuildTimeline": {
+    "kind": "object",
+  },
   "post.reviews": {
     "envelope": [
       "rows",

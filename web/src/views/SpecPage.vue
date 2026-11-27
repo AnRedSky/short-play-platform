@@ -156,6 +156,7 @@ function visibleRowActions(row: Row) {
 function displayField(row: Row, key: string) {
   if (key === 'chosen') return row.chosen ? '已选' : '未选'
   const value = row[key]
+  if (typeof value === 'boolean') return value ? '是' : '否'
   return value === undefined || value === null || value === '' ? '—' : String(value)
 }
 

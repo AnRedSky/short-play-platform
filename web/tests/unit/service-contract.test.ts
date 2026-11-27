@@ -258,9 +258,16 @@ const specs: ContractSpec[] = [
   },
   {
     name: 'post.outputEpisode',
-    invoke: (s) => s.post.outputEpisode('1'),
-    mock: request('PATCH', '/episodes/1'),
-    real: request('PATCH', '/episodes/1'),
+    invoke: (s) => s.post.outputEpisode(PROJECT_CODE, '1'),
+    mock: request('POST', '/episodes/1/output'),
+    real: request('POST', '/episodes/1/output'),
+    kind: 'object',
+  },
+  {
+    name: 'post.rebuildTimeline',
+    invoke: (s) => s.post.rebuildTimeline('TL-26031-E16-V3', PROJECT_CODE),
+    mock: request('POST', '/timelines/TL-26031-E16-V3/rebuild'),
+    real: request('POST', '/timelines/TL-26031-E16-V3/rebuild'),
     kind: 'object',
   },
   {

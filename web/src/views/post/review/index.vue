@@ -3,8 +3,8 @@
     <PageHeader kicker="POST / FINAL REVIEW" title="最终成片审核" desc="节点 B：终审结论直接决定交付；通过后状态进入「已完成」，退回则回到后期返工。">
       <HeadActions>
         <button class="btn" @click="$router.push('/quality/reports')">质量报告</button>
-        <button class="btn primary" v-if="session.can('final.review') && projectStore.current?.status === '待最终审核'" @click="decide('通过')">终审通过</button>
-        <button class="btn danger" v-if="session.can('final.review') && projectStore.current?.status === '待最终审核'" @click="decide('退回')">退回返工</button>
+        <button class="btn primary" v-if="session.can('final.review') && projectStore.current?.status === '待最终审核'" @click="openReview('通过')">终审通过</button>
+        <button class="btn danger" v-if="session.can('final.review') && projectStore.current?.status === '待最终审核'" @click="openReview('退回')">退回返工</button>
       </HeadActions>
     </PageHeader>
 
@@ -49,17 +49,24 @@
 
       <aside class="spec-side">
         <div class="card">
-          <div class="card-head"><h3 class="card-title">终审意见</h3></div>
-          <div class="field-wrap">
-            <label class="field-label">结论说明</label>
-            <textarea v-model="note" class="field" rows="4" placeholder="通过需说明依据；退回需写清问题与返工范围"></textarea>
-          </div>
+          <div class="card-head"><h3 class="card-title">终审前置</h3></div>
           <div class="checklist">
+            <div class="ck"><i :class="{ on: projectStore.current?.status === '待最终审核' }">{{ projectStore.current?.status === '待最终审核' ? '✓' : '' }}</i><span>项目处于待最终审核</span></div>
             <div class="ck"><i :class="{ on: epComplete }">{{ epComplete ? '✓' : '' }}</i><span>集数完整</span></div>
             <div class="ck"><i :class="{ on: qcPass }">{{ qcPass ? '✓' : '' }}</i><span>质检无阻断项</span></div>
-            <div class="ck"><i :class="{ on: checklistReady }">{{ checklistReady ? '✓' : '' }}</i><span>交付清单齐备</span></div>
+            <div class="ck"><i :class="{ on: checklistReady }">{{ checklistReady ? '✓' : '' }}</i><span>必需清单齐备</span></div>
           </div>
-          <div v-if="projectStore.current?.status !== '待最终审核'" class="notice warn" style="margin-top: 10px">项目当前不在「待最终审核」，终审动作会被服务端拒绝。</div>
+          <div v-if="projectStore.current?.status !== '待最终审核'" class="notice warn" style="margin-top: 10px">当前项目不在「待最终审核」，终审动作会被阻断。</div>
+          <div v-else class="notice" style="margin-top: 10px">通过会锁定版本并进入「已完成」；退回会回到后期返工，必须在意见中写清问题与范围。</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3 class="card-title">审核口径</h3></div>
+          <dl class="kv-lite">
+            <dt>节点</dt><dd>B · 最终成片</dd>
+            <dt>范围</dt><dd>全 {{ projectStore.current?.episodes }} 集</dd>
+            <dt>质检</dt><dd>{{ projectStore.current?.quality }}</dd>
+            <dt>清单</dt><dd>{{ checklist.filter(i => i.status === '已就绪').length }} / {{ checklist.length }}</dd>
+          </dl>
         </div>
       </aside>
     </div>
@@ -67,8 +74,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { postApi } from '../../../services/post'
+import { checklistReady as checklistIsReady, reviewBlockReason } from '../../../composables/postGate'
 import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
 import { useUiStore } from '../../../stores/ui'
@@ -84,11 +92,13 @@ const ui = useUiStore()
 
 const checklist = ref<Row[]>([])
 const reviews = ref<Row[]>([])
-const note = ref('')
 
 const epComplete = computed(() => Number(projectStore.current?.done ?? 0) >= Number(projectStore.current?.episodes ?? 1))
-const qcPass = computed(() => String(projectStore.current?.quality ?? '').includes('良好') || String(projectStore.current?.quality ?? '').includes('通过'))
-const checklistReady = computed(() => checklist.value.every((item) => item.status === '已就绪' || !item.required))
+const qcPass = computed(() => {
+  const quality = String(projectStore.current?.quality ?? '')
+  return quality.includes('良好') || quality.includes('通过')
+})
+const checklistReady = computed(() => checklistIsReady(checklist.value))
 
 async function load() {
   const [checkRows, reviewRows] = await Promise.all([
@@ -99,18 +109,53 @@ async function load() {
   reviews.value = reviewRows.rows
 }
 
-async function decide(result: '通过' | '退回') {
-  if (!note.value.trim()) {
-    ui.toast('请先填写终审意见', 'bad')
+function openReview(result: '通过' | '退回') {
+  const blocked = reviewBlockReason(projectStore.current, result, checklist.value)
+  if (blocked) {
+    ui.toast(blocked, 'bad')
     return
   }
-  const yes = await ui.confirm(`确认${result}`, result === '通过' ? '通过后进入「已完成」，可生成交付包。' : '退回后回到后期返工。', result === '退回')
-  if (!yes) return
-  await postApi.createReview({ project: projectStore.currentId, result, note: note.value })
-  ui.toast(`终审已${result}`)
-  await projectStore.load()
-  await load()
+  ui.openDialog({
+    title: result === '通过' ? '终审通过' : '退回返工',
+    subtitle: result === '通过'
+      ? `将锁定《${projectStore.current?.name}》当前版本并进入「已完成」，随后可生成交付包。`
+      : `将把《${projectStore.current?.name}》退回后期返工；问题与返工范围会写入审核记录。`,
+    danger: result === '退回',
+    submitLabel: result === '通过' ? '确认通过' : '确认退回',
+    fields: [
+      {
+        key: 'note',
+        label: '终审意见',
+        type: 'textarea',
+        required: true,
+        rows: 4,
+        placeholder: result === '通过' ? '说明通过依据，例如集数、字幕与授权核对结果' : '写清问题、涉及集数与返工范围',
+      },
+      {
+        key: 'checked',
+        label: '核对确认',
+        type: 'select',
+        required: true,
+        value: '未核对',
+        options: [{ value: '未核对', label: '未核对' }, { value: '已核对', label: '已核对全集体检、字幕与授权' }],
+      },
+    ],
+    onSubmit: async (values) => {
+      const current = reviewBlockReason(projectStore.current, result, checklist.value)
+      if (current) throw new Error(current)
+      if (String(values.checked) !== '已核对') throw new Error('请先确认已核对全集体检、字幕与授权材料')
+      await postApi.createReview({
+        project: projectStore.currentId,
+        result,
+        note: String(values.note ?? '').trim(),
+      })
+      ui.toast(`终审已${result}`)
+      await projectStore.load()
+      await load()
+    },
+  })
 }
 
 onMounted(load)
+watch(() => projectStore.currentId, load)
 </script>

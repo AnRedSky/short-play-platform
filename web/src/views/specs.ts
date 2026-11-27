@@ -1441,6 +1441,13 @@ export const SPECS: Record<string, PageSpec> = {
     kicker: 'POST / VERSIONS',
     title: '版本链',
     desc: '交付版本冻结，不允许覆盖历史；新建版本必须基于已冻结版本。',
+    scoped: true,
+    stats: (rows) => [
+      { label: '交付版本', value: rows.length },
+      { label: '已冻结', value: rows.filter((row) => row.frozen).length },
+      { label: '校验和留存', value: rows.filter((row) => row.checksum).length },
+      { label: '最近交付', value: rows[0]?.at ?? '—' },
+    ],
     table: {
       endpoint: '/deliveries',
       columns: [
@@ -1452,6 +1459,24 @@ export const SPECS: Record<string, PageSpec> = {
         col('checksum', '校验和', { mono: true }),
         col('status', '状态', { pill: true }),
         col('at', '交付时间', { mono: true }),
+      ],
+    },
+    rowPanel: {
+      title: '交付版本详情',
+      hint: '版本链只读：交付后冻结、不可覆盖；重新交付会生成新的版本号。',
+      fields: [
+        { key: 'id', label: '版本号' },
+        { key: 'project', label: '项目' },
+        { key: 'version', label: '交付版本' },
+        { key: 'episodes', label: '集数' },
+        { key: 'files', label: '文件数' },
+        { key: 'size', label: '体积' },
+        { key: 'checksum', label: '校验和' },
+        { key: 'reviewer', label: '审核人' },
+        { key: 'receiver', label: '接收方' },
+        { key: 'at', label: '交付时间' },
+        { key: 'status', label: '状态' },
+        { key: 'frozen', label: '冻结' },
       ],
     },
     side: () => [{ title: '版本规则', type: 'checklist', items: [{ label: '交付后冻结', on: true }, { label: 'V2 新建不覆盖', on: true }, { label: '校验和随包留存', on: true }] }],
