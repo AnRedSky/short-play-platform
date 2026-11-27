@@ -53,7 +53,13 @@ export interface EpisodeState {
   scriptLocked: boolean
   assetsLocked: boolean
   productionStarted: boolean
+  timelineLocked?: boolean
+  audioGenerated?: boolean
+  subtitleApproved?: boolean
+  lipSyncPassed?: boolean
+  mixPassed?: boolean
   qcPassed?: boolean
+  finalApproved?: boolean
   delivered?: boolean
   modelBaseline?: string
   owner?: string
@@ -136,6 +142,10 @@ export function inferEpisodeFlow(episode: Row): EpisodeFlow {
     currentStep = 'E2'
     tone = 'wait'
     note = '待进入素材生产'
+  } else if (status.includes('声音字幕') || status.includes('配音') || status.includes('字幕')) {
+    currentStep = 'E5'
+    tone = 'active'
+    note = '声音字幕处理中'
   } else if (status.includes('后期')) {
     currentStep = 'E4'
     tone = 'active'
@@ -144,6 +154,10 @@ export function inferEpisodeFlow(episode: Row): EpisodeFlow {
     currentStep = 'E6'
     tone = 'active'
     note = '质量检测中'
+  } else if (status.includes('终审')) {
+    currentStep = 'E7'
+    tone = 'active'
+    note = '待终审入库'
   } else if (status.includes('审核')) {
     currentStep = 'E1'
     tone = 'wait'

@@ -92,6 +92,65 @@ describe('episode E0–E3 contract', () => {
     })
   })
 
+  it('walks E4 → E7 with timeline, audio, QC, final review and a single-episode package', async () => {
+    const { handleMock, store } = await loadMock()
+    await call(handleMock, '/api/v1/projects/SP-26031/summary')
+    const act = (action: string, extra: Record<string, unknown> = {}) =>
+      call(handleMock, '/api/v1/projects/SP-26031/episodes/19/actions', { action, ...extra }) as Promise<{
+        data: { state: Record<string, unknown> }
+      }>
+
+    await act('lockAssets', { model: '视频模型 A' })
+    await act('startProduction')
+    await act('advanceQueue', { note: 'Mock 队列完成 18 镜' })
+    expect(
+      store.table('episodeStates').find((row) => row.project === 'SP-26031' && row.ep === 19)?.currentStep,
+    ).toBe('E4')
+    expect(store.table('tasks').filter((row) => row.project === 'SP-26031' && row.ep === 19).every((row) => row.status === '已通过')).toBe(true)
+
+    const timeline = (await act('buildTimeline', { note: '建立 E19 时间线' })).data.state
+    expect(timeline).toMatchObject({ currentStep: 'E4', timelineLocked: false })
+    const lockedTimeline = (await act('lockTimeline', { note: '锁定 E19 时间线' })).data.state
+    expect(lockedTimeline).toMatchObject({ currentStep: 'E5', timelineLocked: true })
+
+    const audio = (await act('generateAudio', { note: '生成 E19 对白与字幕' })).data.state
+    expect(audio).toMatchObject({ currentStep: 'E5', audioGenerated: true, subtitleApproved: false })
+    const lip = (await act('runLipSync', { note: '执行 E19 口型同步' })).data.state
+    expect(lip).toMatchObject({ currentStep: 'E5', lipSyncPassed: true })
+    const subtitle = (await act('approveSubtitle', { note: '确认 E19 字幕' })).data.state
+    expect(subtitle).toMatchObject({ currentStep: 'E5', subtitleApproved: true })
+    const mix = (await act('checkMix', { note: '混音检查通过' })).data.state
+    expect(mix).toMatchObject({ currentStep: 'E6', mixPassed: true })
+
+    const qc = (await act('runEpisodeQc', { note: '单集 QC 执行' })).data.state
+    expect(qc).toMatchObject({ currentStep: 'E6', qcPassed: false })
+
+    const rework = (await act('reworkEpisode', { target: 'E5', note: '字幕错字，退回声音字幕' })).data.state
+    expect(rework).toMatchObject({ currentStep: 'E5', qcPassed: false, mixPassed: false })
+    expect(
+      store.table('qualityReports').find((row) => row.project === 'SP-26031' && String(row.object).includes('第 19 集'))?.archived,
+    ).toBe(true)
+
+    await act('generateAudio', { note: '返工后重新生成字幕' })
+    await act('approveSubtitle', { note: '返工后字幕确认' })
+    await act('runLipSync', { note: '返工后口型复检' })
+    const mixAgain = (await act('checkMix', { note: '返工后混音复检' })).data.state
+    expect(mixAgain).toMatchObject({ currentStep: 'E6', mixPassed: true })
+    const qcAgain = (await act('runEpisodeQc', { note: '返工后 QC 复检' })).data.state
+    expect(qcAgain).toMatchObject({ currentStep: 'E6', qcPassed: false })
+
+    const accepted = (await act('acceptEpisodeQc', { note: 'QC 确认通过' })).data.state
+    expect(accepted).toMatchObject({ currentStep: 'E7', qcPassed: true })
+    const final = (await act('approveEpisode', { note: '单集终审通过' })).data.state
+    expect(final).toMatchObject({ currentStep: 'E7', finalApproved: true })
+    const packaged = (await act('packageEpisode', { receiver: '企业内容库', note: '单集包入库' })).data.state
+    expect(packaged).toMatchObject({ currentStep: 'E7', delivered: true })
+
+    const deliveries = store.table('deliveries').filter((row) => row.project === 'SP-26031' && row.ep === 19)
+    expect(deliveries[0]).toMatchObject({ kind: '单集包', episodes: 1, status: '已交付' })
+    expect(store.table('episodes').find((row) => row.project === 'SP-26031' && row.no === 19)?.status).toBe('已交付')
+  })
+
   it('locks E2 assets, starts E3 tasks, retries and opens a new take when model changes', async () => {    const { handleMock, store } = await loadMock()
 
     const locked = (await call(handleMock, '/api/v1/projects/SP-26031/episodes/19/actions', {

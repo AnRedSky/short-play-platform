@@ -272,6 +272,93 @@ test.describe('工作室 mock 全流程', () => {
     await expect(page.locator('tbody tr').filter({ hasText: 'T2' }).first()).toBeVisible()
   })
 
+  test('E4→E7 完成剪辑、声音字幕、单集 QC、终审与单集交付包', async ({ page }) => {
+    await resetStudio(page)
+    await page.goto('/projects/workflow?view=episode&batch=4&episode=19&step=E2')
+
+    await page.getByRole('button', { name: '锁定资产与模型' }).click()
+    const lockModal = page.locator('.modal').last()
+    await lockModal.locator('#dlg-model').selectOption('视频模型 A')
+    await lockModal.locator('#dlg-note').fill('E19 资产锁定')
+    await lockModal.getByRole('button', { name: '锁定并进入 E3' }).click()
+    await expect(page.getByText('E2 资产与模型锁定 已完成')).toBeVisible()
+
+    await page.getByRole('button', { name: '生成镜头任务' }).click()
+    const taskModal = page.locator('.modal').last()
+    await taskModal.locator('#dlg-note').fill('E19 派发 18 镜')
+    await taskModal.getByRole('button', { name: '生成镜头任务' }).click()
+    await expect(page.getByText('E3 素材生产启动 已完成')).toBeVisible()
+
+    await page.getByRole('button', { name: '推进本集队列' }).click()
+    await page.locator('.modal').last().getByRole('button', { name: '确认' }).click()
+    await expect(page.getByText('E3 队列推进 已完成')).toBeVisible()
+
+    await page.locator('.ep-step').filter({ hasText: 'E4' }).click()
+    await page.getByRole('button', { name: '建立时间线' }).click()
+    let actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('建立 E19 时间线')
+    await actionModal.getByRole('button', { name: '建立时间线' }).click()
+    await expect(page.getByText('建立时间线 已完成')).toBeVisible()
+
+    await page.getByRole('button', { name: '锁定时间线' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 精剪完成')
+    await actionModal.getByRole('button', { name: '锁定时间线' }).click()
+    await expect(page.getByText('锁定时间线 已完成')).toBeVisible()
+
+    await page.locator('.ep-step').filter({ hasText: 'E5' }).click()
+    await page.getByRole('button', { name: '生成对白与字幕' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('生成 E19 对白与字幕')
+    await actionModal.getByRole('button', { name: '生成对白与字幕' }).click()
+    await expect(page.getByText('生成对白与字幕 已完成')).toBeVisible()
+
+    await page.getByRole('button', { name: '确认字幕' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 字幕校对通过')
+    await actionModal.getByRole('button', { name: '确认字幕' }).click()
+    await expect(page.getByText('确认字幕 已完成')).toBeVisible()
+
+    await page.getByRole('button', { name: '执行口型同步' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 口型同步通过')
+    await actionModal.getByRole('button', { name: '执行口型同步' }).click()
+    await expect(page.getByText('执行口型同步 已完成')).toBeVisible()
+
+    await page.getByRole('button', { name: '混音检查并进入 QC' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 混音检查通过')
+    await actionModal.getByRole('button', { name: '混音检查并进入 QC' }).click()
+    await expect(page.getByText('混音检查并进入 QC 已完成')).toBeVisible()
+
+    await page.locator('.ep-step').filter({ hasText: 'E6' }).click()
+    await page.getByRole('button', { name: '执行单集 QC' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 单集 QC')
+    await actionModal.getByRole('button', { name: '执行单集 QC' }).click()
+    await expect(page.getByText('执行单集 QC 已完成')).toBeVisible()
+
+    await page.getByRole('button', { name: '确认 QC 通过' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 QC 确认通过')
+    await actionModal.getByRole('button', { name: '确认 QC 通过' }).click()
+    await expect(page.getByText('确认 QC 通过 已完成')).toBeVisible()
+
+    await page.locator('.ep-step').filter({ hasText: 'E7' }).click()
+    await page.getByRole('button', { name: '单集终审通过' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-note').fill('E19 终审通过')
+    await actionModal.getByRole('button', { name: '终审通过', exact: true }).click()
+    await expect(page.getByText('终审通过 已完成')).toBeVisible()
+
+    await page.getByRole('button', { name: '生成单集交付包' }).click()
+    actionModal = page.locator('.modal').last()
+    await actionModal.locator('#dlg-receiver').fill('企业内容库')
+    await actionModal.locator('#dlg-note').fill('E19 单集包入库')
+    await actionModal.getByRole('button', { name: '生成并入库' }).click()
+    await expect(page.getByText('E7 单集交付包 已完成')).toBeVisible()
+  })
+
   test('创意策划的方案、版本与确认门禁都走居中弹窗', async ({ page }) => {
     await resetStudio(page)
     await page.goto('/projects/workflow?stage=brief')

@@ -80,24 +80,37 @@ function defaultEpisodeState(project: Row, episode: Row): Row {
   const status = String(episode.status ?? '')
   const qc = String(episode.qc ?? '')
   const shot = rows('shots').find((row) => row.project === project.id && Number(row.ep) === ep)
+  const timeline = rows('timelines').find((row) => row.project === project.id && Number(row.ep) === ep)
+  const dialogues = rows('dialogues').filter((row) => row.project === project.id && Number(row.ep) === ep)
+  const subtitles = rows('subtitles').filter((row) => row.project === project.id && Number(row.ep) === ep)
+  const lipSync = rows('lipSync').filter((row) => dialogues.some((line) => row.line === line.id))
   let currentStep = 'E0'
   let inputConfirmed = false
   let scriptLocked = false
   let assetsLocked = false
   let productionStarted = false
+  let timelineLocked = timeline ? String(timeline.status) === '已输出' : false
+  let audioGenerated = dialogues.length > 0 && dialogues.every((row) => String(row.audio ?? '').startsWith('已生成'))
+  let subtitleApproved = subtitles.some((row) => String(row.status) === '已通过')
+  let lipSyncPassed = lipSync.length > 0 && lipSync.every((row) => String(row.status) === '已通过')
+  let mixPassed = false
   let qcPassed = false
+  let finalApproved = false
   let delivered = false
   let blocked = false
 
   if (status.includes('已交付')) {
     currentStep = 'E7'
-    inputConfirmed = scriptLocked = assetsLocked = productionStarted = qcPassed = delivered = true
+    inputConfirmed = scriptLocked = assetsLocked = productionStarted = true
+    timelineLocked = audioGenerated = subtitleApproved = lipSyncPassed = mixPassed = qcPassed = finalApproved = delivered = true
   } else if (status.includes('已输出')) {
     currentStep = 'E7'
-    inputConfirmed = scriptLocked = assetsLocked = productionStarted = qcPassed = true
+    inputConfirmed = scriptLocked = assetsLocked = productionStarted = true
+    timelineLocked = audioGenerated = subtitleApproved = lipSyncPassed = mixPassed = qcPassed = finalApproved = true
   } else if (status.includes('已通过质检') || qc === 'PASS') {
     currentStep = 'E7'
-    inputConfirmed = scriptLocked = assetsLocked = productionStarted = qcPassed = true
+    inputConfirmed = scriptLocked = assetsLocked = productionStarted = true
+    timelineLocked = audioGenerated = subtitleApproved = lipSyncPassed = mixPassed = qcPassed = true
   } else if (status.includes('异常') || status.includes('失败')) {
     currentStep = 'E3'
     inputConfirmed = scriptLocked = assetsLocked = productionStarted = true
@@ -111,9 +124,15 @@ function defaultEpisodeState(project: Row, episode: Row): Row {
   } else if (status.includes('质量') || status.includes('质检')) {
     currentStep = 'E6'
     inputConfirmed = scriptLocked = assetsLocked = productionStarted = true
+    timelineLocked = audioGenerated = subtitleApproved = lipSyncPassed = mixPassed = true
   } else if (status.includes('审核')) {
     currentStep = 'E1'
     inputConfirmed = true
+  }
+
+  if (currentStep === 'E5') timelineLocked = true
+  if (currentStep === 'E6' || currentStep === 'E7') {
+    timelineLocked = audioGenerated = subtitleApproved = lipSyncPassed = mixPassed = true
   }
 
   return {
@@ -128,7 +147,13 @@ function defaultEpisodeState(project: Row, episode: Row): Row {
     scriptLocked,
     assetsLocked,
     productionStarted,
+    timelineLocked,
+    audioGenerated,
+    subtitleApproved,
+    lipSyncPassed,
+    mixPassed,
     qcPassed,
+    finalApproved,
     delivered,
     modelBaseline: String(shot?.model ?? '视频模型 A'),
     owner: project.owner ?? '',
@@ -304,6 +329,276 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
     } else {
       touch('E3', '生产中', reason || `接受镜头 ${task.shot} take ${task.take ?? 1}`)
     }
+  } else if (action === 'advanceQueue') {
+    if (!state.productionStarted) throw new MockHttpError(409, 'episode_production_gate', '请先启动本集素材生产')
+    const tasks = rows('tasks').filter(
+      (row) => row.project === projectId && Number(row.ep) === ep && !['已替代', '已取消'].includes(String(row.status)),
+    )
+    if (!tasks.length) throw new MockHttpError(409, 'episode_task_empty', '本集没有可推进的任务')
+    let accepted = 0
+    for (const task of tasks) {
+      if (String(task.status) === '已通过') continue
+      task.status = '已通过'
+      task.qc = 'PASS'
+      task.updatedAt = now()
+      const shot = rows('shots').find(
+        (row) => row.id === task.shotId || (row.project === projectId && Number(row.ep) === ep && row.no === task.shot),
+      )
+      if (shot) {
+        shot.status = '已通过'
+        shot.version = `take ${task.take ?? 1}`
+      }
+      accepted += 1
+    }
+    touch('E4', '后期', reason || `本集队列已推进 ${accepted} 个任务，镜头素材齐备，进入 E4`)
+  } else if (action === 'buildTimeline') {
+    requireStep('E4')
+    const existing = rows('timelines').find((row) => row.project === projectId && Number(row.ep) === ep)
+    if (existing) {
+      state.timelineLocked = false
+      touch('E4', '后期', reason || `复用已有时间线 ${existing.version}`)
+    } else {
+      const shots = rows('shots').filter((row) => row.project === projectId && Number(row.ep) === ep)
+      const accepted = rows('tasks').filter(
+        (row) => row.project === projectId && Number(row.ep) === ep && String(row.status) === '已通过',
+      )
+      const version = `TL-${project.id.replace(/^SP-/, '')}-E${pad2(ep)}-V1`
+      rows('timelines').unshift({
+        project: projectId,
+        ep,
+        version,
+        tracks: 6,
+        clips: accepted.length || shots.length,
+        duration: episode.duration ?? `${shots.reduce((sum, row) => sum + Number(String(row.duration ?? '').replace(/[^\d]/g, '')), 0)} 秒`,
+        timebase: 'PTS + 1/25 时基',
+        status: '已输出',
+        stale: 0,
+        locked: false,
+        builtAt: now(),
+      })
+      state.timelineLocked = false
+      touch('E4', '后期', reason || `按 ${shots.length} 镜建立单集时间线 ${version}`)
+    }
+  } else if (action === 'lockTimeline') {
+    requireStep('E4')
+    const timeline = rows('timelines').find((row) => row.project === projectId && Number(row.ep) === ep)
+    if (!timeline) throw new MockHttpError(409, 'episode_timeline_missing', '请先生成时间线')
+    timeline.status = '已输出'
+    timeline.stale = 0
+    timeline.locked = true
+    timeline.lockedAt = now()
+    state.timelineLocked = true
+    touch('E5', '声音字幕', reason || `时间线 ${timeline.version} 已锁定，进入声音字幕`)
+  } else if (action === 'generateAudio') {
+    requireStep('E5')
+    const shots = rows('shots').filter((row) => row.project === projectId && Number(row.ep) === ep)
+    const lines = shots.filter((row) => String(row.line ?? '').trim() && String(row.line) !== '—')
+    let created = 0
+    for (const shot of lines) {
+      const text = String(shot.line)
+      const exists = rows('dialogues').find((row) => row.project === projectId && Number(row.ep) === ep && String(row.text) === text)
+      if (exists) {
+        exists.audio = '已生成 v1'
+        exists.status = '已通过'
+        exists.asr = '回听一致'
+        continue
+      }
+      const dialogue = {
+        id: nextId('DL', 'dialogues'),
+        project: projectId,
+        ep,
+        char: shot.chars ?? '角色',
+        text,
+        voice: `${shot.chars ?? '角色'} · 声音档案`,
+        emotion: shot.emotion ?? '克制',
+        audio: '已生成 v1',
+        asr: '回听一致',
+        status: '已通过',
+        cost: 3.2,
+      }
+      rows('dialogues').unshift(dialogue)
+      created += 1
+    }
+    const epDialogues = rows('dialogues').filter((row) => row.project === projectId && Number(row.ep) === ep)
+    if (!epDialogues.length) throw new MockHttpError(409, 'episode_dialogue_empty', '本集没有可配音的对白')
+    let subtitle = rows('subtitles').find((row) => row.project === projectId && Number(row.ep) === ep)
+    if (!subtitle) {
+      subtitle = {
+        project: projectId,
+        ep,
+        version: `SUB-${pad2(ep)} v1`,
+        lines: epDialogues.length,
+        timeline: '整数毫秒 · 待校对',
+        asr: '待校对',
+        style: '字号 34 / 安全区 12% / 单行 14 字',
+        status: '待校对',
+      }
+      rows('subtitles').unshift(subtitle)
+    }
+    state.audioGenerated = true
+    state.subtitleApproved = false
+    state.lipSyncPassed = false
+    touch('E5', '声音字幕', reason || `生成 ${epDialogues.length} 条对白音频与字幕初稿${created ? `，新建 ${created} 条` : ''}`)
+  } else if (action === 'approveSubtitle') {
+    requireStep('E5')
+    if (!state.audioGenerated) throw new MockHttpError(409, 'episode_audio_gate', '请先生成对白音频与字幕')
+    const subtitle = rows('subtitles').find((row) => row.project === projectId && Number(row.ep) === ep)
+    if (!subtitle) throw new MockHttpError(409, 'episode_subtitle_missing', '本集没有字幕版本')
+    subtitle.status = '已通过'
+    subtitle.asr = '错字 0 · 校对完成'
+    subtitle.timeline = '整数毫秒 · 无累计漂移'
+    state.subtitleApproved = true
+    touch('E5', '声音字幕', reason || `字幕 ${subtitle.version} 校对通过`)
+  } else if (action === 'runLipSync') {
+    requireStep('E5')
+    if (!state.audioGenerated) throw new MockHttpError(409, 'episode_audio_gate', '请先生成对白音频')
+    const epDialogues = rows('dialogues').filter((row) => row.project === projectId && Number(row.ep) === ep)
+    if (!epDialogues.length) throw new MockHttpError(409, 'episode_dialogue_empty', '本集没有可校验的对白')
+    let created = 0
+    for (const line of epDialogues) {
+      const exists = rows('lipSync').find((row) => row.line === line.id)
+      if (exists) {
+        exists.status = '已通过'
+        exists.match = '96% 帧对齐'
+        continue
+      }
+      const shot = rows('shots').find((row) => row.project === projectId && Number(row.ep) === ep && String(row.line) === String(line.text))
+      rows('lipSync').unshift({
+        id: nextId('LS', 'lipSync'),
+        line: line.id,
+        shot: shot?.id ?? '',
+        model: 'Lip Model L1',
+        match: '96% 帧对齐',
+        duration: shot?.duration ?? '—',
+        status: '已通过',
+        cost: 4.1,
+      })
+      created += 1
+    }
+    state.lipSyncPassed = true
+    touch('E5', '声音字幕', reason || `口型同步 ${epDialogues.length} 条通过${created ? `，新建 ${created} 条` : ''}`)
+  } else if (action === 'checkMix') {
+    requireStep('E5')
+    if (!state.audioGenerated || !state.subtitleApproved || !state.lipSyncPassed) {
+      throw new MockHttpError(409, 'episode_audio_gate', '对白、字幕与口型未全部就绪，不能混音')
+    }
+    state.mixPassed = true
+    rows('audioAssets').unshift({
+      id: nextId('AU', 'audioAssets'),
+      project: projectId,
+      type: '混音',
+      name: `第 ${ep} 集混音母版`,
+      source: '单集混音检查',
+      rights: '项目内使用',
+      used: `第 ${ep} 集`,
+      mix: '对白 −16 LUFS / 音乐 −18 LUFS',
+      status: '已通过',
+      validUntil: '2027-12-31',
+    })
+    touch('E6', '质检', reason || '混音检查通过，进入单集 QC')
+  } else if (action === 'runEpisodeQc') {
+    requireStep('E6')
+    if (!state.mixPassed) throw new MockHttpError(409, 'episode_mix_gate', '请先完成混音检查')
+    const result = 'PASS'
+    const report = {
+      id: nextId('QR', 'qualityReports'),
+      project: projectId,
+      object: `第 ${ep} 集成片`,
+      level: '单集级',
+      version: `EP${pad2(ep)} v1`,
+      result,
+      items: 42,
+      issues: 0,
+      review: 0,
+      fail: 0,
+      engine: '质检模型 Q1（独立检测能力）',
+      at: now(),
+      note: reason || '单集 QC 执行完成；音画、字幕、时长与安全区通过',
+    }
+    rows('qualityReports').unshift(report)
+    episode.qc = 'PASS'
+    touch('E6', '质检', reason || `单集 QC ${report.id} 通过，待确认`)
+  } else if (action === 'acceptEpisodeQc') {
+    requireStep('E6')
+    const report = rows('qualityReports').find((row) => row.project === projectId && String(row.object ?? '').includes(`第 ${ep} 集`))
+    if (!report) throw new MockHttpError(409, 'episode_qc_missing', '请先执行单集 QC')
+    if (String(report.result) === 'FAIL') throw new MockHttpError(409, 'episode_qc_failed', 'QC 存在阻断项，需返工后再确认')
+    state.qcPassed = true
+    episode.qc = 'PASS'
+    touch('E7', '已通过质检', reason || `单集 QC ${report.id} 已确认通过，进入终审入库`)
+  } else if (action === 'reworkEpisode') {
+    const target = String(body.target ?? 'E5')
+    if (!['E4', 'E5'].includes(target)) throw new MockHttpError(422, 'episode_rework_target', '返工目标只能是 E4 或 E5')
+    const latestReport = rows('qualityReports').find(
+      (row) => row.project === projectId && String(row.object ?? '').includes(`第 ${ep} 集`) && !row.archived,
+    )
+    if (latestReport) {
+      latestReport.archived = true
+      latestReport.archivedAt = now()
+    }
+    rows('reworkLedger').unshift({
+      id: nextId('RW', 'reworkLedger'),
+      project: projectId,
+      ep,
+      target: target === 'E4' ? '单集时间线 / 剪辑' : '声音字幕',
+      type: target === 'E4' ? '剪辑返工' : '音频字幕返工',
+      round: 1,
+      cost: target === 'E4' ? 18 : 12,
+      old: '上一版本保留',
+      report: body.report ? String(body.report) : '',
+      note: reason || '单集 QC 退回返工',
+      status: '进行中',
+      at: now(),
+      createdAt: now(),
+    })
+    state.qcPassed = false
+    state.mixPassed = false
+    if (target === 'E4') state.timelineLocked = false
+    touch(target, target === 'E4' ? '后期' : '声音字幕', reason || `单集 QC 退回 ${target} 返工`)
+  } else if (action === 'approveEpisode') {
+    requireStep('E7')
+    if (!state.qcPassed) throw new MockHttpError(409, 'episode_qc_gate', '单集 QC 未通过，不能终审')
+    rows('reviews').unshift({
+      id: nextId('RV', 'reviews'),
+      project: projectId,
+      node: '单集终审',
+      object: `第 ${ep} 集成片`,
+      version: `EP${pad2(ep)}`,
+      auditor: String(currentIdentity().name ?? '').split(' · ')[0],
+      role: '终审人',
+      at: now(),
+      result: '通过',
+      note: reason || '单集终审通过',
+      positions: '本集全篇',
+      tasks: '生成单集交付包',
+      follow: '入库',
+    })
+    state.finalApproved = true
+    episode.status = '已输出'
+    touch('E7', '已输出', reason || '单集终审通过')
+  } else if (action === 'packageEpisode') {
+    requireStep('E7')
+    if (!state.finalApproved) throw new MockHttpError(409, 'episode_final_gate', '请先完成单集终审')
+    const delivery = {
+      id: `DP-${project.id.replace(/^SP-/, '')}-EP${pad2(ep)}`,
+      project: projectId,
+      ep,
+      kind: '单集包',
+      version: `EP${pad2(ep)}`,
+      episodes: 1,
+      files: 1,
+      size: '0.42 GB',
+      checksum: `sha256:${project.id.toLowerCase()}-ep${pad2(ep)}…mock`,
+      reviewer: String(currentIdentity().name ?? '').split(' · ')[0],
+      at: now(),
+      status: '已交付',
+      receiver: String(body.receiver ?? '企业内容库'),
+      frozen: true,
+    }
+    rows('deliveries').unshift(delivery)
+    state.delivered = true
+    episode.status = '已交付'
+    touch('E7', '已交付', reason || `单集包 ${delivery.id} 已冻结并入库`)
   } else {
     throw new MockHttpError(422, 'episode_action_unknown', `未知的单集动作 ${action}`)
   }
@@ -1436,7 +1731,9 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/members$/, handler: ({ id }) => ok(projectOf(id).members ?? []) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/summary$/, handler: ({ id }) => {
     const project = projectOf(id)
-    const reports = rows('qualityReports').filter((row) => String(row.object ?? '').includes(id))
+    const reports = rows('qualityReports').filter(
+      (row) => row.project === id || String(row.object ?? '').includes(id),
+    )
     const projectCode = id.split('-')[1] ?? id
     return ok({
       project,
