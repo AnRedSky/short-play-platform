@@ -278,6 +278,33 @@ test.describe('工作室 mock 全流程', () => {
     await expect(page.locator('.ep-stage-head')).toContainText('镜头契约、资产与模型基线')
   })
 
+  test('批次 6 集全部交付后可冻结批次包', async ({ page }) => {
+    await resetStudio(page)
+    await page.goto('/projects/workflow?view=batch&batch=1')
+    await expect(page.locator('.batch-board')).toBeVisible()
+    await page.waitForTimeout(300)
+    await page.evaluate(({ key }) => {
+      const stored = JSON.parse(localStorage.getItem(key) ?? '{}') as {
+        entities: Record<string, Array<Record<string, unknown>>>
+      }
+      for (const state of stored.entities.episodeStates ?? []) {
+        if (state.project === 'SP-26031' && Number(state.ep) <= 6) {
+          Object.assign(state, { currentStep: 'E7', status: '已交付', delivered: true })
+        }
+      }
+      for (const episode of stored.entities.episodes ?? []) {
+        if (episode.project === 'SP-26031' && Number(episode.no) <= 6) episode.status = '已交付'
+      }
+      localStorage.setItem(key, JSON.stringify(stored))
+    }, { key: MOCK_KEY })
+    await page.goto('/projects/workflow?view=batch&batch=1')
+    const gate = page.locator('.batch-gate').filter({ hasText: '交付门禁' })
+    await expect(gate).toContainText('6 / 6 集已交付')
+    await page.getByRole('button', { name: '生成批次交付包' }).click()
+    await expect(page.locator('.package-line')).toContainText('BP-26031-B1')
+    await expect(page.locator('.package-line')).toContainText('已冻结')
+  })
+
   test('E2 锁定资产后生成镜头任务，并可为镜头换模型生成新 take', async ({ page }) => {
     await resetStudio(page)
     await page.goto('/projects/workflow?view=episode&batch=4&episode=19&step=E2')

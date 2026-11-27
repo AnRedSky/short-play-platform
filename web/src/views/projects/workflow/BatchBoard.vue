@@ -12,17 +12,20 @@ const props = defineProps<{
   batches: BatchGroup[]
   activeIndex: number
   trials?: Row[]
+  packages?: Row[]
 }>()
 
 const emit = defineEmits<{
   (event: 'select-batch', index: number): void
   (event: 'open-episode', item: EpisodeCard): void
   (event: 'trial-started'): void
+  (event: 'package-created'): void
   (event: 'back'): void
 }>()
 
 const ui = useUiStore()
 const starting = ref(false)
+const packaging = ref(false)
 
 const currentBatch = computed(
   () => props.batches.find((batch) => batch.index === props.activeIndex) ?? props.batches[0] ?? null,
@@ -39,6 +42,12 @@ const currentTrial = computed(
 const trialEpisodes = computed(() => (currentTrial.value?.episodes as number[] | undefined) ?? [])
 const trialChecks = computed(
   () => (currentTrial.value?.checks as Array<Record<string, unknown>> | undefined) ?? [],
+)
+const currentPackage = computed(
+  () =>
+    (props.packages ?? []).find(
+      (item) => item.kind === '批次包' && Number(item.batch) === currentBatch.value?.index,
+    ) ?? null,
 )
 
 async function startTrial() {
@@ -57,6 +66,22 @@ async function startTrial() {
     starting.value = false
   }
 }
+
+async function startPackage() {
+  if (!currentBatch.value || !props.project || packaging.value) return
+  packaging.value = true
+  try {
+    const item = await projectApi.batchPackage(String(props.project.id), currentBatch.value.index, {
+      receiver: '企业内容库',
+    })
+    ui.toast(`批次包 ${String(item.id)} 已冻结`)
+    emit('package-created')
+  } catch (error) {
+    ui.toast(error instanceof Error ? error.message : '批次包生成失败', 'bad')
+  } finally {
+    packaging.value = false
+  }
+}
 </script>
 
 <template>
@@ -67,7 +92,12 @@ async function startTrial() {
         <p class="board-sub">批次只做分组、资产锁、模型版本与交付控制；单集仍是实际交互和制作单位。</p>
       </div>
       <div class="board-actions">
-        <button class="btn primary" :disabled="starting || !currentBatch" @click="startTrial">
+        <button
+          v-if="doneCount < totalEpisodes"
+          class="btn primary"
+          :disabled="starting || !currentBatch"
+          @click="startTrial"
+        >
           {{ starting ? '生成中…' : currentTrial ? '重算试跑门禁' : '创建 3 集试跑' }}
         </button>
         <button class="btn" @click="emit('back')">项目概览</button>
@@ -120,6 +150,18 @@ async function startTrial() {
           <div class="batch-gate">
             <span>交付门禁</span>
             <b>{{ doneCount }} / {{ totalEpisodes }} 集已交付</b>
+            <div v-if="currentPackage" class="package-line">
+              批次包 {{ currentPackage.id }} · 已冻结
+            </div>
+            <button
+              v-else-if="totalEpisodes && doneCount === totalEpisodes"
+              class="gate-action"
+              :disabled="packaging"
+              @click="startPackage"
+            >
+              {{ packaging ? '生成中…' : '生成批次交付包' }}
+            </button>
+            <em v-else class="gate-hint">全部单集包交付后可生成批次包</em>
           </div>
           <div class="batch-gate">
             <span>模型基线</span>
@@ -152,7 +194,7 @@ async function startTrial() {
           </div>
           <p class="trial-note">{{ currentTrial.note }}</p>
         </div>
-        <div v-else class="notice">
+        <div v-else-if="doneCount < totalEpisodes" class="notice">
           批次试跑只做门禁预检：先锁定剧本、镜头与资产、模型基线，再进单集执行；不会自动推进任何一集。
         </div>
       </div>
@@ -328,6 +370,33 @@ async function startTrial() {
   font-size: 11px;
   line-height: 1.45;
   font-weight: 600;
+}
+.package-line {
+  margin-top: 6px;
+  color: var(--accent);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.gate-action {
+  margin-top: 6px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--accent);
+  padding: 3px 8px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.gate-action:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.gate-hint {
+  display: block;
+  margin-top: 5px;
+  color: var(--faint);
+  font-size: 10px;
+  font-style: normal;
 }
 .trial-card {
   margin-top: 12px;

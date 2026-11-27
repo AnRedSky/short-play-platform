@@ -426,6 +426,13 @@ const specs: ContractSpec[] = [
     realData: { trial: { id: 'BT-26031-B4', batch: 4, size: 3 } },
   },
   {
+    name: 'projects.batchPackage',
+    invoke: (s) => s.projects.batchPackage(PROJECT_CODE, 1, { receiver: '企业内容库' }),
+    ...projectPath('/batches/1/package', 'POST'),
+    kind: 'object',
+    realData: { package: { id: 'BP-26031-B1', batch: 1, episodes: 6 } },
+  },
+  {
     name: 'projects.transition',
     invoke: (s) => s.projects.transition(PROJECT_CODE, 'toPost', 'contract'),
     ...projectPath('/transitions', 'POST'),

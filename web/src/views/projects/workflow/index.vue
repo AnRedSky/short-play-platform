@@ -234,9 +234,11 @@
           :batches="batches"
           :active-index="activeBatch?.index ?? 1"
           :trials="batchTrials"
+          :packages="batchPackages"
           @select-batch="openBatch"
           @open-episode="openEpisodeWorkspace"
           @trial-started="reload"
+          @package-created="reload"
           @back="backToProject"
         />
 
@@ -374,6 +376,7 @@ const viewMode = computed(() => {
 })
 const batches = computed(() => buildBatchGroups(summary.value))
 const batchTrials = computed(() => (summary.value.batchTrials as Row[] | undefined) ?? [])
+const batchPackages = computed(() => (summary.value.deliveries as Row[] | undefined) ?? [])
 const activeBatch = computed(() => {
   const requested = Number(route.query.batch ?? 0)
   return batches.value.find((batch) => batch.index === requested) ?? batches.value[0] ?? null

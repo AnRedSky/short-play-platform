@@ -38,6 +38,8 @@ export const projectApi = {
     http.post<Row>(`/projects/${projectRef(id)}/episodes/${ep}/actions`, payload),
   batchTrial: (id: string, batch: number, payload: Record<string, unknown> = {}) =>
     http.post<Row>(`/projects/${projectRef(id)}/batches/${batch}/trial`, payload),
+  batchPackage: (id: string, batch: number, payload: Record<string, unknown> = {}) =>
+    http.post<Row>(`/projects/${projectRef(id)}/batches/${batch}/package`, payload),
   transition: async (id: string, action: string, reason?: string, expectedState?: string) => {
     const body: Record<string, unknown> = { action }
     if (reason) body.reason = reason

@@ -269,4 +269,50 @@ describe('episode E0–E3 contract', () => {
     expect(summary.data.batchTrials[0]).toMatchObject({ id: 'BT-26031-B4' })
     expect(summary.data.episodeStates.find((state) => state.ep === 19)?.currentStep).toBe('E2')
   })
+
+  it('blocks batch package until every episode is delivered, then freezes one package', async () => {
+    const { handleMock, store } = await loadMock()
+    await call(handleMock, '/api/v1/projects/SP-26031/summary')
+    const blocked = (await call(handleMock, '/api/v1/projects/SP-26031/batches/1/package', {
+      receiver: '企业内容库',
+    })) as { data: Record<string, unknown>; meta?: Record<string, unknown> }
+    expect(blocked.data).toMatchObject({
+      id: 'BP-26031-B1',
+      status: '待补齐',
+      episodes: 6,
+      delivered: 0,
+      missing: ['E01', 'E02', 'E03', 'E04', 'E05', 'E06'],
+    })
+    expect(blocked.meta).toMatchObject({ created: false, ready: false })
+    expect(store.table('deliveries').some((row) => row.id === 'BP-26031-B1')).toBe(false)
+
+    for (const state of store.table('episodeStates').filter((row) => row.project === 'SP-26031' && Number(row.ep) <= 6)) {
+      Object.assign(state, { currentStep: 'E7', status: '已交付', delivered: true })
+    }
+    for (const episode of store.table('episodes').filter((row) => row.project === 'SP-26031' && Number(row.no) <= 6)) {
+      episode.status = '已交付'
+    }
+
+    const result = (await call(handleMock, '/api/v1/projects/SP-26031/batches/1/package', {
+      receiver: '企业内容库',
+    })) as { data: Record<string, unknown>; meta?: Record<string, unknown> }
+    expect(result.data).toMatchObject({
+      id: 'BP-26031-B1',
+      kind: '批次包',
+      batch: 1,
+      episodes: 6,
+      files: 6,
+      status: '已交付',
+      receiver: '企业内容库',
+      frozen: true,
+    })
+    expect(result.meta).toMatchObject({ created: true })
+
+    const again = (await call(handleMock, '/api/v1/projects/SP-26031/batches/1/package', {
+      receiver: '企业内容库',
+    })) as { data: Record<string, unknown>; meta?: Record<string, unknown> }
+    expect(again.data.id).toBe('BP-26031-B1')
+    expect(again.meta).toMatchObject({ created: false })
+    expect(store.table('deliveries').filter((row) => row.id === 'BP-26031-B1')).toHaveLength(1)
+  })
 })

@@ -300,6 +300,59 @@ function batchTrial(projectId: string, batch: number, body: Row): Envelope {
   return ok(trial)
 }
 
+function batchPackage(projectId: string, batch: number, body: Row): Envelope {
+  const project = projectOf(projectId)
+  const states = ensureEpisodeStates(projectId)
+  const episodes = rows('episodes')
+    .filter((row) => row.project === projectId)
+    .filter((row) => Math.ceil(Number(row.no ?? 0) / BATCH_SIZE) === batch)
+    .sort((a, b) => Number(a.no) - Number(b.no))
+  if (!episodes.length) throw new MockHttpError(404, 'batch_not_found', `项目 ${projectId} 没有 B${batch}`)
+  const missing = episodes.filter((episode) => {
+    const state = states.find((row) => Number(row.ep) === Number(episode.no))
+    return !state?.delivered
+  })
+  if (missing.length) {
+    return ok(
+      {
+        id: `BP-${String(projectId).split('-')[1] ?? projectId}-B${batch}`,
+        project: projectId,
+        kind: '批次包',
+        batch,
+        status: '待补齐',
+        episodes: episodes.length,
+        delivered: episodes.length - missing.length,
+        missing: missing.map((episode) => `E${pad2(Number(episode.no))}`),
+      },
+      { created: false, ready: false },
+    )
+  }
+  const id = `BP-${String(projectId).split('-')[1] ?? projectId}-B${batch}`
+  const existing = rows('deliveries').find((row) => row.id === id)
+  if (existing) return ok(existing, { created: false })
+  const delivery: Row = {
+    id,
+    project: projectId,
+    kind: '批次包',
+    batch,
+    version: `B${batch}`,
+    episodes: episodes.length,
+    files: episodes.length,
+    size: `${(episodes.length * 0.42).toFixed(1)} GB`,
+    checksum: `sha256:${String(projectId).toLowerCase()}-b${batch}…mock`,
+    reviewer: String(currentIdentity().name ?? '').split(' · ')[0],
+    at: now(),
+    status: '已交付',
+    receiver: String(body.receiver ?? '企业内容库'),
+    frozen: true,
+  }
+  rows('deliveries').unshift(delivery)
+  project.delivered = states.filter((state) => state.delivered).length
+  project.updated = now()
+  store.persist()
+  return ok(delivery, { created: true })
+}
+
 function episodeAction(projectId: string, ep: number, body: Row): Envelope {
   const project = projectOf(projectId)
   const episode = rows('episodes').find((row) => row.project === projectId && Number(row.no) === ep)
@@ -1953,6 +2006,7 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/timeline$/, handler: ({ id }) => projectTimeline(id) },
   { method: 'POST', pattern: /^\/projects\/([^/]+)\/episodes\/([^/]+)\/actions$/, handler: ({ id, parts, body }) => episodeAction(id, Number(parts[3]), body) },
   { method: 'POST', pattern: /^\/projects\/([^/]+)\/batches\/([^/]+)\/trial$/, handler: ({ id, parts, body }) => batchTrial(id, Number(parts[3]), body) },
+  { method: 'POST', pattern: /^\/projects\/([^/]+)\/batches\/([^/]+)\/package$/, handler: ({ id, parts, body }) => batchPackage(id, Number(parts[3]), body) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/members$/, handler: ({ id }) => ok(projectOf(id).members ?? []) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/summary$/, handler: ({ id }) => {
     const project = projectOf(id)

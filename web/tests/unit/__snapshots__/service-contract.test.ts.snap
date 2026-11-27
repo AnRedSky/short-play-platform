@@ -364,6 +364,9 @@ exports[`B-14 service contract > runs every service function against mock and re
       ],
     ],
   },
+  "projects.batchPackage": {
+    "kind": "object",
+  },
   "projects.batchTrial": {
     "kind": "object",
   },
