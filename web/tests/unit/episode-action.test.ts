@@ -103,13 +103,13 @@ describe('episode E0–E3 contract', () => {
     const { handleMock, store } = await loadMock()
     await call(handleMock, '/api/v1/projects/SP-26031/summary')
     const project = store.table('projects').find((row) => row.id === 'SP-26031')
-    Object.assign(project!, { status: '已交付', phase: '交付完成' })
+    Object.assign(project!, { status: '已交付', phase: '交付完成', delivered: 24 })
     const stale = (await call(handleMock, '/api/v1/projects/SP-26031/summary')) as {
       data: { project: Record<string, unknown> }
     }
     expect(stale.data.project.status).toBe('生产准备中')
 
-    Object.assign(project!, { status: '已归档', phase: '归档完成' })
+    Object.assign(project!, { status: '已归档', phase: '归档完成', delivered: 24 })
     const staleArchive = (await call(handleMock, '/api/v1/projects/SP-26031/summary')) as {
       data: { project: Record<string, unknown> }
     }

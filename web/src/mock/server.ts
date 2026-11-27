@@ -311,13 +311,15 @@ const STAGE_STATUS_RANK: Record<string, number> = {
 function deriveProjectStatus(project: Row, states: Row[]): string | null {
   if (!states.length) return null
   const episodes = Number(project.episodes ?? 0)
+  const status = String(project.status ?? '')
   const deliveredAll = states.every((state) => Boolean(state.delivered))
   const deliveredEnough = episodes > 0 && Number(project.delivered ?? 0) >= episodes
-  if (String(project.status) === '已归档' && (deliveredAll || deliveredEnough)) return '已归档'
-  if (deliveredAll) return '已交付'
-  if (deliveredEnough) return '已交付'
-  if (states.every((state) => Boolean(state.finalApproved))) return '已完成'
   const pending = states.filter((state) => !state.delivered && !state.finalApproved)
+  const onlyFinalPending = pending.every((state) => String(state.currentStep) === 'E7')
+  const trustDelivery = deliveredAll || (deliveredEnough && onlyFinalPending)
+  if (status === '已归档' && trustDelivery) return '已归档'
+  if (deliveredAll) return '已交付'
+  if (deliveredEnough && onlyFinalPending) return '已交付'
   if (!pending.length) return '已完成'
   const stage = pending
     .map((state) => STEP_STAGE_STATUS[String(state.currentStep ?? 'E0')] ?? '生产准备中')
