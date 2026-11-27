@@ -334,6 +334,7 @@ POST /projects/:id/episodes/:no/package
 - 阶段 2 代码改造（提交 `e5d4125`）：单集状态契约、E0–E3 动作接口、居中弹窗动作、E3 镜头任务、失败重试、换模型 take 与单集事件流。
 - 阶段 3 代码改造（提交 `4ec9a37`）：E4 时间线与片段替换/重建、E5 声音字幕、E6 QC PASS/FAIL 与返工、E7 终审与单集交付包。
 - 阶段 4：批次 `batchTrials` 试跑门禁单、`BP-*` 批次交付包与冻结、批次看板真实门禁文案、过期只读文案清理。
+- 阶段 4 契约归一：单集动作、试跑单、批次包与嵌套 summary 集合统一 DTO；mock 与 real 共用完整字段断言。
 - 阶段 4 旧入口收口：`stage=video/audio/post/qc/delivery` 分别重定向到 E3/E5/E4/E6/E7 单集工作区；`brief/script/plan` 保留项目级阶段页。
 
 未完成：
@@ -464,12 +465,31 @@ POST /projects/:id/episodes/:no/package
 - `npm run build` 通过；
 - 1366 / 1600 宽度无页面横向溢出。
 
-### 8.7 下一步：真实接口与试跑制作
+### 8.7 阶段 4 mock 契约与真实后端响应归一
 
-1. 接入真实后端 `episodeState`、take 版本树、模型基线与单集 QC/交付接口。
-2. 用真实 QC 检测结果替换 `failEpisodeQc` 的固定阻断项。
-3. 在试跑单通过后执行 E19–E21 的真实三段式制作，并验证批次交付门禁与单集包汇总。
-4. 制作阶段旧视图组件在真实接口接入后统一下线，避免双路径长期并存。
+按“mock 充当真实后端、环境配置切 real 不改页面”的要求补齐契约层：
+
+1. `toEpisodeActionResult` 统一单集动作响应：`state` 兼容 `currentStep/current_step`，并固定 `episode`、`message` 字段。
+2. `toBatchTrial` 兼容真实后端 `{ trial }` 包装、snake_case 字段与字符串集号；输出页面统一的 `deliveryGate/createdAt/checks` 形状。
+3. `toBatchPackage` 兼容 `{ package }` 包装、`file_count`、`created_at` 与缺失集；统一 `frozen/missing/kind` 字段。
+4. `toProjectSummary` 对嵌套的 `batchTrials`、批次包 `deliveries` 一并归一，页面不再直接消费后端原始字段。
+5. 服务契约的真实分支改用完整后端包装样本，并强制校验单集动作、试跑单、批次包的关键字段；mock 与 real 共用同一断言。
+6. 批次看板从泛化 `Row` 改为 `BatchTrialDto` / `BatchPackageDto`，删除试跑集与检查项的重复类型断言。
+
+验证结果：
+
+- `npm run check` 通过；
+- `npm run test` 108 例通过；
+- `npm run test:e2e` 12 例通过；
+- `npm run build` 通过；
+- 1366 / 1600 宽度无页面横向溢出。
+
+### 8.8 下一步：mock 业务面补齐与试跑制作
+
+1. 按已归一契约补齐 mock 的 `episodeState`、take 版本树、模型基线与单集 QC/交付响应，保持可切 real 的同一形状。
+2. 用可配置的 mock QC 结果替换 `failEpisodeQc` 的固定阻断项。
+3. 在试跑单通过后执行 E19–E21 的三段式制作，验证批次交付门禁与单集包汇总。
+4. 制作阶段旧视图组件在业务面稳定后统一下线，避免双路径长期并存。
 
 ---
 
