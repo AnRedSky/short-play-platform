@@ -1,7 +1,7 @@
 <template>
   <div class="stage-rail">
     <div
-      v-for="stage in stages"
+      v-for="(stage, index) in stages"
       :key="stage.key"
       class="stage-card"
       :class="[stage.state, { clickable: interactive, active: stage.key === activeKey }]"
@@ -12,7 +12,7 @@
       @keydown.enter="interactive && emit('select', stage)"
       @keydown.space.prevent="interactive && emit('select', stage)"
     >
-      <div class="k">{{ stage.state === 'overview' ? 'INFO' : stage.state === 'done' ? 'DONE' : stage.state === 'now' ? 'NOW' : stage.state === 'blocked' ? 'BLOCKED' : 'TODO' }}</div>
+      <div class="k">{{ marker(stage, index) }}</div>
       <div class="n">{{ stage.name }}</div>
       <div class="g">关口 · {{ stage.gate }}</div>
     </div>
@@ -27,6 +27,19 @@ withDefaults(defineProps<{ stages: StageRow[]; activeKey?: string; interactive?:
   interactive: false,
 })
 const emit = defineEmits<{ (event: 'select', stage: StageRow): void }>()
+
+const STATE_LABEL: Record<StageRow['state'], string> = {
+  overview: 'INFO',
+  done: 'DONE',
+  now: 'NOW',
+  blocked: 'BLOCKED',
+  todo: 'TODO',
+}
+
+function marker(stage: StageRow, index: number): string {
+  if (stage.state === 'overview') return STATE_LABEL.overview
+  return `${String(index).padStart(2, '0')} · ${STATE_LABEL[stage.state]}`
+}
 </script>
 
 <style scoped>

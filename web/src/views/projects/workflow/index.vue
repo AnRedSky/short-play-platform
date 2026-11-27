@@ -20,7 +20,7 @@
           <div class="stage-dock-head">
             <div class="stage-dock-title">
               阶段管线
-              <span class="card-sub">项目概览汇总档案与进度；制作阶段点击后直达对应单集工作区</span>
+              <span class="card-sub">项目概览汇总档案与进度；创意、剧本、规划为项目级，生产到交付按单集顺序直达</span>
             </div>
             <div class="stage-dock-meta">
               <span class="pill accent">当前 {{ (viewMode === 'episode' && selectedStage?.name) || currentStage?.name || '—' }}</span>

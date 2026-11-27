@@ -163,6 +163,12 @@ test.describe('工作室 mock 全流程', () => {
     const dock = page.locator('.stage-dock')
     await expect(dock.locator('.stage-card')).toHaveCount(9)
     await expect(dock.locator('.stage-card.active')).toContainText('项目概览')
+    await expect(dock.locator('.stage-card').nth(4)).toContainText('04 ·')
+    await expect(dock.locator('.stage-card').nth(4)).toContainText('视频生产')
+    await expect(dock.locator('.stage-card').nth(5)).toContainText('后期合成')
+    await expect(dock.locator('.stage-card').nth(6)).toContainText('音频字幕')
+    await expect(dock.locator('.stage-card').nth(7)).toContainText('质量检测')
+    await expect(dock.locator('.stage-card').nth(8)).toContainText('终审交付')
     await expect(page.locator('.overview-grid')).toContainText('基本档案')
     await expect(page.locator('.overview-grid')).toContainText('制作设定')
     await expect(page.locator('.overview-grid')).toContainText('预算与产出')
@@ -202,8 +208,8 @@ test.describe('工作室 mock 全流程', () => {
 
     const productionStages = [
       ['视频生产', 'E3', '素材生产'],
-      ['音频字幕', 'E5', '声音字幕'],
       ['后期合成', 'E4', '剪辑'],
+      ['音频字幕', 'E5', '声音字幕'],
       ['质量检测', 'E6', '单集 QC'],
       ['终审交付', 'E7', '终审入库'],
     ] as const

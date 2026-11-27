@@ -96,8 +96,17 @@ export interface StageRow {
   state: 'overview' | 'done' | 'now' | 'blocked' | 'todo'
 }
 
+const STAGE_ORDER = ['brief', 'script', 'plan', 'video', 'post', 'audio', 'qc', 'delivery']
+
 export function stageChain(project: Row): StageRow[] {
-  const pipeline = store.table('stagePipeline')
+  const pipeline = store
+    .table('stagePipeline')
+    .slice()
+    .sort((a, b) => {
+      const left = STAGE_ORDER.indexOf(String(a.key ?? ''))
+      const right = STAGE_ORDER.indexOf(String(b.key ?? ''))
+      return (left < 0 ? STAGE_ORDER.length : left) - (right < 0 ? STAGE_ORDER.length : right)
+    })
   const current = PHASE_TO_STAGE[project.status] ?? 'brief'
   const currentIndex = Math.max(0, pipeline.findIndex((stage) => stage.key === current))
   return pipeline.map((stage, index) => ({
