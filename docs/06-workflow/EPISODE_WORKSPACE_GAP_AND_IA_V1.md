@@ -382,16 +382,38 @@ POST /projects/:id/episodes/:no/package
 - 任务状态仍由 mock 队列控制，没有真实生成回调；
 - E4–E7 仍是只读展示。
 
-### 8.3 下一步：E4–E7 可操作
+### 8.3 阶段 3 已完成：E4–E7 可操作
 
-1. E4 剪辑：时间线锁定、片段替换、过期片段重建、提交单集 QC。
-2. E5 声音字幕：对白生成、字幕校对、口型任务与混音检查。
-3. E6 单集 QC：执行单集质检、问题项分派、返工与复验。
-4. E7 终审入库：单集终审、单集交付包、平台入库记录。
-5. 所有动作继续走居中弹窗，并写入单集事件流。
-6. 验收标准：第 19 集可从 E3 素材齐推进到 E7 入库，QC 失败能回到 E4/E5 返工。
+阶段 3 已落地：
 
-完成 E4–E7 后，再做旧阶段深链收口与 3 集试跑。
+1. E4 剪辑：`buildTimeline` 建立单集 6 轨时间线，`lockTimeline` 锁定时间线并推进 E5。
+2. E5 声音字幕：`generateAudio` 生成对白音频与字幕初稿，`approveSubtitle` 确认字幕，`runLipSync` 执行口型同步，`checkMix` 混音检查后推进 E6。
+3. E6 单集 QC：`runEpisodeQc` 生成单集 QC 报告，`acceptEpisodeQc` 确认通过并推进 E7；`reworkEpisode` 可退回 E4 或 E5，旧 QC 报告归档，返工后可重新执行 QC。
+4. E7 终审入库：`approveEpisode` 生成单集终审记录，`packageEpisode` 生成 `DP-<projectCode>-EP##` 单集包并置为已交付。
+5. 所有动作继续走居中弹窗并写入单集事件流；右侧门禁按 E4–E7 分别展示剪辑、音字、QC 与交付检查项。
+6. 为让演示数据中的 E4 可达，增加 `advanceQueue`：将本集活动任务批量置为已通过并推进 E4；UI 明确标注为 Mock 队列推进。
+
+验证结果：
+
+- `npm run check` 通过；
+- `npm run test` 102 例通过；
+- `npm run test:e2e` 9 例通过，新增 E4→E7 全链路；
+- `npm run build` 通过；
+- `npx eslint . --quiet` 0 error；
+- 1366 / 1600 宽度无页面级横向溢出。
+
+边界仍然明确：
+
+- 单集状态与交付仍来自 mock 派生数据，真实后端 `episodeState`、take、单集 QC 与单集交付接口尚未接入；
+- `advanceQueue` 是 mock 便利动作，不是真实生成回调；
+- `runEpisodeQc` 当前固定 PASS，QC FAIL 的退回路径已具备接口与 UI，但缺少正常触发 FAIL 的演示数据。
+
+### 8.4 下一步：旧页面收口与真实接口
+
+1. 收口旧阶段深链，保留现有 E2E 入口兼容层。
+2. 接入真实后端 `episodeState`、take 版本树、模型基线与单集 QC/交付接口。
+3. 增加 QC FAIL 的可复现场景，验证“QC 失败 → 退回 E4/E5 → 复验”闭环。
+4. 执行批次级 3 集试跑，验证批次交付门禁与单集包汇总。
 
 ---
 
