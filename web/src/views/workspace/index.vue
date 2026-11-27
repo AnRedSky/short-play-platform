@@ -11,7 +11,7 @@
           <span v-if="inbox.unread" class="count-badge">{{ inbox.unread }}</span>
         </button>
         <button class="btn" @click="load">刷新</button>
-        <button v-if="session.can('project.create')" class="btn primary" @click="go('projects/new')">新建项目</button>
+        <button v-if="session.can('project.create')" class="btn primary" @click="createOpen = true">新建项目</button>
       </HeadActions>
     </PageHeader>
 
@@ -118,6 +118,8 @@
         </div>
       </div>
     </AppDrawer>
+
+    <ProjectCreateDialog :open="createOpen" @close="createOpen = false" />
   </section>
 </template>
 
@@ -140,6 +142,7 @@ import EmptyState from '../../components/ui/EmptyState.vue'
 import StageRail from '../../components/ui/StageRail.vue'
 import StatusPill from '../../components/ui/StatusPill.vue'
 import AppDrawer from '../../components/ui/AppDrawer.vue'
+import ProjectCreateDialog from './components/ProjectCreateDialog.vue'
 
 const session = useSessionStore()
 const project = useProjectStore()
@@ -148,6 +151,7 @@ const router = useRouter()
 const home = ref<Row>({})
 const projects = ref<Row[]>([])
 const loading = ref(false)
+const createOpen = ref(false)
 const { activeId, isOpen, open: openPanel, close: closePanel } = useRoutePanel('project')
 const selected = computed(() => projects.value.find((row) => String(row.id) === activeId.value) ?? null)
 

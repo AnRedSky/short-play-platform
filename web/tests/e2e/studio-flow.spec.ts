@@ -81,17 +81,26 @@ test.describe('工作室 mock 全流程', () => {
     await expect(page.locator('tbody tr').filter({ hasText: 'DP-26031-01' }).first()).toBeVisible()
   })
 
-  test('新建项目从立项走到交付全链路', async ({ page }) => {
+  test('新建项目弹窗一次填完并走到交付全链路', async ({ page }) => {
     test.setTimeout(180_000)
     await resetStudio(page)
-    await page.goto('/projects/new')
-    await page.getByPlaceholder('例：雾城来信').fill('E2E 自动化项目')
-    await page.getByPlaceholder('悬疑 / 都市').fill('悬疑')
-    await page.getByRole('button', { name: '下一步' }).click()
-    await expect(page.locator('.card-title').first()).toContainText('制作设定')
-    await page.getByRole('button', { name: '下一步' }).click()
-    await expect(page.locator('.card-title').first()).toContainText('预算与团队')
-    await page.getByRole('button', { name: '创建项目' }).click()
+    await page.getByRole('button', { name: '新建项目' }).click()
+
+    const modal = page.locator('.create-modal')
+    await expect(modal).toBeVisible()
+    // 三段字段全部在同一弹窗内，不进入下一步也能看到与编辑。
+    await expect(modal).toContainText('基础信息')
+    await expect(modal).toContainText('制作设定')
+    await expect(modal).toContainText('预算与团队')
+    await expect(modal.locator('input, select, textarea')).toHaveCount(13)
+    await modal.locator('#np-constraints').scrollIntoViewIfNeeded()
+    await expect(modal.locator('#np-constraints')).toBeVisible()
+    await expect(modal.locator('#np-budget')).toBeAttached()
+    await expect(page.locator('.sb-scroll').getByText('新建项目', { exact: true })).toHaveCount(0)
+
+    await modal.getByPlaceholder('例：雾城来信').fill('E2E 自动化项目')
+    await modal.getByPlaceholder('悬疑 / 都市').fill('悬疑')
+    await modal.getByRole('button', { name: '创建项目' }).click()
     await expect(page).toHaveURL(/\/projects\/workflow/)
     await expect(page.locator('main h1')).toContainText('E2E 自动化项目')
 

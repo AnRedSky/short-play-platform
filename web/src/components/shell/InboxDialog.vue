@@ -160,6 +160,16 @@ async function handle(row: Row) {
 
 <style scoped>
 .inbox-modal { width: min(780px, 100%); }
+.modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #39434f transparent;
+}
+.modal-body::-webkit-scrollbar { width: 8px; }
+.modal-body::-webkit-scrollbar-thumb { background: #39434f; border-radius: 8px; }
 .inbox-list { display: grid; gap: 10px; }
 .inbox-item { border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; display: grid; gap: 6px; background: var(--surface); }
 .inbox-item.unread { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
