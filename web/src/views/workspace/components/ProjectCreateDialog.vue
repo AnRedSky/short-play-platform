@@ -4,7 +4,7 @@
       <div class="modal-head">
         <div>
           <h3 :id="titleId">新建项目</h3>
-          <p>基础信息、制作设定与预算团队同页填写，提交后项目进入「草稿」，由流水线启动创作。</p>
+          <p>基础信息、制作设定与预算团队同页填写；提交后直接进入剧本创作，也可先存草稿。</p>
         </div>
         <button type="button" class="btn ghost" aria-label="关闭新建项目弹窗" @click="requestClose">✕</button>
       </div>
@@ -155,8 +155,8 @@
             <div class="field-wrap">
               <label class="field-label" for="np-start-mode">启动方式</label>
               <select id="np-start-mode" v-model="form.startMode" class="field">
-                <option value="draft">先存草稿，稍后启动</option>
-                <option value="start">创建后立即启动创意策划</option>
+                <option value="draft">先存草稿，稍后开始剧本创作</option>
+                <option value="start">创建后直接进入剧本创作</option>
               </select>
             </div>
           </div>
@@ -215,7 +215,7 @@ const form = reactive({
   budget: 18000,
   dept: '内容创新部',
   ownerId: 'u-01',
-  startMode: 'draft',
+  startMode: 'start',
 })
 const initialSnapshot = JSON.stringify(form)
 const dirty = computed(() => JSON.stringify(form) !== initialSnapshot)
@@ -238,7 +238,7 @@ function reset() {
     budget: 18000,
     dept: '内容创新部',
     ownerId: 'u-01',
-    startMode: 'draft',
+    startMode: 'start',
   })
   saving.value = false
   error.value = ''
@@ -350,8 +350,8 @@ async function submit() {
       budget: Number(form.budget),
       actual: 0,
       estimated: 0,
-      status: '草稿',
-      phase: '创意策划',
+      status: form.startMode === 'start' ? '剧本创作中' : '草稿',
+      phase: form.startMode === 'start' ? '剧本创作' : '待开始剧本',
       done: 0,
       delivered: 0,
       quality: '未检测',
@@ -364,7 +364,6 @@ async function submit() {
       members: [{ userId: form.ownerId, role: '管理' }],
     })
     projectStore.select(String(created.id))
-    if (form.startMode === 'start') await projectApi.transition(String(created.id), 'start')
     await projectStore.load()
     ui.toast(`项目《${created.name}》已创建（${created.id}）`)
     emit('close')

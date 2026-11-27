@@ -95,6 +95,9 @@ exports[`B-14 service contract > runs every service function against mock and re
       ],
     ],
   },
+  "creation.createBlankScript": {
+    "kind": "object",
+  },
   "creation.createBrief": {
     "kind": "object",
   },

@@ -209,6 +209,17 @@ const specs: ContractSpec[] = [
     kind: 'object',
   },
   {
+    name: 'creation.createBlankScript',
+    invoke: (s) => s.creation.createBlankScript({
+      project: PROJECT_CODE,
+      source: { kind: 'manual', label: '自主编写' },
+      note: 'contract blank script',
+    }),
+    mock: request('POST', '/scripts/blank'),
+    real: request('POST', '/scripts/blank'),
+    kind: 'object',
+  },
+  {
     name: 'creation.generateScript',
     invoke: (s) => s.creation.generateScript({
       project: PROJECT_CODE,

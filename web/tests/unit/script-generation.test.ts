@@ -74,6 +74,54 @@ describe('script creation contract', () => {
     })
   })
 
+  it('creates a blank manual draft with a registered writing source', async () => {
+    const { handleMock } = await loadMock()
+    const result = (await call(handleMock, '/api/v1/scripts/blank', {
+      project: 'SP-26011',
+      source: { kind: 'manual', label: '自主编写', title: '手写初稿' },
+      note: '从空白稿开始',
+    })) as {
+      data: {
+        version: string
+        status: string
+        writtenEpisodes: number
+        source: Record<string, unknown>
+      }
+    }
+    expect(result.data.version).toBe('v2')
+    expect(result.data.status).toBe('草稿')
+    expect(result.data.writtenEpisodes).toBe(0)
+    expect(result.data.source).toMatchObject({ kind: 'manual', label: '自主编写', title: '手写初稿' })
+  })
+
+  it('registers a novel source with chapter directory but no adapted scenes', async () => {
+    const { handleMock } = await loadMock()
+    const result = (await call(handleMock, '/api/v1/scripts/blank', {
+      project: 'SP-26011',
+      source: {
+        kind: 'novel',
+        label: '小说改编',
+        title: '雾城来信（原著）',
+        fileName: 'wucheng.md',
+        chapters: [
+          { no: 1, title: '雨夜', words: 1200 },
+          { no: 2, title: '旧城', words: 1400 },
+        ],
+      },
+      note: '小说来源登记',
+    })) as {
+      data: {
+        writtenEpisodes: number
+        scenes: number
+        source: Record<string, unknown>
+      }
+    }
+    expect(result.data.writtenEpisodes).toBe(0)
+    expect(result.data.scenes).toBe(0)
+    expect(result.data.source).toMatchObject({ kind: 'novel', label: '小说改编' })
+    expect((result.data.source.chapters as unknown[]).length).toBe(2)
+  })
+
   it('fills the whole series while preserving manual edits', async () => {
     const { handleMock, store } = await loadMock()
     const pilot = (await call(handleMock, '/api/v1/scripts/generate', {

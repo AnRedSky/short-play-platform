@@ -11,19 +11,34 @@
     <div class="card script-flow-card">
       <div class="card-head">
         <div>
-          <h3 class="card-title">剧本创作流程</h3>
-          <p class="card-sub">创意交棒后先用模型出稿，再逐集修订、补齐全剧，最后提交审核；每一步都留在当前工作区。</p>
+          <h3 class="card-title">剧本创作入口</h3>
+          <p class="card-sub">{{ sourceIntro }}</p>
         </div>
         <div class="script-flow-actions">
           <button
+            v-if="sourceMode === 'model'"
             type="button"
             class="btn primary"
             :disabled="!canGenerate"
-            :title="canGenerate ? '' : '先完成创意策划的确认交棒'"
+            :title="canGenerate ? '' : '当前状态暂不能生成或编辑剧本'"
             @click="openGenerate(false)"
           >{{ generateLabel }}</button>
           <button
-            v-if="activeDraft"
+            v-else-if="sourceMode === 'manual'"
+            type="button"
+            class="btn primary"
+            :disabled="!canGenerate || creating"
+            @click="createManualScript"
+          >{{ creating ? '创建中…' : activeSourceKind === 'manual' && activeDraft ? '新建一集' : '新建空白剧本' }}</button>
+          <button
+            v-else
+            type="button"
+            class="btn primary"
+            :disabled="!canGenerate"
+            @click="openNovel"
+          >导入小说 / 章节</button>
+          <button
+            v-if="sourceMode === 'model' && activeDraft"
             type="button"
             class="btn"
             :disabled="!canGenerate"
@@ -41,6 +56,27 @@
         </div>
       </div>
 
+      <div class="script-source-tabs" role="tablist" aria-label="创作方式">
+        <button
+          v-for="mode in sourceModes"
+          :key="mode.key"
+          type="button"
+          role="tab"
+          class="script-source-tab"
+          :class="{ active: sourceMode === mode.key }"
+          :aria-selected="sourceMode === mode.key"
+          @click="sourceMode = mode.key"
+        >
+          <b>{{ mode.label }}</b>
+          <small>{{ mode.desc }}</small>
+        </button>
+      </div>
+
+      <div class="script-source-note">
+        <span class="pill" :class="{ accent: sourceReady }">{{ sourceLabel }}</span>
+        <span>{{ sourceModeHelp }}</span>
+      </div>
+
       <div class="script-flow">
         <div
           v-for="step in flowSteps"
@@ -53,10 +89,7 @@
         </div>
       </div>
 
-      <p v-if="!handoff" class="notice warn script-gate-note">
-        创意方案尚未确认，剧本创作台已锁定。请先在「创意策划」完成生成候选、选定方案与确认交棒。
-      </p>
-      <p v-else-if="lockedScript" class="notice script-gate-note">
+      <p v-if="lockedScript" class="notice script-gate-note">
         正式版本 {{ lockedScript.version }} 已锁定并供下游引用。如需修改，请另起一版，审核通过后才替换基线。
       </p>
     </div>
@@ -83,20 +116,21 @@
 
         <div v-if="!activeScript" class="script-empty">
           <b>还没有剧本版本</b>
-          <p>确认创意方案后，用模型生成第一版分集稿。建议先出前 3 集样章，确认口径后再补齐全剧。</p>
-          <button type="button" class="btn primary" :disabled="!canGenerate" @click="openGenerate(false)">用模型生成第一版</button>
+          <p>{{ emptyIntro }}</p>
+          <button v-if="sourceMode === 'model'" type="button" class="btn primary" :disabled="!canGenerate" @click="openGenerate(false)">用模型生成第一版</button>
+          <button v-else-if="sourceMode === 'manual'" type="button" class="btn primary" :disabled="!canGenerate || creating" @click="createManualScript">{{ creating ? '创建中…' : '新建空白剧本' }}</button>
+          <button v-else type="button" class="btn primary" :disabled="!canGenerate" @click="openNovel">导入小说 / 章节</button>
         </div>
 
         <div v-else-if="!draftEpisodes.length" class="script-empty">
-          <b>{{ activeScript.locked ? `${activeScript.version} 已锁定` : '这个版本还没有分集稿' }}</b>
-          <p>
-            {{ activeScript.locked
-              ? '正式版本只保存统计与审核记录，分集正文已冻结供下游引用。要改内容必须另起一版。'
-              : '当前版本只登记了集数与统计，没有可编辑的分集正文。可以继续用模型补齐。' }}
-          </p>
-          <button type="button" class="btn primary" :disabled="!canGenerate" @click="openGenerate(false)">
-            {{ activeScript.locked ? '生成修订版' : '用模型补齐分集稿' }}
-          </button>
+          <b>{{ activeScript.locked ? `${activeScript.version} 已锁定` : emptyDraftTitle }}</b>
+          <p>{{ emptyDraftText }}</p>
+          <div v-if="activeSourceKind === 'novel' && novelChapterPreview.length" class="script-novel-preview">
+            <span v-for="chapter in novelChapterPreview" :key="chapter.no" class="pill">第 {{ chapter.no }} 章 · {{ chapter.title }}</span>
+          </div>
+          <button v-if="activeScript.locked" type="button" class="btn primary" :disabled="!canGenerate" @click="openGenerate(false)">生成修订版</button>
+          <button v-else-if="activeSourceKind === 'manual'" type="button" class="btn primary" :disabled="!canGenerate || creating" @click="addManualEpisode">{{ creating ? '创建中…' : '新建第一集' }}</button>
+          <button v-else-if="activeSourceKind === 'model'" type="button" class="btn primary" :disabled="!canGenerate" @click="openGenerate(false)">用模型补齐分集稿</button>
         </div>
 
         <div v-else class="script-body">
@@ -154,12 +188,12 @@
         <div class="card">
           <div class="card-head">
             <div>
-              <h3 class="card-title">创作输入</h3>
-              <p class="card-sub">模型只读取已交棒的创意方案与项目基线。</p>
+              <h3 class="card-title">创作设定</h3>
+              <p class="card-sub">创作来源、项目基线会随版本留档；不通过单独阶段审批。</p>
             </div>
-            <span class="pill" :class="{ accent: handoff }">{{ handoff ? '已交棒' : '未交棒' }}</span>
+            <span class="pill" :class="{ accent: sourceReady }">{{ sourceLabel }}</span>
           </div>
-          <blockquote class="script-source">{{ creativeSource }}</blockquote>
+          <blockquote class="script-source">{{ sourceSummary }}</blockquote>
           <div class="script-input-grid">
             <div><span class="metric-label">题材</span><b>{{ project?.genre || '—' }}</b></div>
             <div><span class="metric-label">受众</span><b>{{ project?.audience || '—' }}</b></div>
@@ -220,6 +254,52 @@
           <p>{{ review.note || '—' }} · {{ review.auditor }} · {{ review.at }}</p>
         </div>
         <EmptyState v-if="!scriptReviews.length" title="暂无审核记录" desc="提交审核后，结论与意见会在这里留痕。" compact />
+      </div>
+    </div>
+
+    <div v-if="novelOpen" class="modal-backdrop script-editor-backdrop" @click.self="closeNovel">
+      <div class="modal wide script-novel-modal" role="dialog" aria-modal="true" aria-label="导入小说或章节">
+        <div class="modal-head">
+          <div>
+            <h3>导入小说 / 章节</h3>
+            <p>先登记来源与章节目录；正文解析、章节映射与模型改编在下一流程接入。</p>
+          </div>
+          <button type="button" class="btn ghost" aria-label="关闭小说导入" @click="closeNovel">✕</button>
+        </div>
+        <div class="modal-body script-novel-body">
+          <label class="field-wrap">
+            <span class="metric-label">作品名称</span>
+            <input v-model="novelTitle" class="field" placeholder="例：雾城来信（原著）" />
+          </label>
+          <label class="field-wrap">
+            <span class="metric-label">选择文件</span>
+            <input type="file" accept=".txt,.md,text/plain,text/markdown" class="field" @change="onNovelFile" />
+            <small class="field-hint">壳阶段支持 TXT / Markdown；DOCX、PDF 在后续流程接入。</small>
+          </label>
+          <label class="field-wrap">
+            <span class="metric-label">或粘贴章节内容</span>
+            <textarea v-model="novelText" class="field" rows="8" placeholder="粘贴全文或章节；系统会按「第 X 章 / Chapter X」识别章节目录。" />
+          </label>
+          <div v-if="novelChapters.length" class="script-novel-chapters">
+            <div class="script-novel-summary">
+              <span class="pill accent">识别 {{ novelChapters.length }} 章</span>
+              <span class="muted">共 {{ novelWordCount }} 字 · 只登记目录，不保存全文</span>
+            </div>
+            <div class="script-novel-list">
+              <span v-for="chapter in novelChapters.slice(0, 12)" :key="chapter.no" class="script-novel-chip">
+                第 {{ chapter.no }} 章 · {{ chapter.title }} · {{ chapter.words }} 字
+              </span>
+            </div>
+            <small v-if="novelChapters.length > 12" class="field-hint">仅显示前 12 章，其余章节同样登记。</small>
+          </div>
+          <p class="notice">本流程只交付“小说改编”入口与来源登记壳，不会生成分集稿；章节解析与改编生成在下一流程实现。</p>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn" @click="closeNovel">取消</button>
+          <button type="button" class="btn primary" :disabled="!canImportNovel || importing" @click="importNovel">
+            {{ importing ? '登记中…' : '登记小说来源' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -297,6 +377,17 @@ interface EpisodeDraft {
   editedAt?: string
 }
 
+interface ScriptSource {
+  kind?: string
+  label?: string
+  title?: string
+  fileName?: string
+  model?: string
+  note?: string
+  chapters?: Array<{ no: number; title: string; words: number }>
+  importedAt?: string
+}
+
 interface ScriptRow extends Row {
   version: string
   status: string
@@ -309,6 +400,7 @@ interface ScriptRow extends Row {
   by?: string
   at?: string
   episodeDrafts?: EpisodeDraft[]
+  source?: ScriptSource
   revision?: number
   updatedAt?: string
   generation?: {
@@ -344,11 +436,9 @@ const projectStatus = computed(() => {
   return String(props.project?.status ?? '')
 })
 const totalEpisodes = computed(() => Math.max(1, Number(props.project?.episodes ?? 1)))
-const handoff = computed(() => !['草稿', '创意策划中', '已终止'].includes(projectStatus.value))
 const canGenerate = computed(
   () =>
     canWrite.value &&
-    handoff.value &&
     !['待剧本审核', '已完成', '已交付', '已归档', '已终止'].includes(projectStatus.value),
 )
 
@@ -371,6 +461,75 @@ watch(versions, (list) => {
 }, { immediate: true })
 const activeScript = computed(() => versions.value.find((row) => row.id === selectedId.value) ?? versions.value[0] ?? null)
 const lockedScript = computed(() => versions.value.find((row) => row.locked) ?? null)
+
+type SourceMode = 'model' | 'manual' | 'novel'
+const sourceModes: Array<{ key: SourceMode; label: string; desc: string }> = [
+  { key: 'model', label: '模型生成', desc: '按模型与范围出稿' },
+  { key: 'manual', label: '自主编写', desc: '空白稿逐集写' },
+  { key: 'novel', label: '小说改编', desc: '导入小说或章节' },
+]
+const sourceMode = ref<SourceMode>('model')
+const activeSourceKind = computed<SourceMode>(() => {
+  const kind = String(activeScript.value?.source?.kind ?? '')
+  if (kind === 'manual' || kind === 'novel' || kind === 'model') return kind
+  return activeScript.value?.generation || activeScript.value?.locked ? 'model' : 'manual'
+})
+watch(activeSourceKind, (kind) => {
+  if (activeScript.value) sourceMode.value = kind
+}, { immediate: true })
+const sourceReady = computed(() =>
+  Boolean(activeScript.value && (activeScript.value.source?.kind || draftEpisodes.value.length || activeScript.value.generation)),
+)
+const sourceLabel = computed(() => {
+  if (!activeScript.value) return '尚未建立版本'
+  if (activeScript.value.source?.label) return String(activeScript.value.source.label)
+  if (activeScript.value.source?.kind === 'novel') return '小说改编'
+  if (activeScript.value.source?.kind === 'manual') return '自主编写'
+  if (activeScript.value.generation) return '模型生成'
+  return '历史稿件'
+})
+const sourceSummary = computed(() => {
+  if (!activeScript.value) return '选择一种创作方式后，会建立可追溯的剧本版本。'
+  const source = activeScript.value.source
+  if (source?.kind === 'novel') {
+    return `小说改编 · 《${String(source.title ?? '未命名')}》 · 已登记 ${source.chapters?.length ?? 0} 章${source.note ? ` · ${source.note}` : ''}`
+  }
+  if (source?.kind === 'manual') {
+    return `自主编写 · 已写 ${draftEpisodes.value.length} / ${totalEpisodes.value} 集${source.note ? ` · ${source.note}` : ''}`
+  }
+  if (activeScript.value.generation) {
+    return `模型生成 · ${activeScript.value.generation.model} · ${activeScript.value.generation.strength}`
+  }
+  return '当前版本未登记创作来源。'
+})
+const novelChapterPreview = computed(() =>
+  (activeScript.value?.source?.chapters ?? []).slice(0, 6),
+)
+const sourceIntro = computed(() => {
+  if (sourceMode.value === 'manual') return '自主编写：从空白稿开始，逐集添加场次、动作与台词，再走同一套审核。'
+  if (sourceMode.value === 'novel') return '小说改编：先登记小说与章节目录；正文解析、章节映射与模型改编在下一流程接入。'
+  return '模型生成：先出样章再补齐全剧，逐集修订后提交审核；与自主编写共用同一套版本。'
+})
+const sourceModeHelp = computed(() => {
+  if (sourceMode.value === 'manual') return '新建空白稿会直接建立 E01，可逐集编辑；不会调用模型。'
+  if (sourceMode.value === 'novel') return '壳阶段只保存作品名、文件名与章节目录，不保存全文，也不生成分集稿。'
+  return '生成结果并入当前草稿；人工修订过的集不会被自动覆盖。'
+})
+const emptyIntro = computed(() => {
+  if (sourceMode.value === 'manual') return '还没有剧本版本。新建空白稿后，从 E01 开始逐集写场次与台词。'
+  if (sourceMode.value === 'novel') return '还没有剧本版本。先导入小说或章节，登记来源与章节目录。'
+  return '还没有剧本版本。用模型生成第一版分集稿，建议先出前 3 集样章。'
+})
+const emptyDraftTitle = computed(() => {
+  if (activeSourceKind.value === 'novel') return '已登记小说来源，尚未生成分集稿'
+  if (activeSourceKind.value === 'manual') return '空白稿还没有分集'
+  return '这个版本还没有分集稿'
+})
+const emptyDraftText = computed(() => {
+  if (activeSourceKind.value === 'novel') return '来源与章节目录已留档；章节解析、映射与模型改编在下一流程接入。'
+  if (activeSourceKind.value === 'manual') return '从第一集开始写：添加场次、动作和“角色：台词”，写完整剧后提交审核。'
+  return '当前版本只登记了集数与统计，没有可编辑的分集正文。可以继续用模型补齐。'
+})
 
 const draftEpisodes = ref<EpisodeDraft[]>([])
 const scriptTick = ref(0)
@@ -402,20 +561,6 @@ const activeEpisode = computed(() =>
   draftEpisodes.value.find((episode) => episode.no === selectedEpisodeNo.value) ?? draftEpisodes.value[0] ?? null,
 )
 
-const currentBrief = computed(() => {
-  const value = props.summary?.briefs
-  return (Array.isArray(value) ? value as Row[] : [])[0] ?? null
-})
-const chosenPlan = computed(() => {
-  const value = props.summary?.creativePlans
-  return (Array.isArray(value) ? value as Row[] : []).find((row) => row.chosen) ?? null
-})
-const creativeSource = computed(() => {
-  if (chosenPlan.value) return `已确认方向「${String(chosenPlan.value.title)}」：${String(chosenPlan.value.selling ?? '')}`
-  if (currentBrief.value?.note) return String(currentBrief.value.note)
-  return '尚未找到已交棒的创意说明；模型不会在缺少创意输入时生成正文。'
-})
-
 const scriptReviews = computed(() => {
   const value = props.summary?.reviews
   return (Array.isArray(value) ? value as Row[] : []).filter((row) => String(row.node ?? '').includes('剧本'))
@@ -431,7 +576,7 @@ const gateChecks = computed(() => {
     (episode) => episode.scenes?.length && episode.scenes.every((scene) => scene.lines?.length),
   )
   return [
-    { label: '创意输入已交棒', ok: handoff.value, detail: handoff.value ? '创意方案已冻结为唯一输入' : '先完成创意策划确认交棒' },
+    { label: '创作来源已登记', ok: sourceReady.value, detail: sourceReady.value ? sourceLabel.value : '先选择模型生成、自主编写或小说改编' },
     { label: '分集稿覆盖全剧', ok: draftEpisodes.value.length >= totalEpisodes.value, detail: `${draftEpisodes.value.length} / ${totalEpisodes.value} 集` },
     { label: '每集至少 3 场', ok: Boolean(draftEpisodes.value.length) && allScenes, detail: allScenes ? '场次结构完整' : '存在场次不足的集' },
     { label: '每场均有台词', ok: Boolean(draftEpisodes.value.length) && allLines, detail: allLines ? '台词与人物已就位' : '存在空场或空台词' },
@@ -470,8 +615,8 @@ const flowSteps = computed(() => {
     || Boolean(scriptReviews.value.length)
   const locked = Boolean(activeScript.value?.locked)
   return [
-    { no: 1, title: '创意交棒', desc: '确认方案成为唯一输入', ok: handoff.value },
-    { no: 2, title: '模型出稿', desc: '按模型与范围生成分集稿', ok: draftEpisodes.value.length > 0 },
+    { no: 1, title: '确定创作来源', desc: '模型 / 自主编写 / 小说改编', ok: sourceReady.value },
+    { no: 2, title: '完成初稿', desc: '逐集形成可分集稿', ok: draftEpisodes.value.length > 0 },
     { no: 3, title: '补齐全剧', desc: `${draftEpisodes.value.length} / ${totalEpisodes.value} 集`, ok: draftEpisodes.value.length >= totalEpisodes.value },
     { no: 4, title: '提交审核', desc: '剧本审核节点 A', ok: submitted },
     { no: 5, title: '审核锁定', desc: '正式版本供下游引用', ok: locked },
@@ -495,13 +640,208 @@ const kpis = computed(() => [
 ])
 
 const generateLabel = computed(() => {
-  if (!handoff.value) return '先完成创意策划'
   if (activeScript.value?.locked) return '生成修订版'
   if (activeDraft.value) return '继续用模型生成'
   return '用模型生成剧本'
 })
 
 const submitting = ref(false)
+const creating = ref(false)
+const importing = ref(false)
+const novelOpen = ref(false)
+const novelTitle = ref('')
+const novelFileName = ref('')
+const novelText = ref('')
+const novelChapters = ref<Array<{ no: number; title: string; words: number }>>([])
+const novelWordCount = computed(() => novelChapters.value.reduce((sum, chapter) => sum + chapter.words, 0))
+const canImportNovel = computed(() =>
+  canWrite.value
+  && Boolean(novelTitle.value.trim())
+  && novelChapters.value.length > 0
+  && !importing.value,
+)
+
+function blankEpisode(no: number): EpisodeDraft {
+  return {
+    no,
+    title: `第 ${no} 集`,
+    logline: '',
+    hook: '',
+    scenes: [{ no: '01', location: '', time: '', chars: '', action: '', lines: [] }],
+    edited: false,
+  }
+}
+
+function countWords(text: string): number {
+  return text.replace(/\s/g, '').length
+}
+
+function parseNovelChapters(text: string): Array<{ no: number; title: string; words: number }> {
+  const source = text.replace(/\r\n/g, '\n')
+  if (!source.trim()) return []
+  const lines = source.split('\n')
+  const headings = lines
+    .map((line, index) => ({ line: line.trim(), index }))
+    .filter(({ line }) => /^(第[0-9一二三四五六七八九十百千零两]+[章节回卷]|Chapter\s+\d+|[0-9]+[.、]\s*)/i.test(line))
+  if (!headings.length) return [{ no: 1, title: '全文', words: countWords(source) }]
+  return headings.map((heading, index) => {
+    const next = headings[index + 1]?.index ?? lines.length
+    const body = lines.slice(heading.index + 1, next).join('\n')
+    const title = heading.line
+      .replace(/^第[0-9一二三四五六七八九十百千零两]+[章节回卷][：:、\s]*/u, '')
+      .replace(/^Chapter\s+\d+[：:、\s]*/i, '')
+      .replace(/^[0-9]+[.、]\s*/, '')
+      .slice(0, 28)
+    return { no: index + 1, title: title || `第 ${index + 1} 章`, words: countWords(body) }
+  })
+}
+
+watch(novelText, (text) => {
+  novelChapters.value = parseNovelChapters(text)
+})
+
+function openNovel() {
+    if (!canGenerate.value) {
+      ui.toast('当前状态暂不能登记小说来源', 'bad')
+      return
+    }
+  if (!novelTitle.value) novelTitle.value = `${String(props.project?.name ?? '')}（原著）`
+  novelOpen.value = true
+}
+
+function closeNovel() {
+  novelOpen.value = false
+  novelTitle.value = ''
+  novelFileName.value = ''
+  novelText.value = ''
+  novelChapters.value = []
+}
+
+function onNovelFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (!/\.(txt|md)$/i.test(file.name)) {
+    ui.toast('壳阶段仅支持 TXT / Markdown 文件', 'bad')
+    input.value = ''
+    return
+  }
+  novelFileName.value = file.name
+  if (!novelTitle.value.trim()) novelTitle.value = file.name.replace(/\.(txt|md)$/i, '')
+  const reader = new FileReader()
+  reader.onload = () => {
+    novelText.value = String(reader.result ?? '')
+  }
+  reader.onerror = () => ui.toast('文件读取失败，请改用粘贴', 'bad')
+  reader.readAsText(file, 'utf-8')
+}
+
+async function importNovel() {
+  if (!canImportNovel.value) return
+  importing.value = true
+  const chapterCount = novelChapters.value.length
+  try {
+    const created = await creationApi.createBlankScript({
+      project: projectId.value,
+      note: `小说来源登记 · ${chapterCount} 章`,
+      source: {
+        kind: 'novel',
+        label: '小说改编',
+        title: novelTitle.value.trim(),
+        fileName: novelFileName.value,
+        chapters: novelChapters.value,
+        importedAt: new Date().toISOString(),
+        note: '壳阶段仅登记章节目录，正文未解析',
+      },
+    })
+    selectedId.value = String(created.id)
+    sourceMode.value = 'novel'
+    closeNovel()
+    emit('refresh')
+    ui.toast(`已登记 ${chapterCount} 章；正文解析与改编将在下一流程接入`)
+  } catch (err) {
+    ui.toast((err as Error).message || '小说来源登记失败', 'bad')
+  } finally {
+    importing.value = false
+  }
+}
+
+async function createManualScript() {
+  if (!canGenerate.value || creating.value) return
+  if (activeSourceKind.value === 'manual' && activeDraft.value) {
+    await addManualEpisode()
+    return
+  }
+  creating.value = true
+  try {
+    const first = blankEpisode(1)
+    const created = await creationApi.createBlankScript({
+      project: projectId.value,
+      note: '自主编写 · 空白稿',
+      source: { kind: 'manual', label: '自主编写', note: '空白稿逐集编写' },
+      episodeDrafts: [first],
+    })
+    selectedId.value = String(created.id)
+    selectedEpisodeNo.value = 1
+    sourceMode.value = 'manual'
+    emit('refresh')
+    ui.toast('已新建空白剧本，可编辑 E01')
+  } catch (err) {
+    ui.toast((err as Error).message || '新建空白剧本失败', 'bad')
+  } finally {
+    creating.value = false
+  }
+}
+
+async function addManualEpisode() {
+  if (!canWrite.value || creating.value) return
+  const existing = activeSourceKind.value === 'manual' && !activeScript.value?.locked
+  const current = existing ? [...draftEpisodes.value] : []
+  const used = new Set(current.map((episode) => episode.no))
+  let no = 1
+  while (used.has(no) && no <= totalEpisodes.value) no += 1
+  if (no > totalEpisodes.value) {
+    ui.toast(`全剧 ${totalEpisodes.value} 集已齐，可继续编辑或提交审核`, 'bad')
+    return
+  }
+  const next = [...current, blankEpisode(no)].sort((left, right) => left.no - right.no)
+  try {
+    creating.value = true
+    let scriptId = activeScript.value?.id ?? ''
+    if (!existing || !scriptId) {
+      const created = await creationApi.createBlankScript({
+        project: projectId.value,
+        note: '自主编写 · 空白稿',
+        source: { kind: 'manual', label: '自主编写', note: '空白稿逐集编写' },
+        episodeDrafts: [blankEpisode(1)],
+      })
+      scriptId = String(created.id)
+      selectedId.value = scriptId
+      selectedEpisodeNo.value = 1
+      emit('refresh')
+      ui.toast('已新建空白剧本，可编辑 E01')
+      return
+    }
+    const scenes = next.reduce((sum, episode) => sum + episode.scenes.length, 0)
+    const lines = next.reduce((sum, episode) => sum + episodeLineCount(episode), 0)
+    await creationApi.updateScript(scriptId, {
+      episodeDrafts: next,
+      writtenEpisodes: next.length,
+      scenes,
+      lines,
+      status: '草稿',
+      revision: Number(activeScript.value?.revision ?? 0) + 1,
+      note: `自主编写 · 新增 E${String(no).padStart(2, '0')}`,
+    })
+    selectedEpisodeNo.value = no
+    emit('refresh')
+    ui.toast(`已新增 E${String(no).padStart(2, '0')} 空白稿`)
+  } catch (err) {
+    ui.toast((err as Error).message || '新建分集失败', 'bad')
+  } finally {
+    creating.value = false
+  }
+}
 
 function firstMissingEpisode(): number {
   for (let no = 1; no <= totalEpisodes.value; no += 1) {
@@ -512,11 +852,17 @@ function firstMissingEpisode(): number {
 
 function openGenerate(forceNew = false) {
   if (!canGenerate.value) {
-    const reason = projectStatus.value === '待剧本审核' ? '剧本正在审核，暂不能继续生成' : '先完成创意策划的确认交棒，再生成剧本'
+    const reason = !canWrite.value
+      ? '当前身份没有剧本写入权限'
+      : projectStatus.value === '待剧本审核'
+        ? '剧本正在审核，暂不能继续生成'
+        : '当前项目状态暂不能生成剧本'
     ui.toast(reason, 'bad')
     return
   }
-  const scriptId = forceNew || activeScript.value?.locked ? '' : String(activeScript.value?.id ?? '')
+  const scriptId = forceNew || activeScript.value?.locked || activeSourceKind.value === 'novel'
+    ? ''
+    : String(activeScript.value?.id ?? '')
   const missing = totalEpisodes.value - draftEpisodes.value.length
   const scope = missing > 0 && draftEpisodes.value.length > 0 ? 'full' : 'pilot'
   const from = firstMissingEpisode()
@@ -538,7 +884,7 @@ function openGenerate(forceNew = false) {
           { value: '剧本模型 B · 快节奏短剧', label: '剧本模型 B · 快节奏短剧（前 3 秒强钩子）' },
           { value: '剧本模型 C · 对话打磨', label: '剧本模型 C · 对话打磨（关系与潜台词）' },
         ],
-        hint: '模型只读取已交棒的创意方案、项目基线与下方生成要求。',
+        hint: '模型读取项目基线、已登记创作来源与下方生成要求；不会自动读取未解析的小说全文。',
       },
       {
         key: 'scope',
@@ -571,7 +917,7 @@ function openGenerate(forceNew = false) {
         label: '生成要求',
         type: 'textarea',
         rows: 5,
-        value: `${creativeSource.value.replace(/[。；;，,\s]+$/, '')}。按 ${String(props.project?.genre ?? '短剧')} 节奏写，单集 ${String(props.project?.duration ?? '')}，每集结尾留一个可追更的钩子。`,
+        value: `按「${String(props.project?.genre ?? '短剧')}」题材写，受众 ${String(props.project?.audience ?? '不限定')}，单集 ${String(props.project?.duration ?? '')}；${String(props.project?.constraints ?? '')}。每集结尾留一个可追更的钩子。`,
         required: true,
         full: true,
         hint: '写明人物关系、每集冲突和结尾钩子；这段要求会记入生成记录。',
@@ -764,6 +1110,14 @@ export default { name: 'ScriptWorkspace' }
 .stage-kpi small { display: block; margin-top: 2px; overflow: hidden; color: var(--faint); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 
 .script-flow-card { padding-bottom: 12px; }
+.script-source-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 10px; }
+.script-source-tab { display: grid; gap: 2px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--text-2); text-align: left; cursor: pointer; }
+.script-source-tab:hover { border-color: var(--line-strong); }
+.script-source-tab.active { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.script-source-tab b { color: var(--ink); font-size: 12px; }
+.script-source-tab small { color: var(--text-3); font-size: 10px; }
+.script-source-note { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 8px; color: var(--text-3); font-size: 10px; line-height: 1.5; }
+.script-novel-preview { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
 .script-flow-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .script-flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
 .script-flow-step { display: flex; align-items: flex-start; gap: 8px; min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--surface) 70%, transparent); }
@@ -846,6 +1200,12 @@ export default { name: 'ScriptWorkspace' }
 
 .script-editor-backdrop { z-index: 96; }
 .script-editor-modal { max-width: 900px; }
+.script-novel-modal { max-width: 760px; }
+.script-novel-body { display: grid; gap: 11px; max-height: 68vh; overflow: auto; }
+.script-novel-chapters { display: grid; gap: 7px; padding: 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
+.script-novel-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; font-size: 10px; }
+.script-novel-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.script-novel-chip { padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text-2); font-size: 10px; }
 .script-editor-body { display: grid; gap: 12px; max-height: 68vh; overflow: auto; }
 .script-editor-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; }
 .script-editor-fields label { display: grid; gap: 4px; min-width: 0; }

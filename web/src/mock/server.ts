@@ -2236,6 +2236,51 @@ function scriptCounts(drafts: DraftEpisode[]) {
   return { scenes, lines }
 }
 
+function createBlankScript(body: Row): Envelope {
+  const projectId = String(body.project ?? '')
+  if (!projectId) throw new MockHttpError(422, 'missing_project', '缺少项目编号')
+  const project = projectOf(projectId)
+  const projectCode = projectId.split('-')[1] ?? projectId
+  const versions = rows('scripts').filter((row) => row.project === projectId)
+  const versionNo = versions.reduce((max, row) => Math.max(max, Number(String(row.version ?? '').replace(/\D/g, '')) || 0), 0) + 1
+  const source = body.source && typeof body.source === 'object' ? body.source as Row : { kind: 'manual', label: '自主编写' }
+  const drafts = Array.isArray(body.episodeDrafts) ? body.episodeDrafts as DraftEpisode[] : []
+  const counts = scriptCounts(drafts)
+  const script: Row = {
+    id: `SCR-${projectCode}-V${versionNo}`,
+    project: projectId,
+    version: `v${versionNo}`,
+    status: '草稿',
+    episodes: Math.max(1, Number(project.episodes ?? 1)),
+    writtenEpisodes: drafts.length,
+    scenes: counts.scenes,
+    lines: counts.lines,
+    shots: 0,
+    by: String(currentIdentity().name ?? '项目负责人').split('·')[0].trim(),
+    at: now(),
+    note: String(body.note ?? '新建空白剧本'),
+    locked: false,
+    revision: 1,
+    updatedAt: now(),
+    source,
+    episodeDrafts: drafts,
+  }
+  rows('scripts').unshift(script)
+  rows('audits').unshift({
+    id: nextId('AUD', 'audits'),
+    time: now(),
+    actor: String(currentIdentity().name ?? '').split('·')[0].trim(),
+    object: `剧本 ${script.id}`,
+    action: `新建剧本版本（${String(source.label ?? source.kind ?? '自主编写')}）`,
+    result: '成功',
+    src: '本地 mock · 剧本创作台',
+    link: projectId,
+    reason: String(body.note ?? ''),
+  })
+  store.persist()
+  return ok(script)
+}
+
 function generateScript(body: Row): Envelope {
   const projectId = String(body.project ?? '')
   if (!projectId) throw new MockHttpError(422, 'missing_project', '缺少项目编号')
@@ -2283,6 +2328,7 @@ function generateScript(body: Row): Envelope {
       note: '',
       locked: false,
       revision: 0,
+      source: { kind: 'model', label: '模型生成', model, at: now() },
     }
     rows('scripts').unshift(script)
   }
@@ -2311,6 +2357,7 @@ function generateScript(body: Row): Envelope {
     revision: Number(script.revision ?? 0) + 1,
     updatedAt: now(),
     note: `模型生成 ${count} 集初稿 · ${strength}${count > 1 ? ` · 第 ${from}–${from + count - 1} 集` : ` · 第 ${from} 集`}`,
+    source: { kind: 'model', label: '模型生成', model, at: now() },
     generation: {
       model,
       prompt,
@@ -2388,6 +2435,7 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: 'POST', pattern: /^\/briefs$/, handler: ({ body }) => createBrief(body) },
   { method: 'POST', pattern: /^\/creative-plans\/generate$/, handler: ({ body }) => generateCreativePlans(body) },
   { method: 'POST', pattern: /^\/creative-plans\/([^/]+)\/select$/, handler: ({ id, body }) => selectCreativePlan(decodeURIComponent(id), body) },
+  { method: 'POST', pattern: /^\/scripts\/blank$/, handler: ({ body }) => createBlankScript(body) },
   { method: 'POST', pattern: /^\/providers\/test-all$/, handler: () => testAllProviders() },
   { method: 'POST', pattern: /^\/providers\/([^/]+)\/test$/, handler: ({ id }) => testProvider(decodeURIComponent(id)) },
   { method: 'POST', pattern: /^\/model-profiles$/, handler: ({ body }) => createModelProfile(body) },

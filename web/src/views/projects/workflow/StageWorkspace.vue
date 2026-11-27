@@ -1,6 +1,6 @@
 <template>
   <div class="stage-content">
-    <div v-if="stageKey !== 'brief' && stageKey !== 'script'" class="stage-kpis">
+    <div v-if="stageKey !== 'script'" class="stage-kpis">
       <div v-for="item in kpis" :key="item.label" class="stage-kpi">
         <span>{{ item.label }}</span>
         <b>{{ item.value }}</b>
@@ -9,11 +9,7 @@
     </div>
 
     <div class="stage-main">
-      <template v-if="stageKey === 'brief'">
-        <BriefWorkspace ref="briefRef" :project="project" :summary="summary" @refresh="$emit('refresh')" />
-      </template>
-
-      <template v-else-if="stageKey === 'script'">
+      <template v-if="stageKey === 'script'">
         <ScriptWorkspace :project="project" :summary="summary" @refresh="$emit('refresh')" @navigate="$emit('navigate', $event)" />
       </template>
 
@@ -485,11 +481,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import type { Row } from '../../../mock/db'
 import DataTable from '../../../components/ui/DataTable.vue'
 import EmptyState from '../../../components/ui/EmptyState.vue'
-import BriefWorkspace from './BriefWorkspace.vue'
 import ScriptWorkspace from './ScriptWorkspace.vue'
 
 const props = defineProps<{
@@ -503,9 +498,6 @@ const emit = defineEmits<{
   (event: 'navigate', path: string): void
   (event: 'refresh'): void
 }>()
-
-const briefRef = ref<{ openGate: () => void } | null>(null)
-defineExpose({ openGate: () => briefRef.value?.openGate() })
 
 function list(key: string): Row[] {
   return (props.summary[key] as Row[] | undefined) ?? []

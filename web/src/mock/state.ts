@@ -16,14 +16,14 @@ export interface GateAction {
   hint?: string
 }
 
-/** 15 个状态之间的合法迁移；未列出的组合一律拒绝。 */
+/** 状态迁移：新项目从剧本创作开始；创意状态仅保留旧项目兼容。 */
 export const GATE_ACTIONS: Record<string, GateAction[]> = {
   草稿: [
-    { key: 'start', label: '启动创意策划', tone: 'primary', permission: 'creation.write', next: '创意策划中' },
+    { key: 'start', label: '开始剧本创作', tone: 'primary', permission: 'creation.write', next: '剧本创作中' },
     { key: 'terminate', label: '终止项目', permission: 'project.manage', next: '已终止', needReason: true },
   ],
   创意策划中: [
-    { key: 'confirmBrief', label: '确认创意方案', tone: 'primary', permission: 'creation.write', next: '剧本创作中' },
+    { key: 'confirmBrief', label: '确认历史创意并进入剧本', tone: 'primary', permission: 'creation.write', next: '剧本创作中' },
     { key: 'terminate', label: '终止项目', permission: 'project.manage', next: '已终止', needReason: true },
   ],
   剧本创作中: [
@@ -70,8 +70,8 @@ export const GATE_ACTIONS: Record<string, GateAction[]> = {
 }
 
 const PHASE_TO_STAGE: Record<string, string> = {
-  草稿: 'brief',
-  创意策划中: 'brief',
+  草稿: 'script',
+  创意策划中: 'script',
   剧本创作中: 'script',
   待剧本审核: 'script',
   生产准备中: 'plan',
@@ -84,7 +84,7 @@ const PHASE_TO_STAGE: Record<string, string> = {
   已归档: 'delivery',
   已暂停: 'video',
   异常中: 'video',
-  已终止: 'brief',
+  已终止: 'script',
 }
 
 export interface StageRow {
@@ -96,18 +96,19 @@ export interface StageRow {
   state: 'overview' | 'done' | 'now' | 'blocked' | 'todo'
 }
 
-const STAGE_ORDER = ['brief', 'script', 'plan', 'video', 'post', 'audio', 'qc', 'delivery']
+const STAGE_ORDER = ['script', 'plan', 'video', 'post', 'audio', 'qc', 'delivery']
 
 export function stageChain(project: Row): StageRow[] {
   const pipeline = store
     .table('stagePipeline')
+    .filter((stage) => stage.key !== 'brief')
     .slice()
     .sort((a, b) => {
       const left = STAGE_ORDER.indexOf(String(a.key ?? ''))
       const right = STAGE_ORDER.indexOf(String(b.key ?? ''))
       return (left < 0 ? STAGE_ORDER.length : left) - (right < 0 ? STAGE_ORDER.length : right)
     })
-  const current = PHASE_TO_STAGE[project.status] ?? 'brief'
+  const current = PHASE_TO_STAGE[project.status] ?? 'script'
   const currentIndex = Math.max(0, pipeline.findIndex((stage) => stage.key === current))
   return pipeline.map((stage, index) => ({
     key: stage.key,
