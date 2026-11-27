@@ -99,6 +99,22 @@ describe('episode E0–E3 contract', () => {
     expect(delivered.data.allowed_actions.map((action) => action.key)).toEqual(['archive'])
   })
 
+  it('reconciles stale terminal status without downgrading delivered projects', async () => {
+    const { handleMock, store } = await loadMock()
+    await call(handleMock, '/api/v1/projects/SP-26031/summary')
+    const project = store.table('projects').find((row) => row.id === 'SP-26031')
+    Object.assign(project!, { status: '已交付', phase: '交付完成' })
+    const stale = (await call(handleMock, '/api/v1/projects/SP-26031/summary')) as {
+      data: { project: Record<string, unknown> }
+    }
+    expect(stale.data.project.status).toBe('生产准备中')
+
+    const delivered = (await call(handleMock, '/api/v1/projects/SP-26019/summary')) as {
+      data: { project: Record<string, unknown> }
+    }
+    expect(delivered.data.project.status).toBe('已交付')
+  })
+
   it('walks E0 → E1 → E2 → E3 through the action contract', async () => {
     const { handleMock, store } = await loadMock()
     await call(handleMock, '/api/v1/projects/SP-26031/summary')

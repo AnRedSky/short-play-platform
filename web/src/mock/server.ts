@@ -283,6 +283,7 @@ const AUTO_PROJECT_STATUSES = new Set([
   '质量检测中',
   '待最终审核',
   '已完成',
+  '已交付',
 ])
 
 const STEP_STAGE_STATUS: Record<string, string> = {
@@ -306,9 +307,11 @@ const STAGE_STATUS_RANK: Record<string, number> = {
   已交付: 6,
 }
 
-function deriveProjectStatus(states: Row[]): string | null {
+function deriveProjectStatus(project: Row, states: Row[]): string | null {
   if (!states.length) return null
+  const episodes = Number(project.episodes ?? 0)
   if (states.every((state) => Boolean(state.delivered))) return '已交付'
+  if (episodes > 0 && Number(project.delivered ?? 0) >= episodes) return '已交付'
   if (states.every((state) => Boolean(state.finalApproved))) return '已完成'
   const pending = states.filter((state) => !state.delivered && !state.finalApproved)
   if (!pending.length) return '已完成'
@@ -321,7 +324,7 @@ function deriveProjectStatus(states: Row[]): string | null {
 function syncProjectStatus(project: Row, states: Row[]): void {
   const status = String(project.status ?? '')
   if (!AUTO_PROJECT_STATUSES.has(status)) return
-  const next = deriveProjectStatus(states)
+  const next = deriveProjectStatus(project, states)
   if (!next || next === status) return
   project.status = next
   project.phase = stageChain(project).find((stage) => stage.state === 'now')?.name ?? project.phase
