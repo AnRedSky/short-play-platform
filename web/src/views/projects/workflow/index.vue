@@ -9,7 +9,7 @@
         >
           <HeadActions>
             <button v-if="viewMode !== 'project'" class="btn" @click="backToProject">项目概览</button>
-            <button v-else class="btn" @click="openBatch(activeBatch?.index ?? 1)">批次看板</button>
+            <button v-else class="btn" :disabled="!batches.length" @click="openBatch(focusBatch?.index ?? activeBatch?.index ?? 1)">批次看板</button>
             <button class="btn" @click="$router.push('/workspace/home')">返回工作台</button>
             <button class="btn" @click="$router.push('/projects/lifecycle')">生命周期</button>
             <button class="btn" @click="reload">刷新</button>
@@ -24,7 +24,7 @@
             </div>
             <div class="stage-dock-meta">
               <span class="pill accent">当前 {{ (viewMode === 'episode' && selectedStage?.name) || currentStage?.name || '—' }}</span>
-              <span class="pill">进度 {{ data.progress ?? 0 }}%</span>
+              <span class="pill">项目进度 {{ data.progress ?? 0 }}%</span>
             </div>
           </div>
           <StageRail :stages="railStages" interactive :active-key="stageKey" @select="selectStage" />
@@ -43,37 +43,54 @@
               <div class="card">
                 <div class="card-head">
                   <div>
-                    <h3 class="card-title">项目概览</h3>
-                    <p class="card-sub">项目档案、制作设定、预算与产出统一在此查看</p>
+                    <h3 class="card-title">项目总览</h3>
+                    <p class="card-sub">档案、制作进度与批次入口统一在此查看</p>
                   </div>
-                  <span class="pill accent">进度 {{ data.progress ?? 0 }}%</span>
+                  <span class="pill accent">制作 {{ productionPercent }}%</span>
                 </div>
                 <div class="overview-progress">
-                  <div class="bar"><i :style="{ width: `${data.progress ?? 0}%` }" /></div>
-                  <span>{{ projectRow?.done ?? 0 }} / {{ projectRow?.episodes ?? 0 }} 集已完成</span>
+                  <div class="bar"><i :style="{ width: `${productionPercent}%` }" /></div>
+                  <span>
+                    {{ projectRow?.done ?? 0 }} / {{ projectRow?.episodes ?? 0 }} 集完成制作 · {{ deliveredCount }} 集已交付
+                  </span>
                 </div>
 
                 <div v-if="batches.length" class="batch-overview">
                   <div class="batch-overview-head">
                     <div>
                       <b>批次交付视图</b>
-                      <p>按每 {{ BATCH_SIZE }} 集一批查看资产、模型与交付门禁；单集仍是执行单位。</p>
+                      <p v-if="focusBatch">
+                        按每 {{ BATCH_SIZE }} 集一批查看资产、模型与交付门禁；当前瓶颈
+                        <strong>{{ focusBatch.label }} · {{ focusBatch.range }}</strong>，建议从这里继续。
+                      </p>
+                      <p v-else>按每 {{ BATCH_SIZE }} 集一批查看资产、模型与交付门禁；当前批次均已交付。</p>
                     </div>
-                    <button class="btn" @click="openBatch(activeBatch?.index ?? 1)">进入批次看板 →</button>
+                    <button class="btn" @click="openBatch(focusBatch?.index ?? activeBatch?.index ?? 1)">
+                      进入 {{ focusBatch?.label ?? '批次' }} 看板 →
+                    </button>
                   </div>
                   <div class="batch-overview-grid">
                     <button
                       v-for="batch in batches"
                       :key="batch.index"
                       class="batch-overview-item"
+                      :class="{ focus: batch.index === focusBatch?.index }"
                       @click="openBatch(batch.index)"
                     >
-                      <span class="batch-overview-title">{{ batch.label }} <i>{{ batch.range }}</i></span>
+                      <span class="batch-overview-title">
+                        <span>{{ batch.label }} <i>{{ batch.range }}</i></span>
+                        <em v-if="batch.index === focusBatch?.index" class="batch-focus-badge">当前瓶颈</em>
+                      </span>
                       <span class="batch-overview-progress">
                         <span class="bar"><i :style="{ width: `${batch.progress}%` }" /></span>
                         <em>{{ batch.doneCount }} / {{ batch.episodes.length }}</em>
                       </span>
-                      <span class="batch-overview-meta">{{ batch.status }} · 质检 {{ batch.qcCount }} 集</span>
+                      <span class="batch-overview-meta">
+                        {{ batch.status }} · 质检 {{ batch.qcCount }} 集
+                        <template v-if="batch.index === focusBatch?.index && focusEpisode">
+                          · 从 E{{ focusEpisode.no }} 继续
+                        </template>
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -83,12 +100,11 @@
                     <div class="stage-block-title">基本档案</div>
                     <dl class="kv-lite">
                       <dt>项目编号</dt><dd>{{ projectRow?.id }}</dd>
-                      <dt>状态</dt><dd>{{ projectRow?.status }}</dd>
-                      <dt>当前阶段</dt><dd>{{ projectRow?.phase }}</dd>
                       <dt>题材</dt><dd>{{ projectRow?.genre }}</dd>
-                      <dt>集数</dt><dd>{{ projectRow?.done ?? 0 }} / {{ projectRow?.episodes ?? 0 }}</dd>
                       <dt>负责人</dt><dd>{{ projectRow?.owner }}</dd>
                       <dt>所属部门</dt><dd>{{ projectRow?.dept }}</dd>
+                      <dt>创建时间</dt><dd>{{ projectRow?.created || '—' }}</dd>
+                      <dt>最近更新</dt><dd>{{ projectRow?.updated || '—' }}</dd>
                     </dl>
                   </section>
 
@@ -283,7 +299,7 @@ import EmptyState from '../../../components/ui/EmptyState.vue'
 import StageWorkspace from './StageWorkspace.vue'
 import BatchBoard from './BatchBoard.vue'
 import EpisodeWorkspace from './EpisodeWorkspace.vue'
-import { BATCH_SIZE, EPISODE_STEPS, buildBatchGroups, isEpisodeStep, type EpisodeCard, type EpisodeStepKey } from './episodeFlow'
+import { BATCH_SIZE, EPISODE_STEPS, buildBatchGroups, isEpisodeStep, stepIndex, type EpisodeCard, type EpisodeStepKey } from './episodeFlow'
 import StageRail from '../../../components/ui/StageRail.vue'
 import StatCards from '../../../components/ui/StatCards.vue'
 import AppDrawer from '../../../components/ui/AppDrawer.vue'
@@ -356,6 +372,35 @@ const viewMode = computed(() => {
   return value === 'batch' || value === 'episode' ? value : 'project'
 })
 const batches = computed(() => buildBatchGroups(summary.value))
+const deliveredCount = computed(() =>
+  batches.value.reduce((sum, batch) => sum + batch.doneCount, 0),
+)
+const productionPercent = computed(() => {
+  const done = Number(projectRow.value?.done ?? 0)
+  const episodes = Number(projectRow.value?.episodes ?? 0)
+  return episodes > 0 ? Math.round((done / episodes) * 100) : 0
+})
+const focusBatch = computed(() => {
+  const pending = batches.value.filter((batch) => batch.doneCount < batch.episodes.length)
+  if (!pending.length) return null
+  return pending
+    .map((batch) => {
+      const remaining = batch.episodes.filter((item) => !item.flow.done)
+      const upcoming = remaining.length
+        ? Math.min(...remaining.map((item) => stepIndex(item.flow.currentStep)))
+        : EPISODE_STEPS.length - 1
+      return { batch, upcoming }
+    })
+    .sort(
+      (left, right) =>
+        left.upcoming - right.upcoming ||
+        left.batch.progress - right.batch.progress ||
+        left.batch.index - right.batch.index,
+    )[0]?.batch ?? null
+})
+const focusEpisode = computed(
+  () => focusBatch.value?.episodes.find((item) => !item.flow.done) ?? null,
+)
 const batchTrials = computed<BatchTrialDto[]>(
   () => (summary.value.batchTrials as BatchTrialDto[] | undefined) ?? [],
 )
@@ -367,7 +412,7 @@ const batchPackages = computed<BatchPackageDto[]>(
 )
 const activeBatch = computed(() => {
   const requested = Number(route.query.batch ?? 0)
-  return batches.value.find((batch) => batch.index === requested) ?? batches.value[0] ?? null
+  return batches.value.find((batch) => batch.index === requested) ?? focusBatch.value ?? batches.value[0] ?? null
 })
 const activeEpisode = computed(() => {
   if (!activeBatch.value) return null
@@ -772,13 +817,30 @@ onMounted(async () => {
 .batch-overview-item:hover {
   border-color: var(--accent);
 }
+.batch-overview-item.focus {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  box-shadow: inset 3px 0 0 var(--accent);
+}
 .batch-overview-title {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 6px;
   font-size: 11px;
   font-weight: 700;
   color: var(--accent);
+}
+.batch-focus-badge {
+  flex: none;
+  padding: 1px 5px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.5;
 }
 .batch-overview-title i {
   color: var(--faint);

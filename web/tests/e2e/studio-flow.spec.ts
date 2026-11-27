@@ -238,6 +238,33 @@ test.describe('工作室 mock 全流程', () => {
     await expect(page.locator('main h1')).toContainText('· 项目详情')
   })
 
+  test('项目概览优先暴露当前瓶颈批次，批次入口直达 B4', async ({ page }) => {
+    await resetStudio(page)
+    await page.goto('/projects/workflow')
+
+    await expect(page.locator('.overview-progress')).toContainText('集完成制作')
+    await expect(page.locator('.overview-progress')).toContainText('集已交付')
+    const basics = page.locator('.overview-grid .overview-block').first()
+    await expect(basics).toContainText('创建时间')
+    await expect(basics).not.toContainText('当前阶段')
+    const overview = page.locator('.batch-overview')
+    const focus = overview.locator('.batch-overview-item.focus')
+    await expect(focus).toContainText('B4')
+    await expect(focus).toContainText('当前瓶颈')
+    await expect(focus).toContainText('从 E19 继续')
+    await expect(overview.getByRole('button', { name: '进入 B4 看板 →' })).toBeVisible()
+
+    await focus.click()
+    await expect(page).toHaveURL(/view=batch/)
+    await expect(page).toHaveURL(/batch=4/)
+    await expect(page.locator('main h1')).toContainText('B4 批次')
+
+    await page.goto('/projects/workflow')
+    await expect(page.locator('.batch-overview-item.focus')).toContainText('B4')
+    await page.getByRole('button', { name: '批次看板', exact: true }).click()
+    await expect(page).toHaveURL(/batch=4/)
+  })
+
   test('旧阶段深链收口到单集工作区，保留创意阶段入口', async ({ page }) => {
     await resetStudio(page)
     await page.goto('/projects/workflow?stage=post')
@@ -254,8 +281,7 @@ test.describe('工作室 mock 全流程', () => {
 
   test('批次看板进入单集 E0–E7 工作区并可返回批次', async ({ page }) => {
     await resetStudio(page)
-    await page.goto('/projects/workflow')
-    await page.getByRole('button', { name: '批次看板' }).click()
+    await page.goto('/projects/workflow?view=batch&batch=1')
 
     await expect(page).toHaveURL(/view=batch/)
     await expect(page.locator('.batch-board')).toContainText('单集仍是实际交互和制作单位')
