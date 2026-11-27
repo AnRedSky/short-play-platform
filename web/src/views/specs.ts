@@ -13,6 +13,10 @@ import {
   taskRetryBlockReason,
   taskRetryImpact,
 } from '../composables/taskGate'
+import {
+  providerTestBlockReason,
+  routeImpactText,
+} from '../composables/modelGate'
 import { reworkCreateBlockReason } from '../composables/qualityGate'
 import { qualityApi } from '../services/quality'
 import {
@@ -591,6 +595,211 @@ async function openLipSyncPicker(ctx: SpecContext) {
 }
 
 const projectOptions = ['SP-26031', 'SP-26028', 'SP-26019', 'SP-26015', 'SP-26011', 'SP-26007', 'SP-26004']
+
+/* ---------------- 模型 ---------------- */
+
+const modelProfilePanel: SpecRowPanel = {
+  title: '模型档案',
+  hint: 'L1 只读；档案只决定“能不能被路由”，生产任务实际用哪个模型由能力路由与任务快照共同确定。',
+  fields: [
+    { key: 'id', label: '档案' },
+    { key: 'providerName', label: '供应商' },
+    { key: 'provider', label: '供应商编号' },
+    { key: 'model', label: '模型' },
+    { key: 'cap', label: '能力族' },
+    { key: 'io', label: '输入 → 输出' },
+    { key: 'limits', label: '使用限制' },
+    { key: 'price', label: '计费单价' },
+    { key: 'license', label: '许可条款' },
+    { key: 'status', label: '档案状态' },
+    { key: 'updatedAt', label: '更新时间' },
+    { key: 'note', label: '说明' },
+  ],
+}
+
+const providerPanel: SpecRowPanel = {
+  title: '供应商详情',
+  hint: 'L1 只读；凭据仅展示掩码，轮换与测试结果会写入审计，个人凭据不跨项目复用。',
+  fields: [
+    { key: 'id', label: '编号' },
+    { key: 'name', label: '供应商' },
+    { key: 'owner', label: '归属人' },
+    { key: 'mode', label: '归属方式' },
+    { key: 'kind', label: '适配器' },
+    { key: 'endpoint', label: '端点' },
+    { key: 'auth', label: '认证方式' },
+    { key: 'masked', label: '凭据掩码' },
+    { key: 'capabilities', label: '能力范围' },
+    { key: 'region', label: '区域' },
+    { key: 'quota', label: '额度' },
+    { key: 'test', label: '连通性' },
+    { key: 'status', label: '状态' },
+    { key: 'defaultFor', label: '默认能力' },
+  ],
+}
+
+const capabilityPanel: SpecRowPanel = {
+  title: '能力路由详情',
+  hint: 'L1 只读；路由只影响之后新建的任务，执行中任务按提交时的模型快照完成。调整路由走 L2 表单并留审计。',
+  fields: [
+    { key: 'cap', label: '能力族' },
+    { key: 'use', label: '用途' },
+    { key: 'io', label: '输入 → 输出' },
+    { key: 'unit', label: '计费单位' },
+    { key: 'models', label: '模型档案数' },
+    { key: 'routePrimary', label: '主模型' },
+    { key: 'routeBackup', label: '备选模型' },
+    { key: 'routeFallback', label: '降级策略' },
+    { key: 'routeMode', label: '路由模式' },
+    { key: 'routeChangedBy', label: '最近变更人' },
+    { key: 'routeUpdatedAt', label: '最近变更时间' },
+    { key: 'routeReason', label: '变更原因' },
+  ],
+}
+
+function providerReady(provider: Row | undefined): boolean {
+  return Boolean(provider)
+    && String(provider?.status ?? '') === '启用'
+    && String(provider?.test ?? '').startsWith('已验证')
+}
+
+async function addModelProfile(ctx: SpecContext) {
+  try {
+    const [providers, capabilities] = await Promise.all([
+      http.get<Row[]>('/providers'),
+      http.get<Row[]>('/capabilities'),
+    ])
+    const usable = providers.filter(providerReady)
+    if (!usable.length) {
+      ctx.ui.toast('没有已启用且通过连通性验证的供应商，请先测试供应商', 'bad')
+      return
+    }
+    ctx.ui.openDialog({
+      title: '新增模型档案',
+      subtitle: 'L2 表单：档案决定模型能否进入能力路由；供应商必须已启用并通过连通性验证。提交后写入模型台账与审计。',
+      wide: true,
+      submitLabel: '登记档案',
+      fields: [
+        { key: 'provider', label: '供应商', type: 'select', required: true, options: usable.map((provider) => ({ value: String(provider.id), label: `${provider.name} · ${provider.mode} · ${provider.masked}` })) },
+        { key: 'model', label: '模型标识', required: true, placeholder: '例如 video-a-2.2' },
+        { key: 'cap', label: '能力族', type: 'select', required: true, options: capabilities.map((cap) => ({ value: String(cap.cap), label: String(cap.cap) })) },
+        { key: 'io', label: '输入 → 输出', required: true, placeholder: '例如 文/图 → MP4' },
+        { key: 'limits', label: '使用限制', required: true, placeholder: '例如 ≤ 12s · ≤ 1080×1920' },
+        { key: 'price', label: '计费单价', required: true, placeholder: '例如 ¥6.3 / 秒' },
+        { key: 'license', label: '许可条款', required: true, placeholder: '例如 商用可用 · 条款已留档' },
+        { key: 'note', label: '说明', type: 'textarea', rows: 2, placeholder: '补充适用边界、已验证样片或限制条件' },
+      ],
+      onSubmit: async (values) => {
+        await http.post('/model-profiles', values)
+        ctx.ui.toast('模型档案已登记，可在能力路由中选择')
+        await ctx.reload()
+      },
+    })
+  } catch (err) {
+    ctx.ui.toast((err as Error).message || '无法加载供应商或能力字典', 'bad')
+  }
+}
+
+async function testProviderRow(row: Row, ctx: SpecContext) {
+  const blocked = providerTestBlockReason(row)
+  if (blocked) {
+    ctx.ui.toast(blocked, 'bad')
+    return
+  }
+  try {
+    await http.post(`/providers/${encodeURIComponent(String(row.id))}/test`)
+    ctx.ui.toast(`供应商 ${row.name} 连通性测试通过`)
+    await ctx.reload()
+  } catch (err) {
+    ctx.ui.toast((err as Error).message || '连通性测试失败', 'bad')
+  }
+}
+
+async function testAllProviders(ctx: SpecContext) {
+  try {
+    const result = await http.post<{ tested: number; skipped: number; skippedNames?: string[] }>('/providers/test-all')
+    const skipped = result.skipped ? `，${result.skipped} 个停用跳过${result.skippedNames?.length ? `（${result.skippedNames.join('、')}）` : ''}` : ''
+    ctx.ui.toast(`已测试 ${result.tested} 个供应商${skipped}`, result.skipped ? 'info' : 'ok')
+    await ctx.reload()
+  } catch (err) {
+    ctx.ui.toast((err as Error).message || '批量测试失败', 'bad')
+  }
+}
+
+async function openRouteEditor(row: Row, ctx: SpecContext) {
+  const cap = String(row.cap ?? '')
+  try {
+    const [models, providers, tasks] = await Promise.all([
+      http.get<Row[]>('/model-profiles'),
+      http.get<Row[]>('/providers'),
+      http.get<Row[]>('/generation-tasks', { limit: 80 }),
+    ])
+    const available = models.filter((model) => {
+      if (String(model.cap ?? '') !== cap || String(model.status ?? '') !== '启用') return false
+      return providerReady(providers.find((provider) => String(provider.id) === String(model.provider)))
+    })
+    const primaryCandidates = available.filter((model) => !String(model.license ?? '').includes('不可作主生产'))
+    if (!primaryCandidates.length) {
+      ctx.ui.toast(`能力「${cap}」暂无可用主模型：需同能力、档案启用、供应商已启用且已验证；不可作主生产的模型只能作备选`, 'bad')
+      return
+    }
+    const currentPrimary = String(row.routePrimaryId ?? '')
+    const currentBackup = String(row.routeBackupId ?? '')
+    const fallbackOptions = [
+      '自动降级 → 通知并保留任务',
+      'L1 主 → L2 备 → 降档 720p → 挂起',
+      '单模型 → 失败即挂起',
+      '自动降级 → 挂起并通知',
+    ]
+    if (row.routeFallback && !fallbackOptions.includes(String(row.routeFallback))) fallbackOptions.unshift(String(row.routeFallback))
+    ctx.ui.openDialog({
+      title: `调整路由 · ${cap}`,
+      subtitle: `L2 表单。${routeImpactText(tasks, cap)}保存后写入审计，执行中任务不会被改写。`,
+      wide: true,
+      submitLabel: '保存路由',
+      fields: [
+        {
+          key: 'primaryId',
+          label: '主模型',
+          type: 'select',
+          required: true,
+          value: primaryCandidates.some((model) => model.id === currentPrimary) ? currentPrimary : String(primaryCandidates[0].id),
+          options: primaryCandidates.map((model) => ({ value: String(model.id), label: `${model.id} · ${model.model}（${model.providerName}）` })),
+        },
+        {
+          key: 'backupId',
+          label: '备选模型',
+          type: 'select',
+          value: available.some((model) => model.id === currentBackup) ? currentBackup : '',
+          options: [{ value: '', label: '无备选（失败直接按降级策略处理）' }, ...available.map((model) => ({ value: String(model.id), label: `${model.id} · ${model.model}（${model.providerName}）` }))],
+        },
+        {
+          key: 'fallback',
+          label: '降级策略',
+          type: 'select',
+          required: true,
+          value: row.routeFallback || fallbackOptions[0],
+          options: fallbackOptions.map((value) => ({ value, label: value })),
+        },
+        {
+          key: 'reason',
+          label: '变更原因',
+          type: 'textarea',
+          required: true,
+          rows: 3,
+          placeholder: '例如：主模型连续超时，切换备选并保留降档；说明影响范围与回滚条件',
+        },
+      ],
+      onSubmit: async (values) => {
+        await http.post(`/capabilities/${encodeURIComponent(cap)}/route`, values)
+        ctx.ui.toast(`能力「${cap}」路由已更新，之后新建任务生效`)
+        await ctx.reload()
+      },
+    })
+  } catch (err) {
+    ctx.ui.toast((err as Error).message || '无法读取模型或任务影响范围', 'bad')
+  }
+}
 
 export const SPECS: Record<string, PageSpec> = {
   /* ---------------- 音频 ---------------- */
@@ -1264,31 +1473,57 @@ export const SPECS: Record<string, PageSpec> = {
     side: (rows) => [{ title: '场景盘点', type: 'list', items: ['内景', '外景'].map((type) => ({ label: type, value: rows.filter((row) => row.type === type).length })) }],
   },
 
-  /* ---------------- 模型 ---------------- */
+  /* ---------------- 模型页面 ---------------- */
   '/models/config': {
     kicker: 'MODELS / CONFIG',
     title: '资源配置',
-    desc: '模型档案：能力、输入输出、限制与商用条款；配置变更需留审计。',
+    desc: '模型档案：能力、输入输出、限制与商用条款；详情走 L1，新增档案走 L2，配置变更写入审计。',
+    stats: (rows) => [
+      { label: '模型档案', value: rows.length },
+      { label: '启用', value: rows.filter((row) => row.status === '启用').length },
+      { label: '供应商覆盖', value: new Set(rows.map((row) => String(row.provider))).size },
+      { label: '待验证 / 停用', value: rows.filter((row) => row.status !== '启用').length },
+    ],
     table: {
       endpoint: '/model-profiles',
       search: true,
       columns: [
         col('id', '档案', { mono: true }),
-        col('provider', '供应商'),
+        col('providerName', '供应商'),
         col('model', '模型', { mono: true }),
         col('cap', '能力'),
         col('limits', '限制'),
         col('price', '单价'),
-        col('license', '许可'),
+        col('status', '状态', { pill: true }),
       ],
     },
-    side: () => [{ title: '配置口径', type: 'kv', items: [{ label: '白名单', value: '按企业策略' }, { label: '默认路由', value: '能力 → 模型' }, { label: '降级', value: '主 → 备 → 降档 → 挂起' }] }],
+    rowPanel: modelProfilePanel,
+    actions: [
+      { label: '新增档案', tone: 'primary', permission: 'models.manage', run: (ctx) => { void addModelProfile(ctx) } },
+    ],
+    side: (rows) => {
+      const byProvider = new Map<string, number>()
+      rows.forEach((row) => {
+        const name = String(row.providerName ?? row.provider ?? '未知供应商')
+        byProvider.set(name, (byProvider.get(name) ?? 0) + 1)
+      })
+      return [
+        { title: '配置口径', type: 'kv', items: [{ label: '白名单', value: '按企业策略' }, { label: '默认路由', value: '能力 → 主模型 → 备选' }, { label: '档案准入', value: '供应商启用且连通性已验证' }] },
+        { title: '供应商覆盖', type: 'list', items: Array.from(byProvider, ([label, value]) => ({ label, value })) },
+      ]
+    },
   },
 
   '/models/providers': {
     kicker: 'MODELS / PROVIDERS',
     title: '供应商与模型',
     desc: '供应来源、凭据掩码、额度与连通性；个人自持与企业托管分离记账。',
+    stats: (rows) => [
+      { label: '供应商', value: rows.length },
+      { label: '启用', value: rows.filter((row) => row.status === '启用').length },
+      { label: '个人自持', value: rows.filter((row) => row.mode === '个人自持').length },
+      { label: '企业托管', value: rows.filter((row) => row.mode === '企业托管').length },
+    ],
     table: {
       endpoint: '/providers',
       search: true,
@@ -1303,9 +1538,24 @@ export const SPECS: Record<string, PageSpec> = {
         col('status', '状态', { pill: true }),
       ],
     },
-    side: () => [{ title: '凭据规则', type: 'checklist', items: [{ label: '前端只显示掩码', on: true }, { label: '轮换需审计', on: true }, { label: '个人凭据不跨项目复用', on: true }] }],
+    rowPanel: providerPanel,
+    rowActions: (row) => [
+      { label: '测试', permission: 'models.manage', run: (ctx) => { void testProviderRow(row, ctx) } },
+    ],
     actions: [
-      { label: '测试连通性', permission: 'models.manage', run: (ctx) => { ctx.ui.toast('连通性测试完成：8/8 可用', 'ok') } },
+      { label: '全部测试', permission: 'models.manage', run: (ctx) => { void testAllProviders(ctx) } },
+    ],
+    side: (rows) => [
+      { title: '凭据规则', type: 'checklist', items: [{ label: '前端只显示掩码', on: true }, { label: '轮换需审计', on: true }, { label: '个人凭据不跨项目复用', on: true }] },
+      {
+        title: '测试概况',
+        type: 'kv',
+        items: [
+          { label: '已验证', value: rows.filter((row) => String(row.test ?? '').startsWith('已验证')).length },
+          { label: '失效 / 未测', value: rows.filter((row) => !String(row.test ?? '').startsWith('已验证')).length },
+          { label: '停用跳过', value: rows.filter((row) => row.status !== '启用').length },
+        ],
+      },
     ],
   },
 
@@ -1313,18 +1563,52 @@ export const SPECS: Record<string, PageSpec> = {
     kicker: 'MODELS / ROUTING',
     title: '能力与路由',
     desc: '能力族到模型的映射、优先级与降级链；路由变更不影响执行中任务。',
+    stats: (rows) => [
+      { label: '能力族', value: rows.length },
+      { label: '已配主模型', value: rows.filter((row) => Boolean(row.routePrimaryId)).length },
+      { label: '有备选', value: rows.filter((row) => Boolean(row.routeBackupId)).length },
+      { label: '待配置', value: rows.filter((row) => !row.routePrimaryId).length },
+    ],
     table: {
       endpoint: '/capabilities',
       rowKey: 'cap',
+      search: true,
+      filters: [{ key: 'routeMode', label: '路由', options: ['自动降级', '单模型', '未配置'] }],
       columns: [
         col('cap', '能力族'),
         col('use', '用途'),
-        col('io', '输入 → 输出'),
+        col('routePrimary', '主模型'),
+        col('routeBackup', '备选'),
+        col('routeFallback', '降级策略'),
         col('unit', '计费单位'),
-        col('models', '可用模型'),
+        col('models', '档案'),
       ],
     },
-    side: () => [{ title: '降级链', type: 'list', items: [{ label: 'L1 主模型', value: '视频模型 A' }, { label: 'L2 备选', value: '视频模型 B' }, { label: 'L3 降档', value: '降低分辨率' }, { label: 'L4 挂起', value: '通知并保留任务' }] }],
+    rowPanel: capabilityPanel,
+    rowActions: (row) => [
+      { label: '调整路由', permission: 'models.manage', run: (ctx) => { void openRouteEditor(row, ctx) } },
+    ],
+    side: (rows) => [
+      {
+        title: '路由覆盖',
+        type: 'kv',
+        items: [
+          { label: '已配置', value: `${rows.filter((row) => Boolean(row.routePrimaryId)).length} / ${rows.length}` },
+          { label: '有备选', value: rows.filter((row) => Boolean(row.routeBackupId)).length },
+          { label: '待配置模型', value: rows.filter((row) => !row.routePrimaryId).length },
+        ],
+      },
+      {
+        title: '降级原则',
+        type: 'checklist',
+        items: [
+          { label: '只影响之后新建的任务', on: true },
+          { label: '主模型不可作主生产时只能作备选', on: true },
+          { label: '备选必须与主模型不同且同能力', on: true },
+          { label: '变更原因与影响范围写入审计', on: true },
+        ],
+      },
+    ],
   },
 
   /* ---------------- 通知 ---------------- */

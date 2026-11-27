@@ -4,6 +4,12 @@
  */
 import { nextId, now, store, type Row } from './db'
 import { GATE_ACTIONS, allowedActions, permissionsOf, progressOf, stageChain } from './state'
+import {
+  modelProfileCreateBlockReason,
+  providerTestBlockReason,
+  routeEditBlockReason,
+  routeImpactTasks,
+} from '../composables/modelGate'
 
 export interface Envelope<T = unknown> {
   data: T
@@ -297,6 +303,144 @@ function createAsset(body: Row): Envelope {
   rows('assets').unshift(row)
   store.persist()
   return ok(row)
+}
+
+function providerVerified(provider: Row): Row {
+  provider.test = `已验证 · ${now()}`
+  provider.testedAt = now()
+  return provider
+}
+
+function providerAudit(provider: Row, action: string): void {
+  rows('audits').unshift({
+    id: nextId('AUD', 'audits'),
+    time: now(),
+    actor: String(currentIdentity().name ?? '').split(' · ')[0],
+    object: `供应商 ${provider.id}`,
+    action,
+    result: '成功',
+    src: '本地 mock · 桌面端',
+    link: String(provider.id),
+  })
+}
+
+function testProvider(id: string): Envelope {
+  const provider = byId('providers', id)
+  const blocked = providerTestBlockReason(provider)
+  if (blocked) throw new MockHttpError(409, 'provider_test_blocked', blocked)
+  providerVerified(provider)
+  providerAudit(provider, '测试连通性')
+  store.persist()
+  return ok(provider)
+}
+
+function testAllProviders(): Envelope {
+  const tested: Row[] = []
+  const skipped: Row[] = []
+  for (const provider of rows('providers')) {
+    if (providerTestBlockReason(provider)) {
+      skipped.push(provider)
+      continue
+    }
+    providerVerified(provider)
+    tested.push(provider)
+  }
+  if (tested.length) {
+    rows('audits').unshift({
+      id: nextId('AUD', 'audits'),
+      time: now(),
+      actor: String(currentIdentity().name ?? '').split(' · ')[0],
+      object: '供应商批量测试',
+      action: `测试连通性（${tested.length} 个成功，${skipped.length} 个跳过）`,
+      result: '成功',
+      src: '本地 mock · 桌面端',
+      link: 'models/providers',
+      reason: skipped.length ? `已停用跳过：${skipped.map((row) => row.name).join('、')}` : '',
+    })
+  }
+  store.persist()
+  return ok({ tested: tested.length, skipped: skipped.length, skippedNames: skipped.map((row) => row.name) })
+}
+
+function createModelProfile(body: Row): Envelope {
+  const blocked = modelProfileCreateBlockReason(body, rows('providers'), rows('modelProfiles'), rows('capabilities'))
+  if (blocked) throw new MockHttpError(422, 'model_profile_blocked', blocked)
+  const provider = rows('providers').find((row) => String(row.id) === String(body.provider))
+  const row: Row = {
+    ...body,
+    id: String(body.id ?? nextId('MP', 'modelProfiles', 2)),
+    provider: String(body.provider),
+    providerName: provider?.name ?? body.provider,
+    model: String(body.model).trim(),
+    cap: String(body.cap).trim(),
+    status: String(body.status ?? '启用'),
+    updatedAt: now(),
+    note: String(body.note ?? '新增模型档案；已完成必填与供应商状态校验'),
+  }
+  rows('modelProfiles').unshift(row)
+  rows('audits').unshift({
+    id: nextId('AUD', 'audits'),
+    time: now(),
+    actor: String(currentIdentity().name ?? '').split(' · ')[0],
+    object: `模型 ${row.id}`,
+    action: `新增档案（${row.providerName} · ${row.model} · ${row.cap}）`,
+    result: '成功',
+    src: '本地 mock · 桌面端',
+    link: String(row.id),
+    reason: body.reason ?? '',
+  })
+  store.persist()
+  return ok(row)
+}
+
+function routeImpact(capName: string): Envelope {
+  const cap = byId('capabilities', capName, 'cap')
+  const impacted = routeImpactTasks(rows('tasks'), capName)
+  return ok({
+    cap: cap.cap,
+    total: impacted.length,
+    running: impacted.filter((task) => task.status === '执行中').length,
+    queued: impacted.filter((task) => ['待执行', '排队中'].includes(String(task.status))).length,
+    manual: impacted.filter((task) => task.status === '待人工处理').length,
+    tasks: impacted.map((task) => ({ id: task.id, project: task.project, status: task.status, kind: task.kind })),
+  })
+}
+
+function updateCapabilityRoute(capName: string, body: Row): Envelope {
+  const cap = byId('capabilities', capName, 'cap')
+  const draft = {
+    primaryId: String(body.primaryId ?? ''),
+    backupId: String(body.backupId ?? ''),
+    fallback: String(body.fallback ?? ''),
+    reason: String(body.reason ?? ''),
+  }
+  const blocked = routeEditBlockReason(capName, draft, rows('modelProfiles'), rows('providers'))
+  if (blocked) throw new MockHttpError(422, 'route_blocked', blocked)
+  const primary = rows('modelProfiles').find((row) => String(row.id) === draft.primaryId)!
+  const backup = draft.backupId ? rows('modelProfiles').find((row) => String(row.id) === draft.backupId) : undefined
+  const previous = `${cap.routePrimary || '未配置'}${cap.routeBackup ? ` / ${cap.routeBackup}` : ''}`
+  cap.routePrimaryId = primary.id
+  cap.routePrimary = `${primary.id} · ${primary.model}`
+  cap.routeBackupId = backup?.id ?? ''
+  cap.routeBackup = backup ? `${backup.id} · ${backup.model}` : ''
+  cap.routeFallback = draft.fallback
+  cap.routeMode = backup ? '自动降级' : '单模型'
+  cap.routeReason = draft.reason
+  cap.routeUpdatedAt = now()
+  cap.routeChangedBy = String(currentIdentity().name ?? '').split(' · ')[0]
+  rows('audits').unshift({
+    id: nextId('AUD', 'audits'),
+    time: now(),
+    actor: cap.routeChangedBy,
+    object: `能力 ${cap.cap}`,
+    action: `调整路由（${previous} → ${cap.routePrimary}${backup ? ` / ${backup.id}` : ' / 无备选'}）`,
+    result: '成功',
+    src: '本地 mock · 桌面端',
+    link: String(cap.cap),
+    reason: draft.reason,
+  })
+  store.persist()
+  return ok(cap)
 }
 
 function workflow(id: string): Envelope {
@@ -901,6 +1045,11 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: 'GET', pattern: /^\/workspace\/home$/, handler: () => workspaceHome() },
   { method: 'GET', pattern: /^\/assets\/([^/]+)\/references$/, handler: ({ id }) => assetReferences(decodeURIComponent(id)) },
   { method: 'POST', pattern: /^\/assets$/, handler: ({ body }) => createAsset(body) },
+  { method: 'POST', pattern: /^\/providers\/test-all$/, handler: () => testAllProviders() },
+  { method: 'POST', pattern: /^\/providers\/([^/]+)\/test$/, handler: ({ id }) => testProvider(decodeURIComponent(id)) },
+  { method: 'POST', pattern: /^\/model-profiles$/, handler: ({ body }) => createModelProfile(body) },
+  { method: 'GET', pattern: /^\/capabilities\/([^/]+)\/impact$/, handler: ({ id }) => routeImpact(decodeURIComponent(id)) },
+  { method: 'POST', pattern: /^\/capabilities\/([^/]+)\/route$/, handler: ({ id, body }) => updateCapabilityRoute(decodeURIComponent(id), body) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/workflow$/, handler: ({ id }) => workflow(id) },
   { method: 'POST', pattern: /^\/projects\/([^/]+)\/transitions$/, handler: ({ id, body }) => transition(id, body) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/timeline$/, handler: ({ id }) => projectTimeline(id) },
