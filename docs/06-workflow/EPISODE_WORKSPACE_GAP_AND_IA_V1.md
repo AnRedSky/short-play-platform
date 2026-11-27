@@ -331,11 +331,12 @@ POST /projects/:id/episodes/:no/package
 - 数据与 API 缺口；
 - 四阶段实施计划；
 - 阶段 1 代码改造（提交 `001270f`）：`view=batch` 批次看板、`view=episode` 单集工作区、项目概览批次摘要、E0–E7 步进、集卡入口与返回批次。
+- 阶段 2 代码改造（提交 `e5d4125`）：单集状态契约、E0–E3 动作接口、居中弹窗动作、E3 镜头任务、失败重试、换模型 take 与单集事件流。
 
 未完成：
 
-- E0–E7 写操作与真实单集状态接口；
-- 批次对象、take、模型基线、单集 QC、单集交付包的真实数据；
+- E4–E7 写操作与真实单集交付包；
+- 真实后端 `episodeState`、take、模型基线接口；
 - 旧阶段深链收口；
 - 3 集试跑。
 
@@ -355,17 +356,42 @@ POST /projects/:id/episodes/:no/package
 
 仍保留旧阶段深链，避免破坏现有页面入口与 E2E；旧路由收口放到阶段 4。
 
-### 8.2 下一步：E0–E3 可操作
+### 8.2 阶段 2 已完成：E0–E3 可操作
 
-下一阶段不先铺满页面，而是把单集生产前半段做成可真实推进的闭环：
+阶段 2 已落地（提交 `e5d4125`）：
 
-1. 补 `episodeState`、`batch`、`take`、`modelBaseline` 的最小数据契约；
-2. E0 输入确认、E1 剧本锁定、E2 镜头/资产/模型基线锁定；
-3. E3 任务生成、失败重试、换模型生成新 take、接受/退回 take；
-4. 所有写操作走确认弹窗，并在右栏留下变更记录；
-5. 验收标准：第 1 集可从 E0 推进到素材齐，旧版本不被覆盖，换模型有 take 记录。
+1. 新增 `episodeStates` 集合：从现有分集状态派生 `currentStep`、`batch`、`inputConfirmed`、`scriptLocked`、`assetsLocked`、`productionStarted`、`modelBaseline`，不修改旧分集字段。
+2. 新增 `POST /projects/:id/episodes/:ep/actions`：支持 `confirmInput`、`lockScript`、`lockAssets`、`startProduction`、`retryTask`、`changeModel`、`acceptTake`。
+3. E0–E3 动作进入居中弹窗；每次动作写入 `episodeEvents`，右栏显示变更记录。
+4. E2 锁定模型基线；E3 按本集镜头批量派发任务，任务表显示 `Take`。
+5. 单镜头换模型时旧任务标记“已替代”，新任务生成独立 take，不覆盖旧版本。
+6. E3 失败任务可重试；任务完成后可接受 take，全部镜头接受后自动推进 E4。
 
-完成 E0–E3 后，再补 E4–E7 的剪辑、声音字幕、单集 QC 与单集交付包。
+验证结果：
+
+- `npm run check` 通过；
+- `npm run test` 101 例通过；
+- `npm run test:e2e` 8 例通过；
+- `npm run build` 通过；
+- `npx eslint . --quiet` 0 error；
+- 1366 / 1600 宽度无横向溢出。
+
+边界仍然明确：
+
+- 单集状态来自 mock 派生数据，真实后端 `episodeState` 接口尚未接入；
+- 任务状态仍由 mock 队列控制，没有真实生成回调；
+- E4–E7 仍是只读展示。
+
+### 8.3 下一步：E4–E7 可操作
+
+1. E4 剪辑：时间线锁定、片段替换、过期片段重建、提交单集 QC。
+2. E5 声音字幕：对白生成、字幕校对、口型任务与混音检查。
+3. E6 单集 QC：执行单集质检、问题项分派、返工与复验。
+4. E7 终审入库：单集终审、单集交付包、平台入库记录。
+5. 所有动作继续走居中弹窗，并写入单集事件流。
+6. 验收标准：第 19 集可从 E3 素材齐推进到 E7 入库，QC 失败能回到 E4/E5 返工。
+
+完成 E4–E7 后，再做旧阶段深链收口与 3 集试跑。
 
 ---
 
