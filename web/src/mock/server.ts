@@ -284,6 +284,7 @@ const AUTO_PROJECT_STATUSES = new Set([
   '待最终审核',
   '已完成',
   '已交付',
+  '已归档',
 ])
 
 const STEP_STAGE_STATUS: Record<string, string> = {
@@ -310,8 +311,11 @@ const STAGE_STATUS_RANK: Record<string, number> = {
 function deriveProjectStatus(project: Row, states: Row[]): string | null {
   if (!states.length) return null
   const episodes = Number(project.episodes ?? 0)
-  if (states.every((state) => Boolean(state.delivered))) return '已交付'
-  if (episodes > 0 && Number(project.delivered ?? 0) >= episodes) return '已交付'
+  const deliveredAll = states.every((state) => Boolean(state.delivered))
+  const deliveredEnough = episodes > 0 && Number(project.delivered ?? 0) >= episodes
+  if (String(project.status) === '已归档' && (deliveredAll || deliveredEnough)) return '已归档'
+  if (deliveredAll) return '已交付'
+  if (deliveredEnough) return '已交付'
   if (states.every((state) => Boolean(state.finalApproved))) return '已完成'
   const pending = states.filter((state) => !state.delivered && !state.finalApproved)
   if (!pending.length) return '已完成'
@@ -1399,6 +1403,14 @@ function transition(id: string, body: Row): Envelope {
   if (!action) throw new MockHttpError(409, 'illegal_transition', `状态「${project.status}」不允许动作 ${actionKey}`)
   if (!PROJECT_GOVERNANCE_ACTIONS.has(actionKey)) {
     throw new MockHttpError(409, 'project_stage_derived', '制作阶段由单集与批次进度自动推导，不再手动推进')
+  }
+  if (actionKey === 'archive') {
+    const states = ensureEpisodeStates(id)
+    const deliveredAll = states.length > 0 && states.every((state) => Boolean(state.delivered))
+    const deliveredEnough = Number(project.delivered ?? 0) >= Number(project.episodes ?? 0)
+    if (!deliveredAll && !deliveredEnough) {
+      throw new MockHttpError(409, 'archive_requires_delivery', '项目尚有未交付单集，不能归档')
+    }
   }
   if (!currentPermissions().includes(action.permission)) {
     throw new MockHttpError(403, 'forbidden', `当前身份缺少权限 ${action.permission}`)

@@ -109,10 +109,23 @@ describe('episode E0–E3 contract', () => {
     }
     expect(stale.data.project.status).toBe('生产准备中')
 
+    Object.assign(project!, { status: '已归档', phase: '归档完成' })
+    const staleArchive = (await call(handleMock, '/api/v1/projects/SP-26031/summary')) as {
+      data: { project: Record<string, unknown> }
+    }
+    expect(staleArchive.data.project.status).toBe('生产准备中')
+
     const delivered = (await call(handleMock, '/api/v1/projects/SP-26019/summary')) as {
       data: { project: Record<string, unknown> }
     }
     expect(delivered.data.project.status).toBe('已交付')
+
+    const deliveredProject = store.table('projects').find((row) => row.id === 'SP-26019')
+    Object.assign(deliveredProject!, { status: '已归档', phase: '归档完成' })
+    const archived = (await call(handleMock, '/api/v1/projects/SP-26019/summary')) as {
+      data: { project: Record<string, unknown> }
+    }
+    expect(archived.data.project.status).toBe('已归档')
   })
 
   it('walks E0 → E1 → E2 → E3 through the action contract', async () => {
