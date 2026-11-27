@@ -37,6 +37,54 @@ type Handler = (ctx: {
 const LATENCY = 60
 const BATCH_SIZE = 6
 
+const QUALITY_PROFILES: Row[] = [
+  {
+    id: 'QC-SUB',
+    name: '字幕与口型',
+    dim: '字幕与口型',
+    level: '高',
+    where: 'E{ep} / S01 / SH-01 · 00:03',
+    action: '退回 E5 校对字幕并重做口型；复检通过后再确认 QC',
+    desc: '字幕错字、断句或口型偏移。',
+  },
+  {
+    id: 'QC-AV',
+    name: '音画同步',
+    dim: '音画同步',
+    level: '高',
+    where: 'E{ep} / S02 / SH-04 · 00:12',
+    action: '退回 E4 对齐画面或退回 E5 重排音轨；复检通过后再确认 QC',
+    desc: '对白与画面对不上，或环境声提前/滞后。',
+  },
+  {
+    id: 'QC-TIME',
+    name: '时长与节奏',
+    dim: '时长与节奏',
+    level: '中',
+    where: 'E{ep} / 全片 · 结尾 00:08',
+    action: '退回 E4 重剪结尾节奏，保证单集时长与钩子',
+    desc: '单集超时、结尾拖沓或钩子不成立。',
+  },
+  {
+    id: 'QC-SAFE',
+    name: '安全区与越界',
+    dim: '安全区',
+    level: '中',
+    where: 'E{ep} / S03 / SH-07 · 00:21',
+    action: '退回 E4 调整字幕安全区或画面构图',
+    desc: '字幕越界、人物关键部位出画。',
+  },
+]
+
+function ensureQualityProfiles(): Row[] {
+  const profiles = rows('qualityProfiles')
+  if (!profiles.length) {
+    profiles.push(...QUALITY_PROFILES.map((profile) => ({ ...profile })))
+    store.persist()
+  }
+  return profiles
+}
+
 function ok<T>(data: T, meta?: Record<string, unknown>): Envelope<T> {
   return meta ? { data, meta } : { data }
 }
@@ -746,6 +794,8 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
   } else if (action === 'failEpisodeQc') {
     requireStep('E6')
     if (!state.mixPassed) throw new MockHttpError(409, 'episode_mix_gate', '请先完成混音检查')
+    const profiles = ensureQualityProfiles()
+    const profile = profiles.find((item) => item.id === String(body.profile ?? '')) ?? profiles[0]
     const report = {
       id: nextId('QR', 'qualityReports'),
       project: projectId,
@@ -760,17 +810,18 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
       fail: 1,
       engine: '质检模型 Q1（独立检测能力）',
       at: now(),
-      note: reason || '单集 QC 阻断：字幕错字与口型偏移',
+      note: reason || `单集 QC 阻断：${String(profile.name ?? '字幕与口型')}`,
     }
     rows('qualityReports').unshift(report)
     rows('qualityIssues').unshift({
       id: nextId('QI', 'qualityIssues'),
       report: report.id,
-      dim: '字幕与口型',
-      where: `E${pad2(ep)} / S01 / SH-01 · 00:03`,
-      level: '高',
-      action: '退回 E5 校对字幕并重做口型；复检通过后再确认 QC',
+      dim: String(profile.dim ?? '字幕与口型'),
+      where: String(profile.where ?? `E${pad2(ep)} / S01 / SH-01 · 00:03`).replace('{ep}', pad2(ep)),
+      level: String(profile.level ?? '高'),
+      action: String(profile.action ?? '退回 E5 校对字幕并重做口型；复检通过后再确认 QC'),
       auto: '是',
+      profile: String(profile.id ?? ''),
     })
     state.qcPassed = false
     episode.qc = 'FAIL'
@@ -2050,6 +2101,7 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
       timelineClips: rows('timelineClips').filter((row) => row.project === id),
       qualityIssues: rows('qualityIssues').filter((row) => reports.some((report) => report.id === row.report)),
       qualityLevels: rows('qualityLevels'),
+      qualityProfiles: ensureQualityProfiles(),
       qualityMatrix: rows('qualityMatrix'),
       rework: rows('reworkLedger').filter((row) => row.project === id),
       deliveryChecklist: rows('deliveryChecklist'),

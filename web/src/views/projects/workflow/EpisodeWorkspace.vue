@@ -51,6 +51,8 @@ function list(key: string): Row[] {
   return (props.summary[key] as Row[] | undefined) ?? []
 }
 
+const qcProfiles = computed(() => list('qualityProfiles'))
+
 const epShots = computed(() => list('shots').filter((row) => Number(row.ep) === no.value))
 const epTasks = computed(() => list('tasks').filter((row) => Number(row.ep) === no.value))
 const epTimelines = computed(() => list('timelines').filter((row) => Number(row.ep) === no.value))
@@ -338,13 +340,43 @@ function runEpisodeQc() {
 }
 
 function failEpisodeQc() {
-  stageActionDialog(
-    `记录第 ${no.value} 集 QC 阻断`,
-    '记录一条 FAIL 报告与阻断项；随后必须退回 E4 或 E5 返工，旧报告会归档。',
-    'failEpisodeQc',
-    '记录 QC 阻断',
-    '例：字幕第 3 行错字，口型偏移 80ms。',
-  )
+  const profiles = qcProfiles.value
+  ui.openDialog({
+    title: `记录第 ${no.value} 集 QC 阻断`,
+    subtitle: '选择阻断模板，生成一条 FAIL 报告与对应问题项；随后必须退回 E4 或 E5 返工。',
+    fields: [
+      ...(profiles.length
+        ? [
+            {
+              key: 'profile',
+              label: '阻断模板',
+              type: 'select' as const,
+              required: true,
+              value: String(profiles[0]?.id ?? ''),
+              options: profiles.map((profile) => ({
+                value: String(profile.id ?? ''),
+                label: String(profile.name ?? profile.dim ?? profile.id ?? ''),
+              })),
+              hint: '模板由 mock 质检配置提供，真实后端接入后可替换为实际检测项。',
+            },
+          ]
+        : []),
+      {
+        key: 'note',
+        label: '执行说明',
+        type: 'textarea' as const,
+        rows: 3,
+        placeholder: '例：字幕第 3 行错字，口型偏移 80ms。',
+      },
+    ],
+    submitLabel: '记录 QC 阻断',
+    onSubmit: (values) =>
+      submitEpisodeAction(
+        'failEpisodeQc',
+        { profile: values.profile, note: values.note },
+        '记录 QC 阻断',
+      ),
+  })
 }
 
 function acceptEpisodeQc() {

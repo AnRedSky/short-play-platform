@@ -37,10 +37,19 @@ describe('episode E0–E3 contract', () => {
   it('derives E0–E7 state from episode status and exposes batches', async () => {
     const { handleMock } = await loadMock()
     const result = (await call(handleMock, '/api/v1/projects/SP-26031/summary')) as {
-      data: { episodeStates: Array<Record<string, unknown>> }
+      data: {
+        episodeStates: Array<Record<string, unknown>>
+        qualityProfiles: Array<Record<string, unknown>>
+      }
     }
     const states = result.data.episodeStates
     expect(states).toHaveLength(24)
+    expect(result.data.qualityProfiles.map((profile) => profile.id)).toEqual([
+      'QC-SUB',
+      'QC-AV',
+      'QC-TIME',
+      'QC-SAFE',
+    ])
     const e19 = states.find((state) => state.ep === 19)
     expect(e19).toMatchObject({
       currentStep: 'E2',
@@ -137,15 +146,24 @@ describe('episode E0–E3 contract', () => {
     const mix = (await act('checkMix', { note: '混音检查通过' })).data.state
     expect(mix).toMatchObject({ currentStep: 'E6', mixPassed: true })
 
-    const qcFail = (await act('failEpisodeQc', { note: '字幕错字，记录 QC 阻断' })).data.state
+    const qcFail = (
+      await act('failEpisodeQc', { profile: 'QC-AV', note: '音画不同步，记录 QC 阻断' })
+    ).data.state
     expect(qcFail).toMatchObject({ currentStep: 'E6', qcPassed: false })
     const failedReport = store
       .table('qualityReports')
       .find((row) => row.project === 'SP-26031' && String(row.object).includes('第 19 集'))
     expect(failedReport).toMatchObject({ result: 'FAIL', fail: 1 })
-    expect(store.table('qualityIssues').some((row) => row.report === failedReport?.id)).toBe(true)
+    const failedIssue = store
+      .table('qualityIssues')
+      .find((row) => row.report === failedReport?.id)
+    expect(failedIssue).toMatchObject({
+      dim: '音画同步',
+      profile: 'QC-AV',
+      where: 'E19 / S02 / SH-04 · 00:12',
+    })
 
-    const rework = (await act('reworkEpisode', { target: 'E5', note: '字幕错字，退回声音字幕' })).data.state
+    const rework = (await act('reworkEpisode', { target: 'E5', note: '音画偏移，退回声音字幕' })).data.state
     expect(rework).toMatchObject({
       currentStep: 'E5',
       qcPassed: false,
