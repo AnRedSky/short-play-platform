@@ -175,7 +175,6 @@
               </div>
 
               <StageWorkspace
-                ref="briefWorkspaceRef"
                 :stage-key="stageKey"
                 :project="projectRow"
                 :summary="summary"
@@ -191,40 +190,29 @@
                 </button>
               </div>
             </div>
-      </div>
 
-      <aside class="spec-side">
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <h3 class="card-title">关卡动作</h3>
-              <p class="card-sub">服务端按「状态 × 权限」返回 allowed_actions</p>
+            <div v-if="projectActions.length" class="card project-action-strip">
+              <div class="project-action-head">
+                <div>
+                  <h3 class="card-title">项目级操作</h3>
+                  <p class="card-sub">仅项目状态与权限可执行的动作；单集制作在 E0–E7 工作区完成</p>
+                </div>
+                <span class="pill">{{ projectActions.length }} 个可用</span>
+              </div>
+              <div class="project-action-buttons">
+                <button
+                  v-for="action in projectActions"
+                  :key="action.key"
+                  class="btn"
+                  :class="{ primary: action.tone === 'primary' && !isDanger(action.key), danger: isDanger(action.key) }"
+                  :title="actionImpact(action)"
+                  @click="runAction(action)"
+                >
+                  {{ action.label }}
+                </button>
+              </div>
             </div>
-            <span class="pill">{{ (data.allowed_actions || []).length }} 个可用</span>
-          </div>
-          <div v-if="!(data.allowed_actions || []).length" class="notice warn">
-            当前身份（{{ session.name }}）在「{{ projectRow?.status }}」状态下没有可执行动作。
-          </div>
-          <div
-            v-for="action in data.allowed_actions || []"
-            :key="action.key"
-            class="wf-gate-row"
-          >
-            <div style="flex: 1; min-width: 0">
-              <b style="font-size: 12px">{{ action.label }}</b>
-              <div class="card-sub">{{ action.next === '__prev__' ? '回到暂停前状态' : `进入「${action.next}」` }} · 需要{{ permissionLabel(action.permission) }}权限</div>
-              <p class="gate-impact">{{ actionImpact(action) }}</p>
-            </div>
-            <button
-              class="btn"
-              :class="{ primary: action.tone === 'primary' && !isDanger(action.key), danger: isDanger(action.key) }"
-              @click="runAction(action)"
-            >
-              {{ action.label }}
-            </button>
-          </div>
-        </div>
-      </aside>
+      </div>
         </div>
         </template>
 
@@ -287,14 +275,8 @@ import { workspaceApi } from '../../../services/workspace'
 import type { Row } from '../../../mock/db'
 import type { GateAction, StageRow } from '../../../mock/state'
 import { useRoutePanel } from '../../../composables/useRoutePanel'
-import { useSessionStore } from '../../../stores/session'
 import { useProjectStore } from '../../../stores/project'
-import {
-  actionImpact,
-  isDangerAction as isDanger,
-  permissionLabel,
-  useGateActionRunner,
-} from '../../../composables/useGateActionRunner'
+import { actionImpact, isDangerAction as isDanger, useGateActionRunner } from '../../../composables/useGateActionRunner'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
 import EmptyState from '../../../components/ui/EmptyState.vue'
@@ -306,7 +288,6 @@ import StageRail from '../../../components/ui/StageRail.vue'
 import StatCards from '../../../components/ui/StatCards.vue'
 import AppDrawer from '../../../components/ui/AppDrawer.vue'
 
-const session = useSessionStore()
 const projectStore = useProjectStore()
 const router = useRouter()
 const route = useRoute()
@@ -317,7 +298,6 @@ const timeline = ref<Row[]>([])
 const blockers = ref<Row[]>([])
 const dataRevision = ref(0)
 const scrollRef = ref<HTMLElement | null>(null)
-const briefWorkspaceRef = ref<{ openGate: () => void } | null>(null)
 
 const stageLinksMap: Record<string, Array<{ label: string; path: string }>> = {
   script: [
@@ -630,6 +610,12 @@ async function reload() {
   dataRevision.value += 1
 }
 
+const projectActions = computed<GateAction[]>(() =>
+  ((data.value.allowed_actions as GateAction[] | undefined) ?? []).filter(
+    (action) => action.key !== 'confirmBrief',
+  ),
+)
+
 const { run: runGateAction } = useGateActionRunner({
   projectId: () => projectStore.currentId,
   status: () => projectRow.value?.status,
@@ -637,10 +623,6 @@ const { run: runGateAction } = useGateActionRunner({
 })
 
 function runAction(action: GateAction) {
-  if (action.key === 'confirmBrief' && stageKey.value === 'brief' && briefWorkspaceRef.value) {
-    briefWorkspaceRef.value.openGate()
-    return
-  }
   return runGateAction(action)
 }
 
@@ -721,7 +703,7 @@ onMounted(async () => {
   padding-bottom: 56px;
 }
 .cockpit-grid {
-  grid-template-columns: minmax(0, 1fr) 330px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
 .cockpit-main {
@@ -928,18 +910,20 @@ onMounted(async () => {
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
-.gate-impact {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.55;
+.project-action-strip {
+  padding: 12px 14px;
 }
-.wf-gate-row {
+.project-action-head {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
+  justify-content: space-between;
+  gap: 12px;
+}
+.project-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 }
 @media (max-width: 1100px) {
   .stage-dock :deep(.stage-rail) {
@@ -948,9 +932,6 @@ onMounted(async () => {
   }
 }
 @media (max-width: 1180px) {
-  .cockpit-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .batch-overview-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

@@ -20,7 +20,7 @@ async function switchIdentity(page: import('@playwright/test').Page, identity: s
 }
 
 async function runGate(page: import('@playwright/test').Page, label: string, nextStatus?: string) {
-  const button = page.locator('.wf-gate-row button', { hasText: label }).first()
+  const button = page.locator('.project-action-strip button', { hasText: label }).first()
   await expect(button).toBeVisible()
   await button.click()
   const modal = page.locator('.modal').last()
@@ -172,7 +172,8 @@ test.describe('工作室 mock 全流程', () => {
     await expect(page.locator('.overview-grid')).toContainText('基本档案')
     await expect(page.locator('.overview-grid')).toContainText('制作设定')
     await expect(page.locator('.overview-grid')).toContainText('预算与产出')
-    await expect(page.locator('.spec-side')).not.toContainText('项目信息')
+    await expect(page.locator('.cockpit-main')).not.toContainText('项目信息')
+    await expect(page.locator('.project-action-strip')).toBeVisible()
 
     const scroll = page.locator('.cockpit-scroll')
     const head = page.locator('.cockpit-head')
