@@ -132,143 +132,35 @@
             </template>
 
             <div v-else-if="selectedStage" class="card">
-          <div class="card-head">
-            <div>
-              <h3 class="card-title">{{ selectedStage.name }} · 阶段工作区</h3>
-              <p class="card-sub">{{ stageStateText(selectedStage.state) }} · 由阶段管线切换，迁移仍以服务端状态为准</p>
-            </div>
-            <span class="pill" :class="{ accent: selectedStage.state === 'now' }">{{ stageStateText(selectedStage.state) }}</span>
-          </div>
+              <div class="card-head">
+                <div>
+                  <h3 class="card-title">{{ selectedStage.name }} · 阶段工作区</h3>
+                  <p class="card-sub">{{ stageStateText(selectedStage.state) }} · 由阶段管线切换，迁移仍以服务端状态为准</p>
+                </div>
+                <span class="pill" :class="{ accent: selectedStage.state === 'now' }">{{ stageStateText(selectedStage.state) }}</span>
+              </div>
 
-          <div class="stage-meta">
-            <div><span class="metric-label">责任方</span><b>{{ selectedStage.owner }}</b></div>
-            <div><span class="metric-label">准入关口</span><b>{{ selectedStage.gate }}</b></div>
-            <div><span class="metric-label">阶段产出</span><b>{{ selectedStage.out }}</b></div>
-          </div>
+              <div class="stage-meta">
+                <div><span class="metric-label">责任方</span><b>{{ selectedStage.owner }}</b></div>
+                <div><span class="metric-label">准入关口</span><b>{{ selectedStage.gate }}</b></div>
+                <div><span class="metric-label">阶段产出</span><b>{{ selectedStage.out }}</b></div>
+              </div>
 
-          <div v-if="stageKey === 'brief'" class="stage-body">
-            <div class="stage-block-title">创意基线</div>
-            <dl class="kv-lite">
-              <dt>题材</dt><dd>{{ projectRow?.genre || '—' }}</dd>
-              <dt>目标受众</dt><dd>{{ projectRow?.audience || '不限定' }}</dd>
-              <dt>单集时长</dt><dd>{{ projectRow?.duration || '—' }}</dd>
-              <dt>画幅</dt><dd>{{ projectRow?.ratio || '—' }}</dd>
-              <dt>语言</dt><dd>{{ projectRow?.language || '—' }}</dd>
-              <dt>影像风格</dt><dd>{{ projectRow?.style || '不限定' }}</dd>
-              <dt>约束</dt><dd>{{ projectRow?.constraints || '—' }}</dd>
-            </dl>
-            <div v-if="briefs.length" class="stage-list">
-              <div class="stage-block-title">创意简报</div>
-              <div v-for="brief in briefs" :key="brief.id" class="list-row">
-                <span class="k">{{ brief.version }} · {{ brief.mode }} · {{ brief.id }}</span>
-                <span class="v">{{ brief.status }} · {{ brief.by }}</span>
-                <p class="stage-note">{{ brief.note }}</p>
+              <StageWorkspace
+                :stage-key="stageKey"
+                :project="projectRow"
+                :summary="summary"
+                @open-script="openScript"
+                @open-episode="openEpisode"
+                @navigate="go"
+              />
+
+              <div class="stage-links">
+                <button v-for="link in stageLinks" :key="link.path" class="btn" @click="go(link.path)">
+                  {{ link.label }} →
+                </button>
               </div>
             </div>
-            <EmptyState v-else title="暂无创意简报" desc="在创意设定页生成并确认简报后，这里会显示版本与结论。" compact />
-          </div>
-
-          <div v-else-if="stageKey === 'script'" class="stage-body">
-            <div class="stage-block-title">剧本版本</div>
-            <div v-if="scripts.length" class="stage-list">
-              <button
-                v-for="script in scripts"
-                :key="script.id"
-                class="list-row row-click stage-row-btn"
-                @click="openScript(script)"
-              >
-                <span class="k">{{ script.version }} · {{ script.id }}</span>
-                <span class="v"><StatusPill :status="script.status" /> {{ script.shots }} 镜</span>
-              </button>
-            </div>
-            <EmptyState v-else title="暂无剧本版本" desc="进入剧本版本页创建首个版本，审核通过后锁定基准。" compact />
-          </div>
-
-          <div v-else-if="stageKey === 'plan'" class="stage-body">
-            <div class="stage-block-title">镜头生产计划</div>
-            <div v-if="plans.length" class="stage-list">
-              <div v-for="plan in plans" :key="plan.id" class="list-row">
-                <span class="k">{{ plan.id }} · {{ plan.scope }}</span>
-                <span class="v">{{ plan.shots }} 镜 / {{ plan.tasks }} 任务</span>
-                <p class="stage-note">{{ plan.status }} · 固化 {{ plan.frozen }} · {{ plan.note }}</p>
-              </div>
-            </div>
-            <EmptyState v-else title="暂无固化计划" desc="在镜头生产计划页完成契约校验并固化后，这里会显示计划版本。" compact />
-            <div class="stage-facts">
-              <div><span class="metric-label">视觉资产</span><b>{{ assets.length }} 个</b></div>
-              <div><span class="metric-label">正式资产</span><b>{{ formalAssets }} 个</b></div>
-              <div><span class="metric-label">计划任务</span><b>{{ stageTasks.length }} 个</b></div>
-            </div>
-          </div>
-
-          <div v-else-if="stageKey === 'post'" class="stage-body">
-            <div class="stage-block-title">分集状态 <span class="card-sub">{{ episodes.length }} 集</span></div>
-            <DataTable
-              :columns="[
-                { key: 'no', label: '集' },
-                { key: 'title', label: '标题' },
-                { key: 'duration', label: '时长' },
-                { key: 'qc', label: '质检', pill: true },
-                { key: 'status', label: '状态', pill: true },
-              ]"
-              :rows="episodes"
-              row-key="no"
-              clickable
-              @row-click="openEpisode"
-            />
-          </div>
-
-          <div v-else-if="stageKey === 'qc'" class="stage-body">
-            <div class="stage-facts">
-              <div><span class="metric-label">项目质量</span><b>{{ projectRow?.quality || '未检测' }}</b></div>
-              <div><span class="metric-label">质检任务</span><b>{{ stageTasks.length }} 个</b></div>
-              <div><span class="metric-label">质量报告</span><b>{{ qualityReports.length }} 份</b></div>
-            </div>
-            <p class="stage-note">质检结论与返工单在质量域处理；高风险未关闭时不能人工通过。</p>
-          </div>
-
-          <div v-else-if="stageKey === 'delivery'" class="stage-body">
-            <div class="stage-block-title">交付记录</div>
-            <div v-if="deliveries.length" class="stage-list">
-              <div v-for="item in deliveries" :key="item.id" class="list-row">
-                <span class="k">{{ item.id }} · {{ item.version }}</span>
-                <span class="v">{{ item.status }} · {{ item.episodes }} 集 / {{ item.files }} 文件</span>
-                <p class="stage-note">接收方 {{ item.receiver }} · {{ item.at }} · 冻结 {{ item.frozen ? '是' : '否' }}</p>
-              </div>
-            </div>
-            <EmptyState v-else title="暂无交付记录" desc="终审通过且集数完整后，在交付包页生成并冻结交付版本。" compact />
-          </div>
-
-          <div v-if="showStageTasks" class="stage-body">
-            <div class="stage-block-title">
-              阶段任务
-              <span class="card-sub">{{ stageTasks.length }} 个</span>
-            </div>
-            <DataTable
-              :columns="[
-                { key: 'id', label: '任务' },
-                { key: 'kind', label: '类型' },
-                { key: 'ep', label: '集' },
-                { key: 'status', label: '状态', pill: true },
-                { key: 'est', label: '预估' },
-              ]"
-              :rows="stageTasks"
-              row-key="id"
-            />
-          </div>
-          <EmptyState
-            v-else-if="stageKey === 'video' || stageKey === 'audio'"
-            title="本阶段暂无任务"
-            desc="进入对应作业页提交生成任务后，这里会按阶段汇总执行状态与成本。"
-            compact
-          />
-
-          <div class="stage-links">
-            <button v-for="link in stageLinks" :key="link.path" class="btn" @click="go(link.path)">
-              {{ link.label }} →
-            </button>
-          </div>
-        </div>
       </div>
 
       <aside class="spec-side">
@@ -340,6 +232,7 @@ import {
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
 import EmptyState from '../../../components/ui/EmptyState.vue'
+import StageWorkspace from './StageWorkspace.vue'
 import StageRail from '../../../components/ui/StageRail.vue'
 import StatCards from '../../../components/ui/StatCards.vue'
 import DataTable from '../../../components/ui/DataTable.vue'
@@ -398,17 +291,6 @@ const stageLinksMap: Record<string, Array<{ label: string; path: string }>> = {
   ],
 }
 
-const stageTaskLabels: Record<string, string[]> = {
-  brief: ['创意与剧本'],
-  script: ['创意与剧本'],
-  plan: ['视觉资产'],
-  video: ['视频生产'],
-  audio: ['音频'],
-  post: ['后期'],
-  qc: ['质量检测'],
-  delivery: [],
-}
-
 const projectRow = computed(() => (data.value.project as Row | undefined) ?? (summary.value.project as Row | undefined) ?? null)
 const stages = computed<StageRow[]>(() => (data.value.stages as StageRow[] | undefined) ?? [])
 const overviewStage = computed<StageRow>(() => ({
@@ -451,12 +333,6 @@ const plans = computed<Row[]>(() => (summary.value.plans as Row[] | undefined) ?
 const deliveries = computed<Row[]>(() => (summary.value.deliveries as Row[] | undefined) ?? [])
 const qualityReports = computed<Row[]>(() => (summary.value.qualityReports as Row[] | undefined) ?? [])
 
-const formalAssets = computed(() => assets.value.filter((row) => row.formal).length)
-const stageTasks = computed(() => {
-  const labels = stageTaskLabels[stageKey.value] ?? []
-  return allTasks.value.filter((row) => labels.includes(String(row.stage)))
-})
-const showStageTasks = computed(() => stageTasks.value.length > 0 && stageKey.value !== 'post')
 const stageLinks = computed(() => stageLinksMap[stageKey.value] ?? [])
 
 function stageStateText(state?: StageRow['state']) {

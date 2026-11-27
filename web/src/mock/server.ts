@@ -1056,6 +1056,8 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/members$/, handler: ({ id }) => ok(projectOf(id).members ?? []) },
   { method: 'GET', pattern: /^\/projects\/([^/]+)\/summary$/, handler: ({ id }) => {
     const project = projectOf(id)
+    const reports = rows('qualityReports').filter((row) => String(row.object ?? '').includes(id))
+    const projectCode = id.split('-')[1] ?? id
     return ok({
       project,
       stages: stageChain(project),
@@ -1069,7 +1071,26 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
       briefs: rows('briefs').filter((row) => row.project === id),
       plans: rows('plans').filter((row) => row.project === id),
       deliveries: rows('deliveries').filter((row) => row.project === id),
-      qualityReports: rows('qualityReports').filter((row) => row.project === id),
+      qualityReports: reports,
+      creativePlans: rows('creativePlans').filter((row) => row.project === id),
+      briefModes: rows('briefModes'),
+      scriptDiffs: rows('scriptDiff'),
+      reviewChecklist: rows('reviewChecklist'),
+      shots: rows('shots').filter((row) => row.project === id),
+      characters: rows('characters').filter((row) => row.project === id),
+      locations: rows('locations').filter((row) => row.project === id),
+      props: rows('props').filter((row) => row.project === id),
+      dialogues: rows('dialogues').filter((row) => row.project === id),
+      voiceProfiles: rows('voiceProfiles').filter((row) => row.project === id),
+      audioAssets: rows('audioAssets').filter((row) => row.project === id),
+      subtitles: rows('subtitles').filter((row) => row.project === id).slice(0, 30),
+      lipSync: rows('lipSync').filter((row) => String(row.line ?? '').includes(projectCode) || String(row.shot ?? '').includes(projectCode)),
+      timelines: rows('timelines').filter((row) => row.project === id),
+      qualityIssues: rows('qualityIssues').filter((row) => reports.some((report) => report.id === row.report)),
+      qualityLevels: rows('qualityLevels'),
+      qualityMatrix: rows('qualityMatrix'),
+      rework: rows('reworkLedger').filter((row) => row.project === id),
+      deliveryChecklist: rows('deliveryChecklist'),
     })
   } },
   { method: 'POST', pattern: /^\/scripts\/([^/]+)\/review$/, handler: ({ id, body }) => scriptReview(id, body) },

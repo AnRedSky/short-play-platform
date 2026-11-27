@@ -154,12 +154,32 @@ test.describe('工作室 mock 全流程', () => {
     await expect(page.locator('.card-title', { hasText: '剧本创作 · 阶段工作区' })).toBeVisible()
     await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBe(0)
     await expect(page.getByRole('button', { name: /剧本版本 →/ })).toBeVisible()
+    await expect(page.locator('.stage-content')).toContainText('剧本版本')
+    await expect(page.locator('.stage-kpi')).not.toHaveCount(0)
 
     await page.mouse.wheel(0, 900)
     await expect.poll(() => head.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(64)
 
+    const stageWorkspaces = [
+      ['创意策划', '创意基线'],
+      ['剧本创作', '剧本版本'],
+      ['导演规划', '项目镜头契约'],
+      ['视频生产', '生产队列'],
+      ['音频字幕', '对白配音'],
+      ['后期合成', '分集状态'],
+      ['质量检测', '质检报告'],
+      ['终审交付', '交付清单'],
+    ] as const
+    for (const [stage, content] of stageWorkspaces) {
+      await dock.locator('.stage-card').filter({ hasText: stage }).click()
+      await expect(page.locator('.stage-content')).toContainText(content)
+      await expect(page.locator('.stage-kpi')).not.toHaveCount(0)
+      await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBe(0)
+    }
+
     await dock.locator('.stage-card').filter({ hasText: '终审交付' }).click()
-    await expect(page.locator('.stage-body')).toContainText('DP-26031-00')
+    await expect(page.locator('.stage-content')).toContainText('DP-26031-00')
+    await expect(page.locator('.stage-content')).toContainText('交付门槛')
 
     await page.goto('/projects/detail')
     await expect(page).toHaveURL(/\/projects\/workflow/)
