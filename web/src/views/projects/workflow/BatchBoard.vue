@@ -41,6 +41,11 @@ const currentTrial = computed(
   () => (props.trials ?? []).find((trial) => Number(trial.batch) === currentBatch.value?.index) ?? null,
 )
 const trialEpisodes = computed(() => currentTrial.value?.episodes ?? [])
+const trialCards = computed(() =>
+  trialEpisodes.value
+    .map((no) => (currentBatch.value?.episodes ?? []).find((item) => item.no === Number(no)))
+    .filter((item): item is EpisodeCard => Boolean(item)),
+)
 const trialChecks = computed(() => currentTrial.value?.checks ?? [])
 const currentPackage = computed(
   () =>
@@ -179,7 +184,17 @@ async function startPackage() {
             </span>
           </div>
           <div class="trial-episodes">
-            <span v-for="no in trialEpisodes" :key="no">E{{ String(no).padStart(2, '0') }}</span>
+            <span
+              v-for="item in trialCards"
+              :key="item.no"
+              class="trial-episode"
+              :class="{ done: item.flow.done }"
+              @click="emit('open-episode', item)"
+            >
+              <b>E{{ String(item.no).padStart(2, '0') }}</b>
+              <em>{{ item.flow.currentStep }} · {{ item.row.status || '待生产' }}</em>
+              <small>{{ item.flow.progress }}%</small>
+            </span>
           </div>
           <div class="trial-checks">
             <span
@@ -421,17 +436,49 @@ async function startPackage() {
   font-size: 11px;
 }
 .trial-episodes {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
   margin-top: 9px;
 }
 .trial-episodes span {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 1px 7px;
   border: 1px solid var(--line);
-  border-radius: 99px;
-  padding: 2px 8px;
+  border-radius: 8px;
+  padding: 6px 9px;
   color: var(--ink);
   font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+  background: var(--panel);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.trial-episodes span:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.trial-episodes span b {
+  grid-row: span 2;
+  font-size: 12px;
+}
+.trial-episodes span em {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trial-episodes span small {
+  font-size: 10px;
+  color: var(--accent);
+}
+.trial-episodes span.done b {
+  color: var(--ok, #248a52);
 }
 .trial-checks {
   display: grid;
