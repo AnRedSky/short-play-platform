@@ -206,6 +206,10 @@
             <span class="pill" :class="{ accent: sourceReady }">{{ sourceLabel }}</span>
           </div>
           <blockquote class="script-source">{{ sourceSummary }}</blockquote>
+          <div v-if="novelSourceReady" class="script-source-actions">
+            <button type="button" class="btn ghost sm" @click="openChapterView(1)">查看源章节</button>
+            <small>共 {{ novelSource?.chapters?.length ?? 0 }} 章，可核对原文</small>
+          </div>
           <div class="script-input-grid">
             <div><span class="metric-label">题材</span><b>{{ project?.genre || '—' }}</b></div>
             <div><span class="metric-label">受众</span><b>{{ project?.audience || '—' }}</b></div>
@@ -337,22 +341,28 @@
             <div class="script-map-row script-map-head">
               <span>章节</span><span>字数</span><span>起始集</span><span>拆/并集数</span>
             </div>
-            <label v-for="row in mappingRows" :key="row.no" class="script-map-row">
-              <span><b>第 {{ row.no }} 章</b> {{ row.title }}</span>
+            <div v-for="(row, index) in mappingRows" :key="row.no" class="script-map-row">
+              <span>
+                <b>第 {{ row.no }} 章</b> {{ row.title }}
+                <button type="button" class="link-btn script-map-source-link" @click="openChapterView(row.no)">查看原文</button>
+              </span>
               <small>{{ row.words }} 字</small>
-              <select v-model.number="row.fromEpisode" class="field" @change="clampMapping(row)">
-                <option v-for="episode in totalEpisodes" :key="episode" :value="episode">E{{ String(episode).padStart(2, '0') }}</option>
+              <span class="script-map-start">E{{ String(row.fromEpisode).padStart(2, '0') }}</span>
+              <select
+                v-model.number="row.episodeCount"
+                class="field"
+                :aria-label="`第 ${row.no} 章拆并集数`"
+                @change="reflowMapping"
+              >
+                <option v-for="count in mappingMaxCount(index)" :key="count" :value="count">{{ count }} 集</option>
               </select>
-              <select v-model.number="row.episodeCount" class="field" @change="clampMapping(row)">
-                <option v-for="count in totalEpisodes - row.fromEpisode + 1" :key="count" :value="count">{{ count }} 集</option>
-              </select>
-            </label>
+            </div>
           </div>
 
           <div class="script-map-summary">
             <span class="pill" :class="{ accent: mappedEpisodeCount > 0 }">将生成 {{ mappedEpisodeCount }} 集</span>
             <span class="muted">覆盖 E{{ String(mappedStart).padStart(2, '0') }}–E{{ String(mappedEnd).padStart(2, '0') }} · {{ mappingRows.length }} 章拆分/合并</span>
-            <span v-if="mappedEpisodeGap" class="script-map-warning">映射存在空集或重叠；生成后仍需补齐或调整。</span>
+            <span v-if="mappedEpisodeGap" class="script-map-warning">还差 {{ totalEpisodes - mappedEpisodeCount }} 集未覆盖；可增加某章集数，后续起始集会随之顺延。</span>
           </div>
 
           <div class="script-map-options">
@@ -382,6 +392,29 @@
           <button type="button" class="btn primary" :disabled="!canAdapt || adapting" @click="adaptNovelSource">
             {{ adapting ? '生成中…' : `生成 ${mappedEpisodeCount} 集分集稿` }}
           </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="chapterViewOpen" class="modal-backdrop script-editor-backdrop" @click.self="closeChapterView">
+      <div class="modal wide script-chapter-modal" role="dialog" aria-modal="true" aria-label="查看源章节">
+        <div class="modal-head">
+          <div>
+            <h3>第 {{ chapterView?.no ?? 0 }} 章 · {{ chapterView?.title ?? '源章节' }}</h3>
+            <p>《{{ String(novelSource?.title ?? '未命名') }}》 · {{ chapterView?.words ?? 0 }} 字 · 原文仅供核对，不参与版本锁定</p>
+          </div>
+          <button type="button" class="btn ghost" aria-label="关闭源章节" @click="closeChapterView">✕</button>
+        </div>
+        <div class="modal-body script-chapter-body">
+          <pre class="script-chapter-text">{{ chapterView?.content || '这个来源没有保存正文；请重新导入小说全文。' }}</pre>
+        </div>
+        <div class="modal-foot script-chapter-foot">
+          <span class="muted">第 {{ chapterViewIndex + 1 }} / {{ novelSource?.chapters?.length ?? 0 }} 章</span>
+          <div>
+            <button type="button" class="btn" :disabled="chapterViewIndex <= 0" @click="stepChapter(-1)">上一章</button>
+            <button type="button" class="btn" :disabled="chapterViewIndex >= (novelSource?.chapters?.length ?? 1) - 1" @click="stepChapter(1)">下一章</button>
+            <button type="button" class="btn primary" @click="closeChapterView">关闭</button>
+          </div>
         </div>
       </div>
     </div>
@@ -799,9 +832,7 @@ const mappingEpisodeNos = computed(() => {
 const mappedEpisodeCount = computed(() => new Set(mappingEpisodeNos.value).size)
 const mappedStart = computed(() => mappingEpisodeNos.value.length ? Math.min(...mappingEpisodeNos.value) : 0)
 const mappedEnd = computed(() => mappingEpisodeNos.value.length ? Math.max(...mappingEpisodeNos.value) : 0)
-const mappedEpisodeGap = computed(() =>
-  mappedEnd.value > mappedStart.value && mappedEpisodeCount.value < mappedEnd.value - mappedStart.value + 1,
-)
+const mappedEpisodeGap = computed(() => mappedEpisodeCount.value < totalEpisodes.value)
 const canAdapt = computed(() =>
   canGenerate.value
   && novelSourceReady.value
@@ -814,6 +845,29 @@ const canAdapt = computed(() =>
   && mappedEpisodeCount.value > 0
   && !adapting.value,
 )
+const chapterViewOpen = ref(false)
+const chapterViewNo = ref(0)
+const chapterViewIndex = computed(() =>
+  Math.max(0, (novelSource.value?.chapters ?? []).findIndex((chapter) => chapter.no === chapterViewNo.value)),
+)
+const chapterView = computed(() =>
+  (novelSource.value?.chapters ?? []).find((chapter) => chapter.no === chapterViewNo.value) ?? null,
+)
+
+function openChapterView(no = 1) {
+  chapterViewNo.value = no
+  chapterViewOpen.value = true
+}
+
+function closeChapterView() {
+  chapterViewOpen.value = false
+}
+
+function stepChapter(delta: number) {
+  const chapters = novelSource.value?.chapters ?? []
+  const next = chapters[chapterViewIndex.value + delta]
+  if (next) chapterViewNo.value = next.no
+}
 
 function autoEpisodeFor(index: number, total: number, target: number): { from: number; count: number } {
   if (total >= target) {
@@ -826,9 +880,23 @@ function autoEpisodeFor(index: number, total: number, target: number): { from: n
   return { from: offset + 1, count: base + (index < extra ? 1 : 0) }
 }
 
-function clampMapping(row: ChapterMappingRow) {
-  row.fromEpisode = Math.min(Math.max(1, Number(row.fromEpisode)), totalEpisodes.value)
-  row.episodeCount = Math.min(Math.max(1, Number(row.episodeCount)), totalEpisodes.value - row.fromEpisode + 1)
+function mappingMaxCount(index: number): number {
+  const row = mappingRows.value[index]
+  if (!row) return 1
+  const later = mappingRows.value.length - index - 1
+  return Math.max(1, totalEpisodes.value - row.fromEpisode + 1 - later)
+}
+
+function reflowMapping() {
+  let cursor = 1
+  mappingRows.value.forEach((row, index) => {
+    row.fromEpisode = cursor
+    const later = mappingRows.value.length - index - 1
+    const maxCount = Math.max(1, totalEpisodes.value - cursor + 1 - later)
+    const count = Math.max(1, Number(row.episodeCount ?? 1))
+    row.episodeCount = Math.min(count, maxCount)
+    cursor += row.episodeCount
+  })
 }
 
 function blankEpisode(no: number): EpisodeDraft {
@@ -953,14 +1021,13 @@ function openChapterMapping() {
   mappingRows.value = chapters.map((chapter, index) => {
     const auto = autoEpisodeFor(index, chapters.length, totalEpisodes.value)
     const stored = saved.get(chapter.no)
-    const fromEpisode = Number(stored?.fromEpisode ?? stored?.episodeNo ?? auto.from)
-    const episodeCount = Math.max(1, Number(stored?.episodeCount ?? auto.count))
     return {
       ...chapter,
-      fromEpisode: Math.min(Math.max(1, fromEpisode), totalEpisodes.value),
-      episodeCount: Math.min(episodeCount, totalEpisodes.value - Math.min(Math.max(1, fromEpisode), totalEpisodes.value) + 1),
+      fromEpisode: 1,
+      episodeCount: Math.max(1, Number(stored?.episodeCount ?? auto.count)),
     }
   })
+  reflowMapping()
   mapModel.value = scriptModels.includes(String(novelSource.value?.model ?? ''))
     ? String(novelSource.value?.model)
     : scriptModels[0]
@@ -972,8 +1039,9 @@ function autoMapChapters() {
   const chapters = novelSource.value?.chapters ?? []
   mappingRows.value = chapters.map((chapter, index) => {
     const auto = autoEpisodeFor(index, chapters.length, totalEpisodes.value)
-    return { ...chapter, fromEpisode: auto.from, episodeCount: auto.count }
+    return { ...chapter, fromEpisode: 1, episodeCount: auto.count }
   })
+  reflowMapping()
 }
 
 function closeChapterMapping() {
@@ -1475,6 +1543,9 @@ export default { name: 'ScriptWorkspace' }
 .script-map-head { background: var(--surface-2); color: var(--text-3); font-size: 10px; }
 .script-map-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
 .script-map-row span b { color: var(--ink); }
+.script-map-source-link { margin-left: 6px; border: 0; background: transparent; color: var(--accent-ink); font-size: 10px; cursor: pointer; padding: 0; }
+.script-map-source-link:hover { text-decoration: underline; }
+.script-map-start { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); color: var(--ink); font-size: 11px; text-align: center; }
 .script-map-row small { color: var(--text-3); font-size: 10px; }
 .script-map-row .field { padding: 4px 6px; font-size: 11px; }
 .script-map-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 10px; }
@@ -1483,6 +1554,14 @@ export default { name: 'ScriptWorkspace' }
 .script-map-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
 .script-map-overwrite { border-color: color-mix(in srgb, var(--warn, #d97706) 45%, var(--line)); }
 .script-map-hint { color: var(--text-3); font-size: 10px; line-height: 1.55; }
+.script-source-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.script-source-actions small { color: var(--text-3); font-size: 10px; }
+.script-chapter-modal { max-width: 860px; }
+.script-chapter-body { max-height: 62vh; overflow: auto; }
+.script-chapter-text { margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--text-2); font-family: inherit; font-size: 12px; line-height: 1.9; white-space: pre-wrap; word-break: break-word; }
+.script-chapter-foot { display: flex; align-items: center; justify-content: space-between; }
+.script-chapter-foot > div { display: flex; gap: 6px; }
+.script-chapter-foot .muted { color: var(--text-3); font-size: 10px; }
 .script-editor-body { display: grid; gap: 12px; max-height: 68vh; overflow: auto; }
 .script-editor-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; }
 .script-editor-fields label { display: grid; gap: 4px; min-width: 0; }
