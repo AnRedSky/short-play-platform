@@ -5,6 +5,15 @@
 import { http } from '../api/client'
 import { findBreakdownIssues, findShotContractIssues, formatBreakdownIssue, formatShotContractIssue } from '../composables/breakdownGate'
 import { budgetText, budgetUsedUp, findActiveTask } from '../composables/videoGate'
+import {
+  audioAssetBlockReason,
+  dialogueBatchBlockReason,
+  dialogueScopeRows,
+  expiringSoon,
+  extractVoiceProfileId,
+  lipSyncBlockReason,
+  voiceBlockReason,
+} from '../composables/audioGate'
 import type { Row } from '../mock/db'
 import type { DialogField } from '../stores/ui'
 import type { Column } from '../components/ui/DataTable.vue'
@@ -253,6 +262,230 @@ async function regenerateShot(row: Row, ctx: SpecContext) {
   await ctx.reload()
 }
 
+async function audioRows(endpoint: string, project: string, limit = 200): Promise<Row[]> {
+  const result = await http.list<Row>(endpoint, { project, limit })
+  return result.rows
+}
+
+function todayIso(): string {
+  const date = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+async function openDialogueBatch(ctx: SpecContext) {
+  const project = ctx.project.currentId
+  const [profiles, tasks, shots] = await Promise.all([
+    audioRows('/voice-profiles', project),
+    audioRows('/generation-tasks', project, 200),
+    audioRows('/shots', project, 999),
+  ])
+  const pending = dialogueScopeRows(shots, 'pending')
+  ctx.ui.openDialog({
+    title: '批量生成对白',
+    subtitle: pending.length
+      ? `将为全项目 ${pending.length} 个待生成镜头提交配音任务；提交前校验音色授权、预算与同集进行中任务。`
+      : '全项目当前没有待生成镜头，默认按全部镜头提交；会重新生成已有音频并产生费用。',
+    fields: [
+      { key: 'scope', label: '范围', type: 'select', value: pending.length ? 'pending' : 'all', options: [{ value: 'pending', label: '仅未生成镜头' }, { value: 'all', label: '全部镜头' }] },
+      { key: 'profile', label: '音色档案', type: 'select', options: profiles.map((profile) => ({ value: String(profile.id), label: `${profile.id} · ${profile.char}（${profile.status}）` })) },
+      { key: 'note', label: '备注', type: 'textarea', hint: '会写入批量任务的输入说明，不影响单镜头台词。' },
+    ],
+    submitLabel: '提交批量配音',
+    onSubmit: async (values) => {
+      const profile = profiles.find((item) => String(item.id) === String(values.profile))
+      if (!profile) throw new Error('请选择有效的音色档案')
+      const blocked = dialogueBatchBlockReason(shots, profile, ctx.project.current, tasks, values.scope)
+      if (blocked) throw new Error(blocked)
+      const targets = dialogueScopeRows(shots, values.scope)
+      const byEpisode = new Map<number, Row[]>()
+      for (const row of targets) {
+        const ep = Number(row.ep)
+        byEpisode.set(ep, [...(byEpisode.get(ep) ?? []), row])
+      }
+      for (const [ep, list] of byEpisode) {
+        await http.post('/generation/tasks', {
+          project,
+          ep,
+          scene: list[0]?.scene,
+          kind: '音频合成',
+          stage: '音频生产',
+          config: profile.id,
+          input: `批量对白 · ${list.length} 个镜头${values.note ? ` · ${values.note}` : ''}`,
+          output: 'WAV 48kHz · 单轨',
+          status: '排队中',
+          priority: '中',
+          attempt: 1,
+          maxAttempts: 3,
+          est: Math.max(8, list.length * 8),
+        })
+      }
+      ctx.ui.toast(`已提交 ${byEpisode.size} 个批量配音任务，覆盖 ${targets.length} 个镜头`)
+      await ctx.reload()
+    },
+  })
+}
+
+async function submitDialogueForShot(row: Row, ctx: SpecContext) {
+  const project = ctx.project.currentId
+  const profiles = await audioRows('/voice-profiles', project)
+  const tasks = await audioRows('/generation-tasks', project, 100)
+  const profileId = extractVoiceProfileId(row.voice)
+  const matches = profileId
+    ? profiles.filter((item) => String(item.id) === profileId)
+    : profiles.filter((item) => String(row.chars ?? '').split('、').map((char) => char.trim()).includes(String(item.char)))
+  if (matches.length !== 1) {
+    ctx.ui.toast(`镜头 ${row.no} 未匹配到唯一音色档案，不能直接配音；请在声音档案中补充或改用批量配音`, 'bad')
+    return
+  }
+  const profile = matches[0]
+  const blocked = voiceBlockReason(profile)
+  if (blocked) {
+    ctx.ui.toast(blocked, 'bad')
+    return
+  }
+  const active = findActiveTask(tasks, row.ep, row.no, '音频合成')
+  if (active) {
+    ctx.ui.toast(`镜头 ${row.no} 已有进行中的配音任务 ${active.id}，不能重复提交`, 'bad')
+    return
+  }
+  if (budgetUsedUp(ctx.project.current)) {
+    ctx.ui.toast(`预算已用 100%（${budgetText(ctx.project.current)}），不能提交配音`, 'bad')
+    return
+  }
+  const yes = await ctx.ui.confirm(
+    '提交单镜头配音',
+    `将为第 ${row.ep} 集 ${row.no} 使用音色 ${profile.id} 生成对白，预估 8 秒；当前预算占用 ${budgetText(ctx.project.current)}。已有音频版本保留。`,
+  )
+  if (!yes) return
+  await http.post('/generation/tasks', {
+    project,
+    ep: row.ep,
+    scene: row.scene,
+    shot: row.no,
+    kind: '音频合成',
+    stage: '音频生产',
+    config: profile.id,
+    input: String(row.line ?? ''),
+    output: 'WAV 48kHz · 单轨',
+    status: '排队中',
+    priority: '中',
+    attempt: 1,
+    maxAttempts: 3,
+    est: 8,
+  })
+  ctx.ui.toast(`镜头 ${row.no} 的配音任务已提交`)
+  await ctx.reload()
+}
+
+function openVoiceRenewal(row: Row, ctx: SpecContext) {
+  ctx.ui.openDialog({
+    title: `更新音色授权 · ${row.id}`,
+    subtitle: '授权到期日与依据会立即影响后续对白生成；已生成的音频不受影响。',
+    fields: [
+      { key: 'validUntil', label: '授权到期日', type: 'date', required: true, value: String(row.validUntil ?? '') },
+      { key: 'rights', label: '授权依据', type: 'textarea', required: true, value: String(row.rights ?? ''), hint: '需写明商用范围与授权书编号，模糊表述会被阻断。' },
+      { key: 'status', label: '状态', type: 'select', value: String(row.status ?? '启用'), options: [{ value: '启用', label: '启用' }, { value: '停用', label: '停用' }] },
+    ],
+    submitLabel: '保存授权',
+    onSubmit: async (values) => {
+      if (String(values.validUntil) <= todayIso()) throw new Error('授权到期日必须晚于今天')
+      const blocked = voiceBlockReason({ ...row, ...values })
+      if (blocked) throw new Error(blocked)
+      await http.patch(`/voice-profiles/${encodeURIComponent(String(row.id))}`, values)
+      ctx.ui.toast(`音色 ${row.id} 的授权已更新`)
+      await ctx.reload()
+    },
+  })
+}
+
+function openAssetRenewal(row: Row, ctx: SpecContext) {
+  ctx.ui.openDialog({
+    title: `登记音频资产授权 · ${row.id}`,
+    subtitle: '补全授权依据与到期日后，资产才可进入混音与交付。',
+    fields: [
+      { key: 'validUntil', label: '授权到期日', type: 'date', required: true, value: String(row.validUntil ?? '') },
+      { key: 'rights', label: '授权依据', type: 'textarea', required: true, value: String(row.rights ?? ''), hint: '需写明来源、渠道与授权编号。' },
+      { key: 'status', label: '状态', type: 'select', value: '待审核', options: [{ value: '待审核', label: '待审核' }, { value: '已通过', label: '已通过' }] },
+    ],
+    submitLabel: '保存授权',
+    onSubmit: async (values) => {
+      if (String(values.validUntil) <= todayIso()) throw new Error('授权到期日必须晚于今天')
+      const blocked = audioAssetBlockReason({ ...row, ...values, status: String(values.status) })
+      if (blocked) throw new Error(blocked)
+      await http.patch(`/audio-assets/${encodeURIComponent(String(row.id))}`, values)
+      ctx.ui.toast(`音频资产 ${row.id} 的授权已更新`)
+      await ctx.reload()
+    },
+  })
+}
+
+async function submitLipSync(ep: unknown, ctx: SpecContext) {
+  const project = ctx.project.currentId
+  const subtitles = await audioRows('/subtitles', project, 40)
+  const tasks = await audioRows('/generation-tasks', project, 100)
+  const blocked = lipSyncBlockReason(subtitles, tasks, ep, ctx.project.current)
+  if (blocked) {
+    ctx.ui.toast(blocked, 'bad')
+    return
+  }
+  const yes = await ctx.ui.confirm(
+    '提交口型校验',
+    `将为第 ${ep} 集提交口型校验，预估 60 秒；当前预算占用 ${budgetText(ctx.project.current)}。校验失败会阻断该镜头交付。`,
+  )
+  if (!yes) return
+  await http.post('/generation/tasks', {
+    project,
+    ep,
+    kind: '口型校验',
+    stage: '音频生产',
+    input: `第 ${ep} 集字幕与口型`,
+    output: '口型校验报告',
+    status: '排队中',
+    priority: '中',
+    attempt: 1,
+    maxAttempts: 3,
+    est: 60,
+  })
+  ctx.ui.toast(`第 ${ep} 集口型校验任务已提交`)
+  await ctx.reload()
+}
+
+async function openLipSyncPicker(ctx: SpecContext) {
+  const project = ctx.project.currentId
+  const subtitles = await audioRows('/subtitles', project, 80)
+  const episodes = [...new Set(subtitles.filter((row) => Number(row.ep) > 0).map((row) => Number(row.ep)))].sort((a, b) => a - b)
+  ctx.ui.openDialog({
+    title: '提交口型校验',
+    subtitle: '按集提交；字幕缺失、需重做或同集已有进行中任务时会被阻断。',
+    fields: [
+      { key: 'ep', label: '集数', type: 'select', options: episodes.map((ep) => ({ value: String(ep), label: `第 ${ep} 集` })) },
+    ],
+    submitLabel: '提交校验',
+    onSubmit: async (values) => {
+      const subtitlesNow = await audioRows('/subtitles', project, 40)
+      const tasksNow = await audioRows('/generation-tasks', project, 100)
+      const blocked = lipSyncBlockReason(subtitlesNow, tasksNow, values.ep, ctx.project.current)
+      if (blocked) throw new Error(blocked)
+      await http.post('/generation/tasks', {
+        project,
+        ep: values.ep,
+        kind: '口型校验',
+        stage: '音频生产',
+        input: `第 ${values.ep} 集字幕与口型`,
+        output: '口型校验报告',
+        status: '排队中',
+        priority: '中',
+        attempt: 1,
+        maxAttempts: 3,
+        est: 60,
+      })
+      ctx.ui.toast(`第 ${values.ep} 集口型校验任务已提交`)
+      await ctx.reload()
+    },
+  })
+}
+
 const projectOptions = ['SP-26031', 'SP-26028', 'SP-26019', 'SP-26015', 'SP-26011', 'SP-26007', 'SP-26004']
 
 export const SPECS: Record<string, PageSpec> = {
@@ -260,13 +493,13 @@ export const SPECS: Record<string, PageSpec> = {
   '/audio/dialogue': {
     kicker: 'AUDIO / DIALOGUE',
     title: '对白配音',
-    desc: '按镜头台词生成对白；音色档案、情绪与语速来自声音档案，生成结果进入音频资产。',
+    desc: '按镜头台词生成对白；单镜头详情走 L1，配音走 L2；提交前校验音色授权、预算与进行中任务。',
     scoped: true,
     stats: (rows) => [
       { label: '台词镜头', value: rows.length },
       { label: '已通过', value: countOf(rows, 'status', '已通过') },
       { label: '执行中', value: countOf(rows, 'status', '执行中') },
-      { label: '待处理', value: countOf(rows, 'status', '待') },
+      { label: '待处理', value: countOf(rows, 'status', '待生成') },
     ],
     table: {
       endpoint: '/shots',
@@ -282,14 +515,34 @@ export const SPECS: Record<string, PageSpec> = {
       ],
       filters: [{ key: 'status', label: '状态', options: ['待生成', '执行中', '已通过', '已退回'] }],
     },
-    side: (rows) => [
+    rowPanel: {
+      title: '配音镜头详情',
+      hint: '单镜头配音会新建任务并保留已有音频；提交前校验音色授权、预算与进行中任务。',
+      fields: [
+        { key: 'id', label: '镜头 ID' },
+        { key: 'ep', label: '集号' },
+        { key: 'scene', label: '场号' },
+        { key: 'no', label: '镜号' },
+        { key: 'desc', label: '画面描述' },
+        { key: 'line', label: '台词' },
+        { key: 'voice', label: '声音设计' },
+        { key: 'emotion', label: '情绪' },
+        { key: 'duration', label: '时长' },
+        { key: 'status', label: '状态' },
+        { key: 'version', label: '版本' },
+      ],
+    },
+    rowActions: (row) => (String(row.line ?? '').trim() && String(row.line) !== '—'
+      ? [{ label: '配音', permission: 'production.write', run: (ctx) => { void submitDialogueForShot(row, ctx) } }]
+      : []),
+    side: (rows, ctx) => [
       {
-        title: '配音口径',
+        title: '配音准入',
         type: 'kv',
         items: [
-          { label: '音色来源', value: '声音档案 VO-01…VO-04' },
-          { label: '语速基准', value: '0.92 倍速' },
-          { label: '情绪标注', value: '按镜头 emotion 字段' },
+          { label: '预算占用', value: budgetText(ctx.project.current) },
+          { label: '待生成', value: `${dialogueScopeRows(rows, 'pending').length} 个镜头` },
+          { label: '音色来源', value: '声音档案 VO-01…VO-09' },
           { label: '输出格式', value: 'WAV 48kHz · 单轨' },
         ],
       },
@@ -301,20 +554,10 @@ export const SPECS: Record<string, PageSpec> = {
     ],
     actions: [
       {
-        label: '生成对白',
+        label: '批量生成对白',
         tone: 'primary',
         permission: 'production.write',
-        dialog: {
-          title: '生成对白',
-          subtitle: '为当前项目的台词镜头批量提交配音任务。',
-          fields: [
-            { key: 'scope', label: '范围', type: 'select', options: [{ value: 'pending', label: '仅未生成镜头' }, { value: 'all', label: '全部镜头' }] },
-            { key: 'profile', label: '音色档案', type: 'select', options: [{ value: 'VO-01', label: 'VO-01 · 顾沉' }, { value: 'VO-02', label: 'VO-02 · 苏眠' }] },
-            { key: 'note', label: '备注', type: 'textarea' },
-          ],
-        },
-        post: async (values, ctx) => http.post('/generation/tasks', { project: ctx.project.currentId, kind: '音频合成', config: values.profile, input: String(values.scope) }),
-        toast: '配音任务已提交',
+        run: (ctx) => { void openDialogueBatch(ctx) },
       },
     ],
   },
@@ -322,7 +565,7 @@ export const SPECS: Record<string, PageSpec> = {
   '/audio/voice': {
     kicker: 'AUDIO / VOICE',
     title: '声音档案',
-    desc: '角色音色、语速、情绪区间与授权条款；音色复用必须带授权依据。',
+    desc: '角色音色、语速、情绪区间与授权条款；详情走 L1，授权变更走 L2，到期或待复核的音色不能用于生成。',
     scoped: true,
     table: {
       endpoint: '/voice-profiles',
@@ -334,11 +577,40 @@ export const SPECS: Record<string, PageSpec> = {
         col('timbre', '音色'),
         col('rate', '语速'),
         col('emotion', '情绪区间'),
+        col('validUntil', '授权到期', { mono: true }),
         col('status', '状态', { pill: true }),
       ],
     },
+    rowPanel: {
+      title: '音色档案详情',
+      hint: '授权到期日与依据决定该音色能否进入生成；授权变更立即影响后续任务。',
+      fields: [
+        { key: 'id', label: '档案 ID' },
+        { key: 'char', label: '角色' },
+        { key: 'lang', label: '语言' },
+        { key: 'timbre', label: '音色' },
+        { key: 'rate', label: '语速' },
+        { key: 'emotion', label: '情绪区间' },
+        { key: 'coverage', label: '覆盖范围' },
+        { key: 'rights', label: '授权依据' },
+        { key: 'validUntil', label: '授权到期日' },
+        { key: 'status', label: '状态' },
+      ],
+    },
+    rowActions: (row) => [
+      { label: '授权变更', permission: 'production.write', run: (ctx) => openVoiceRenewal(row, ctx) },
+    ],
     side: (rows) => [
-      { title: '授权口径', type: 'kv', items: [{ label: '授权方式', value: '供应商商用条款' }, { label: '留档要求', value: '逐音色留档' }, { label: '可复用', value: `${rows.length} 个档案` }] },
+      {
+        title: '授权口径',
+        type: 'kv',
+        items: [
+          { label: '可复用档案', value: `${rows.filter((row) => !voiceBlockReason(row)).length} 个` },
+          { label: '授权阻断', value: `${rows.filter((row) => voiceBlockReason(row)).length} 个` },
+          { label: '7 天内到期', value: `${rows.filter((row) => expiringSoon(row)).length} 个` },
+          { label: '留档要求', value: '逐音色留档' },
+        ],
+      },
     ],
     actions: [
       {
@@ -347,15 +619,22 @@ export const SPECS: Record<string, PageSpec> = {
         permission: 'production.write',
         dialog: {
           title: '新建音色档案',
+          subtitle: '新音色必须登记授权依据与到期日，否则不能进入对白生成。',
           fields: [
             { key: 'char', label: '角色', required: true },
             { key: 'lang', label: '语言', type: 'select', options: [{ value: '普通话', label: '普通话' }] },
             { key: 'timbre', label: '音色描述', required: true },
             { key: 'rate', label: '语速', placeholder: '0.92' },
+            { key: 'validUntil', label: '授权到期日', type: 'date', required: true, hint: '必须晚于今天。' },
             { key: 'rights', label: '授权依据', type: 'textarea', required: true },
           ],
         },
-        post: async (values, ctx) => http.post('/voice-profiles', { ...values, project: ctx.project.currentId, status: '启用' }),
+        post: async (values, ctx) => {
+          if (String(values.validUntil) <= todayIso()) throw new Error('授权到期日必须晚于今天')
+          const blocked = voiceBlockReason({ id: '新音色', status: '启用', rights: values.rights, validUntil: values.validUntil })
+          if (blocked) throw new Error(blocked)
+          return http.post('/voice-profiles', { ...values, project: ctx.project.currentId, status: '启用' })
+        },
         toast: '音色档案已创建',
       },
     ],
@@ -364,7 +643,7 @@ export const SPECS: Record<string, PageSpec> = {
   '/audio/bgm': {
     kicker: 'AUDIO / MUSIC',
     title: '配乐与音效',
-    desc: '配乐、音效与底噪的来源、授权到期与混音口径。',
+    desc: '配乐、音效与底噪的来源、授权到期与混音口径；详情走 L1，补授权走 L2，授权不完整的资产不能进入混音。',
     scoped: true,
     table: {
       endpoint: '/audio-assets',
@@ -375,11 +654,43 @@ export const SPECS: Record<string, PageSpec> = {
         col('name', '名称'),
         col('source', '来源'),
         col('rights', '授权'),
+        col('validUntil', '授权到期', { mono: true }),
         col('used', '使用位置'),
         col('status', '状态', { pill: true }),
       ],
     },
-    side: () => [{ title: '混音口径', type: 'kv', items: [{ label: '响度', value: '−18 LUFS' }, { label: '对白回避', value: '侧链回避已开启' }, { label: '授权到期', value: '逐条登记' }] }],
+    rowPanel: {
+      title: '音频资产详情',
+      hint: '授权依据与到期日决定资产能否用于混音与交付；补授权后会进入待审核状态。',
+      fields: [
+        { key: 'id', label: '资产 ID' },
+        { key: 'type', label: '类型' },
+        { key: 'name', label: '名称' },
+        { key: 'source', label: '来源' },
+        { key: 'rights', label: '授权依据' },
+        { key: 'validUntil', label: '授权到期日' },
+        { key: 'used', label: '使用位置' },
+        { key: 'mix', label: '混音口径' },
+        { key: 'status', label: '状态' },
+      ],
+    },
+    rowActions: (row) => {
+      const blocked = audioAssetBlockReason(row)
+      if (!blocked && !expiringSoon(row)) return []
+      return [{ label: blocked ? '补授权' : '授权续期', permission: 'production.write', run: (ctx) => openAssetRenewal(row, ctx) }]
+    },
+    side: (rows) => [
+      {
+        title: '授权与混音',
+        type: 'kv',
+        items: [
+          { label: '阻断资产', value: `${rows.filter((row) => audioAssetBlockReason(row)).length} 条` },
+          { label: '7 天内到期', value: `${rows.filter((row) => expiringSoon(row)).length} 条` },
+          { label: '响度', value: '−18 LUFS' },
+          { label: '对白回避', value: '侧链回避已开启' },
+        ],
+      },
+    ],
     actions: [
       {
         label: '登记音频资产',
@@ -387,14 +698,21 @@ export const SPECS: Record<string, PageSpec> = {
         permission: 'production.write',
         dialog: {
           title: '登记音频资产',
+          subtitle: '登记来源、授权依据与到期日；授权不完整的资产会被阻断。',
           fields: [
             { key: 'type', label: '类型', type: 'select', options: [{ value: '配乐', label: '配乐' }, { value: '音效', label: '音效' }] },
             { key: 'name', label: '名称', required: true },
             { key: 'source', label: '来源', required: true },
-            { key: 'rights', label: '授权依据', required: true },
+            { key: 'validUntil', label: '授权到期日', type: 'date', required: true, hint: '必须晚于今天。' },
+            { key: 'rights', label: '授权依据', type: 'textarea', required: true },
           ],
         },
-        post: async (values, ctx) => http.post('/audio-assets', { ...values, project: ctx.project.currentId, status: '待审核' }),
+        post: async (values, ctx) => {
+          if (String(values.validUntil) <= todayIso()) throw new Error('授权到期日必须晚于今天')
+          const blocked = audioAssetBlockReason({ id: '新资产', status: '待审核', rights: values.rights, validUntil: values.validUntil })
+          if (blocked) throw new Error(blocked)
+          return http.post('/audio-assets', { ...values, project: ctx.project.currentId, status: '待审核', mix: '待混音' })
+        },
         toast: '音频资产已登记',
       },
     ],
@@ -403,12 +721,13 @@ export const SPECS: Record<string, PageSpec> = {
   '/audio/subtitle': {
     kicker: 'AUDIO / SUBTITLE',
     title: '字幕与口型',
-    desc: '字幕时基、错字校对、样式与口型对齐校验；口型失败必须阻断该镜头交付。',
+    desc: '字幕时基、错字校对、样式与口型对齐校验；详情走 L1，口型校验走 L2；字幕缺失或需重做时阻断提交。',
     scoped: true,
     stats: (rows) => [
       { label: '字幕版本', value: rows.length },
       { label: '已通过', value: countOf(rows, 'status', '已通过') },
-      { label: '待校对', value: countOf(rows, 'status', '待') },
+      { label: '待校对', value: countOf(rows, 'status', '处理中') },
+      { label: '需重做', value: countOf(rows, 'status', '需重做') },
     ],
     table: {
       endpoint: '/subtitles',
@@ -423,17 +742,41 @@ export const SPECS: Record<string, PageSpec> = {
         col('status', '状态', { pill: true }),
       ],
     },
-    side: () => [
-      { title: '字幕规范', type: 'kv', items: [{ label: '字号', value: '34' }, { label: '安全区', value: '12%' }, { label: '单行字数', value: '≤ 14 字' }, { label: '时基', value: '整数毫秒，无累计漂移' }] },
+    rowPanel: {
+      title: '字幕版本详情',
+      hint: '口型校验按集提交；字幕需重做、缺失或同集已有进行中任务时会被阻断。',
+      fields: [
+        { key: 'id', label: '记录 ID' },
+        { key: 'ep', label: '集号' },
+        { key: 'version', label: '版本' },
+        { key: 'lines', label: '行数' },
+        { key: 'timeline', label: '时基' },
+        { key: 'asr', label: '校对结果' },
+        { key: 'style', label: '样式规范' },
+        { key: 'status', label: '状态' },
+      ],
+    },
+    rowActions: (row) => [
+      { label: '口型校验', permission: 'production.write', run: (ctx) => { void submitLipSync(row.ep, ctx) } },
+    ],
+    side: (rows, ctx) => [
+      {
+        title: '字幕与口型准入',
+        type: 'kv',
+        items: [
+          { label: '预算占用', value: budgetText(ctx.project.current) },
+          { label: '已通过字幕', value: `${rows.filter((row) => String(row.status) === '已通过').length} 集` },
+          { label: '需重做', value: `${rows.filter((row) => String(row.status) === '需重做').length} 集` },
+          { label: '时基', value: '整数毫秒，无累计漂移' },
+        ],
+      },
     ],
     actions: [
       {
         label: '提交口型校验',
         tone: 'primary',
         permission: 'production.write',
-        dialog: { title: '提交口型校验', fields: [{ key: 'ep', label: '集数', type: 'select', options: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `第 ${i + 1} 集` })) }] },
-        post: async (values, ctx) => http.post('/generation/tasks', { project: ctx.project.currentId, kind: '口型校验', ep: values.ep }),
-        toast: '口型校验任务已提交',
+        run: (ctx) => { void openLipSyncPicker(ctx) },
       },
     ],
   },
