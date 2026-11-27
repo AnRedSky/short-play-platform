@@ -200,6 +200,9 @@ test.describe('工作室 mock 全流程', () => {
     await expect(page.locator('.card-title', { hasText: '剧本创作 · 阶段工作区' })).toBeVisible()
     await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBe(0)
     await expect(page.getByRole('button', { name: /剧本版本 →/ })).toBeVisible()
+    await expect(page.locator('.stage-head')).toContainText('下一阶段「导演规划」')
+    await expect(page.locator('.stage-head-actions')).toContainText('剧本审核')
+    await expect(page.locator('.stage-links')).toHaveCount(0)
     await expect(page.locator('.stage-content')).toContainText('剧本版本')
     await expect(page.locator('.stage-kpi')).not.toHaveCount(0)
 
@@ -217,6 +220,7 @@ test.describe('工作室 mock 全流程', () => {
       await expect(page.locator('.stage-kpi')).not.toHaveCount(0)
       await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBe(0)
     }
+    await expect(page.locator('.stage-head')).toContainText('进入「视频生产」')
 
     const productionStages = [
       ['视频生产', 'E3', '素材生产'],

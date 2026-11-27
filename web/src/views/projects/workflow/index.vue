@@ -176,12 +176,19 @@
             </template>
 
             <div v-else-if="selectedStage" class="card">
-              <div class="card-head">
-                <div>
-                  <h3 class="card-title">{{ selectedStage.name }} · 阶段工作区</h3>
-                  <p class="card-sub">{{ stageStateText(selectedStage.state) }} · 由阶段管线切换，迁移仍以服务端状态为准</p>
+              <div class="card-head stage-head">
+                <div class="stage-head-main">
+                  <div class="stage-title-row">
+                    <h3 class="card-title">{{ selectedStage.name }} · 阶段工作区</h3>
+                    <span class="pill" :class="{ accent: selectedStage.state === 'now' }">{{ stageStateText(selectedStage.state) }}</span>
+                  </div>
+                  <p class="card-sub">{{ stageFocusText }}</p>
                 </div>
-                <span class="pill" :class="{ accent: selectedStage.state === 'now' }">{{ stageStateText(selectedStage.state) }}</span>
+                <div v-if="stageLinks.length" class="stage-head-actions">
+                  <button v-for="link in stageLinks" :key="link.path" class="btn stage-link" @click="go(link.path)">
+                    {{ link.label }} →
+                  </button>
+                </div>
               </div>
 
               <div class="stage-meta">
@@ -199,12 +206,6 @@
                 @navigate="go"
                 @refresh="reload"
               />
-
-              <div v-if="stageLinks.length" class="stage-links">
-                <button v-for="link in stageLinks" :key="link.path" class="btn" @click="go(link.path)">
-                  {{ link.label }} →
-                </button>
-              </div>
             </div>
 
             <div v-if="projectActions.length" class="card project-action-strip">
@@ -460,6 +461,22 @@ const reviews = computed<Row[]>(() => (summary.value.reviews as Row[] | undefine
 const allTasks = computed<Row[]>(() => (summary.value.tasks as Row[] | undefined) ?? [])
 
 const stageLinks = computed(() => stageLinksMap[stageKey.value] ?? [])
+const nextStage = computed(() => {
+  const index = stages.value.findIndex((stage) => stage.key === selectedStage.value?.key)
+  return index >= 0 ? (stages.value[index + 1] ?? null) : null
+})
+const stageFocusText = computed(() => {
+  const stage = selectedStage.value
+  if (!stage) return ''
+  if (stage.state === 'done') {
+    return `本阶段已完成，产出已冻结${nextStage.value ? `；下一阶段「${nextStage.value.name}」` : ''}。如需变更，需重新走本阶段。`
+  }
+  if (stage.state === 'now') {
+    return `正在推进；完成「${stage.gate}」后进入${nextStage.value ? `「${nextStage.value.name}」` : '交付归档'}。`
+  }
+  if (stage.state === 'blocked') return `当前受阻；先处理阻断项，再继续「${stage.gate}」。`
+  return `待开始${nextStage.value ? `；前置阶段完成后进入「${stage.name}」` : ''}。`
+})
 
 function stageStateText(state?: StageRow['state']) {
   if (state === 'overview') return '项目汇总'
@@ -905,6 +922,31 @@ onMounted(async () => {
   gap: 6px;
   flex-wrap: wrap;
 }
+.stage-head {
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.stage-head-main {
+  flex: 1;
+  min-width: 0;
+}
+.stage-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.stage-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.stage-head-actions .stage-link {
+  padding: 4px 8px;
+  font-size: 10px;
+}
 .stage-meta {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -920,11 +962,6 @@ onMounted(async () => {
   color: var(--ink);
   font-weight: 650;
 }
-.stage-body {
-  display: grid;
-  gap: 10px;
-  margin-top: 14px;
-}
 .stage-block-title {
   font-size: 12px;
   font-weight: 700;
@@ -932,10 +969,6 @@ onMounted(async () => {
   display: flex;
   align-items: baseline;
   gap: 8px;
-}
-.stage-list {
-  display: grid;
-  gap: 4px;
 }
 .stage-row-btn {
   width: 100%;
@@ -949,28 +982,6 @@ onMounted(async () => {
   font-size: 11px;
   color: var(--muted);
   line-height: 1.55;
-}
-.stage-facts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-}
-.stage-facts b {
-  display: block;
-  margin-top: 3px;
-  font-size: 13px;
-  color: var(--ink);
-}
-.stage-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
 }
 .project-action-strip {
   padding: 12px 14px;
@@ -1004,7 +1015,6 @@ onMounted(async () => {
 }
 @media (max-width: 900px) {
   .stage-meta,
-  .stage-facts,
   .overview-split,
   .batch-overview-grid {
     grid-template-columns: 1fr;
