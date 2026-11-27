@@ -1001,6 +1001,133 @@ function costsSummary(): Envelope {
 }
 
 /* ------------------------------------------------------------------ *
+ * 创意策划工作区
+ * ------------------------------------------------------------------ */
+
+function requireText(value: unknown, label: string): string {
+  const text = String(value ?? '').trim()
+  if (!text) throw new MockHttpError(422, 'missing_input', `${label}不能为空`)
+  return text
+}
+
+function briefVersionNumber(value: unknown): number {
+  const match = String(value ?? '').match(/(\d+)/)
+  return match ? Number(match[1]) : 0
+}
+
+function createBrief(body: Row): Envelope {
+  const projectId = String(body.project ?? '')
+  if (!projectId) throw new MockHttpError(422, 'missing_project', '缺少项目编号')
+  const project = projectOf(projectId)
+  const note = requireText(body.note, '创意说明')
+  const constraints = requireText(body.constraints, '内容约束')
+  const genre = requireText(body.genre, '题材')
+  const audience = requireText(body.audience, '目标受众')
+  const style = requireText(body.style, '影像风格')
+
+  const versions = rows('briefs').filter((row) => row.project === projectId)
+  const version = `v${versions.reduce((max, row) => Math.max(max, briefVersionNumber(row.version)), 0) + 1}`
+  const projectCode = projectId.split('-')[1] ?? projectId
+  const sequence = versions.reduce((max, row) => {
+    const suffix = String(row.id).split('-').pop() ?? ''
+    return Math.max(max, Number(suffix) || 0)
+  }, 0) + 1
+  const brief: Row = {
+    id: `CB-${projectCode}-${String(sequence).padStart(2, '0')}`,
+    project: projectId,
+    version,
+    genre,
+    audience,
+    duration: String(body.duration ?? project.duration ?? ''),
+    ratio: String(body.ratio ?? project.ratio ?? ''),
+    language: String(body.language ?? project.language ?? ''),
+    style,
+    constraints,
+    note,
+    mode: String(body.mode ?? '自由描述'),
+    status: String(body.status ?? '草稿'),
+    by: String(currentIdentity().name ?? '项目负责人').split('·')[0].trim(),
+    at: now(),
+  }
+  rows('briefs').push(brief)
+
+  if (body.applyProject !== false) {
+    Object.assign(project, {
+      genre,
+      audience,
+      duration: brief.duration,
+      ratio: brief.ratio,
+      language: brief.language,
+      style,
+      constraints,
+    })
+  }
+  store.persist()
+  return ok(brief)
+}
+
+function generateCreativePlans(body: Row): Envelope {
+  const projectId = String(body.project ?? '')
+  if (!projectId) throw new MockHttpError(422, 'missing_project', '缺少项目编号')
+  projectOf(projectId)
+  const idea = requireText(body.idea, '创意说明')
+  const rawCount = Number(body.count ?? 3)
+  const count = Math.min(4, Math.max(2, Number.isFinite(rawCount) ? Math.round(rawCount) : 3))
+  const projectCode = projectId.split('-')[1] ?? projectId
+  const existing = rows('creativePlans').filter((row) => row.project === projectId)
+  const used = new Set(existing.map((row) => String(row.id).split('-').pop() ?? ''))
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+  const parts = idea.split(/[，。；、,.;]/).map((part) => part.trim()).filter(Boolean)
+  const seed = (parts[0]?.length && parts[0].length >= 4 ? parts[0] : parts.slice(0, 2).join(' · ')) || idea.slice(0, 12)
+  const variants = [
+    { tag: '冷叙事', theme: '用留白和克制替代解释，把情绪压到细节里', hook: '开场 3 秒只给一封信的落款，不给写信人正脸', risk: '前两集信息密度偏低，需要靠悬念镜头维持留存' },
+    { tag: '强冲突', theme: '把错认与误会推到不可挽回，再用代价完成反转', hook: '主角当众读错信，第一句就改变两个人的关系', risk: '冲突强度高，需控制反派动机避免工具化' },
+    { tag: '双线反转', theme: '两条时间线互相改写，让同一封信有两种真相', hook: '同一句台词在现在与过去之间产生完全相反的指向', risk: '时间线切换密集，剪辑与字幕需强提示' },
+    { tag: '克制收束', theme: '把真相留到最后一封信，用余味替代强刺激', hook: '全场安静，只有拆信的声音和一次呼吸', risk: '收束偏慢，适合长剧集但不适合强节奏投放' },
+  ]
+  const group = Math.floor(existing.length / variants.length) + 1
+  const created: Row[] = []
+  for (let index = 0; index < count; index += 1) {
+    const letter = letters.find((item) => !used.has(item))
+    if (!letter) break
+    used.add(letter)
+    const variant = variants[index % variants.length]
+    const plan: Row = {
+      id: `CP-${projectCode}-${letter}`,
+      project: projectId,
+      title: `${seed} · ${variant.tag}${group > 1 ? ` ${group}` : ''}`,
+      selling: `以「${idea.slice(0, 20)}」为内核，沿${variant.tag}路线组织前三集钩子与人物关系。`,
+      theme: variant.theme,
+      hook: variant.hook,
+      score: 88 - index * 2 + (group - 1),
+      chosen: false,
+      risk: variant.risk,
+      mode: String(body.mode ?? '自由描述'),
+      idea,
+      by: String(currentIdentity().name ?? '项目负责人').split('·')[0].trim(),
+      at: now(),
+    }
+    rows('creativePlans').push(plan)
+    created.push(plan)
+  }
+  store.persist()
+  return ok(created)
+}
+
+function selectCreativePlan(id: string, body: Row): Envelope {
+  const plan = byId('creativePlans', id)
+  const projectId = String(body.project ?? plan.project ?? '')
+  if (!projectId || plan.project !== projectId) {
+    throw new MockHttpError(422, 'project_mismatch', '方案不属于当前项目')
+  }
+  rows('creativePlans')
+    .filter((row) => row.project === projectId)
+    .forEach((row) => { row.chosen = row.id === id })
+  store.persist()
+  return ok(plan)
+}
+
+/* ------------------------------------------------------------------ *
  * 鉴权
  * ------------------------------------------------------------------ */
 
@@ -1045,6 +1172,9 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
   { method: 'GET', pattern: /^\/workspace\/home$/, handler: () => workspaceHome() },
   { method: 'GET', pattern: /^\/assets\/([^/]+)\/references$/, handler: ({ id }) => assetReferences(decodeURIComponent(id)) },
   { method: 'POST', pattern: /^\/assets$/, handler: ({ body }) => createAsset(body) },
+  { method: 'POST', pattern: /^\/briefs$/, handler: ({ body }) => createBrief(body) },
+  { method: 'POST', pattern: /^\/creative-plans\/generate$/, handler: ({ body }) => generateCreativePlans(body) },
+  { method: 'POST', pattern: /^\/creative-plans\/([^/]+)\/select$/, handler: ({ id, body }) => selectCreativePlan(decodeURIComponent(id), body) },
   { method: 'POST', pattern: /^\/providers\/test-all$/, handler: () => testAllProviders() },
   { method: 'POST', pattern: /^\/providers\/([^/]+)\/test$/, handler: ({ id }) => testProvider(decodeURIComponent(id)) },
   { method: 'POST', pattern: /^\/model-profiles$/, handler: ({ body }) => createModelProfile(body) },

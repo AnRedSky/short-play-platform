@@ -147,15 +147,17 @@
               </div>
 
               <StageWorkspace
+                ref="briefWorkspaceRef"
                 :stage-key="stageKey"
                 :project="projectRow"
                 :summary="summary"
                 @open-script="openScript"
                 @open-episode="openEpisode"
                 @navigate="go"
+                @refresh="reload"
               />
 
-              <div class="stage-links">
+              <div v-if="stageLinks.length" class="stage-links">
                 <button v-for="link in stageLinks" :key="link.path" class="btn" @click="go(link.path)">
                   {{ link.label }} →
                 </button>
@@ -249,12 +251,9 @@ const summary = ref<Row>({})
 const timeline = ref<Row[]>([])
 const blockers = ref<Row[]>([])
 const scrollRef = ref<HTMLElement | null>(null)
+const briefWorkspaceRef = ref<{ openGate: () => void } | null>(null)
 
 const stageLinksMap: Record<string, Array<{ label: string; path: string }>> = {
-  brief: [
-    { label: '创意设定', path: '/creation/brief' },
-    { label: '创意方案', path: '/creation/plan' },
-  ],
   script: [
     { label: '剧本版本', path: '/creation/script' },
     { label: '剧本审核', path: '/creation/review' },
@@ -462,6 +461,10 @@ const { run: runGateAction } = useGateActionRunner({
 })
 
 function runAction(action: GateAction) {
+  if (action.key === 'confirmBrief' && stageKey.value === 'brief' && briefWorkspaceRef.value) {
+    briefWorkspaceRef.value.openGate()
+    return
+  }
   return runGateAction(action)
 }
 

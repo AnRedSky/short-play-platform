@@ -112,7 +112,35 @@ test.describe('工作室 mock 全流程', () => {
     expect(code).toBeTruthy()
 
     await runGate(page, '启动创意策划', '创意策划中')
-    await runGate(page, '确认创意方案', '剧本创作中')
+
+    await page.locator('.stage-card').filter({ hasText: '创意策划' }).click()
+    await page.getByRole('button', { name: '编辑为新版本' }).first().click()
+    const briefModal = page.locator('.modal').last()
+    await briefModal.locator('#dlg-audience').selectOption('25–40 岁女性')
+    await briefModal.locator('#dlg-style').selectOption('冷灰低饱和 · 手持近景')
+    await briefModal.locator('#dlg-constraints').fill('不出现真实品牌，不使用真实案件细节。')
+    await briefModal.locator('#dlg-note').fill('雨夜错认来信，前三集每集一个钩子，最后用一封信完成反转。')
+    await briefModal.getByRole('button', { name: '保存为新版本' }).click()
+    await expect(page.getByText('已保存新的创意版本')).toBeVisible()
+
+    await page.getByRole('button', { name: '生成候选方向' }).click()
+    const generateModal = page.locator('.modal').last()
+    await generateModal.locator('#dlg-idea').fill('雨夜错认来信，冷叙事，每集以信件推进。')
+    await generateModal.getByRole('button', { name: '生成候选' }).click()
+    await expect(page.locator('.brief-plan-card')).toHaveCount(3)
+
+    await page.locator('.brief-plan-card').first().getByRole('button', { name: '设为选定' }).click()
+    const chooseModal = page.locator('.modal').last()
+    await expect(chooseModal).toContainText('选定这个创意方向')
+    await chooseModal.getByRole('button', { name: '确认' }).click()
+    await expect(page.locator('.brief-plan-card').first()).toContainText('已选定')
+
+    await page.getByRole('button', { name: '确认创意方案' }).first().click()
+    const gateModal = page.locator('.modal').last()
+    await expect(gateModal.locator('.brief-checks li.ok')).toHaveCount(5)
+    await gateModal.getByRole('button', { name: '确认并交棒' }).click()
+    await expect(page.locator('main')).toContainText('· 剧本创作中 ·')
+
     await runGate(page, '提交剧本审核', '待剧本审核')
     await runGate(page, '审核通过并锁定', '生产准备中')
     await runGate(page, '固化镜头计划', '生产中')
@@ -161,7 +189,7 @@ test.describe('工作室 mock 全流程', () => {
     await expect.poll(() => head.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(64)
 
     const stageWorkspaces = [
-      ['创意策划', '创意基线'],
+      ['创意策划', '创意输入基线'],
       ['剧本创作', '剧本版本'],
       ['导演规划', '项目镜头契约'],
       ['视频生产', '生产队列'],
@@ -184,5 +212,30 @@ test.describe('工作室 mock 全流程', () => {
     await page.goto('/projects/detail')
     await expect(page).toHaveURL(/\/projects\/workflow/)
     await expect(page.locator('main h1')).toContainText('· 项目详情')
+  })
+
+  test('创意策划的方案、版本与确认门禁都走居中弹窗', async ({ page }) => {
+    await resetStudio(page)
+    await page.goto('/projects/workflow?stage=brief')
+    await expect(page.locator('.stage-content')).toContainText('创意输入基线')
+    await expect(page.locator('.stage-links')).toHaveCount(0)
+    await expect(page.locator('.brief-plan-card')).toHaveCount(2)
+
+    await page.locator('.brief-plan-card').first().locator('.brief-plan-head').click()
+    const planModal = page.locator('.modal').last()
+    await expect(planModal).toContainText('创意方向详情')
+    await expect(planModal).toContainText('核心卖点')
+    await planModal.getByRole('button', { name: '关闭弹窗' }).click()
+
+    await page.locator('tbody tr').first().click()
+    const versionModal = page.locator('.modal').last()
+    await expect(versionModal).toContainText('简报版本')
+    await expect(versionModal).toContainText('内容约束与禁区')
+    await versionModal.getByRole('button', { name: '关闭弹窗' }).click()
+
+    await page.getByRole('button', { name: '确认创意方案' }).first().click()
+    const gateModal = page.locator('.modal').last()
+    await expect(gateModal).toContainText('创意已冻结')
+    await expect(gateModal.getByRole('button', { name: '创意已冻结' })).toBeDisabled()
   })
 })

@@ -95,6 +95,9 @@ exports[`B-14 service contract > runs every service function against mock and re
       ],
     ],
   },
+  "creation.createBrief": {
+    "kind": "object",
+  },
   "creation.createScript": {
     "kind": "object",
   },
@@ -110,6 +113,23 @@ exports[`B-14 service contract > runs every service function against mock and re
       [
         "id",
         "string",
+      ],
+    ],
+  },
+  "creation.generateCreativePlans": {
+    "kind": "array",
+    "row": [
+      [
+        "id",
+        "string",
+      ],
+      [
+        "title",
+        "string",
+      ],
+      [
+        "chosen",
+        "boolean",
       ],
     ],
   },
@@ -175,6 +195,9 @@ exports[`B-14 service contract > runs every service function against mock and re
         "string",
       ],
     ],
+  },
+  "creation.selectCreativePlan": {
+    "kind": "object",
   },
   "creation.updateBrief": {
     "kind": "object",

@@ -1,6 +1,6 @@
 <template>
   <div class="stage-content">
-    <div class="stage-kpis">
+    <div v-if="stageKey !== 'brief'" class="stage-kpis">
       <div v-for="item in kpis" :key="item.label" class="stage-kpi">
         <span>{{ item.label }}</span>
         <b>{{ item.value }}</b>
@@ -10,66 +10,7 @@
 
     <div class="stage-main">
       <template v-if="stageKey === 'brief'">
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <h3 class="card-title">创意基线</h3>
-              <p class="card-sub">题材、受众、风格与约束来自项目档案；确认后成为剧本与生成的统一输入。</p>
-            </div>
-            <span class="pill">{{ latestBrief?.version || '未建立' }}</span>
-          </div>
-          <div class="kv-grid">
-            <div><span class="metric-label">题材</span><b>{{ project?.genre || '—' }}</b></div>
-            <div><span class="metric-label">目标受众</span><b>{{ project?.audience || '不限定' }}</b></div>
-            <div><span class="metric-label">单集时长</span><b>{{ project?.duration || '—' }}</b></div>
-            <div><span class="metric-label">画幅</span><b>{{ project?.ratio || '—' }}</b></div>
-            <div><span class="metric-label">语言</span><b>{{ project?.language || '—' }}</b></div>
-            <div><span class="metric-label">影像风格</span><b>{{ project?.style || '不限定' }}</b></div>
-            <div class="wide"><span class="metric-label">内容约束</span><b>{{ project?.constraints || '—' }}</b></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <h3 class="card-title">创意方向</h3>
-              <p class="card-sub">{{ creativePlans.length }} 个方案；评分、卖点、主题与风险同一口径对比。</p>
-            </div>
-          </div>
-          <div class="plan-grid">
-            <article v-for="plan in creativePlans" :key="plan.id" class="plan-card" :class="{ chosen: plan.chosen }">
-              <div class="plan-head">
-                <b>{{ plan.title }}</b>
-                <span class="pill" :class="{ accent: plan.chosen }">{{ plan.chosen ? '已选用' : '候选' }}</span>
-              </div>
-              <p class="plan-selling">{{ plan.selling }}</p>
-              <dl class="kv-lite">
-                <dt>主题</dt><dd>{{ plan.theme }}</dd>
-                <dt>开场钩子</dt><dd>{{ plan.hook }}</dd>
-                <dt>已知风险</dt><dd>{{ plan.risk }}</dd>
-                <dt>评分</dt><dd>{{ plan.score }} / 100</dd>
-              </dl>
-            </article>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-head">
-            <div><h3 class="card-title">创意简报版本</h3><p class="card-sub">每次确认生成新版本，历史版本保留可追溯。</p></div>
-          </div>
-          <DataTable
-            :columns="[
-              { key: 'version', label: '版本' },
-              { key: 'mode', label: '输入方式' },
-              { key: 'status', label: '状态', pill: true },
-              { key: 'by', label: '维护人' },
-              { key: 'at', label: '更新时间' },
-            ]"
-            :rows="briefs"
-            row-key="id"
-            empty-title="暂无创意简报"
-          />
-        </div>
+        <BriefWorkspace ref="briefRef" :project="project" :summary="summary" @refresh="$emit('refresh')" />
       </template>
 
       <template v-else-if="stageKey === 'script'">
@@ -452,27 +393,8 @@
       </template>
     </div>
 
-    <div class="stage-side">
-      <template v-if="stageKey === 'brief'">
-        <div class="card">
-          <div class="card-head"><h3 class="card-title">确认条件</h3><span class="pill" :class="{ accent: briefReadyCount === 5 }">{{ briefReadyCount }} / 5</span></div>
-          <div class="check-grid">
-            <div v-for="item in briefChecks" :key="item.label" class="check-item">
-              <i :class="{ on: item.ok }">{{ item.ok ? '✓' : '' }}</i>
-              <span>{{ item.label }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h3 class="card-title">输入方式</h3><span class="card-sub">{{ briefModes.length }} 种</span></div>
-          <div v-for="mode in briefModes" :key="mode.mode" class="list-row">
-            <span class="k">{{ mode.mode }}</span>
-            <span class="v">{{ mode.input }}</span>
-          </div>
-        </div>
-      </template>
-
-      <template v-else-if="stageKey === 'script'">
+    <div v-if="stageKey !== 'brief'" class="stage-side">
+      <template v-if="stageKey === 'script'">
         <div class="card">
           <div class="card-head"><h3 class="card-title">下游准入</h3></div>
           <div class="check-grid">
@@ -641,11 +563,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { Row } from '../../../mock/db'
 import DataTable from '../../../components/ui/DataTable.vue'
 import StatusPill from '../../../components/ui/StatusPill.vue'
 import EmptyState from '../../../components/ui/EmptyState.vue'
+import BriefWorkspace from './BriefWorkspace.vue'
 
 const props = defineProps<{
   stageKey: string
@@ -657,15 +580,16 @@ const emit = defineEmits<{
   (event: 'open-script', row: Row): void
   (event: 'open-episode', row: Row): void
   (event: 'navigate', path: string): void
+  (event: 'refresh'): void
 }>()
+
+const briefRef = ref<{ openGate: () => void } | null>(null)
+defineExpose({ openGate: () => briefRef.value?.openGate() })
 
 function list(key: string): Row[] {
   return (props.summary[key] as Row[] | undefined) ?? []
 }
 
-const briefs = computed(() => list('briefs'))
-const creativePlans = computed(() => list('creativePlans'))
-const briefModes = computed(() => list('briefModes'))
 const scripts = computed(() => list('scripts'))
 const scriptDiffs = computed(() => list('scriptDiffs'))
 const scriptReviews = computed(() => list('reviews').filter((row) => String(row.node ?? '').includes('剧本')))
@@ -706,10 +630,8 @@ const deliveries = computed(() => list('deliveries'))
 const deliveryChecklist = computed(() => list('deliveryChecklist'))
 const reviewChecklist = computed(() => list('reviewChecklist'))
 
-const latestBrief = computed(() => briefs.value[0] ?? null)
 const lockedScript = computed(() => scripts.value.find((row) => row.locked) ?? scripts.value[0] ?? null)
 const currentPlan = computed(() => plans.value[0] ?? null)
-const chosenPlans = computed(() => creativePlans.value.filter((row) => row.chosen).length)
 const videoTasks = computed(() => tasks.value.filter((row) => String(row.stage) === '视频生产'))
 const videoExecuting = computed(() => videoTasks.value.filter((row) => String(row.status) === '执行中').length)
 const videoFailed = computed(() => videoTasks.value.filter((row) => String(row.status) === '失败'))
@@ -738,15 +660,6 @@ const deliveryReadyCount = computed(() => deliveryChecklist.value.filter((row) =
 const budgetPercent = computed(() =>
   Math.min(100, Math.round((Number(props.project?.actual || 0) / Math.max(1, Number(props.project?.budget || 1))) * 100)),
 )
-
-const briefChecks = computed(() => [
-  { label: '创意说明已填写', ok: Boolean(latestBrief.value?.note) },
-  { label: '内容约束与禁区已声明', ok: Boolean(props.project?.constraints) },
-  { label: '受众与风格已确定', ok: Boolean(props.project?.audience && props.project?.style) },
-  { label: '创意方案恰有 1 个', ok: chosenPlans.value === 1 },
-  { label: '简报版本已确认', ok: briefs.value.some((row) => String(row.status) === '已确认') },
-])
-const briefReadyCount = computed(() => briefChecks.value.filter((item) => item.ok).length)
 
 const scriptChecklist = computed(() => {
   const group = reviewChecklist.value.find((row) => String(row.group).includes('剧本'))
@@ -815,14 +728,6 @@ const audioChecks = computed(() => [
 ])
 
 const kpis = computed<Array<{ label: string; value: string | number; hint?: string }>>(() => {
-  if (props.stageKey === 'brief') {
-    return [
-      { label: '创意方向', value: creativePlans.value.length, hint: `${chosenPlans.value} 个已选用` },
-      { label: '简报版本', value: briefs.value.length, hint: latestBrief.value?.version ?? '未建立' },
-      { label: '确认条件', value: `${briefReadyCount.value} / 5`, hint: '缺项不可确认' },
-      { label: '输入方式', value: briefModes.value.length, hint: '结构化输入' },
-    ]
-  }
   if (props.stageKey === 'script') {
     return [
       { label: '剧本版本', value: scripts.value.length, hint: lockedScript.value?.version ?? '未锁定' },
