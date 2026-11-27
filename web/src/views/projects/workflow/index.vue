@@ -4,10 +4,12 @@
       <div class="cockpit-frame">
         <PageHeader
           kicker="PROJECTS / COCKPIT"
-          :title="projectRow ? `${projectRow.name} · 项目详情` : '项目详情'"
-          :desc="projectRow ? `${projectRow.id} · ${projectRow.status} · 当前阶段 ${projectRow.phase}` : '读取项目详情…'"
+          :title="pageTitle"
+          :desc="pageDesc"
         >
           <HeadActions>
+            <button v-if="viewMode !== 'project'" class="btn" @click="backToProject">项目概览</button>
+            <button v-else class="btn" @click="openBatch(activeBatch?.index ?? 1)">批次看板</button>
             <button class="btn" @click="$router.push('/workspace/home')">返回工作台</button>
             <button class="btn" @click="$router.push('/projects/lifecycle')">生命周期</button>
             <button class="btn" @click="reload">刷新</button>
@@ -32,6 +34,7 @@
 
     <div ref="scrollRef" class="cockpit-scroll">
       <div class="cockpit-frame cockpit-body">
+        <template v-if="viewMode === 'project'">
         <div class="spec-grid cockpit-grid">
           <div class="cockpit-main">
             <template v-if="stageKey === 'overview'">
@@ -48,6 +51,31 @@
                 <div class="overview-progress">
                   <div class="bar"><i :style="{ width: `${data.progress ?? 0}%` }" /></div>
                   <span>{{ projectRow?.done ?? 0 }} / {{ projectRow?.episodes ?? 0 }} 集已完成</span>
+                </div>
+
+                <div v-if="batches.length" class="batch-overview">
+                  <div class="batch-overview-head">
+                    <div>
+                      <b>批次交付视图</b>
+                      <p>按每 {{ BATCH_SIZE }} 集一批查看资产、模型与交付门禁；单集仍是执行单位。</p>
+                    </div>
+                    <button class="btn" @click="openBatch(activeBatch?.index ?? 1)">进入批次看板 →</button>
+                  </div>
+                  <div class="batch-overview-grid">
+                    <button
+                      v-for="batch in batches"
+                      :key="batch.index"
+                      class="batch-overview-item"
+                      @click="openBatch(batch.index)"
+                    >
+                      <span class="batch-overview-title">{{ batch.label }} <i>{{ batch.range }}</i></span>
+                      <span class="batch-overview-progress">
+                        <span class="bar"><i :style="{ width: `${batch.progress}%` }" /></span>
+                        <em>{{ batch.doneCount }} / {{ batch.episodes.length }}</em>
+                      </span>
+                      <span class="batch-overview-meta">{{ batch.status }} · 质检 {{ batch.qcCount }} 集</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div class="overview-grid">
@@ -152,7 +180,7 @@
                 :project="projectRow"
                 :summary="summary"
                 @open-script="openScript"
-                @open-episode="openEpisode"
+                @open-episode="openEpisodeDrawer"
                 @navigate="go"
                 @refresh="reload"
               />
@@ -197,8 +225,37 @@
           </div>
         </div>
       </aside>
-    </div>
-    </div>
+        </div>
+        </template>
+
+        <BatchBoard
+          v-if="viewMode === 'batch'"
+          :project="projectRow"
+          :batches="batches"
+          :active-index="activeBatch?.index ?? 1"
+          @select-batch="openBatch"
+          @open-episode="openEpisodeWorkspace"
+          @back="backToProject"
+        />
+
+        <EpisodeWorkspace
+          v-else-if="viewMode === 'episode' && activeBatch && activeEpisode"
+          :project="projectRow"
+          :summary="summary"
+          :batch="activeBatch"
+          :episode="activeEpisode"
+          :step="activeStep"
+          @select-step="selectEpisodeStep"
+          @open-episode="openEpisodeWorkspace"
+          @back="openBatch(activeBatch.index)"
+        />
+
+        <EmptyState
+          v-else-if="viewMode === 'episode'"
+          title="未找到单集"
+          desc="当前批次里没有匹配的集号，请返回批次看板重新选择。"
+        />
+      </div>
     </div>
 
     <AppDrawer :open="drawerOpen" :title="drawerTitle" :subtitle="drawerSubtitle" @close="closeDrawer">
@@ -235,10 +292,11 @@ import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
 import EmptyState from '../../../components/ui/EmptyState.vue'
 import StageWorkspace from './StageWorkspace.vue'
+import BatchBoard from './BatchBoard.vue'
+import EpisodeWorkspace from './EpisodeWorkspace.vue'
+import { BATCH_SIZE, EPISODE_STEPS, buildBatchGroups, isEpisodeStep, type EpisodeCard, type EpisodeStepKey } from './episodeFlow'
 import StageRail from '../../../components/ui/StageRail.vue'
 import StatCards from '../../../components/ui/StatCards.vue'
-import DataTable from '../../../components/ui/DataTable.vue'
-import StatusPill from '../../../components/ui/StatusPill.vue'
 import AppDrawer from '../../../components/ui/AppDrawer.vue'
 
 const session = useSessionStore()
@@ -250,6 +308,7 @@ const data = ref<Row>({})
 const summary = ref<Row>({})
 const timeline = ref<Row[]>([])
 const blockers = ref<Row[]>([])
+const dataRevision = ref(0)
 const scrollRef = ref<HTMLElement | null>(null)
 const briefWorkspaceRef = ref<{ openGate: () => void } | null>(null)
 
@@ -314,6 +373,46 @@ const stageKey = computed({
 })
 const selectedStage = computed(() => railStages.value.find((stage) => stage.key === stageKey.value) ?? null)
 
+const viewMode = computed(() => {
+  const value = String(route.query.view ?? 'project')
+  return value === 'batch' || value === 'episode' ? value : 'project'
+})
+const batches = computed(() => buildBatchGroups(summary.value))
+const activeBatch = computed(() => {
+  const requested = Number(route.query.batch ?? 0)
+  return batches.value.find((batch) => batch.index === requested) ?? batches.value[0] ?? null
+})
+const activeEpisode = computed(() => {
+  if (!activeBatch.value) return null
+  const requested = Number(route.query.episode ?? 0)
+  return activeBatch.value.episodes.find((item) => item.no === requested) ?? activeBatch.value.episodes[0] ?? null
+})
+const activeStep = computed<EpisodeStepKey>(() => {
+  const value = String(route.query.step ?? '')
+  return isEpisodeStep(value) ? value : (activeEpisode.value?.flow.currentStep ?? 'E0')
+})
+const activeStepMeta = computed(
+  () => EPISODE_STEPS.find((step) => step.key === activeStep.value) ?? EPISODE_STEPS[0],
+)
+const pageTitle = computed(() => {
+  const name = projectRow.value?.name ?? '项目详情'
+  if (viewMode.value === 'batch' && activeBatch.value) return `${name} · ${activeBatch.value.label} 批次`
+  if (viewMode.value === 'episode' && activeEpisode.value) return `${name} · 第 ${activeEpisode.value.no} 集`
+  return `${name} · 项目详情`
+})
+const pageDesc = computed(() => {
+  void dataRevision.value
+  const row = projectRow.value
+  if (!row) return '读取项目详情…'
+  if (viewMode.value === 'batch' && activeBatch.value) {
+    return `${row.id} · ${activeBatch.value.range} · ${activeBatch.value.status} · ${activeBatch.value.doneCount}/${activeBatch.value.episodes.length} 集已交付`
+  }
+  if (viewMode.value === 'episode' && activeEpisode.value) {
+    return `${row.id} · ${activeStepMeta.value.key} ${activeStepMeta.value.name} · 完成度 ${activeEpisode.value.flow.progress}% · ${activeEpisode.value.flow.note}`
+  }
+  return `${row.id} · ${row.status} · 当前阶段 ${row.phase}`
+})
+
 const kpis = computed(() =>
   ((data.value.kpis as Array<{ label: string; value: string }> | undefined) ?? []).map((item) => ({
     label: item.label,
@@ -327,10 +426,6 @@ const costs = computed<Row[]>(() => (summary.value.costs as Row[] | undefined) ?
 const assets = computed<Row[]>(() => (summary.value.assets as Row[] | undefined) ?? [])
 const reviews = computed<Row[]>(() => (summary.value.reviews as Row[] | undefined) ?? [])
 const allTasks = computed<Row[]>(() => (summary.value.tasks as Row[] | undefined) ?? [])
-const briefs = computed<Row[]>(() => (summary.value.briefs as Row[] | undefined) ?? [])
-const plans = computed<Row[]>(() => (summary.value.plans as Row[] | undefined) ?? [])
-const deliveries = computed<Row[]>(() => (summary.value.deliveries as Row[] | undefined) ?? [])
-const qualityReports = computed<Row[]>(() => (summary.value.qualityReports as Row[] | undefined) ?? [])
 
 const stageLinks = computed(() => stageLinksMap[stageKey.value] ?? [])
 
@@ -342,11 +437,57 @@ function stageStateText(state?: StageRow['state']) {
   return '待开始'
 }
 
-function selectStage(stage: StageRow) {
-  stageKey.value = stage.key
+function navigateQuery(updates: Record<string, string | undefined>, clear: string[] = []) {
+  const query: Record<string, string> = {}
+  for (const [key, value] of Object.entries(route.query)) {
+    if (typeof value === 'string' && !clear.includes(key)) query[key] = value
+  }
+  for (const [key, value] of Object.entries(updates)) {
+    if (value === undefined) delete query[key]
+    else query[key] = value
+  }
+  void router.replace({ query })
 }
 
-watch(stageKey, async () => {
+function selectStage(stage: StageRow) {
+  navigateQuery(
+    { stage: stage.key, view: undefined, batch: undefined, episode: undefined, step: undefined },
+    ['view', 'batch', 'episode', 'step'],
+  )
+}
+
+function backToProject() {
+  navigateQuery(
+    { view: undefined, batch: undefined, episode: undefined, step: undefined },
+    ['view', 'batch', 'episode', 'step'],
+  )
+}
+
+function openBatch(index: number) {
+  navigateQuery(
+    { view: 'batch', batch: String(index), episode: undefined, step: undefined },
+    ['stage', 'view', 'batch', 'episode', 'step'],
+  )
+}
+
+function openEpisodeWorkspace(item: EpisodeCard) {
+  const batchIndex = activeBatch.value?.index ?? Math.ceil(item.no / BATCH_SIZE)
+  navigateQuery(
+    {
+      view: 'episode',
+      batch: String(batchIndex),
+      episode: String(item.no),
+      step: item.flow.currentStep,
+    },
+    ['stage', 'view', 'batch', 'episode', 'step'],
+  )
+}
+
+function selectEpisodeStep(step: EpisodeStepKey) {
+  navigateQuery({ step })
+}
+
+watch([stageKey, viewMode, activeStep], async () => {
   await nextTick()
   scrollRef.value?.scrollTo({ top: 0 })
 })
@@ -420,7 +561,7 @@ const drawerLinks = computed<Array<{ label: string; path: string }>>(() => {
   return []
 })
 
-function openEpisode(row: Row) {
+function openEpisodeDrawer(row: Row) {
   episodePanel.open(String(row.no ?? ''))
 }
 function openScript(row: Row) {
@@ -452,6 +593,7 @@ async function reload() {
   summary.value = detail
   timeline.value = logs
   blockers.value = notifications.rows.filter((row) => row.unread)
+  dataRevision.value += 1
 }
 
 const { run: runGateAction } = useGateActionRunner({
@@ -560,6 +702,85 @@ onMounted(async () => {
   font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
+}
+.batch-overview {
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.batch-overview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.batch-overview-head b {
+  font-size: 12px;
+  color: var(--ink);
+}
+.batch-overview-head p {
+  margin: 4px 0 0;
+  max-width: 680px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.batch-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.batch-overview-item {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.batch-overview-item:hover {
+  border-color: var(--accent);
+}
+.batch-overview-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.batch-overview-title i {
+  color: var(--faint);
+  font-style: normal;
+  font-weight: 400;
+}
+.batch-overview-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.batch-overview-progress .bar {
+  flex: 1;
+  height: 5px;
+}
+.batch-overview-progress em {
+  min-width: 34px;
+  color: var(--muted);
+  font-size: 10px;
+  font-style: normal;
+  text-align: right;
+}
+.batch-overview-meta {
+  color: var(--faint);
+  font-size: 10px;
 }
 .overview-grid {
   display: grid;
@@ -689,6 +910,9 @@ onMounted(async () => {
   .cockpit-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+  .batch-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .cockpit-head .cockpit-frame {
     padding-top: 14px;
     padding-bottom: 10px;
@@ -697,7 +921,8 @@ onMounted(async () => {
 @media (max-width: 900px) {
   .stage-meta,
   .stage-facts,
-  .overview-split {
+  .overview-split,
+  .batch-overview-grid {
     grid-template-columns: 1fr;
   }
   .cockpit-frame {

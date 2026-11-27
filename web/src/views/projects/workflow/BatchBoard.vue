@@ -1,0 +1,361 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import type { Row } from '../../../mock/db'
+import type { BatchGroup, EpisodeCard } from './episodeFlow'
+import EmptyState from '../../../components/ui/EmptyState.vue'
+import StatusPill from '../../../components/ui/StatusPill.vue'
+
+const props = defineProps<{
+  project: Row | null
+  batches: BatchGroup[]
+  activeIndex: number
+}>()
+
+const emit = defineEmits<{
+  (event: 'select-batch', index: number): void
+  (event: 'open-episode', item: EpisodeCard): void
+  (event: 'back'): void
+}>()
+
+const currentBatch = computed(
+  () => props.batches.find((batch) => batch.index === props.activeIndex) ?? props.batches[0] ?? null,
+)
+
+const totalEpisodes = computed(() => currentBatch.value?.episodes.length ?? 0)
+const doneCount = computed(() => currentBatch.value?.doneCount ?? 0)
+const qcCount = computed(() => currentBatch.value?.qcCount ?? 0)
+const activeCount = computed(() => currentBatch.value?.activeCount ?? 0)
+const progress = computed(() => currentBatch.value?.progress ?? 0)
+</script>
+
+<template>
+  <section class="batch-board">
+    <div class="board-head">
+      <div>
+        <h2 class="board-title">批次看板</h2>
+        <p class="board-sub">批次只做分组、资产锁、模型版本与交付控制；单集仍是实际交互和制作单位。</p>
+      </div>
+      <div class="board-actions">
+        <button class="btn" @click="emit('back')">项目概览</button>
+      </div>
+    </div>
+
+    <EmptyState
+      v-if="!batches.length"
+      title="尚未生成分集"
+      desc="项目分集生成后，这里会出现批次分组和单集入口。"
+      icon="▤"
+    />
+
+    <template v-else>
+      <div class="batch-tabs" role="tablist" aria-label="批次切换">
+        <button
+          v-for="batch in batches"
+          :key="batch.index"
+          class="batch-tab"
+          :class="{ active: batch.index === currentBatch?.index }"
+          role="tab"
+          :aria-selected="batch.index === currentBatch?.index"
+          @click="emit('select-batch', batch.index)"
+        >
+          <b>{{ batch.label }}</b>
+          <span>{{ batch.range }}</span>
+          <em>{{ batch.status }}</em>
+        </button>
+      </div>
+
+      <div v-if="currentBatch" class="batch-summary card">
+        <div class="batch-summary-head">
+          <div>
+            <h3 class="card-title">{{ currentBatch.label }} · {{ currentBatch.range }}</h3>
+            <p class="card-sub">本批 {{ totalEpisodes }} 集；已交付 {{ doneCount }}，质检通过待入 {{ qcCount }}，生产中 {{ activeCount }}</p>
+          </div>
+          <span class="pill" :class="{ accent: currentBatch.tone === 'active', ok: currentBatch.tone === 'done' }">
+            {{ currentBatch.status }}
+          </span>
+        </div>
+        <div class="batch-progress">
+          <div class="bar"><i :style="{ width: `${progress}%` }" /></div>
+          <span>{{ progress }}%</span>
+        </div>
+        <div class="batch-gates">
+          <div class="batch-gate">
+            <span>开工门禁</span>
+            <b>剧本 / 资产 / 模型基线待接入</b>
+          </div>
+          <div class="batch-gate">
+            <span>交付门禁</span>
+            <b>{{ doneCount }} / {{ totalEpisodes }} 集已输出</b>
+          </div>
+          <div class="batch-gate">
+            <span>模型基线</span>
+            <b>未接入 · 参考现有任务模型</b>
+          </div>
+        </div>
+        <div class="notice">
+          当前为阶段 1 只读壳：集状态由现有 episode 状态推断；E0–E7 的写入动作将在后续阶段接入。
+        </div>
+      </div>
+
+      <div class="batch-grid">
+        <button
+          v-for="item in currentBatch?.episodes || []"
+          :key="item.no"
+          class="episode-card"
+          @click="emit('open-episode', item)"
+        >
+          <div class="episode-card-head">
+            <div>
+              <span class="episode-no">E{{ String(item.no).padStart(2, '0') }}</span>
+              <b>{{ item.row.title || '未命名单集' }}</b>
+            </div>
+            <StatusPill :status="item.row.status || '待生产'" />
+          </div>
+          <div class="episode-current">
+            <span>当前阶段</span>
+            <b>{{ item.flow.currentStep }} · {{ item.flow.steps.find((step) => step.key === item.flow.currentStep)?.name }}</b>
+            <em>{{ item.flow.note }}</em>
+          </div>
+          <div class="episode-progress">
+            <div class="bar"><i :style="{ width: `${item.flow.progress}%` }" /></div>
+            <span>{{ item.flow.progress }}%</span>
+          </div>
+          <div class="episode-meta">
+            <span>{{ item.row.duration || '时长待接入' }}</span>
+            <span>{{ item.row.shots ?? 0 }} 镜</span>
+            <span>QC {{ item.row.qc || '待检' }}</span>
+          </div>
+          <div class="episode-card-foot">
+            <span>查看 E0–E7 工作区</span>
+            <b>→</b>
+          </div>
+        </button>
+      </div>
+    </template>
+  </section>
+</template>
+
+<style scoped>
+.batch-board {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.board-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.board-title {
+  margin: 0;
+  font-size: 16px;
+  color: var(--ink);
+}
+.board-sub {
+  margin: 4px 0 0;
+  max-width: 780px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.board-actions {
+  display: flex;
+  gap: 8px;
+}
+.batch-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.batch-tab {
+  flex: none;
+  min-width: 150px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink);
+  text-align: left;
+  padding: 9px 11px;
+  cursor: pointer;
+}
+.batch-tab:hover,
+.batch-tab.active {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.batch-tab b {
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--accent);
+}
+.batch-tab span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.batch-tab em {
+  display: block;
+  margin-top: 4px;
+  color: var(--faint);
+  font-size: 10px;
+  font-style: normal;
+}
+.batch-summary {
+  padding: 14px;
+}
+.batch-summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.batch-progress,
+.episode-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.batch-progress .bar,
+.episode-progress .bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.batch-progress .bar i,
+.episode-progress .bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+.batch-progress span,
+.episode-progress span {
+  min-width: 34px;
+  text-align: right;
+  color: var(--muted);
+  font-size: 11px;
+}
+.batch-gates {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.batch-gate {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-2);
+  padding: 9px 10px;
+}
+.batch-gate span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+}
+.batch-gate b {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 600;
+}
+.batch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.episode-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.episode-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+.episode-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.episode-no {
+  display: inline-block;
+  margin-right: 7px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+.episode-card-head b {
+  color: var(--ink);
+  font-size: 13px;
+}
+.episode-current {
+  display: grid;
+  gap: 2px;
+}
+.episode-current span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.episode-current b {
+  color: var(--ink);
+  font-size: 12px;
+}
+.episode-current em {
+  color: var(--faint);
+  font-size: 10px;
+  font-style: normal;
+}
+.episode-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 10px;
+}
+.episode-meta span {
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 2px 7px;
+}
+.episode-card-foot {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--accent);
+  font-size: 11px;
+}
+@media (max-width: 1100px) {
+  .batch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .batch-gates {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .batch-grid,
+  .batch-gates {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

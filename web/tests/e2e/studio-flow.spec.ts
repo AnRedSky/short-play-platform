@@ -214,6 +214,31 @@ test.describe('工作室 mock 全流程', () => {
     await expect(page.locator('main h1')).toContainText('· 项目详情')
   })
 
+  test('批次看板进入单集 E0–E7 工作区并可返回批次', async ({ page }) => {
+    await resetStudio(page)
+    await page.goto('/projects/workflow')
+    await page.getByRole('button', { name: '批次看板' }).click()
+
+    await expect(page).toHaveURL(/view=batch/)
+    await expect(page.locator('.batch-board')).toContainText('单集仍是实际交互和制作单位')
+    await expect(page.locator('.batch-tab')).toHaveCount(4)
+    await expect(page.locator('.episode-card')).toHaveCount(6)
+
+    await page.locator('.episode-card').first().click()
+    await expect(page).toHaveURL(/view=episode/)
+    await expect(page.locator('.episode-workspace')).toContainText('第 1 集')
+    await expect(page.locator('.ep-step')).toHaveCount(8)
+
+    await page.locator('.ep-step').filter({ hasText: 'E3' }).click()
+    await expect(page).toHaveURL(/step=E3/)
+    await expect(page.locator('.ep-stage-head')).toContainText('素材生产')
+    await expect(page.locator('.ep-stage-head')).toContainText('镜头生成、审片与重试')
+
+    await page.getByRole('button', { name: '返回批次' }).click()
+    await expect(page).toHaveURL(/view=batch/)
+    await expect(page.locator('.batch-board')).toBeVisible()
+  })
+
   test('创意策划的方案、版本与确认门禁都走居中弹窗', async ({ page }) => {
     await resetStudio(page)
     await page.goto('/projects/workflow?stage=brief')
