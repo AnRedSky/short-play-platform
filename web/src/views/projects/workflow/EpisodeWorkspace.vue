@@ -842,7 +842,7 @@ function openSibling(item: EpisodeCard | null) {
         <div class="ep-stage-head">
           <div>
             <h3 class="card-title">{{ stepMeta.key }} · {{ stepMeta.name }}</h3>
-            <p class="card-sub">{{ stepMeta.hint }} · {{ flow.note }}</p>
+            <p class="card-sub">{{ stepMeta.hint }}</p>
           </div>
           <span class="pill" :class="{ accent: flow.tone === 'active', ok: flow.tone === 'done', bad: flow.tone === 'blocked' }">
             {{ flow.note }}

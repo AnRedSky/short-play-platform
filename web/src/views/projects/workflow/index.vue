@@ -20,10 +20,10 @@
           <div class="stage-dock-head">
             <div class="stage-dock-title">
               阶段管线
-              <span class="card-sub">项目概览汇总档案与进度，点击阶段切换下方工作区</span>
+              <span class="card-sub">项目概览汇总档案与进度；制作阶段点击后直达对应单集工作区</span>
             </div>
             <div class="stage-dock-meta">
-              <span class="pill accent">当前 {{ currentStage?.name || '—' }}</span>
+              <span class="pill accent">当前 {{ (viewMode === 'episode' && selectedStage?.name) || currentStage?.name || '—' }}</span>
               <span class="pill">进度 {{ data.progress ?? 0 }}%</span>
             </div>
           </div>
@@ -328,29 +328,6 @@ const stageLinksMap: Record<string, Array<{ label: string; path: string }>> = {
     { label: '场景与道具', path: '/director/world' },
     { label: '镜头契约', path: '/director/shots' },
   ],
-  video: [
-    { label: '视频生产队列', path: '/video/production' },
-    { label: '预览与校验', path: '/video/preview' },
-  ],
-  audio: [
-    { label: '对白配音', path: '/audio/dialogue' },
-    { label: '声音档案', path: '/audio/voice' },
-    { label: '配乐与音效', path: '/audio/bgm' },
-    { label: '字幕与口型', path: '/audio/subtitle' },
-  ],
-  post: [
-    { label: '时间线与剪辑', path: '/post/timeline' },
-    { label: '分集成片', path: '/post/episodes' },
-    { label: '版本链', path: '/post/versions' },
-  ],
-  qc: [
-    { label: '质量报告', path: '/quality/reports' },
-    { label: '返工台账', path: '/quality/rework' },
-  ],
-  delivery: [
-    { label: '交付包', path: '/post/delivery' },
-    { label: '版本链', path: '/post/versions' },
-  ],
 }
 
 const projectRow = computed(() => (data.value.project as Row | undefined) ?? (summary.value.project as Row | undefined) ?? null)
@@ -366,9 +343,23 @@ const overviewStage = computed<StageRow>(() => ({
 const railStages = computed<StageRow[]>(() => [overviewStage.value, ...stages.value])
 const currentStage = computed(() => stages.value.find((stage) => stage.state === 'now') ?? null)
 const defaultStageKey = computed(() => 'overview')
+const EPISODE_STEP_STAGE: Record<EpisodeStepKey, string> = {
+  E0: 'script',
+  E1: 'script',
+  E2: 'plan',
+  E3: 'video',
+  E4: 'post',
+  E5: 'audio',
+  E6: 'qc',
+  E7: 'delivery',
+}
 const stageKey = computed({
   get() {
     const query = String(route.query.stage ?? '')
+    if (route.query.view === 'episode') {
+      const mapped = EPISODE_STEP_STAGE[activeStep.value]
+      if (railStages.value.some((stage) => stage.key === mapped)) return mapped
+    }
     return railStages.value.some((stage) => stage.key === query) ? query : defaultStageKey.value
   },
   set(key: string) {
@@ -454,7 +445,34 @@ function navigateQuery(updates: Record<string, string | undefined>, clear: strin
   void router.replace({ query })
 }
 
+const LEGACY_STAGE_STEP: Record<string, EpisodeStepKey> = {
+  video: 'E3',
+  audio: 'E5',
+  post: 'E4',
+  qc: 'E6',
+  delivery: 'E7',
+}
+
+function redirectLegacyStage(stage: string, force = false): boolean {
+  const step = LEGACY_STAGE_STEP[stage]
+  if (!step || (!force && route.query.view) || !batches.value.length) return false
+  const requestedBatch = Number(route.query.batch ?? 0)
+  const targetBatch =
+    batches.value.find((batch) => batch.index === requestedBatch) ??
+    batches.value.find((batch) => batch.activeCount > 0) ??
+    batches.value.find((batch) => batch.doneCount < batch.episodes.length) ??
+    batches.value[0]
+  const targetEpisode =
+    targetBatch.episodes.find((item) => !item.flow.done && item.flow.currentStep === step) ??
+    targetBatch.episodes.find((item) => !item.flow.done) ??
+    targetBatch.episodes[0]
+  if (!targetEpisode) return false
+  openEpisodeWorkspace(targetEpisode, step)
+  return true
+}
+
 function selectStage(stage: StageRow) {
+  if (redirectLegacyStage(stage.key, true)) return
   navigateQuery(
     { stage: stage.key, view: undefined, batch: undefined, episode: undefined, step: undefined },
     ['view', 'batch', 'episode', 'step'],
@@ -475,14 +493,14 @@ function openBatch(index: number) {
   )
 }
 
-function openEpisodeWorkspace(item: EpisodeCard) {
-  const batchIndex = activeBatch.value?.index ?? Math.ceil(item.no / BATCH_SIZE)
+function openEpisodeWorkspace(item: EpisodeCard, step?: EpisodeStepKey) {
+  const batchIndex = Math.ceil(item.no / BATCH_SIZE)
   navigateQuery(
     {
       view: 'episode',
       batch: String(batchIndex),
       episode: String(item.no),
-      step: item.flow.currentStep,
+      step: step ?? item.flow.currentStep,
     },
     ['stage', 'view', 'batch', 'episode', 'step'],
   )
@@ -621,6 +639,13 @@ const panelStageMap: Record<string, string> = {
 }
 
 watch(() => projectStore.currentId, reload)
+watch(
+  () => [String(route.query.stage ?? ''), batches.value.length] as const,
+  ([stage]) => {
+    if (stage) redirectLegacyStage(stage)
+  },
+  { immediate: true },
+)
 onMounted(async () => {
   const queryId = String(route.query.id ?? '')
   if (queryId) projectStore.select(queryId)

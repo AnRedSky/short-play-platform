@@ -192,11 +192,6 @@ test.describe('工作室 mock 全流程', () => {
       ['创意策划', '创意输入基线'],
       ['剧本创作', '剧本版本'],
       ['导演规划', '项目镜头契约'],
-      ['视频生产', '生产队列'],
-      ['音频字幕', '对白配音'],
-      ['后期合成', '分集状态'],
-      ['质量检测', '质检报告'],
-      ['终审交付', '交付清单'],
     ] as const
     for (const [stage, content] of stageWorkspaces) {
       await dock.locator('.stage-card').filter({ hasText: stage }).click()
@@ -205,13 +200,38 @@ test.describe('工作室 mock 全流程', () => {
       await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBe(0)
     }
 
-    await dock.locator('.stage-card').filter({ hasText: '终审交付' }).click()
-    await expect(page.locator('.stage-content')).toContainText('DP-26031-00')
-    await expect(page.locator('.stage-content')).toContainText('交付门槛')
+    const productionStages = [
+      ['视频生产', 'E3', '素材生产'],
+      ['音频字幕', 'E5', '声音字幕'],
+      ['后期合成', 'E4', '剪辑'],
+      ['质量检测', 'E6', '单集 QC'],
+      ['终审交付', 'E7', '终审入库'],
+    ] as const
+    for (const [stage, step, name] of productionStages) {
+      await dock.locator('.stage-card').filter({ hasText: stage }).click()
+      await expect(page).toHaveURL(new RegExp(`view=episode.*step=${step}`))
+      await expect(page.locator('.episode-workspace')).toBeVisible()
+      await expect(page.locator('.ep-stage-head')).toContainText(name)
+      await expect(dock.locator('.stage-card.active')).toContainText(stage)
+    }
 
     await page.goto('/projects/detail')
     await expect(page).toHaveURL(/\/projects\/workflow/)
     await expect(page.locator('main h1')).toContainText('· 项目详情')
+  })
+
+  test('旧阶段深链收口到单集工作区，保留创意阶段入口', async ({ page }) => {
+    await resetStudio(page)
+    await page.goto('/projects/workflow?stage=post')
+    await expect(page).toHaveURL(/view=episode/)
+    await expect(page).toHaveURL(/step=E4/)
+    await expect(page).not.toHaveURL(/stage=post/)
+    await expect(page.locator('.episode-workspace')).toBeVisible()
+    await expect(page.locator('.ep-stage-head')).toContainText('剪辑')
+
+    await page.goto('/projects/workflow?stage=brief')
+    await expect(page).toHaveURL(/stage=brief/)
+    await expect(page.locator('.stage-content')).toContainText('创意输入基线')
   })
 
   test('批次看板进入单集 E0–E7 工作区并可返回批次', async ({ page }) => {
