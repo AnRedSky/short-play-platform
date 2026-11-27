@@ -1,6 +1,6 @@
 <template>
   <div class="stage-content">
-    <div v-if="stageKey !== 'brief'" class="stage-kpis">
+    <div v-if="stageKey !== 'brief' && stageKey !== 'script'" class="stage-kpis">
       <div v-for="item in kpis" :key="item.label" class="stage-kpi">
         <span>{{ item.label }}</span>
         <b>{{ item.value }}</b>
@@ -14,66 +14,7 @@
       </template>
 
       <template v-else-if="stageKey === 'script'">
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <h3 class="card-title">剧本版本</h3>
-              <p class="card-sub">正式版本锁定后作为下游唯一基准；历史版本只读保留。</p>
-            </div>
-            <span class="pill" :class="{ accent: Boolean(lockedScript) }">{{ lockedScript?.version || '未锁定' }}</span>
-          </div>
-          <DataTable
-            :columns="[
-              { key: 'version', label: '版本' },
-              { key: 'status', label: '状态', pill: true },
-              { key: 'episodes', label: '集' },
-              { key: 'scenes', label: '场次' },
-              { key: 'shots', label: '镜头' },
-              { key: 'lines', label: '台词行' },
-              { key: 'by', label: '维护人' },
-              { key: 'at', label: '更新时间' },
-            ]"
-            :rows="scripts"
-            row-key="id"
-            clickable
-            wide
-            empty-title="暂无剧本版本"
-            @row-click="openScript"
-          />
-        </div>
-
-        <div class="stage-split">
-          <div class="card">
-            <div class="card-head"><h3 class="card-title">版本变更</h3></div>
-            <div v-for="diff in scriptDiffs" :key="diff.version" class="list-row">
-              <span class="k">{{ diff.version }} · {{ diff.change }}</span>
-              <span class="v">{{ diff.scenes }} / {{ diff.lines }} 行</span>
-              <p class="stage-note">{{ diff.detail }} · {{ diff.by }}</p>
-            </div>
-            <EmptyState v-if="!scriptDiffs.length" title="暂无版本变更" desc="剧本发生修订后，这里记录场次与台词变化。" compact />
-          </div>
-          <div class="card">
-            <div class="card-head"><h3 class="card-title">审核记录</h3></div>
-            <div v-for="review in scriptReviews" :key="review.id" class="list-row">
-              <span class="k">{{ review.node }} · {{ review.version }}</span>
-              <span class="v"><StatusPill :status="review.result" /></span>
-              <p class="stage-note">{{ review.note }} · {{ review.auditor }} · {{ review.at }}</p>
-            </div>
-            <EmptyState v-if="!scriptReviews.length" title="暂无审核记录" desc="提交审核后，结论与意见会在此留痕。" compact />
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-head">
-            <div><h3 class="card-title">剧本审核清单</h3><p class="card-sub">审核通过前需逐项确认；缺项不允许锁定正式版本。</p></div>
-          </div>
-          <div class="check-grid">
-            <div v-for="item in scriptChecklist" :key="item" class="check-item">
-              <i :class="{ on: Boolean(lockedScript) }">{{ lockedScript ? '✓' : '' }}</i>
-              <span>{{ item }}</span>
-            </div>
-          </div>
-        </div>
+        <ScriptWorkspace :project="project" :summary="summary" @refresh="$emit('refresh')" @navigate="$emit('navigate', $event)" />
       </template>
 
       <template v-else-if="stageKey === 'plan'">
@@ -393,27 +334,8 @@
       </template>
     </div>
 
-    <div v-if="stageKey !== 'brief'" class="stage-side">
-      <template v-if="stageKey === 'script'">
-        <div class="card">
-          <div class="card-head"><h3 class="card-title">下游准入</h3></div>
-          <div class="check-grid">
-            <div v-for="item in scriptChecks" :key="item.label" class="check-item">
-              <i :class="{ on: item.ok }">{{ item.ok ? '✓' : '' }}</i>
-              <span>{{ item.label }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h3 class="card-title">版本指标</h3></div>
-          <div v-for="item in scriptMetrics" :key="item.label" class="list-row">
-            <span class="k">{{ item.label }}</span>
-            <span class="v">{{ item.value }}</span>
-          </div>
-        </div>
-      </template>
-
-      <template v-else-if="stageKey === 'plan'">
+    <div v-if="stageKey !== 'brief' && stageKey !== 'script'" class="stage-side">
+      <template v-if="stageKey === 'plan'">
         <div class="card">
           <div class="card-head"><h3 class="card-title">导演资产</h3></div>
           <div v-for="item in directorAssetCounts" :key="item.label" class="list-row">
@@ -566,9 +488,9 @@
 import { computed, ref } from 'vue'
 import type { Row } from '../../../mock/db'
 import DataTable from '../../../components/ui/DataTable.vue'
-import StatusPill from '../../../components/ui/StatusPill.vue'
 import EmptyState from '../../../components/ui/EmptyState.vue'
 import BriefWorkspace from './BriefWorkspace.vue'
+import ScriptWorkspace from './ScriptWorkspace.vue'
 
 const props = defineProps<{
   stageKey: string
@@ -577,7 +499,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (event: 'open-script', row: Row): void
   (event: 'open-episode', row: Row): void
   (event: 'navigate', path: string): void
   (event: 'refresh'): void
@@ -590,9 +511,6 @@ function list(key: string): Row[] {
   return (props.summary[key] as Row[] | undefined) ?? []
 }
 
-const scripts = computed(() => list('scripts'))
-const scriptDiffs = computed(() => list('scriptDiffs'))
-const scriptReviews = computed(() => list('reviews').filter((row) => String(row.node ?? '').includes('剧本')))
 const plans = computed(() => list('plans'))
 const shots = computed(() => list('shots'))
 const characters = computed(() => list('characters'))
@@ -628,9 +546,7 @@ const qualityMatrixRows = computed(() =>
 const rework = computed(() => list('rework'))
 const deliveries = computed(() => list('deliveries'))
 const deliveryChecklist = computed(() => list('deliveryChecklist'))
-const reviewChecklist = computed(() => list('reviewChecklist'))
 
-const lockedScript = computed(() => scripts.value.find((row) => row.locked) ?? scripts.value[0] ?? null)
 const currentPlan = computed(() => plans.value[0] ?? null)
 const videoTasks = computed(() => tasks.value.filter((row) => String(row.stage) === '视频生产'))
 const videoExecuting = computed(() => videoTasks.value.filter((row) => String(row.status) === '执行中').length)
@@ -660,22 +576,6 @@ const deliveryReadyCount = computed(() => deliveryChecklist.value.filter((row) =
 const budgetPercent = computed(() =>
   Math.min(100, Math.round((Number(props.project?.actual || 0) / Math.max(1, Number(props.project?.budget || 1))) * 100)),
 )
-
-const scriptChecklist = computed(() => {
-  const group = reviewChecklist.value.find((row) => String(row.group).includes('剧本'))
-  return ((group?.items as string[] | undefined) ?? [])
-})
-const scriptChecks = computed(() => [
-  { label: '正式版本已锁定', ok: Boolean(lockedScript.value?.locked) },
-  { label: '剧本审核已通过', ok: scriptReviews.value.some((row) => String(row.result).includes('通过')) },
-  { label: '审核清单完整', ok: scriptChecklist.value.length > 0 },
-])
-const scriptMetrics = computed(() => [
-  { label: '集数', value: `${lockedScript.value?.episodes ?? 0} 集` },
-  { label: '场次', value: `${lockedScript.value?.scenes ?? 0} 场` },
-  { label: '镜头', value: `${lockedScript.value?.shots ?? 0} 镜` },
-  { label: '台词行', value: `${lockedScript.value?.lines ?? 0} 行` },
-])
 
 const shotIssues = computed(() =>
   shots.value
@@ -728,15 +628,6 @@ const audioChecks = computed(() => [
 ])
 
 const kpis = computed<Array<{ label: string; value: string | number; hint?: string }>>(() => {
-  if (props.stageKey === 'script') {
-    return [
-      { label: '剧本版本', value: scripts.value.length, hint: lockedScript.value?.version ?? '未锁定' },
-      { label: '场次', value: lockedScript.value?.scenes ?? 0, hint: '锁定版本' },
-      { label: '镜头', value: lockedScript.value?.shots ?? 0, hint: '锁定版本' },
-      { label: '台词行', value: lockedScript.value?.lines ?? 0, hint: '锁定版本' },
-      { label: '审核记录', value: scriptReviews.value.length, hint: '节点 A' },
-    ]
-  }
   if (props.stageKey === 'plan') {
     return [
       { label: '固化计划', value: plans.value.length, hint: currentPlan.value?.id ?? '未固化' },
@@ -794,9 +685,6 @@ const kpis = computed<Array<{ label: string; value: string | number; hint?: stri
   return []
 })
 
-function openScript(row: Row) {
-  emit('open-script', row)
-}
 function openEpisode(row: Row) {
   emit('open-episode', row)
 }

@@ -1420,6 +1420,24 @@ function transition(id: string, body: Row): Envelope {
   if (action.needReason && !String(body.reason ?? '').trim()) {
     throw new MockHttpError(422, 'reason_required', '该动作必须填写原因')
   }
+  if (actionKey === 'submitScript') {
+    const versions = rows('scripts')
+      .filter((row) => row.project === id)
+      .sort((left, right) => Number(String(right.version ?? '').replace(/\D/g, '')) - Number(String(left.version ?? '').replace(/\D/g, '')))
+    const script = versions.find((row) => !row.locked) ?? versions[0]
+    if (!script) throw new MockHttpError(422, 'script_missing', '尚未建立剧本版本，不能提交审核')
+    if (script.locked) throw new MockHttpError(409, 'script_locked', '正式版本已锁定，不能再提交审核')
+    const drafts = Array.isArray(script.episodeDrafts) ? script.episodeDrafts as DraftEpisode[] : []
+    if (drafts.length < Number(project.episodes ?? 1)) {
+      throw new MockHttpError(422, 'script_incomplete', `分集稿 ${drafts.length} / ${project.episodes} 集，补齐后才可提交审核`)
+    }
+    if (drafts.some((episode) => !episode.scenes?.length || episode.scenes.some((scene) => !scene.lines?.length))) {
+      throw new MockHttpError(422, 'script_scene_incomplete', '存在无场次或无台词的集，补齐后才可提交审核')
+    }
+    script.status = '待审核'
+    script.updatedAt = now()
+    script.note = `${String(body.reason ?? script.note ?? '')} · 已提交审核`.trim()
+  }
 
   const from = project.status
   const next = action.next === '__prev__' ? String(project._prevStatus ?? '生产中') : action.next
@@ -2077,6 +2095,252 @@ function selectCreativePlan(id: string, body: Row): Envelope {
 }
 
 /* ------------------------------------------------------------------ *
+ * 剧本创作：模型生成初稿、逐集重写、提交审核
+ * ------------------------------------------------------------------ */
+
+interface DraftLine {
+  char: string
+  text: string
+}
+
+interface DraftScene {
+  no: string
+  location: string
+  time: string
+  chars: string
+  action: string
+  lines: DraftLine[]
+}
+
+interface DraftEpisode {
+  no: number
+  title: string
+  logline: string
+  hook: string
+  scenes: DraftScene[]
+  edited?: boolean
+  editedAt?: string
+}
+
+const SCRIPT_MODELS = ['剧本模型 A · 长篇结构', '剧本模型 B · 快节奏短剧', '剧本模型 C · 对话打磨']
+
+function scriptTitles(project: Row): string[] {
+  const genre = String(project.genre ?? '')
+  if (genre.includes('青春')) {
+    return ['开学第一天', '被退回的申请表', '靠窗的座位', '天台上的耳机', '雨里的两杯豆浆', '最后一次点名', '没有寄出的信', '操场的灯', '毕业照空位', '夏夜的长跑', '广播里的名字', '校门关闭之前', '一张旧车票', '跑道尽头', '说好不回头', '边界之外']
+  }
+  if (genre.includes('家庭') || genre.includes('美食')) {
+    return ['一桌冷掉的饭', '灶台上的信', '失传的那道汤', '咸淡之间', '阿婆的旧围裙', '菜市场清晨', '多摆的一双筷子', '汤滚的时候', '巷口的灯', '一张欠条', '年夜饭之前', '厨房里的争吵', '一碗长寿面', '灶火熄灭', '留给谁的位置', '饭后散步', '旧锅新火', '团圆之前']
+  }
+  return ['雾里的地址', '第一封信', '没有寄件人', '旧城区的雨', '门后的声音', '空房间', '迟到的访客', '无人接听', '第二把钥匙', '雨停之前', '天台的风', '最后一班车', '回信', '邮戳之下', '灯灭之后', '一封旧信', '错位的门牌', '终点之前', '真相的重量', '最后一封信', '雾散', '回声', '归途', '交付']
+}
+
+function scriptSceneSets(project: Row): Array<Array<Omit<DraftScene, 'no'>>> {
+  const genre = String(project.genre ?? '')
+  if (genre.includes('青春')) {
+    return [
+      [
+        { location: '校门口 · 清晨', time: '晨 / 外', chars: '林夏、周野', action: '林夏把被退回的申请表折成四折，周野隔着马路举起两杯豆浆。', lines: [{ char: '周野', text: '你又一个人去交了？' }, { char: '林夏', text: '这次我想自己签。' }] },
+        { location: '高三教室 · 午后', time: '日 / 内', chars: '林夏、许知遥', action: '许知遥把最后一排的座位牌换到窗边，假装只是顺手。', lines: [{ char: '许知遥', text: '靠窗能看见操场。' }, { char: '林夏', text: '也能看见谁没来。' }] },
+        { location: '旧教学楼天台 · 黄昏', time: '黄昏 / 外', chars: '林夏、周野', action: '两人隔着栏杆分一副耳机，远处广播开始点名。', lines: [{ char: '周野', text: '毕业以后，你还跑吗？' }, { char: '林夏', text: '跑，但会回来。' }] },
+      ],
+      [
+        { location: '便利店门口 · 雨夜', time: '夜 / 外', chars: '林夏、周野', action: '雨把招牌灯打碎成一片橙色，林夏把没送出去的信塞回书包。', lines: [{ char: '周野', text: '信都湿了。' }, { char: '林夏', text: '字还在。' }] },
+        { location: '篮球场 · 傍晚', time: '傍晚 / 外', chars: '周野、许知遥', action: '球停在脚边，周野盯着看台上空掉的位置。', lines: [{ char: '许知遥', text: '她今天没来。' }, { char: '周野', text: '我知道。' }] },
+        { location: '公交末班 · 夜', time: '夜 / 内', chars: '林夏、周野', action: '车厢只剩两个人，林夏把座位让给一束被雨打湿的花。', lines: [{ char: '林夏', text: '下一站我就下。' }, { char: '周野', text: '那我再坐一站。' }] },
+      ],
+      [
+        { location: '教室走廊 · 清晨', time: '晨 / 内', chars: '林夏、许知遥', action: '值日表上两个人的名字被并排写在一起，粉笔灰落在窗台。', lines: [{ char: '许知遥', text: '今天轮到我们锁门。' }, { char: '林夏', text: '那就晚一点走。' }] },
+        { location: '图书馆 · 午后', time: '日 / 内', chars: '林夏、周野', action: '周野把一本翻旧的志愿手册推过来，书页停在最远的那一页。', lines: [{ char: '周野', text: '这个城市也有海。' }, { char: '林夏', text: '先看完这一章。' }] },
+        { location: '天台 · 夜', time: '夜 / 外', chars: '林夏、周野、许知遥', action: '三个人坐在天台边缘，谁都没有先提明天。', lines: [{ char: '许知遥', text: '灯灭了就回去吧。' }, { char: '林夏', text: '再等一分钟。' }] },
+      ],
+    ]
+  }
+  if (genre.includes('家庭') || genre.includes('美食')) {
+    return [
+      [
+        { location: '厨房 · 夜', time: '夜 / 内', chars: '周远、小满', action: '灶上汤滚了第三遍，周远仍把火调小，等一个不会回来的人。', lines: [{ char: '小满', text: '爸，汤要干了。' }, { char: '周远', text: '再煨一会儿。' }] },
+        { location: '餐桌 · 夜', time: '夜 / 内', chars: '周远、小满、阿婆', action: '桌上多摆了一双筷子，阿婆把它悄悄收进围裙口袋。', lines: [{ char: '阿婆', text: '人没到，碗先留着。' }, { char: '小满', text: '他会来的。' }] },
+        { location: '巷口 · 清晨', time: '晨 / 外', chars: '小满、阿婆', action: '早点摊刚支起来，小满把昨晚剩下的汤装进保温桶。', lines: [{ char: '阿婆', text: '给谁送？' }, { char: '小满', text: '给那个总说下次的人。' }] },
+      ],
+      [
+        { location: '菜市场 · 清晨', time: '晨 / 外', chars: '周远、小满', action: '周远在一堆青菜前挑了很久，只买了够两个人吃的量。', lines: [{ char: '小满', text: '今天有人来？' }, { char: '周远', text: '先按三个人备。' }] },
+        { location: '老屋灶台 · 午后', time: '日 / 内', chars: '阿婆、小满', action: '阿婆从柜底翻出一口旧锅，锅底还留着上一顿饭的焦痕。', lines: [{ char: '阿婆', text: '这锅只做那道汤。' }, { char: '小满', text: '那今天做给我。' }] },
+        { location: '阳台 · 夜', time: '夜 / 外', chars: '周远、小满', action: '父子俩隔着晾衣杆站着，楼下传来别人家的电视声。', lines: [{ char: '周远', text: '你妈走那年，也是这个味。' }, { char: '小满', text: '那就别让它断。' }] },
+      ],
+      [
+        { location: '面馆后厨 · 夜', time: '夜 / 内', chars: '周远、小满', action: '最后一碗面出锅，周远把围裙解下来，第一次让小满掌勺。', lines: [{ char: '周远', text: '火候你看着。' }, { char: '小满', text: '糊了算我的。' }] },
+        { location: '饭桌 · 夜', time: '夜 / 内', chars: '周远、小满、阿婆', action: '三个人终于同时坐下，谁都没有先动筷子。', lines: [{ char: '阿婆', text: '开饭吧。' }, { char: '小满', text: '等人齐。' }] },
+        { location: '医院走廊 · 日', time: '日 / 内', chars: '周远、小满', action: '走廊尽头的窗开着，周远把保温桶放在长椅上。', lines: [{ char: '小满', text: '还热着。' }, { char: '周远', text: '她闻得到。' }] },
+      ],
+    ]
+  }
+  return [
+    [
+      { location: '旧城区街口 · 雨夜', time: '夜 / 雨', chars: '顾沉、苏眠', action: '顾沉在邮筒里摸到一封没有邮戳的信，信封上只写着苏眠的名字。', lines: [{ char: '苏眠', text: '这不是我写的。' }, { char: '顾沉', text: '但字迹是你的。' }] },
+      { location: '邮局旧址 · 夜内', time: '夜 / 内', chars: '顾沉、老周', action: '老周把最后一盏灯关掉，柜台下压着一枚二十年前的邮戳。', lines: [{ char: '老周', text: '这封信不该送到。' }, { char: '顾沉', text: '可它已经到了。' }] },
+      { location: '旧城区天台 · 黄昏', time: '黄昏 / 外', chars: '顾沉、苏眠', action: '两人隔着水箱站着，远处教堂钟声盖住了翻信纸的声音。', lines: [{ char: '苏眠', text: '你信里面写的吗？' }, { char: '顾沉', text: '我只信你现在的样子。' }] },
+    ],
+    [
+      { location: '出租屋 · 夜内', time: '夜 / 内', chars: '苏眠、顾沉', action: '台灯下摊着七封信，每一封的落款都停在同一天。', lines: [{ char: '苏眠', text: '同一天寄出七封？' }, { char: '顾沉', text: '不，是同一天被退回。' }] },
+      { location: '巷口 · 凌晨', time: '凌晨 / 外', chars: '顾沉、老周', action: '清扫车经过，老周从湿垃圾里捡出一枚被踩扁的钥匙。', lines: [{ char: '老周', text: '这是旧邮局后门的。' }, { char: '顾沉', text: '门还在吗？' }] },
+      { location: '旧邮局 · 午后', time: '日 / 内', chars: '顾沉、苏眠', action: '阳光切开灰尘，墙缝里露出一排没有寄出的信。', lines: [{ char: '苏眠', text: '都是给我的。' }, { char: '顾沉', text: '也许只是没送到。' }] },
+    ],
+    [
+      { location: '警局走廊 · 日', time: '日 / 内', chars: '顾沉、苏眠', action: '长椅上的两人隔着一个空位，墙上时钟停在整点前两分钟。', lines: [{ char: '苏眠', text: '你要现在说吗？' }, { char: '顾沉', text: '等钟响。' }] },
+      { location: '废弃站台 · 夜', time: '夜 / 外', chars: '顾沉、老周', action: '末班车早已停运，站牌下却有人用粉笔写下明天的日期。', lines: [{ char: '老周', text: '她来过了。' }, { char: '顾沉', text: '她一直没走。' }] },
+      { location: '公寓 · 深夜', time: '深夜 / 内', chars: '顾沉、苏眠', action: '最后一封信被拆开，里面只有一张旧城区改造前的地图。', lines: [{ char: '苏眠', text: '地址被划掉了。' }, { char: '顾沉', text: '那就按记忆找。' }] },
+    ],
+  ]
+}
+
+const SCRIPT_HOOKS: Record<string, string[]> = {
+  青春: ['结尾停在广播喊出名字的瞬间，林夏没有回头。', '雨停之前，周野把那封信重新塞回邮筒。', '天台灯灭，三个人谁都没有先走。'],
+  家庭: ['汤终于滚开，门外却没有人敲门。', '多摆的那双筷子，被阿婆收进了围裙口袋。', '最后一碗面端上桌，座位仍空着一个。'],
+  悬疑: ['信纸背面还有一行被水洇开的字。', '钥匙插进旧邮局后门，门从里面反锁。', '地图上被划掉的地址，正是他们站的地方。'],
+}
+
+function scriptThemeKey(project: Row): keyof typeof SCRIPT_HOOKS {
+  const genre = String(project.genre ?? '')
+  if (genre.includes('青春')) return '青春'
+  if (genre.includes('家庭') || genre.includes('美食')) return '家庭'
+  return '悬疑'
+}
+
+function buildEpisodeDraft(project: Row, ep: number, prompt: string): DraftEpisode {
+  const theme = scriptThemeKey(project)
+  const sets = scriptSceneSets(project)
+  const titles = scriptTitles(project)
+  const set = sets[(ep - 1) % sets.length]
+  const title = titles[(ep - 1) % titles.length]
+  const hooks = SCRIPT_HOOKS[theme]
+  return {
+    no: ep,
+    title,
+    logline: `第 ${ep} 集《${title}》：${prompt.slice(0, 56)}${prompt.length > 56 ? '…' : ''}`,
+    hook: hooks[(ep - 1) % hooks.length],
+    scenes: set.map((scene, index) => ({
+      no: pad2(index + 1),
+      ...scene,
+      lines: scene.lines.map((line) => ({ ...line })),
+    })),
+  }
+}
+
+function scriptCounts(drafts: DraftEpisode[]) {
+  const scenes = drafts.reduce((sum, episode) => sum + episode.scenes.length, 0)
+  const lines = drafts.reduce(
+    (sum, episode) => sum + episode.scenes.reduce((lineSum, scene) => lineSum + scene.lines.length, 0),
+    0,
+  )
+  return { scenes, lines }
+}
+
+function generateScript(body: Row): Envelope {
+  const projectId = String(body.project ?? '')
+  if (!projectId) throw new MockHttpError(422, 'missing_project', '缺少项目编号')
+  const project = projectOf(projectId)
+  const prompt = requireText(body.prompt, '生成要求')
+  const model = requireText(body.model, '生成模型')
+  if (!SCRIPT_MODELS.includes(model)) {
+    throw new MockHttpError(422, 'script_model_unknown', `未登记的剧本模型：${model}`)
+  }
+  const strength = String(body.strength ?? '标准改编')
+  const totalEpisodes = Math.max(1, Number(project.episodes ?? 1))
+  const scope = String(body.scope ?? 'pilot')
+  let from = Math.max(1, Math.round(Number(body.from ?? 1)))
+  let count = Math.max(1, Math.round(Number(body.count ?? 3)))
+  if (scope === 'pilot') count = Math.min(3, totalEpisodes)
+  if (scope === 'full') {
+    from = 1
+    count = totalEpisodes
+  }
+  if (from + count - 1 > totalEpisodes) {
+    throw new MockHttpError(422, 'script_range_invalid', `生成范围超出全剧 ${totalEpisodes} 集`)
+  }
+
+  const mergeId = String(body.scriptId ?? '')
+  let script: Row
+  if (mergeId) {
+    script = byId('scripts', mergeId)
+    if (script.project !== projectId) throw new MockHttpError(422, 'project_mismatch', '剧本版本不属于当前项目')
+    if (script.locked) throw new MockHttpError(409, 'script_locked', '正式版本已锁定，不能直接覆盖；请另起一版')
+  } else {
+    const projectCode = projectId.split('-')[1] ?? projectId
+    const versions = rows('scripts').filter((row) => row.project === projectId)
+    const versionNo = versions.reduce((max, row) => Math.max(max, Number(String(row.version ?? '').replace(/\D/g, '')) || 0), 0) + 1
+    script = {
+      id: `SCR-${projectCode}-V${versionNo}`,
+      project: projectId,
+      version: `v${versionNo}`,
+      status: '草稿',
+      episodes: totalEpisodes,
+      scenes: 0,
+      shots: 0,
+      lines: 0,
+      by: String(currentIdentity().name ?? '项目负责人').split('·')[0].trim(),
+      at: now(),
+      note: '',
+      locked: false,
+      revision: 0,
+    }
+    rows('scripts').unshift(script)
+  }
+
+  const generated: DraftEpisode[] = []
+  for (let index = 0; index < count; index += 1) {
+    generated.push(buildEpisodeDraft(project, from + index, prompt))
+  }
+  const existingDrafts = Array.isArray(script.episodeDrafts) ? script.episodeDrafts as DraftEpisode[] : []
+  const protectedEdits = body.overwrite ? [] : existingDrafts.filter((episode) => episode.edited && generated.some((item) => item.no === episode.no))
+  const replaced = new Set(generated.map((episode) => episode.no))
+  const kept = existingDrafts.filter((episode) => !replaced.has(episode.no))
+  const applied = generated.filter((episode) => !protectedEdits.some((edit) => edit.no === episode.no))
+  const drafts = kept.concat(applied, protectedEdits)
+  drafts.sort((left, right) => left.no - right.no)
+
+  const counts = scriptCounts(drafts)
+  Object.assign(script, {
+    status: '草稿',
+    episodes: totalEpisodes,
+    writtenEpisodes: drafts.length,
+    scenes: counts.scenes,
+    lines: counts.lines,
+    shots: 0,
+    episodeDrafts: drafts,
+    revision: Number(script.revision ?? 0) + 1,
+    updatedAt: now(),
+    note: `模型生成 ${count} 集初稿 · ${strength}${count > 1 ? ` · 第 ${from}–${from + count - 1} 集` : ` · 第 ${from} 集`}`,
+    generation: {
+      model,
+      prompt,
+      strength,
+      scope,
+      from,
+      count,
+      elapsed: `${(count * 4.2 + 2.8).toFixed(1)}s`,
+      tokens: count * 1460,
+      cost: Number((count * 0.24).toFixed(2)),
+      at: now(),
+    },
+  })
+
+  rows('audits').unshift({
+    id: nextId('AUD', 'audits'),
+    time: now(),
+    actor: String(currentIdentity().name ?? '').split('·')[0].trim(),
+    object: `剧本 ${script.id}`,
+    action: `${mergeId ? '模型重写' : '模型生成'} ${count} 集（${model} · ${strength}）`,
+    result: '成功',
+    src: '本地 mock · 剧本创作台',
+    link: projectId,
+    reason: prompt,
+  })
+  store.persist()
+  return ok(script)
+}
+
+/* ------------------------------------------------------------------ *
  * 鉴权
  * ------------------------------------------------------------------ */
 
@@ -2186,6 +2450,7 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
       deliveryChecklist: rows('deliveryChecklist'),
     })
   } },
+  { method: 'POST', pattern: /^\/scripts\/generate$/, handler: ({ body }) => generateScript(body) },
   { method: 'POST', pattern: /^\/scripts\/([^/]+)\/review$/, handler: ({ id, body }) => scriptReview(id, body) },
   { method: 'POST', pattern: /^\/generation\/tasks$/, handler: ({ body }) => createTask(body) },
   { method: 'POST', pattern: /^\/generation\/tasks\/([^/]+)\/(retry|cancel|pause)$/, handler: ({ id, parts }) => taskAction(id, parts[3] as 'retry' | 'cancel' | 'pause') },

@@ -209,6 +209,27 @@ const specs: ContractSpec[] = [
     kind: 'object',
   },
   {
+    name: 'creation.generateScript',
+    invoke: (s) => s.creation.generateScript({
+      project: PROJECT_CODE,
+      model: '剧本模型 A · 长篇结构',
+      scope: 'pilot',
+      count: 3,
+      strength: '标准改编',
+      prompt: 'contract script generation',
+    }),
+    mock: request('POST', '/scripts/generate'),
+    real: request('POST', '/scripts/generate'),
+    kind: 'object',
+  },
+  {
+    name: 'creation.updateScript',
+    invoke: (s) => s.creation.updateScript('SCR-26031-V4', { note: 'contract revise' }),
+    mock: request('PATCH', '/scripts/SCR-26031-V4'),
+    real: request('PATCH', '/scripts/SCR-26031-V4'),
+    kind: 'object',
+  },
+  {
     name: 'creation.reviews',
     invoke: (s) => s.creation.reviews(PROJECT_CODE),
     mock: request('GET', `/reviews?project=${PROJECT_CODE}`),

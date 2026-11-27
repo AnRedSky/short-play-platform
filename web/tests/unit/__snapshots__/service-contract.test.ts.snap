@@ -133,6 +133,9 @@ exports[`B-14 service contract > runs every service function against mock and re
       ],
     ],
   },
+  "creation.generateScript": {
+    "kind": "object",
+  },
   "creation.reviewChecklist": {
     "envelope": [
       "rows",
@@ -200,6 +203,9 @@ exports[`B-14 service contract > runs every service function against mock and re
     "kind": "object",
   },
   "creation.updateBrief": {
+    "kind": "object",
+  },
+  "creation.updateScript": {
     "kind": "object",
   },
   "director.createTask": {

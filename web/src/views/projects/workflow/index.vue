@@ -201,10 +201,10 @@
                 :stage-key="stageKey"
                 :project="projectRow"
                 :summary="summary"
+                @refresh="reload"
                 @open-script="openScript"
                 @open-episode="openEpisodeDrawer"
                 @navigate="go"
-                @refresh="reload"
               />
             </div>
 
@@ -318,7 +318,6 @@ const scrollRef = ref<HTMLElement | null>(null)
 
 const stageLinksMap: Record<string, Array<{ label: string; path: string }>> = {
   script: [
-    { label: '剧本版本', path: '/creation/script' },
     { label: '剧本审核', path: '/creation/review' },
     { label: '剧本拆解', path: '/creation/breakdown' },
   ],
@@ -674,7 +673,7 @@ async function reload() {
 
 const projectActions = computed<GateAction[]>(() =>
   ((data.value.allowed_actions as GateAction[] | undefined) ?? []).filter(
-    (action) => action.key !== 'confirmBrief',
+    (action) => action.key !== 'confirmBrief' && action.key !== 'submitScript',
   ),
 )
 
