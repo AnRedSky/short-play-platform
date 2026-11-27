@@ -136,12 +136,133 @@ export function toUpdateDto(patch: Record<string, unknown>): Record<string, unkn
   return dto
 }
 
+export interface BatchTrialCheck {
+  key: string
+  label: string
+  pass: boolean
+  detail: string
+}
+
+export interface BatchTrialDto {
+  id: string
+  project: string
+  batch: number
+  size: number
+  episodes: number[]
+  range: string
+  status: string
+  gate: string
+  deliveryGate: string
+  model: string
+  checks: BatchTrialCheck[]
+  note: string
+  createdAt: string
+  updatedAt: string
+  [key: string]: unknown
+}
+
+export interface BatchPackageDto {
+  id: string
+  project: string
+  kind: string
+  batch: number
+  version: string
+  episodes: number
+  files: number
+  size: string
+  checksum: string
+  reviewer: string
+  at: string
+  status: string
+  receiver: string
+  frozen: boolean
+  missing: string[]
+  [key: string]: unknown
+}
+
+/** 单集动作响应：mock 与真实后端都归一到 state / episode / message。 */
+export function toEpisodeActionResult(dto: Record<string, unknown>): Row {
+  const state = dto.state && typeof dto.state === 'object' ? (dto.state as Row) : {}
+  return {
+    ...dto,
+    state: {
+      ...state,
+      ep: Number(state.ep ?? 0),
+      batch: Number(state.batch ?? 0),
+      currentStep: String(state.currentStep ?? state.current_step ?? 'E0'),
+    },
+    episode: dto.episode && typeof dto.episode === 'object' ? (dto.episode as Row) : null,
+    message: String(dto.message ?? ''),
+  }
+}
+
+/** 批次试跑单：兼容真实后端 `{ trial }` 包装与 snake_case 字段。 */
+export function toBatchTrial(dto: Record<string, unknown>): BatchTrialDto {
+  const raw = dto.trial && typeof dto.trial === 'object' ? (dto.trial as Row) : dto
+  const episodes = Array.isArray(raw.episodes) ? raw.episodes.map(Number) : []
+  const checks = Array.isArray(raw.checks) ? (raw.checks as Row[]) : []
+  return {
+    ...raw,
+    id: String(raw.id ?? ''),
+    project: String(raw.project ?? ''),
+    batch: Number(raw.batch ?? 0),
+    size: Number(raw.size ?? episodes.length),
+    episodes,
+    range: String(raw.range ?? ''),
+    status: String(raw.status ?? '待补齐'),
+    gate: String(raw.gate ?? ''),
+    deliveryGate: String(raw.deliveryGate ?? raw.delivery_gate ?? ''),
+    model: String(raw.model ?? ''),
+    checks: checks.map((check) => ({
+      key: String(check.key ?? ''),
+      label: String(check.label ?? ''),
+      pass: Boolean(check.pass),
+      detail: String(check.detail ?? ''),
+    })),
+    note: String(raw.note ?? ''),
+    createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
+    updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ''),
+  }
+}
+
+/** 批次包：兼容真实后端 `{ package }` 包装、缺失集与 snake_case 字段。 */
+export function toBatchPackage(dto: Record<string, unknown>): BatchPackageDto {
+  const raw = dto.package && typeof dto.package === 'object' ? (dto.package as Row) : dto
+  return {
+    ...raw,
+    id: String(raw.id ?? ''),
+    project: String(raw.project ?? ''),
+    kind: String(raw.kind ?? '批次包'),
+    batch: Number(raw.batch ?? 0),
+    version: String(raw.version ?? ''),
+    episodes: Number(raw.episodes ?? 0),
+    files: Number(raw.files ?? raw.file_count ?? 0),
+    size: String(raw.size ?? ''),
+    checksum: String(raw.checksum ?? ''),
+    reviewer: String(raw.reviewer ?? ''),
+    at: String(raw.at ?? raw.created_at ?? ''),
+    status: String(raw.status ?? '待补齐'),
+    receiver: String(raw.receiver ?? ''),
+    frozen: Boolean(raw.frozen),
+    missing: Array.isArray(raw.missing) ? raw.missing.map(String) : [],
+  }
+}
+
 /** 详情聚合：项目实体统一走行映射，其余集合保持后端形状。 */
 export function toProjectSummary(dto: Record<string, unknown>): Row {
-  if (dto.project && typeof dto.project === 'object') {
-    return { ...dto, project: toProjectRow(dto.project as ProjectDto) }
+  const summary: Row =
+    dto.project && typeof dto.project === 'object'
+      ? { ...dto, project: toProjectRow(dto.project as ProjectDto) }
+      : toProjectRow(dto as ProjectDto)
+  if (Array.isArray(summary.batchTrials)) {
+    summary.batchTrials = (summary.batchTrials as Row[]).map(toBatchTrial)
   }
-  return toProjectRow(dto as ProjectDto)
+  if (Array.isArray(summary.deliveries)) {
+    summary.deliveries = (summary.deliveries as Row[]).map((row) =>
+      String(row.kind ?? '') === '批次包' || row.package ? toBatchPackage(row) : row,
+    )
+  }
+  return summary
 }
 
 /** 状态迁移结果：`data.project` 归一，`allowed_actions` 原样透传。 */

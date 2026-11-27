@@ -416,21 +416,63 @@ const specs: ContractSpec[] = [
       }),
     ...projectPath('/episodes/19/actions', 'POST'),
     kind: 'object',
-    realData: { state: { currentStep: 'E3' } },
+    rowKeys: ['state', 'episode', 'message'],
+    realData: {
+      state: { ep: 19, batch: 4, current_step: 'E3', status: '生产中' },
+      episode: { no: 19, title: '雨夜来客' },
+      message: 'lockAssets 已完成',
+    },
   },
   {
     name: 'projects.batchTrial',
     invoke: (s) => s.projects.batchTrial(PROJECT_CODE, 4, { size: 3 }),
     ...projectPath('/batches/4/trial', 'POST'),
     kind: 'object',
-    realData: { trial: { id: 'BT-26031-B4', batch: 4, size: 3 } },
+    rowKeys: ['id', 'batch', 'size', 'episodes', 'status', 'deliveryGate', 'model', 'checks', 'note'],
+    realData: {
+      trial: {
+        id: 'BT-26031-B4',
+        project: PROJECT_CODE,
+        batch: 4,
+        size: 3,
+        episodes: [19, 20, 21],
+        range: 'E19–E21',
+        status: '待补齐',
+        gate: '2/3 开工项通过',
+        delivery_gate: '0/3 集已交付',
+        model: '视频模型 A',
+        checks: [{ key: 'script', label: '剧本锁定', pass: true, detail: '3/3' }],
+        note: '试跑门禁预检',
+        created_at: '2026-11-27 10:00',
+        updated_at: '2026-11-27 10:00',
+      },
+    },
   },
   {
     name: 'projects.batchPackage',
     invoke: (s) => s.projects.batchPackage(PROJECT_CODE, 1, { receiver: '企业内容库' }),
     ...projectPath('/batches/1/package', 'POST'),
     kind: 'object',
-    realData: { package: { id: 'BP-26031-B1', batch: 1, episodes: 6 } },
+    rowKeys: ['id', 'kind', 'batch', 'episodes', 'files', 'status', 'receiver', 'frozen', 'missing'],
+    realData: {
+      package: {
+        id: 'BP-26031-B1',
+        project: PROJECT_CODE,
+        kind: '批次包',
+        batch: 1,
+        version: 'B1',
+        episodes: 6,
+        file_count: 6,
+        size: '2.5 GB',
+        checksum: 'sha256:sp-26031-b1',
+        reviewer: '林知远',
+        created_at: '2026-11-27 10:00',
+        status: '已交付',
+        receiver: '企业内容库',
+        frozen: true,
+        missing: [],
+      },
+    },
   },
   {
     name: 'projects.transition',
@@ -694,6 +736,9 @@ function assertResult(spec: ContractSpec, result: unknown) {
   }
   expect(result).toBeTruthy()
   expect(typeof result).toBe('object')
+  for (const key of spec.rowKeys ?? []) {
+    expect(result as Record<string, unknown>).toHaveProperty(key)
+  }
   expect(Array.isArray(result)).toBe(false)
 }
 

@@ -2,7 +2,10 @@ import { isMockMode } from '../../api'
 import { http } from '../../api/client'
 import type { Row } from '../../mock/db'
 import {
+  toBatchPackage,
+  toBatchTrial,
   toCreateDto,
+  toEpisodeActionResult,
   toProjectRow,
   toProjectSummary,
   toTransitionResult,
@@ -34,12 +37,18 @@ export const projectApi = {
     toProjectSummary(await http.get<Record<string, unknown>>(`/projects/${projectRef(id)}/summary`)),
   workflow: (id: string) => http.get<Row>(`/projects/${projectRef(id)}/workflow`),
   timeline: (id: string) => http.get<Row[]>(`/projects/${projectRef(id)}/timeline`),
-  episodeAction: (id: string, ep: number, payload: Record<string, unknown>) =>
-    http.post<Row>(`/projects/${projectRef(id)}/episodes/${ep}/actions`, payload),
-  batchTrial: (id: string, batch: number, payload: Record<string, unknown> = {}) =>
-    http.post<Row>(`/projects/${projectRef(id)}/batches/${batch}/trial`, payload),
-  batchPackage: (id: string, batch: number, payload: Record<string, unknown> = {}) =>
-    http.post<Row>(`/projects/${projectRef(id)}/batches/${batch}/package`, payload),
+  episodeAction: async (id: string, ep: number, payload: Record<string, unknown>) =>
+    toEpisodeActionResult(
+      await http.post<Record<string, unknown>>(`/projects/${projectRef(id)}/episodes/${ep}/actions`, payload),
+    ),
+  batchTrial: async (id: string, batch: number, payload: Record<string, unknown> = {}) =>
+    toBatchTrial(
+      await http.post<Record<string, unknown>>(`/projects/${projectRef(id)}/batches/${batch}/trial`, payload),
+    ),
+  batchPackage: async (id: string, batch: number, payload: Record<string, unknown> = {}) =>
+    toBatchPackage(
+      await http.post<Record<string, unknown>>(`/projects/${projectRef(id)}/batches/${batch}/package`, payload),
+    ),
   transition: async (id: string, action: string, reason?: string, expectedState?: string) => {
     const body: Record<string, unknown> = { action }
     if (reason) body.reason = reason

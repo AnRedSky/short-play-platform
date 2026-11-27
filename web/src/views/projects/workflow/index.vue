@@ -282,6 +282,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { projectApi } from '../../../services/projects'
+import type { BatchPackageDto, BatchTrialDto } from '../../../services/projects/contract'
 import { workspaceApi } from '../../../services/workspace'
 import type { Row } from '../../../mock/db'
 import type { GateAction, StageRow } from '../../../mock/state'
@@ -375,8 +376,15 @@ const viewMode = computed(() => {
   return value === 'batch' || value === 'episode' ? value : 'project'
 })
 const batches = computed(() => buildBatchGroups(summary.value))
-const batchTrials = computed(() => (summary.value.batchTrials as Row[] | undefined) ?? [])
-const batchPackages = computed(() => (summary.value.deliveries as Row[] | undefined) ?? [])
+const batchTrials = computed<BatchTrialDto[]>(
+  () => (summary.value.batchTrials as BatchTrialDto[] | undefined) ?? [],
+)
+const batchPackages = computed<BatchPackageDto[]>(
+  () =>
+    ((summary.value.deliveries as BatchPackageDto[] | undefined) ?? []).filter(
+      (row) => row.kind === '批次包',
+    ),
+)
 const activeBatch = computed(() => {
   const requested = Number(route.query.batch ?? 0)
   return batches.value.find((batch) => batch.index === requested) ?? batches.value[0] ?? null

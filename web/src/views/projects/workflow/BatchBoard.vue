@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { Row } from '../../../mock/db'
 import type { BatchGroup, EpisodeCard } from './episodeFlow'
+import type { BatchPackageDto, BatchTrialDto } from '../../../services/projects/contract'
 import { projectApi } from '../../../services/projects'
 import { useUiStore } from '../../../stores/ui'
 import EmptyState from '../../../components/ui/EmptyState.vue'
@@ -11,8 +12,8 @@ const props = defineProps<{
   project: Row | null
   batches: BatchGroup[]
   activeIndex: number
-  trials?: Row[]
-  packages?: Row[]
+  trials?: BatchTrialDto[]
+  packages?: BatchPackageDto[]
 }>()
 
 const emit = defineEmits<{
@@ -39,10 +40,8 @@ const progress = computed(() => currentBatch.value?.progress ?? 0)
 const currentTrial = computed(
   () => (props.trials ?? []).find((trial) => Number(trial.batch) === currentBatch.value?.index) ?? null,
 )
-const trialEpisodes = computed(() => (currentTrial.value?.episodes as number[] | undefined) ?? [])
-const trialChecks = computed(
-  () => (currentTrial.value?.checks as Array<Record<string, unknown>> | undefined) ?? [],
-)
+const trialEpisodes = computed(() => currentTrial.value?.episodes ?? [])
+const trialChecks = computed(() => currentTrial.value?.checks ?? [])
 const currentPackage = computed(
   () =>
     (props.packages ?? []).find(
@@ -57,7 +56,7 @@ async function startTrial() {
     const trial = await projectApi.batchTrial(String(props.project.id), currentBatch.value.index, {
       size: 3,
     })
-    const eps = (trial.episodes as number[] | undefined) ?? []
+    const eps = trial.episodes
     ui.toast(`已生成 ${currentBatch.value.label} 试跑单：${eps.map((no) => `E${String(no).padStart(2, '0')}`).join(' / ')}`)
     emit('trial-started')
   } catch (error) {
@@ -74,7 +73,7 @@ async function startPackage() {
     const item = await projectApi.batchPackage(String(props.project.id), currentBatch.value.index, {
       receiver: '企业内容库',
     })
-    ui.toast(`批次包 ${String(item.id)} 已冻结`)
+    ui.toast(`批次包 ${item.id} 已冻结`)
     emit('package-created')
   } catch (error) {
     ui.toast(error instanceof Error ? error.message : '批次包生成失败', 'bad')
