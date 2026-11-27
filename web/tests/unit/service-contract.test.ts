@@ -476,7 +476,7 @@ const specs: ContractSpec[] = [
   },
   {
     name: 'projects.transition',
-    invoke: (s) => s.projects.transition(PROJECT_CODE, 'toPost', 'contract'),
+    invoke: (s) => s.projects.transition(PROJECT_CODE, 'terminate', 'contract'),
     ...projectPath('/transitions', 'POST'),
     kind: 'object',
   },

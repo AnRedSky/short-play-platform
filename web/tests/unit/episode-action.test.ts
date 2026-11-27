@@ -61,6 +61,44 @@ describe('episode E0–E3 contract', () => {
     expect(e19?.batch).toBe(4)
   })
 
+  it('derives project status from episode progress and hides stage actions', async () => {
+    const { handleMock, store } = await loadMock()
+    const summary = (await call(handleMock, '/api/v1/projects/SP-26031/summary')) as {
+      data: { project: Record<string, unknown> }
+    }
+    expect(summary.data.project.status).toBe('生产准备中')
+    const detail = (await call(handleMock, '/api/v1/projects/SP-26031/workflow')) as {
+      data: {
+        project: Record<string, unknown>
+        stages: Array<Record<string, unknown>>
+        allowed_actions: Array<Record<string, unknown>>
+      }
+    }
+    expect(detail.data.allowed_actions.map((action) => action.key)).toEqual(['terminate'])
+
+    const states = store.table('episodeStates').filter((row) => row.project === 'SP-26031')
+    const pending = states.filter((row) => !row.delivered)
+    for (const row of pending) Object.assign(row, { currentStep: 'E4' })
+    const post = (await call(handleMock, '/api/v1/projects/SP-26031/workflow')) as typeof detail
+    expect(post.data.project.status).toBe('后期制作中')
+    expect(post.data.stages.find((stage) => stage.state === 'now')?.name).toBe('后期合成')
+    expect(post.data.allowed_actions.map((action) => action.key)).toEqual(['pause'])
+
+    for (const row of pending) Object.assign(row, { currentStep: 'E6' })
+    const qc = (await call(handleMock, '/api/v1/projects/SP-26031/workflow')) as typeof detail
+    expect(qc.data.project.status).toBe('质量检测中')
+    expect(qc.data.allowed_actions).toEqual([])
+
+    for (const row of states) Object.assign(row, { currentStep: 'E7', finalApproved: true })
+    const done = (await call(handleMock, '/api/v1/projects/SP-26031/workflow')) as typeof detail
+    expect(done.data.project.status).toBe('已完成')
+
+    for (const row of states) Object.assign(row, { delivered: true })
+    const delivered = (await call(handleMock, '/api/v1/projects/SP-26031/workflow')) as typeof detail
+    expect(delivered.data.project.status).toBe('已交付')
+    expect(delivered.data.allowed_actions.map((action) => action.key)).toEqual(['archive'])
+  })
+
   it('walks E0 → E1 → E2 → E3 through the action contract', async () => {
     const { handleMock, store } = await loadMock()
     await call(handleMock, '/api/v1/projects/SP-26031/summary')

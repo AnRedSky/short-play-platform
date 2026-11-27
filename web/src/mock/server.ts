@@ -3,7 +3,7 @@
  * 前端只调 api 层；VITE_DATA_MODE=mock 时请求进入这里，切到 real 时同一份代码改用后端。
  */
 import { nextId, now, store, type Row } from './db'
-import { GATE_ACTIONS, allowedActions, permissionsOf, progressOf, stageChain } from './state'
+import { GATE_ACTIONS, PROJECT_GOVERNANCE_ACTIONS, allowedActions, permissionsOf, progressOf, stageChain } from './state'
 import {
   modelProfileCreateBlockReason,
   providerTestBlockReason,
@@ -276,6 +276,59 @@ function ensureEpisodeStates(projectId: string): Row[] {
   return states.filter((row) => row.project === projectId)
 }
 
+const AUTO_PROJECT_STATUSES = new Set([
+  '生产准备中',
+  '生产中',
+  '后期制作中',
+  '质量检测中',
+  '待最终审核',
+  '已完成',
+])
+
+const STEP_STAGE_STATUS: Record<string, string> = {
+  E0: '生产准备中',
+  E1: '生产准备中',
+  E2: '生产准备中',
+  E3: '生产中',
+  E4: '后期制作中',
+  E5: '后期制作中',
+  E6: '质量检测中',
+  E7: '待最终审核',
+}
+
+const STAGE_STATUS_RANK: Record<string, number> = {
+  生产准备中: 0,
+  生产中: 1,
+  后期制作中: 2,
+  质量检测中: 3,
+  待最终审核: 4,
+  已完成: 5,
+  已交付: 6,
+}
+
+function deriveProjectStatus(states: Row[]): string | null {
+  if (!states.length) return null
+  if (states.every((state) => Boolean(state.delivered))) return '已交付'
+  if (states.every((state) => Boolean(state.finalApproved))) return '已完成'
+  const pending = states.filter((state) => !state.delivered && !state.finalApproved)
+  if (!pending.length) return '已完成'
+  const stage = pending
+    .map((state) => STEP_STAGE_STATUS[String(state.currentStep ?? 'E0')] ?? '生产准备中')
+    .sort((a, b) => (STAGE_STATUS_RANK[a] ?? 0) - (STAGE_STATUS_RANK[b] ?? 0))[0]
+  return stage ?? '生产准备中'
+}
+
+function syncProjectStatus(project: Row, states: Row[]): void {
+  const status = String(project.status ?? '')
+  if (!AUTO_PROJECT_STATUSES.has(status)) return
+  const next = deriveProjectStatus(states)
+  if (!next || next === status) return
+  project.status = next
+  project.phase = stageChain(project).find((stage) => stage.state === 'now')?.name ?? project.phase
+  project.updated = now()
+  store.persist()
+}
+
 function episodeEvent(projectId: string, ep: number, action: string, note: string, step: string) {
   rows('episodeEvents').unshift({
     id: nextId('EE', 'episodeEvents'),
@@ -396,6 +449,7 @@ function batchPackage(projectId: string, batch: number, body: Row): Envelope {
   }
   rows('deliveries').unshift(delivery)
   project.delivered = states.filter((state) => state.delivered).length
+  syncProjectStatus(project, states)
   project.updated = now()
   store.persist()
   return ok(delivery, { created: true })
@@ -931,6 +985,7 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
     throw new MockHttpError(422, 'episode_action_unknown', `未知的单集动作 ${action}`)
   }
 
+  syncProjectStatus(project, ensureEpisodeStates(projectId))
   store.persist()
   return ok({ state, episode, message: `${action} 已完成` })
 }
@@ -1317,6 +1372,8 @@ function updateCapabilityRoute(capName: string, body: Row): Envelope {
 
 function workflow(id: string): Envelope {
   const project = projectOf(id)
+  const states = ensureEpisodeStates(id)
+  syncProjectStatus(project, states)
   const permissions = currentPermissions()
   return ok({
     project,
@@ -1337,6 +1394,9 @@ function transition(id: string, body: Row): Envelope {
   const actionKey = String(body.action ?? '')
   const action = (GATE_ACTIONS[project.status] ?? []).find((item) => item.key === actionKey)
   if (!action) throw new MockHttpError(409, 'illegal_transition', `状态「${project.status}」不允许动作 ${actionKey}`)
+  if (!PROJECT_GOVERNANCE_ACTIONS.has(actionKey)) {
+    throw new MockHttpError(409, 'project_stage_derived', '制作阶段由单集与批次进度自动推导，不再手动推进')
+  }
   if (!currentPermissions().includes(action.permission)) {
     throw new MockHttpError(403, 'forbidden', `当前身份缺少权限 ${action.permission}`)
   }
@@ -2067,10 +2127,12 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
     const timelines = rows('timelines').filter((row) => row.project === id)
     for (const timeline of timelines) ensureTimelineClips(id, Number(timeline.ep), String(timeline.version))
     const projectCode = id.split('-')[1] ?? id
+    const states = ensureEpisodeStates(id).sort((a, b) => Number(a.ep) - Number(b.ep))
+    syncProjectStatus(project, states)
     return ok({
       project,
       stages: stageChain(project),
-      episodeStates: ensureEpisodeStates(id).sort((a, b) => Number(a.ep) - Number(b.ep)),
+      episodeStates: states,
       episodeEvents: rows('episodeEvents').filter((row) => row.project === id).slice(0, 40),
       batchTrials: rows('batchTrials').filter((row) => row.project === id),
       scripts: rows('scripts').filter((row) => row.project === id),

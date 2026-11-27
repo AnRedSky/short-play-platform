@@ -137,9 +137,23 @@ export function identityOf(identityId: string): Row | undefined {
   return store.table('identities').find((row) => row.id === identityId)
 }
 
+export const PROJECT_GOVERNANCE_ACTIONS = new Set([
+  'start',
+  'confirmBrief',
+  'submitScript',
+  'approveScript',
+  'rejectScript',
+  'pause',
+  'resume',
+  'terminate',
+  'archive',
+])
+
 export function allowedActions(project: Row, permissions: string[]): GateAction[] {
   const actions = GATE_ACTIONS[project.status] ?? []
-  return actions.filter((action) => permissions.includes(action.permission))
+  return actions.filter(
+    (action) => permissions.includes(action.permission) && PROJECT_GOVERNANCE_ACTIONS.has(action.key),
+  )
 }
 
 export function progressOf(project: Row): number {

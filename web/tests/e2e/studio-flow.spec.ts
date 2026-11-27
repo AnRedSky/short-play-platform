@@ -13,8 +13,22 @@ async function resetStudio(page: import('@playwright/test').Page, identity = 'i-
   await expect(page.locator('main h1')).toBeVisible()
 }
 
-async function switchIdentity(page: import('@playwright/test').Page, identity: string) {
-  await page.evaluate((id) => localStorage.setItem('sp_studio_identity', id), identity)
+async function setEpisodeProgress(
+  page: import('@playwright/test').Page,
+  project: string,
+  step: string,
+  extra: Record<string, unknown> = {},
+) {
+  await page.evaluate(({ key, project, step, extra }) => {
+    const raw = localStorage.getItem(key)
+    if (!raw) return
+    const data = JSON.parse(raw) as { entities: { episodeStates: Array<Record<string, unknown>> } }
+    for (const state of data.entities.episodeStates) {
+      if (state.project !== project || state.delivered) continue
+      Object.assign(state, { currentStep: step, ...extra })
+    }
+    localStorage.setItem(key, JSON.stringify(data))
+  }, { key: MOCK_KEY, project, step, extra })
   await page.reload()
   await expect(page.locator('main h1')).toBeVisible()
 }
@@ -58,30 +72,35 @@ test.describe('工作室 mock 全流程', () => {
     await expect(bell.locator('.dot-badge')).toBeVisible()
   })
 
-  test('生产 → 后期 → 质检 → 终审 → 交付闭环', async ({ page }) => {
+  test('项目阶段随单集进度自动推导，项目级只保留治理动作', async ({ page }) => {
     test.setTimeout(120_000)
     await resetStudio(page)
     await page.goto('/projects/workflow')
     await expect(page.locator('main h1')).toContainText('雾城来信')
+    await expect(page.locator('main')).toContainText('· 生产准备中 ·')
+    const actions = page.locator('.project-action-strip')
+    await expect(actions).toContainText('终止项目')
+    await expect(actions).not.toContainText('转入后期')
+    await expect(actions).not.toContainText('提交质量检测')
 
-    await runGate(page, '转入后期', '后期制作中')
+    await setEpisodeProgress(page, 'SP-26031', 'E4')
+    await expect(page.locator('main')).toContainText('· 后期制作中 ·')
+    await expect(page.locator('.project-action-strip')).toContainText('暂停派发')
+    await expect(page.locator('.project-action-strip')).not.toContainText('提交质量检测')
 
-    await runGate(page, '提交质量检测', '质量检测中')
+    await setEpisodeProgress(page, 'SP-26031', 'E6')
+    await expect(page.locator('main')).toContainText('· 质量检测中 ·')
+    await expect(page.locator('.project-action-strip')).toHaveCount(0)
 
-    await switchIdentity(page, 'i-staff')
-    await runGate(page, '检测通过', '待最终审核')
+    await setEpisodeProgress(page, 'SP-26031', 'E7', { finalApproved: true })
+    await expect(page.locator('main')).toContainText('· 已完成 ·')
 
-    await switchIdentity(page, 'i-owner')
-    await runGate(page, '终审通过', '已完成')
-    await runGate(page, '生成并交付', '已交付')
-
-    await page.goto('/projects/workflow')
+    await setEpisodeProgress(page, 'SP-26031', 'E7', { finalApproved: true, delivered: true })
     await expect(page.locator('main')).toContainText('· 已交付 ·')
-    await page.goto('/post/delivery')
-    await expect(page.locator('tbody tr').filter({ hasText: 'DP-26031-01' }).first()).toBeVisible()
+    await expect(page.locator('.project-action-strip')).toContainText('归档资产')
   })
 
-  test('新建项目弹窗一次填完并走到交付全链路', async ({ page }) => {
+  test('新建项目弹窗一次填完，剧本锁定后进入生产准备', async ({ page }) => {
     test.setTimeout(180_000)
     await resetStudio(page)
     await page.getByRole('button', { name: '新建项目' }).click()
@@ -143,16 +162,8 @@ test.describe('工作室 mock 全流程', () => {
 
     await runGate(page, '提交剧本审核', '待剧本审核')
     await runGate(page, '审核通过并锁定', '生产准备中')
-    await runGate(page, '固化镜头计划', '生产中')
-    await runGate(page, '转入后期', '后期制作中')
-    await runGate(page, '提交质量检测', '质量检测中')
-    await runGate(page, '检测通过', '待最终审核')
-    await runGate(page, '终审通过', '已完成')
-    await runGate(page, '生成并交付', '已交付')
-
-    await expect(page.locator('main')).toContainText('· 已交付 ·')
-    await page.goto('/post/delivery')
-    await expect(page.locator('tbody tr').filter({ hasText: code! }).first()).toContainText('已交付')
+    await expect(page.locator('.project-action-strip')).not.toContainText('固化镜头计划')
+    await expect(page.locator('.project-action-strip')).not.toContainText('转入后期')
   })
 
   test('项目概览汇总详情，阶段管线固定顶部并可切换', async ({ page }) => {
