@@ -2,7 +2,7 @@
   <section class="page">
     <PageHeader kicker="PROJECTS / DETAIL" :title="summary.project ? summary.project.name : '项目详情'" :desc="summary.project ? `${summary.project.id} · ${summary.project.status} · ${summary.project.genre}` : ''">
       <HeadActions>
-        <button class="btn" @click="$router.push('/projects/list')">项目列表</button>
+        <button class="btn" @click="$router.push('/workspace/home')">返回工作台</button>
         <button class="btn primary" @click="$router.push('/projects/workflow')">制作流水线</button>
       </HeadActions>
     </PageHeader>

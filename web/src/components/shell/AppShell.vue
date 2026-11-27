@@ -55,9 +55,9 @@
           <span class="mode-chip" :class="{ mock: isMock }" :title="isMock ? 'mock API：接口契约与真实后端一致，切换 VITE_DATA_MODE=real 即接真实后端' : '真实后端 API'">
             {{ isMock ? 'MOCK API' : 'REAL API' }}
           </span>
-          <button class="btn tb-bell" @click="go('notify/inbox')">
+          <button class="btn tb-bell" @click="inbox.openInbox()">
             通知
-            <span v-if="unread" class="dot-badge">{{ unread }}</span>
+            <span v-if="inbox.unread" class="dot-badge">{{ inbox.unread }}</span>
           </button>
           <select class="tb-identity" :value="session.identity?.id" @change="switchIdentity">
             <option v-for="identity in session.identities" :key="identity.id" :value="identity.id">{{ identity.name }}</option>
@@ -71,31 +71,33 @@
     </div>
 
     <DialogHost />
+    <InboxDialog />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import menuData from '../../mock/menu.json'
 import routesMeta from '../../mock/routes.json'
-import { http } from '../../api/client'
 import { isMockMode } from '../../api'
+import { http } from '../../api/client'
 import { useSessionStore } from '../../stores/session'
 import { useProjectStore } from '../../stores/project'
+import { useInboxStore } from '../../stores/inbox'
 import { useUiStore } from '../../stores/ui'
-import type { Row } from '../../mock/db'
 import DialogHost from '../ui/DialogHost.vue'
+import InboxDialog from './InboxDialog.vue'
 
 const session = useSessionStore()
 const project = useProjectStore()
+const inbox = useInboxStore()
 const ui = useUiStore()
 const route = useRoute()
 const router = useRouter()
-const unread = ref(0)
 const isMock = isMockMode
 
-interface MenuEntry { id?: string; path: string; label?: string; hidden?: boolean; perm?: string }
+interface MenuEntry { id?: string; path: string; label?: string; hidden?: boolean; perm?: string | string[] }
 interface MenuSection { id?: string; label?: string; items: MenuEntry[] }
 interface MenuGroup { id?: string; label?: string; children: MenuSection[] }
 
@@ -132,13 +134,9 @@ async function resetMock() {
   await http.post('/mock/reset')
   await session.login('i-owner')
   await project.load()
+  await inbox.load()
   ui.toast('mock 数据已重置')
   router.push('/workspace/home')
-}
-
-async function loadUnread() {
-  const result = await http.list<Row>('/notifications', { limit: 100 })
-  unread.value = result.rows.filter((row) => row.unread).length
 }
 
 function onUnhandledRejection(event: PromiseRejectionEvent) {
@@ -152,8 +150,8 @@ let unreadTimer: number | undefined
 onMounted(async () => {
   window.addEventListener('unhandledrejection', onUnhandledRejection)
   if (!session.ready) await session.login()
-  await Promise.all([session.loadIdentities(), project.load(), loadUnread()])
-  unreadTimer = window.setInterval(loadUnread, 20000)
+  await Promise.all([session.loadIdentities(), project.load(), inbox.load()])
+  unreadTimer = window.setInterval(() => inbox.load(), 20000)
 })
 
 onUnmounted(() => {

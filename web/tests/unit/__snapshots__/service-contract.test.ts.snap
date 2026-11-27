@@ -573,6 +573,12 @@ exports[`B-14 service contract > runs every service function against mock and re
   "workspace.home": {
     "kind": "object",
   },
+  "workspace.markAllNotificationsRead": {
+    "kind": "object",
+  },
+  "workspace.markNotificationRead": {
+    "kind": "object",
+  },
   "workspace.notifications": {
     "envelope": [
       "rows",

@@ -36,9 +36,11 @@ export const useSessionStore = defineStore('session', () => {
     return identity.value ? map[identity.value.role] ?? identity.value.role : '—'
   })
 
-  function can(permission?: string | null): boolean {
+  /** 单个权限码或候选集合：集合内任一命中即视为有权限，与路由 beforeEach 同口径。 */
+  function can(permission?: string | string[] | null): boolean {
     if (!permission) return true
-    return permissions.value.includes(permission)
+    const list = Array.isArray(permission) ? permission : [permission]
+    return list.some((item) => permissions.value.includes(item))
   }
 
   async function login(identityId?: string) {

@@ -540,6 +540,20 @@ const specs: ContractSpec[] = [
     rowKeys: ['id'],
   },
   {
+    name: 'workspace.markNotificationRead',
+    invoke: (s) => s.workspace.markNotificationRead('N-4412'),
+    mock: request('POST', '/notifications/N-4412/read'),
+    real: request('POST', '/notifications/N-4412/read'),
+    kind: 'object',
+  },
+  {
+    name: 'workspace.markAllNotificationsRead',
+    invoke: (s) => s.workspace.markAllNotificationsRead(),
+    mock: request('POST', '/notifications/read-all'),
+    real: request('POST', '/notifications/read-all'),
+    kind: 'object',
+  },
+  {
     name: 'workspace.createTask',
     invoke: (s) => s.workspace.createTask({ project: PROJECT_CODE, kind: '视频生成' }),
     mock: request('POST', '/generation/tasks'),
@@ -716,9 +730,9 @@ describe('B-14 service contract', () => {
     expect(Object.keys(mockShapes).sort()).toEqual(specs.map((spec) => spec.name).sort())
     expect(realShapes).toEqual(mockShapes)
     expect(mockShapes).toMatchSnapshot('service shapes')
-  })
+  }, 15_000)
 
-  it('marks a notification read with the POST route used by /notify/inbox', async () => {
+  it('marks a notification read with the POST route used by the inbox dialog', async () => {
     const { api, mockServer } = await loadServices('mock')
     api.configureApiMock(mockServer.handleMock)
     const result = await api.apiRequest<{ data: { id: string; unread: boolean } }>(

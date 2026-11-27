@@ -1,7 +1,7 @@
 <template>
   <section class="page">
     <PageHeader kicker="PROJECTS / NEW" title="新建项目" desc="三步完成立项：基础信息 → 制作设定 → 预算与团队。提交后项目进入「草稿」，由流水线启动创作。">
-      <HeadActions><button class="btn" @click="$router.push('/projects/list')">返回列表</button></HeadActions>
+      <HeadActions><button class="btn" @click="$router.push('/workspace/home')">返回工作台</button></HeadActions>
     </PageHeader>
 
     <div class="card" style="margin-bottom: 16px">

@@ -8,7 +8,7 @@ const routes: Array<{ path: string; permission?: string | string[] }> = JSON.par
 const identities = ['i-owner', 'i-ops', 'i-admin', 'i-dept', 'i-staff', 'i-auditor']
 
 test.describe('权限矩阵快照', () => {
-  test('6 个身份 × 56 条路由的可达结果稳定', async ({ page }) => {
+  test('6 个身份 × 54 条路由的可达结果稳定', async ({ page }) => {
     test.setTimeout(300_000)
     await page.goto('/workspace/home')
     await page.evaluate(() => {

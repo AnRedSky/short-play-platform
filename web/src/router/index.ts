@@ -3,7 +3,7 @@ import { useSessionStore } from '../stores/session'
 import routeMeta from '../mock/routes.json'
 
 /**
- * 页面按需加载：56 条路由与原型 routes.json 一一对应。
+ * 页面按需加载：54 条业务路由与原型 routes.json 一一对应；合并/弹窗化后的旧地址保留重定向。
  * 约定：每个业务页是独立目录，主入口统一为 views/<domain>/<page>/index.vue；
  * 规格驱动的页面共用 views/SpecPage.vue。
  */
@@ -19,11 +19,13 @@ const routes: RouteRecordRaw[] = [
   { path: '/', redirect: '/workspace/home' },
   { path: '/no-access', name: 'no-access', component: view('no-access') },
 
+  // 旧入口兼容：工作台与项目列表已合并，待办与通知已改为顶栏居中弹窗。
+  { path: '/projects/list', redirect: '/workspace/home' },
+  { path: '/notify/inbox', redirect: '/workspace/home' },
+
   { path: '/workspace/home', name: 'workspace-home', component: view('workspace') },
   { path: '/workspace/assistant', name: 'workspace-assistant', component: view('workspace/assistant') },
-  { path: '/notify/inbox', name: 'notify-inbox', component: view('SpecPage') },
 
-  { path: '/projects/list', name: 'projects-list', component: view('projects') },
   { path: '/projects/workflow', name: 'projects-workflow', component: view('projects/workflow') },
   { path: '/projects/new', name: 'projects-new', component: view('projects/new') },
   { path: '/projects/detail', name: 'projects-detail', component: view('projects/detail') },

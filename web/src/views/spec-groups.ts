@@ -25,7 +25,6 @@ export const SPEC_GROUPS: SpecGroup[] = [
   { key: 'post-extra', label: '后期补充', tabs: [{ path: '/post/versions', label: '版本链' }] },
   { key: 'quality-extra', label: '质量补充', tabs: [{ path: '/quality/rework', label: '返工台账' }] },
   { key: 'video-extra', label: '视频补充', tabs: [{ path: '/video/preview', label: '预览校验' }] },
-  { key: 'notify', label: '通知', tabs: [{ path: '/notify/inbox', label: '待办通知' }] },
 ]
 
 export function groupFor(path: string): { group: SpecGroup; tab: SpecTab } | null {

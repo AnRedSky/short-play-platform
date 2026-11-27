@@ -6,5 +6,7 @@ export const workspaceApi = {
   home: () => http.get<Row>('/workspace/home'),
   costSummary: () => http.get<Row>('/costs/summary'),
   notifications: (limit = 50, project?: string) => http.list<Row>('/notifications', project ? { limit, project } : { limit }),
+  markNotificationRead: (id: string) => http.post(`/notifications/${id}/read`),
+  markAllNotificationsRead: () => http.post('/notifications/read-all'),
   createTask: (payload: Record<string, unknown>) => http.post('/generation/tasks', payload),
 }

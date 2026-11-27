@@ -32,6 +32,32 @@ async function runGate(page: import('@playwright/test').Page, label: string, nex
 }
 
 test.describe('工作室 mock 全流程', () => {
+  test('工作台合并项目列表，通知从顶栏打开居中弹窗', async ({ page }) => {
+    await resetStudio(page)
+    await expect(page.locator('main h1')).toContainText('工作台')
+    await expect(page.locator('.ws-projects tbody tr').first()).toBeVisible()
+
+    const bell = page.locator('.tb-bell')
+    const unreadBefore = await bell.locator('.dot-badge').innerText()
+    await bell.click()
+
+    const modal = page.locator('.inbox-modal')
+    await expect(modal).toBeVisible()
+    await expect(modal.locator('.inbox-item').first()).toBeVisible()
+
+    const box = await modal.boundingBox()
+    const viewport = page.viewportSize()
+    expect(box && viewport).toBeTruthy()
+    expect(Math.abs(box!.x - (viewport!.width - box!.x - box!.width))).toBeLessThan(4)
+
+    await modal.locator('.inbox-item.unread').first().getByRole('button', { name: '标记已读' }).click()
+    await expect(bell.locator('.dot-badge')).toHaveText(String(Number(unreadBefore) - 1))
+
+    await modal.getByRole('button', { name: '关闭', exact: true }).click()
+    await expect(modal).toBeHidden()
+    await expect(bell.locator('.dot-badge')).toBeVisible()
+  })
+
   test('生产 → 后期 → 质检 → 终审 → 交付闭环', async ({ page }) => {
     test.setTimeout(120_000)
     await resetStudio(page)

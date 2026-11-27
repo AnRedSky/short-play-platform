@@ -1611,38 +1611,6 @@ export const SPECS: Record<string, PageSpec> = {
     ],
   },
 
-  /* ---------------- 通知 ---------------- */
-  '/notify/inbox': {
-    kicker: 'NOTIFY / INBOX',
-    title: '待办与通知',
-    desc: '阻塞类待办优先；每条通知必须能跳到处理页面，处理动作留审计。',
-    stats: (rows) => [
-      { label: '未读', value: rows.filter((row) => row.unread).length },
-      { label: '待处理', value: countOf(rows, 'state', '待处理') },
-      { label: '已处理', value: countOf(rows, 'state', '已处理') },
-    ],
-    table: {
-      endpoint: '/notifications',
-      search: true,
-      columns: [
-        col('id', '编号', { mono: true }),
-        col('type', '类型'),
-        col('project', '项目'),
-        col('title', '标题'),
-        col('impact', '影响'),
-        col('state', '状态', { pill: true }),
-        col('at', '时间', { mono: true }),
-      ],
-    },
-    rowActions: (row) => [
-      { label: '标记已读', run: async (ctx) => { await http.post(`/notifications/${row.id}/read`); ctx.ui.toast('已标记为已读'); ctx.reload() } },
-    ],
-    actions: [
-      { label: '全部已读', permission: 'notify.handle', run: async (ctx) => { await http.post('/notifications/read-all'); ctx.ui.toast('全部通知已标记已读'); ctx.reload() } },
-    ],
-    side: (rows) => [{ title: '通知口径', type: 'kv', items: [{ label: '通知总数', value: rows.length }, { label: '跳转', value: '每条带 link 字段' }, { label: '去重', value: '同对象合并' }] }],
-  },
-
   /* ---------------- 运维 ---------------- */
   '/ops/capabilities': {
     kicker: 'OPS / CAPABILITY',
