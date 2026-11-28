@@ -1,16 +1,14 @@
 <template>
   <section class="page">
     <PageHeader
-      kicker="WORKSPACE / PROJECTS"
-      :title="`${session.shortName} 的工作台`"
-      :desc="'项目推进与今日待办在同一页完成；待办与通知从顶部通知入口打开，不再单独占一页。'"
+      title="工作台"
+      desc="先看项目状态，再处理待办与运行任务；项目行可直接打开详情。"
     >
       <HeadActions>
         <button class="btn" @click="inbox.openInbox()">
           待办与通知
           <span v-if="inbox.unread" class="count-badge">{{ inbox.unread }}</span>
         </button>
-        <button class="btn" @click="load">刷新</button>
         <button v-if="session.can('project.create')" class="btn primary" @click="createOpen = true">新建项目</button>
       </HeadActions>
     </PageHeader>
@@ -45,11 +43,7 @@
           </select>
         </div>
 
-        <DataTable :columns="columns" :rows="visible" row-key="id" :loading="loading" clickable wide @row-click="openRow">
-          <template #actions="{ row }">
-            <button class="link-btn" @click="go('projects/workflow', row.id)">流水线</button>
-          </template>
-        </DataTable>
+        <DataTable :columns="columns" :rows="visible" row-key="id" :loading="loading" clickable @row-click="openRow" />
       </div>
 
       <aside class="ws-side">
@@ -70,18 +64,24 @@
             <h3 class="card-title">运行中的任务</h3>
             <button class="btn ghost" @click="go('tasks/list')">任务台</button>
           </div>
-          <EmptyState v-if="!(home.tasks || []).length" title="暂无运行任务" desc="从创意或视频页发起生成任务后，这里会跟踪执行状态。" compact />
-          <div v-for="task in home.tasks || []" :key="task.id" class="list-row">
-            <span class="k">{{ task.kind }} · {{ task.project }}</span>
-            <span class="v"><StatusPill :status="task.status" /> {{ task.est }}s</span>
+          <EmptyState v-if="!taskGroups.length" title="暂无运行任务" desc="从创意或视频页发起生成任务后，这里会跟踪执行状态。" compact />
+          <div v-for="group in taskGroups" :key="group.key" class="list-row">
+            <span class="k">{{ group.kind }} · {{ group.project }}</span>
+            <span class="v">{{ group.count }} 个 · 预计 {{ group.est }} 秒 <StatusPill :status="group.status" /></span>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-head"><h3 class="card-title">最近动作</h3></div>
-          <div v-for="audit in home.audits || []" :key="audit.time + audit.action" class="list-row">
-            <span class="k">{{ audit.time }}</span>
-            <span class="v">{{ audit.action }}</span>
+          <div class="card-head">
+            <h3 class="card-title">最近动作</h3>
+            <button class="btn ghost" @click="showAudits = !showAudits">{{ showAudits ? '收起' : '展开' }}</button>
+          </div>
+          <p v-if="!showAudits" class="card-sub">默认收起；展开后查看最近操作留痕。</p>
+          <div v-else>
+            <div v-for="audit in home.audits || []" :key="audit.time + audit.action" class="list-row">
+              <span class="k">{{ audit.time }}</span>
+              <span class="v">{{ audit.action }}</span>
+            </div>
           </div>
         </div>
       </aside>
@@ -152,6 +152,7 @@ const home = ref<Row>({})
 const projects = ref<Row[]>([])
 const loading = ref(false)
 const createOpen = ref(false)
+const showAudits = ref(false)
 const { activeId, isOpen, open: openPanel, close: closePanel } = useRoutePanel('project')
 const selected = computed(() => projects.value.find((row) => String(row.id) === activeId.value) ?? null)
 
@@ -180,17 +181,28 @@ query.status = ''
 query.dept = ''
 
 const columns: Column[] = [
-  { key: 'name', label: '项目', width: '170px' },
-  { key: 'id', label: '编号', mono: true },
-  { key: 'status', label: '状态', pill: true },
-  { key: 'phase', label: '阶段' },
-  { key: 'done', label: '集数', format: (row) => `${row.done ?? 0} / ${row.episodes ?? 0}` },
-  { key: 'budgetState', label: '预算', pill: true },
-  { key: 'quality', label: '质量', pill: true },
-  { key: 'updated', label: '最近更新', mono: true, width: '100px' },
+  { key: 'name', label: '项目', width: '184px' },
+  { key: 'status', label: '状态', pill: true, width: '94px', nowrap: true },
+  { key: 'phase', label: '阶段', width: '100px', nowrap: true },
+  { key: 'done', label: '集数', width: '52px', nowrap: true, format: (row) => `${row.done ?? 0} / ${row.episodes ?? 0}` },
+  { key: 'quality', label: '质量', pill: true, width: '58px', nowrap: true },
+  { key: 'updated', label: '最近更新', width: '104px', nowrap: true },
 ]
 
 const runningTasks = computed(() => Number((home.value.metrics || []).find((item: Row) => item.label === '运行任务')?.value ?? 0))
+const taskGroups = computed(() => {
+  const groups = new Map<string, { key: string; kind: string; project: string; count: number; est: number; status: string }>()
+  for (const task of (home.value.tasks as Row[] | undefined) ?? []) {
+    const kind = String(task.kind ?? '生成任务')
+    const project = String(task.project ?? '未关联项目')
+    const key = `${kind}|${project}`
+    const current = groups.get(key) ?? { key, kind, project, count: 0, est: 0, status: String(task.status ?? '排队中') }
+    current.count += 1
+    current.est += Number(task.est ?? 0)
+    groups.set(key, current)
+  }
+  return [...groups.values()]
+})
 const totalCost = computed(() => projects.value.reduce((sum, row) => sum + Number(row.actual || 0), 0))
 const statuses = computed(() => [...new Set(projects.value.map((row) => String(row.status)))].filter(Boolean))
 const depts = computed(() => [...new Set(projects.value.map((row) => String(row.dept)))].filter(Boolean))
@@ -235,11 +247,11 @@ onMounted(load)
 </script>
 
 <style scoped>
-.ws-grid { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
+.ws-grid { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(320px, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
 .ws-projects { display: grid; gap: 12px; min-width: 0; }
 .ws-tabs { margin-bottom: 0; }
 .ws-side { display: grid; gap: 14px; }
-@media (max-width: 1440px) {
+@media (max-width: 1280px) {
   .ws-grid { grid-template-columns: minmax(0, 1fr); }
 }
 </style>

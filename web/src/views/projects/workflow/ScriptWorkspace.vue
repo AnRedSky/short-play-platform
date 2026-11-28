@@ -12,7 +12,7 @@
       <div class="card-head">
         <div>
           <h3 class="card-title">剧本创作入口</h3>
-          <p class="card-sub">{{ sourceIntro }}</p>
+          <p class="card-sub">{{ sourceIntro }}<span v-if="lockedScript"> 本阶段已完成；下列步骤用于新建修订版。</span></p>
         </div>
         <div class="script-flow-actions">
           <button
@@ -155,7 +155,7 @@
               :class="{ active: episode.no === activeEpisode?.no }"
               @click="selectedEpisodeNo = episode.no"
             >
-              <span class="no">E{{ String(episode.no).padStart(2, '0') }}</span>
+              <span class="no">第 {{ String(episode.no).padStart(2, '0') }} 集</span>
               <span class="title">{{ episode.title }}</span>
               <small>{{ episode.scenes.length }} 场 · {{ episodeLineCount(episode) }} 行{{ episode.edited ? ' · 已修订' : '' }}</small>
             </button>
@@ -165,7 +165,7 @@
             <div class="script-episode-head">
               <div>
                 <div class="script-episode-title">
-                  <b>E{{ String(activeEpisode.no).padStart(2, '0') }} · {{ activeEpisode.title }}</b>
+                  <b>第 {{ String(activeEpisode.no).padStart(2, '0') }} 集 · {{ activeEpisode.title }}</b>
                   <span class="pill">{{ activeEpisode.scenes.length }} 场</span>
                   <span v-if="activeEpisode.edited" class="pill accent">人工修订</span>
                 </div>
@@ -227,7 +227,7 @@
 
         <div class="card">
           <div class="card-head">
-            <h3 class="card-title">提交门禁</h3>
+            <h3 class="card-title">{{ activeScript?.locked ? '修订版门禁' : '提交门禁' }}</h3>
             <span class="pill" :class="{ accent: gatePass }">{{ gateDone }} / 5</span>
           </div>
           <ul class="script-checks">
@@ -265,7 +265,7 @@
       <div class="card">
         <div class="card-head"><h3 class="card-title">审核记录</h3></div>
         <div v-for="review in scriptReviews" :key="String(review.id)" class="script-review-row">
-          <span class="k">{{ review.version }} · {{ review.node }}</span>
+          <span class="k">{{ review.version }} · {{ reviewNode(review.node) }}</span>
           <StatusPill :status="String(review.result)" />
           <p>{{ review.note || '—' }} · {{ review.auditor }} · {{ review.at }}</p>
         </div>
@@ -290,7 +290,7 @@
           <label class="field-wrap">
             <span class="metric-label">选择文件</span>
             <input type="file" accept=".txt,.md,text/plain,text/markdown" class="field" @change="onNovelFile" />
-            <small class="field-hint">支持 TXT / Markdown，单次不超过 12 万字；DOCX、PDF 在后续流程接入。</small>
+            <small class="field-hint">支持纯文本与标记文本，单次不超过 12 万字；Word 文档、固定版式文档在后续流程接入。</small>
           </label>
           <label class="field-wrap">
             <span class="metric-label">或粘贴章节内容</span>
@@ -347,7 +347,7 @@
                 <button type="button" class="link-btn script-map-source-link" @click="openChapterView(row.no)">查看原文</button>
               </span>
               <small>{{ row.words }} 字</small>
-              <span class="script-map-start">E{{ String(row.fromEpisode).padStart(2, '0') }}</span>
+              <span class="script-map-start">第 {{ String(row.fromEpisode).padStart(2, '0') }} 集</span>
               <select
                 v-model.number="row.episodeCount"
                 class="field"
@@ -361,7 +361,7 @@
 
           <div class="script-map-summary">
             <span class="pill" :class="{ accent: mappedEpisodeCount > 0 }">将生成 {{ mappedEpisodeCount }} 集</span>
-            <span class="muted">覆盖 E{{ String(mappedStart).padStart(2, '0') }}–E{{ String(mappedEnd).padStart(2, '0') }} · {{ mappingRows.length }} 章拆分/合并</span>
+            <span class="muted">覆盖第 {{ String(mappedStart).padStart(2, '0') }}–{{ String(mappedEnd).padStart(2, '0') }} 集 · {{ mappingRows.length }} 章拆分/合并</span>
             <span v-if="mappedEpisodeGap" class="script-map-warning">还差 {{ totalEpisodes - mappedEpisodeCount }} 集未覆盖；可增加某章集数，后续起始集会随之顺延。</span>
           </div>
 
@@ -423,7 +423,7 @@
       <div class="modal wide script-editor-modal" role="dialog" aria-modal="true" aria-label="编辑分集稿">
         <div class="modal-head">
           <div>
-            <h3>编辑 E{{ String(editDraft.no).padStart(2, '0') }}《{{ editDraft.title }}》</h3>
+            <h3>编辑第 {{ String(editDraft.no).padStart(2, '0') }} 集《{{ editDraft.title }}》</h3>
             <p>{{ activeScript?.version }} · 人工修订会留痕，不覆盖旧版本</p>
           </div>
           <button type="button" class="btn ghost" aria-label="关闭编辑" @click="closeEditor">✕</button>
@@ -658,14 +658,14 @@ const sourceIntro = computed(() => {
   return '模型生成：先出样章再补齐全剧，逐集修订后提交审核；与自主编写共用同一套版本。'
 })
 const sourceModeHelp = computed(() => {
-  if (sourceMode.value === 'manual') return '新建空白稿会直接建立 E01，可逐集编辑；不会调用模型。'
+  if (sourceMode.value === 'manual') return '新建空白稿会直接建立第 1 集，可逐集编辑；不会调用模型。'
   if (sourceMode.value === 'novel') return novelSourceReady.value
     ? `已解析 ${novelSource.value?.chapters?.length ?? 0} 章 / ${novelSourceWords.value} 字；下一步做章节映射。`
     : '导入小说全文后可解析章节、保留正文，并按章节映射生成分集稿。'
   return '生成结果并入当前草稿；人工修订过的集不会被自动覆盖。'
 })
 const emptyIntro = computed(() => {
-  if (sourceMode.value === 'manual') return '还没有剧本版本。新建空白稿后，从 E01 开始逐集写场次与台词。'
+  if (sourceMode.value === 'manual') return '还没有剧本版本。新建空白稿后，从第 1 集开始逐集写场次与台词。'
   if (sourceMode.value === 'novel') return '还没有剧本版本。先导入小说全文，解析章节后做章节映射。'
   return '还没有剧本版本。用模型生成第一版分集稿，建议先出前 3 集样章。'
 })
@@ -719,6 +719,10 @@ const scriptReviews = computed(() => {
   return (Array.isArray(value) ? value as Row[] : []).filter((row) => String(row.node ?? '').includes('剧本'))
 })
 
+function reviewNode(value: unknown): string {
+  return String(value ?? '').replace('节点 A', '节点一')
+}
+
 function episodeLineCount(episode: EpisodeDraft): number {
   return episode.scenes.reduce((sum, scene) => sum + (scene.lines?.length ?? 0), 0)
 }
@@ -770,8 +774,8 @@ const flowSteps = computed(() => {
   return [
     { no: 1, title: '确定创作来源', desc: '模型 / 自主编写 / 小说改编', ok: sourceReady.value },
     { no: 2, title: '完成初稿', desc: '逐集形成可分集稿', ok: draftEpisodes.value.length > 0 },
-    { no: 3, title: '补齐全剧', desc: `${draftEpisodes.value.length} / ${totalEpisodes.value} 集`, ok: draftEpisodes.value.length >= totalEpisodes.value },
-    { no: 4, title: '提交审核', desc: '剧本审核节点 A', ok: submitted },
+    { no: 3, title: locked ? '补齐修订版' : '补齐全剧', desc: `${draftEpisodes.value.length} / ${totalEpisodes.value} 集`, ok: draftEpisodes.value.length >= totalEpisodes.value },
+    { no: 4, title: '提交审核', desc: '剧本审核节点一', ok: submitted },
     { no: 5, title: '审核锁定', desc: '正式版本供下游引用', ok: locked },
   ]
 })
@@ -786,10 +790,10 @@ const draftLineCount = computed(() =>
 
 const kpis = computed(() => [
   { label: '当前版本', value: activeScript.value?.version ?? '未创建', hint: activeScript.value?.status ?? '等待生成' },
-  { label: '分集稿', value: `${draftEpisodes.value.length} / ${totalEpisodes.value}`, hint: '已生成 / 全剧' },
-  { label: '场次', value: String(draftSceneCount.value), hint: '当前分集稿合计' },
-  { label: '台词行', value: String(draftLineCount.value), hint: '当前分集稿合计' },
-  { label: '提交门禁', value: `${gateDone.value} / 5`, hint: canSubmit.value ? '可提交审核' : '未就绪' },
+  { label: activeScript.value?.locked ? '当前草稿' : '分集稿', value: `${draftEpisodes.value.length} / ${totalEpisodes.value}`, hint: '已写 / 全剧' },
+  { label: '场次', value: String(draftSceneCount.value), hint: '当前草稿合计' },
+  { label: '台词行', value: String(draftLineCount.value), hint: '当前草稿合计' },
+  { label: activeScript.value?.locked ? '修订版门禁' : '提交门禁', value: `${gateDone.value} / 5`, hint: activeScript.value?.locked ? '修订版未就绪' : canSubmit.value ? '可提交审核' : '未就绪' },
 ])
 
 const generateLabel = computed(() => {
@@ -1111,7 +1115,7 @@ async function createManualScript() {  if (!canGenerate.value || creating.value)
     selectedEpisodeNo.value = 1
     sourceMode.value = 'manual'
     emit('refresh')
-    ui.toast('已新建空白剧本，可编辑 E01')
+    ui.toast('已新建空白剧本，可编辑第 1 集')
   } catch (err) {
     ui.toast((err as Error).message || '新建空白剧本失败', 'bad')
   } finally {
@@ -1145,7 +1149,7 @@ async function addManualEpisode() {
       selectedId.value = scriptId
       selectedEpisodeNo.value = 1
       emit('refresh')
-      ui.toast('已新建空白剧本，可编辑 E01')
+      ui.toast('已新建空白剧本，可编辑第 1 集')
       return
     }
     const scenes = next.reduce((sum, episode) => sum + episode.scenes.length, 0)
@@ -1157,11 +1161,11 @@ async function addManualEpisode() {
       lines,
       status: '草稿',
       revision: Number(activeScript.value?.revision ?? 0) + 1,
-      note: `自主编写 · 新增 E${String(no).padStart(2, '0')}`,
+      note: `自主编写 · 新增第 ${no} 集`,
     })
     selectedEpisodeNo.value = no
     emit('refresh')
-    ui.toast(`已新增 E${String(no).padStart(2, '0')} 空白稿`)
+    ui.toast(`已新增第 ${no} 集空白稿`)
   } catch (err) {
     ui.toast((err as Error).message || '新建分集失败', 'bad')
   } finally {
@@ -1279,7 +1283,7 @@ async function newVersion() {
 function openRewrite(episode: EpisodeDraft) {
   if (!canGenerate.value || !activeScript.value) return
   ui.openDialog({
-    title: `模型重写 E${String(episode.no).padStart(2, '0')}`,
+    title: `模型重写第 ${episode.no} 集`,
     subtitle: '只替换这一集；其他集与人工修订保持不变。',
     wide: true,
     fields: [
@@ -1312,7 +1316,7 @@ function openRewrite(episode: EpisodeDraft) {
         label: '重写要求',
         type: 'textarea',
         rows: 5,
-        value: `保留 E${episode.no} 的核心冲突「${episode.hook}」，让人物关系更紧，结尾钩子更明确。`,
+        value: `保留第 ${episode.no} 集的核心冲突「${episode.hook}」，让人物关系更紧，结尾钩子更明确。`,
         required: true,
         full: true,
       },
@@ -1331,7 +1335,7 @@ function openRewrite(episode: EpisodeDraft) {
         overwrite: true,
       })
       selectedId.value = String(created.id)
-      ui.toast(`E${String(episode.no).padStart(2, '0')} 已用模型重写`)
+      ui.toast(`第 ${episode.no} 集已用模型重写`)
       emit('refresh')
     },
   })
@@ -1410,9 +1414,9 @@ async function saveEditor() {
       lines: counts.lines,
       status: '草稿',
       revision: Number(activeScript.value.revision ?? 0) + 1,
-      note: `人工修订 E${String(episode.no).padStart(2, '0')} · ${activeScript.value.note ?? ''}`,
+      note: `人工修订第 ${episode.no} 集 · ${activeScript.value.note ?? ''}`,
     })
-    ui.toast(`E${String(episode.no).padStart(2, '0')} 已保存修订`)
+    ui.toast(`第 ${episode.no} 集已保存修订`)
     closeEditor()
     emit('refresh')
   } catch (err) {

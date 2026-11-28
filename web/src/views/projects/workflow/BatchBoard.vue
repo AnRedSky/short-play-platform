@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { Row } from '../../../mock/db'
 import type { BatchGroup, EpisodeCard } from './episodeFlow'
+import { EPISODE_STEPS } from './episodeFlow'
 import type { BatchPackageDto, BatchTrialDto } from '../../../services/projects/contract'
 import { projectApi } from '../../../services/projects'
 import { useUiStore } from '../../../stores/ui'
@@ -25,6 +26,15 @@ const emit = defineEmits<{
 }>()
 
 const ui = useUiStore()
+
+function stepName(key: string): string {
+  return EPISODE_STEPS.find((step) => step.key === key)?.name ?? key
+}
+
+function qcText(value: unknown): string {
+  const text = String(value ?? '').trim()
+  return text ? text.replace(/\bQC\b/g, '质检') : '待检'
+}
 const starting = ref(false)
 const packaging = ref(false)
 
@@ -62,7 +72,7 @@ async function startTrial() {
       size: 3,
     })
     const eps = trial.episodes
-    ui.toast(`已生成 ${currentBatch.value.label} 试跑单：${eps.map((no) => `E${String(no).padStart(2, '0')}`).join(' / ')}`)
+    ui.toast(`已生成 ${currentBatch.value.label} 试跑单：${eps.map((no) => `第 ${no} 集`).join(' / ')}`)
     emit('trial-started')
   } catch (error) {
     ui.toast(error instanceof Error ? error.message : '试跑单生成失败', 'bad')
@@ -191,8 +201,8 @@ async function startPackage() {
               :class="{ done: item.flow.done }"
               @click="emit('open-episode', item)"
             >
-              <b>E{{ String(item.no).padStart(2, '0') }}</b>
-              <em>{{ item.flow.currentStep }} · {{ item.row.status || '待生产' }}</em>
+              <b>第 {{ String(item.no).padStart(2, '0') }} 集</b>
+              <em>{{ stepName(item.flow.currentStep) }} · {{ item.row.status || '待生产' }}</em>
               <small>{{ item.flow.progress }}%</small>
             </span>
           </div>
@@ -222,14 +232,14 @@ async function startPackage() {
         >
           <div class="episode-card-head">
             <div>
-              <span class="episode-no">E{{ String(item.no).padStart(2, '0') }}</span>
+              <span class="episode-no">第 {{ String(item.no).padStart(2, '0') }} 集</span>
               <b>{{ item.row.title || '未命名单集' }}</b>
             </div>
             <StatusPill :status="item.row.status || '待生产'" />
           </div>
           <div class="episode-current">
             <span>当前阶段</span>
-            <b>{{ item.flow.currentStep }} · {{ item.flow.steps.find((step) => step.key === item.flow.currentStep)?.name }}</b>
+            <b>{{ item.flow.steps.find((step) => step.key === item.flow.currentStep)?.name }}</b>
             <em>{{ item.flow.note }}</em>
           </div>
           <div class="episode-progress">
@@ -239,10 +249,10 @@ async function startPackage() {
           <div class="episode-meta">
             <span>{{ item.row.duration || '时长待接入' }}</span>
             <span>{{ item.row.shots ?? 0 }} 镜</span>
-            <span>QC {{ item.row.qc || '待检' }}</span>
+            <span>质检 {{ qcText(item.row.qc) }}</span>
           </div>
           <div class="episode-card-foot">
-            <span>查看 E0–E7 工作区</span>
+            <span>查看阶段工作区</span>
             <b>→</b>
           </div>
         </button>

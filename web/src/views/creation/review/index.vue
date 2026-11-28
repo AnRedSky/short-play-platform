@@ -1,6 +1,6 @@
 <template>
   <section class="page">
-    <PageHeader kicker="CREATION / REVIEW A" title="剧本审核" desc="节点 A：审核结论决定项目能否进入生产准备；通过即锁定正式版本，退回必须写明原因。">
+    <PageHeader kicker="CREATION / REVIEW A" title="剧本审核" desc="节点一：审核结论决定项目能否进入生产准备；通过即锁定正式版本，退回必须写明原因。">
       <HeadActions>
         <button class="btn" @click="$router.push('/creation/script')">查看剧本版本</button>
         <button class="btn primary" v-if="session.can('script.review') && reviewing" @click="decide('通过')">通过并锁定</button>

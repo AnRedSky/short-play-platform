@@ -14,36 +14,38 @@
       { label: '冻结版本', value: deliveries.filter(d => d.frozen).length },
     ]" />
 
-    <div class="spec-grid" style="grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr); margin-top: 18px">
+    <div class="spec-grid" style="grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr); margin-top: 18px; align-items: start">
       <div style="display: grid; gap: 14px">
         <div class="card">
-          <div class="card-head"><h3 class="card-title">交付清单</h3><span class="card-sub">缺项会阻断交付动作</span></div>
-          <DataTable :columns="[{ key: 'item', label: '交付物' }, { key: 'required', label: '必需', format: (row) => (row.required ? '是' : '否') }, { key: 'status', label: '状态', pill: true }]" :rows="checklist" row-key="item" />
+          <div class="card-head">
+            <h3 class="card-title">交付清单</h3>
+            <div class="head-inline">
+              <span class="card-sub">{{ readyCount }} / {{ checklist.length }} 项已就绪</span>
+              <button v-if="checklist.length" class="link-btn" @click="showAllChecklist = !showAllChecklist">
+                {{ showAllChecklist ? '收起明细' : '查看明细' }}
+              </button>
+            </div>
+          </div>
+          <p v-if="checklistReady && !showAllChecklist" class="checklist-note">
+            {{ checklist.length }} 项交付物均已就绪；展开明细可核对交付物与必需标记。
+          </p>
+          <DataTable
+            v-if="showAllChecklist || !checklistReady"
+            :columns="checkColumns"
+            :rows="checklist"
+            row-key="item"
+          />
         </div>
 
         <div class="card">
           <div class="card-head"><h3 class="card-title">交付记录</h3></div>
           <DataTable
-            :columns="[
-              { key: 'id', label: '交付包', mono: true },
-              { key: 'project', label: '项目' },
-              { key: 'version', label: '版本' },
-              { key: 'episodes', label: '集数' },
-              { key: 'size', label: '体积' },
-              { key: 'checksum', label: '校验和', mono: true },
-              { key: 'status', label: '状态', pill: true },
-              { key: 'receiver', label: '接收方' },
-            ]"
+            :columns="deliveryColumns"
             :rows="deliveries"
             row-key="id"
-            wide
             clickable
             @row-click="open"
-          >
-            <template #actions="{ row }">
-              <button class="link-btn" @click="open(row)">详情</button>
-            </template>
-          </DataTable>
+          />
         </div>
       </div>
 
@@ -51,7 +53,7 @@
         <div class="card">
           <div class="card-head"><h3 class="card-title">交付前置</h3></div>
           <div class="checklist">
-            <div class="ck"><i :class="{ on: projectStore.current?.status === '已完成' }">{{ projectStore.current?.status === '已完成' ? '✓' : '' }}</i><span>终审通过（已完成）</span></div>
+            <div class="ck"><i :class="{ on: projectStore.current?.status === '已完成' }">{{ projectStore.current?.status === '已完成' ? '✓' : '' }}</i><span>终审通过</span></div>
             <div class="ck"><i :class="{ on: checklistReady }">{{ checklistReady ? '✓' : '' }}</i><span>必需清单齐备</span></div>
             <div class="ck"><i class="on">✓</i><span>校验和计算并留存</span></div>
             <div class="ck"><i class="on">✓</i><span>交付后冻结，不覆盖历史</span></div>
@@ -73,7 +75,7 @@
 
     <AppDrawer
       :open="panel.isOpen.value"
-      :title="activeDelivery ? `${activeDelivery.id} · ${activeDelivery.version}` : '交付包详情'"
+      :title="activeDelivery ? `交付包 ${activeDelivery.id}` : '交付包详情'"
       :subtitle="activeDelivery?.status || '未找到该交付包'"
       @close="panel.close"
     >
@@ -91,7 +93,7 @@
           <dt>状态</dt><dd>{{ activeDelivery.status }}</dd>
           <dt>冻结</dt><dd>{{ activeDelivery.frozen ? '已冻结，不可覆盖' : '未冻结' }}</dd>
         </dl>
-        <div class="notice">交付包生成后冻结，历史版本保留；重新交付会创建新版本号，不覆盖当前包。</div>
+        <div class="notice info">交付包生成后冻结，历史版本保留；重新交付会创建新版本号，不覆盖当前包。</div>
       </div>
       <p v-else class="muted">记录不存在：链接中的交付包可能已删除。</p>
     </AppDrawer>
@@ -110,7 +112,7 @@ import type { Row } from '../../../mock/db'
 import PageHeader from '../../../components/ui/PageHeader.vue'
 import HeadActions from '../../../components/ui/HeadActions.vue'
 import StatCards from '../../../components/ui/StatCards.vue'
-import DataTable from '../../../components/ui/DataTable.vue'
+import DataTable, { type Column } from '../../../components/ui/DataTable.vue'
 import AppDrawer from '../../../components/ui/AppDrawer.vue'
 
 const session = useSessionStore()
@@ -119,9 +121,26 @@ const ui = useUiStore()
 
 const deliveries = ref<Row[]>([])
 const checklist = ref<Row[]>([])
+const showAllChecklist = ref(false)
 const panel = useRoutePanel('post-delivery')
 const activeDelivery = computed(() => deliveries.value.find((row) => String(row.id) === panel.activeId.value) ?? null)
 
+const checkColumns: Column[] = [
+  { key: 'item', label: '交付物' },
+  { key: 'required', label: '必需', width: '56px', format: (row) => (row.required ? '是' : '否') },
+  { key: 'status', label: '状态', pill: true, width: '96px' },
+]
+
+const deliveryColumns: Column[] = [
+  { key: 'id', label: '交付包', mono: true, nowrap: true, width: '116px' },
+  { key: 'version', label: '版本', width: '64px', nowrap: true },
+  { key: 'episodes', label: '集数', width: '56px', nowrap: true },
+  { key: 'status', label: '状态', pill: true, width: '96px' },
+  { key: 'receiver', label: '接收方', width: '96px', nowrap: true },
+  { key: 'at', label: '交付时间', mono: true, nowrap: true },
+]
+
+const readyCount = computed(() => checklist.value.filter((item) => item.status === '已就绪').length)
 const checklistReady = computed(() => checklist.value.every((item) => item.status === '已就绪' || !item.required))
 
 async function load() {
@@ -161,3 +180,18 @@ watch(() => projectStore.currentId, () => {
 })
 onMounted(load)
 </script>
+
+<style scoped>
+.head-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.checklist-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+</style>

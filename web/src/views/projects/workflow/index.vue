@@ -1,6 +1,6 @@
 <template>
   <section class="page cockpit-page">
-    <div class="cockpit-head">
+    <div v-if="viewMode === 'project'" class="cockpit-head">
       <div class="cockpit-frame">
         <PageHeader
           kicker="PROJECTS / COCKPIT"
@@ -8,11 +8,8 @@
           :desc="pageDesc"
         >
           <HeadActions>
-            <button v-if="viewMode !== 'project'" class="btn" @click="backToProject">项目概览</button>
-            <button v-else class="btn" :disabled="!batches.length" @click="openBatch(focusBatch?.index ?? activeBatch?.index ?? 1)">批次看板</button>
-            <button class="btn" @click="$router.push('/workspace/home')">返回工作台</button>
+            <button class="btn" :disabled="!batches.length" @click="openBatch(focusBatch?.index ?? activeBatch?.index ?? 1)">批次看板</button>
             <button class="btn" @click="$router.push('/projects/lifecycle')">生命周期</button>
-            <button class="btn" @click="reload">刷新</button>
           </HeadActions>
         </PageHeader>
 
@@ -23,7 +20,7 @@
               <span class="card-sub">项目概览汇总档案与进度；剧本为项目级，导演规划起按单集顺序直达</span>
             </div>
             <div class="stage-dock-meta">
-              <span class="pill accent">当前 {{ (viewMode === 'episode' && selectedStage?.name) || currentStage?.name || '—' }}</span>
+              <span class="pill accent">当前 {{ currentStage?.name || '—' }}</span>
               <span class="pill">项目进度 {{ data.progress ?? 0 }}%</span>
             </div>
           </div>
@@ -88,7 +85,7 @@
                       <span class="batch-overview-meta">
                         {{ batch.status }} · 质检 {{ batch.qcCount }} 集
                         <template v-if="batch.index === focusBatch?.index && focusEpisode">
-                          · 从 E{{ focusEpisode.no }} 继续
+                          · 从第 {{ focusEpisode.no }} 集继续
                         </template>
                       </span>
                     </button>
@@ -144,7 +141,7 @@
                   <EmptyState v-if="!blockers.length" title="当前无阻塞项" desc="项目可继续推进；异常与待办会在此列出。" compact />
                   <div v-for="item in blockers" :key="item.id" class="list-row">
                     <span class="k">{{ item.title }}</span>
-                    <span class="v">{{ item.impact }}</span>
+                    <span class="v">{{ episodeText(item.impact) }}</span>
                   </div>
                 </div>
 
@@ -156,7 +153,7 @@
                     class="list-row row-click stage-row-btn"
                     @click="openCost(cost)"
                   >
-                    <span class="k">{{ cost.cap }} · E{{ cost.ep }}</span>
+                    <span class="k">{{ cost.cap }} · 第 {{ cost.ep }} 集</span>
                     <span class="v">¥{{ cost.actual }}</span>
                   </button>
                   <EmptyState v-if="!costs.length" title="暂无成本记录" desc="生成任务产生调用后，成本会自动记账。" compact />
@@ -169,8 +166,8 @@
                 <EmptyState v-if="!timeline.length" title="尚无动作记录" desc="执行关卡动作后，操作人、时间与结果会在此留痕。" compact />
                 <div v-for="item in timeline" :key="item.at + item.title" class="timeline-item">
                   <time>{{ item.at }}</time>
-                  <b>{{ item.title }}</b>
-                  <p>{{ item.by }} · {{ item.kind }} · {{ item.note }}</p>
+                  <b>{{ cleanText(item.title) }}</b>
+                  <p>{{ item.by }} · {{ item.kind }} · {{ cleanText(item.note) }}</p>
                 </div>
               </div>
             </template>
@@ -192,7 +189,7 @@
               </div>
 
               <div class="stage-meta">
-                <div><span class="metric-label">责任方</span><b>{{ selectedStage.owner }}</b></div>
+                <div><span class="metric-label">责任方</span><b>{{ ownerText(selectedStage.owner) }}</b></div>
                 <div><span class="metric-label">准入关口</span><b>{{ selectedStage.gate }}</b></div>
                 <div><span class="metric-label">阶段产出</span><b>{{ selectedStage.out }}</b></div>
               </div>
@@ -212,7 +209,7 @@
               <div class="project-action-head">
                 <div>
                   <h3 class="card-title">项目级操作</h3>
-                  <p class="card-sub">仅项目状态与权限可执行的动作；单集制作在 E0–E7 工作区完成</p>
+                  <p class="card-sub">仅项目状态与权限可执行的动作；单集制作在八个阶段工作区完成</p>
                 </div>
                 <span class="pill">{{ projectActions.length }} 个可用</span>
               </div>
@@ -440,10 +437,22 @@ const pageDesc = computed(() => {
     return `${row.id} · ${activeBatch.value.range} · ${activeBatch.value.status} · ${activeBatch.value.doneCount}/${activeBatch.value.episodes.length} 集已交付`
   }
   if (viewMode.value === 'episode' && activeEpisode.value) {
-    return `${row.id} · ${activeStepMeta.value.key} ${activeStepMeta.value.name} · 完成度 ${activeEpisode.value.flow.progress}% · ${activeEpisode.value.flow.note}`
+    return `${row.id} · ${activeStepMeta.value.name} · 完成度 ${activeEpisode.value.flow.progress}% · ${activeEpisode.value.flow.note}`
   }
-  return `${row.id} · ${row.status} · 当前阶段 ${row.phase}`
+  return `${row.id} · ${row.status}`
 })
+
+function episodeText(value: unknown): string {
+  return String(value ?? '').replace(/E(\d+)/g, '第 $1 集')
+}
+
+function ownerText(value: unknown): string {
+  return String(value ?? '').replace(/\bAI\b/g, '模型')
+}
+
+function cleanText(value: unknown): string {
+  return episodeText(value).replace(/节点\s*A/g, '节点一').replace(/\bAI\b/g, '模型')
+}
 
 const kpis = computed(() =>
   ((data.value.kpis as Array<{ label: string; value: string }> | undefined) ?? []).map((item) => ({
@@ -619,7 +628,7 @@ const drawerItems = computed<Array<{ label: string; value: string }>>(() => {
     return [
       { label: '成本编号', value: String(cost.value.id ?? '') },
       { label: '任务', value: String(cost.value.task ?? '') },
-      { label: '集 / 镜头', value: `E${cost.value.ep ?? '—'} / ${cost.value.shot ?? '—'}` },
+      { label: '集 / 镜头', value: `第 ${cost.value.ep ?? '—'} 集 / ${cost.value.shot ?? '—'}` },
       { label: '能力', value: String(cost.value.cap ?? '') },
       { label: '预估', value: `¥${cost.value.est ?? '—'}` },
       { label: '实际', value: `¥${cost.value.actual ?? '—'}` },
@@ -713,28 +722,25 @@ onMounted(async () => {
 
 <style scoped>
 .cockpit-page {
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
+  display: block;
 }
 .cockpit-head {
   flex: none;
   position: relative;
   z-index: 15;
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  background: transparent;
+  border-bottom: 0;
+  box-shadow: none;
 }
 .cockpit-frame {
   width: 100%;
-  max-width: var(--content-max);
+  max-width: none;
   margin: 0 auto;
-  padding: 0 var(--sp-6);
+  padding: 0;
 }
 .cockpit-head .cockpit-frame {
-  padding-top: 20px;
-  padding-bottom: 14px;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 .cockpit-head .page-head {
   margin-bottom: 12px;
@@ -754,15 +760,12 @@ onMounted(async () => {
   min-width: 0;
 }
 .cockpit-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-gutter: stable;
+  display: block;
+  overflow: visible;
 }
 .cockpit-body {
   padding-top: 16px;
-  padding-bottom: 56px;
+  padding-bottom: 0;
 }
 .cockpit-grid {
   grid-template-columns: minmax(0, 1fr);
@@ -899,6 +902,7 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  align-items: start;
 }
 .stage-dock-head {
   display: flex;
@@ -1018,9 +1022,6 @@ onMounted(async () => {
   .overview-split,
   .batch-overview-grid {
     grid-template-columns: 1fr;
-  }
-  .cockpit-frame {
-    padding: 0 var(--sp-4);
   }
 }
 </style>

@@ -1,11 +1,11 @@
 <template>
-  <div class="grid grid-4">
-    <div v-for="item in items" :key="item.label" class="card stat-card">
-      <div class="metric-label">{{ item.label }}</div>
-      <div class="v">{{ item.value }}<small v-if="item.unit">{{ item.unit }}</small></div>
-      <div class="h">{{ item.hint || '' }}</div>
+  <section class="status-strip" aria-label="关键状态">
+    <div v-for="(item, index) in items" :key="item.label" class="status-cell" :class="{ primary: index === 0 }">
+      <span class="status-label">{{ item.label }}</span>
+      <div class="status-value">{{ item.value }}<small v-if="item.unit">{{ item.unit }}</small></div>
+      <div class="status-hint">{{ item.hint || '' }}</div>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">

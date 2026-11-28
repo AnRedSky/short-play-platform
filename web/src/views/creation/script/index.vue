@@ -14,7 +14,7 @@
           <div class="card-head">
             <div>
               <h3 class="card-title">{{ selected?.id || '未选择版本' }}</h3>
-              <p class="card-sub">{{ selected?.version }} · {{ selected?.status }}</p>
+              <p class="card-sub">{{ versionText(selected?.version) }} · {{ selected?.status }}</p>
             </div>
             <StatusPill :status="selected?.status" />
           </div>
@@ -34,17 +34,13 @@
 
         <div class="card">
           <div class="card-head"><h3 class="card-title">版本链</h3><span class="card-sub">点击查看版本详情</span></div>
-          <DataTable :columns="columns" :rows="versions" row-key="id" clickable @row-click="openVersion">
-            <template #actions="{ row }">
-              <button class="link-btn" @click="openVersion(row)">详情</button>
-            </template>
-          </DataTable>
+          <DataTable :columns="columns" :rows="versions" row-key="id" clickable @row-click="openVersion" />
         </div>
 
         <div class="card">
           <div class="card-head"><h3 class="card-title">版本差异</h3></div>
           <div v-for="diff in diffs" :key="diff.version" class="diff-row">
-            <b>{{ diff.version }} · {{ diff.change }}</b>
+            <b>{{ versionText(diff.version) }} · {{ diff.change }}</b>
             <p>{{ diff.detail }}（{{ diff.scenes }} 场 / {{ diff.lines }} 行）</p>
           </div>
           <EmptyState v-if="!diffs.length" title="暂无版本差异" desc="创建新版本后，逐场与逐行差异会显示在这里。" compact />
@@ -74,7 +70,7 @@
     <AppDrawer
       :open="panel.isOpen.value"
       title="剧本版本详情"
-      :subtitle="activeVersion ? `${activeVersion.id} · ${activeVersion.version}` : '未找到该版本'"
+      :subtitle="activeVersion ? `${versionText(activeVersion.version)} · ${activeVersion.status || '状态待接入'}` : '未找到该版本'"
       @close="panel.close"
     >
       <template v-if="activeVersion">
@@ -126,12 +122,16 @@ const activeVersion = computed(() => {
   return versions.value.find((row) => String(row.id) === panel.activeId.value) ?? null
 })
 
+function versionText(value: unknown): string {
+  return String(value ?? '—').replace(/^v(\d+)$/i, '第 $1 版')
+}
+
 const columns: Column[] = [
-  { key: 'id', label: '版本编号', mono: true },
-  { key: 'version', label: '版本' },
+  { key: 'id', label: '版本编号', mono: true, nowrap: true },
+  { key: 'version', label: '版本', width: '64px', nowrap: true, format: (row) => versionText(row.version) },
   { key: 'status', label: '状态', pill: true },
-  { key: 'by', label: '创建人' },
-  { key: 'at', label: '时间', mono: true },
+  { key: 'by', label: '创建人', width: '100px', nowrap: true },
+  { key: 'at', label: '时间', mono: true, nowrap: true, width: '132px' },
 ]
 
 const canSubmit = computed(() => session.can('creation.write') && projectStore.current?.status === '剧本创作中')

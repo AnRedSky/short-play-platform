@@ -71,7 +71,7 @@
               <div class="queue-head"><b>{{ column.status }}</b><span>{{ column.rows.length }}</span></div>
               <div v-for="task in column.rows.slice(0, 4)" :key="task.id" class="queue-item">
                 <b>{{ task.id }} · {{ task.kind }}</b>
-                <small>E{{ task.ep }} {{ task.scene }} / {{ task.shot }}</small>
+                <small>第 {{ task.ep }} 集 {{ task.scene }} / {{ task.shot }}</small>
                 <span class="tag">尝试 {{ task.attempt }}/{{ task.maxAttempts }} · 预估 {{ task.est }}s</span>
               </div>
               <p v-if="!column.rows.length" class="queue-empty">暂无任务</p>
@@ -204,7 +204,7 @@
               <h3 class="card-title">质检报告</h3>
               <p class="card-sub">镜头级、单集级与整剧级分别出报告；高风险未关闭不能人工通过。</p>
             </div>
-            <span class="pill" :class="{ warn: qualityFailCount }">{{ qualityFailCount }} 个 FAIL</span>
+            <span class="pill" :class="{ warn: qualityFailCount }">{{ qualityFailCount }} 份未通过</span>
           </div>
           <DataTable
             :columns="[
@@ -360,7 +360,7 @@
         <div class="card">
           <div class="card-head"><h3 class="card-title">失败任务</h3><span class="pill warn">{{ videoFailed.length }}</span></div>
           <div v-for="task in videoFailed.slice(0, 3)" :key="task.id" class="list-row">
-            <span class="k">{{ task.id }} · E{{ task.ep }} {{ task.shot }}</span>
+            <span class="k">{{ task.id }} · 第 {{ task.ep }} 集 {{ task.shot }}</span>
             <span class="v">{{ task.failReason }}</span>
           </div>
           <EmptyState v-if="!videoFailed.length" title="当前无失败任务" desc="失败任务会在这里列出原因与重试次数。" compact />
@@ -592,7 +592,7 @@ const postChecks = computed(() => [
   { label: '字幕校对完成', ok: subtitles.value.every((row) => String(row.status) === '已通过') },
 ])
 const qualityChecks = computed(() => [
-  { label: '无 FAIL 报告', ok: qualityFailCount.value === 0 },
+  { label: '无未通过报告', ok: qualityFailCount.value === 0 },
   { label: '无高风险问题', ok: qualityHighIssues.value.length === 0 },
   { label: '待人工项已确认', ok: qualityReviewCount.value === 0 },
   { label: '单集与整剧均出报告', ok: qualityReports.value.some((row) => String(row.level) === '单集级') && qualityReports.value.some((row) => String(row.level) === '整剧级') },
@@ -661,8 +661,8 @@ const kpis = computed<Array<{ label: string; value: string | number; hint?: stri
       { label: '质检报告', value: qualityReports.value.length },
       { label: '问题项', value: qualityIssues.value.length },
       { label: '待人工', value: qualityReviewCount.value },
-      { label: 'FAIL', value: qualityFailCount.value, hint: qualityFailCount.value ? '阻断下游' : '无阻断' },
-      { label: 'PASS 率', value: `${passRate.value}%` },
+      { label: '未通过', value: qualityFailCount.value, hint: qualityFailCount.value ? '阻断下游' : '无阻断' },
+      { label: '通过率', value: `${passRate.value}%` },
     ]
   }
   if (props.stageKey === 'delivery') {
@@ -670,7 +670,7 @@ const kpis = computed<Array<{ label: string; value: string | number; hint?: stri
       { label: '交付记录', value: deliveries.value.length },
       { label: '清单就绪', value: `${deliveryReadyCount.value} / ${deliveryChecklist.value.length}` },
       { label: '集数完成', value: `${props.project?.done ?? 0} / ${props.project?.episodes ?? 0}` },
-      { label: '质量结论', value: qualityFailCount.value ? '阻断' : qualityReviewCount.value ? '待人工' : '通过', hint: `${qualityFailCount.value} FAIL / ${qualityReviewCount.value} 待确认` },
+      { label: '质量结论', value: qualityFailCount.value ? '阻断' : qualityReviewCount.value ? '待人工' : '通过', hint: `${qualityFailCount.value} 份未通过 / ${qualityReviewCount.value} 待确认` },
       { label: '交付门槛', value: `${deliveryGateCount.value} / ${deliveryChecks.value.length}`, hint: deliveryGateCount.value === deliveryChecks.value.length ? '可冻结' : '未就绪' },
     ]
   }

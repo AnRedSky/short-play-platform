@@ -22,7 +22,7 @@
       </select>
       <select v-model="query.qc" class="filter">
         <option value="">质检 · 全部</option>
-        <option v-for="item in qcOptions" :key="item" :value="item">{{ item }}</option>
+        <option v-for="item in qcOptions" :key="item" :value="item">{{ qcText(item) }}</option>
       </select>
       <select v-model="query.gate" class="filter">
         <option value="">放行 · 全部</option>
@@ -32,7 +32,7 @@
       <span class="filter-count">{{ visible.length }} / {{ assets.length }} 个资产</span>
     </div>
 
-    <div class="grid grid-3">
+    <div class="grid asset-grid">
       <div
         v-for="asset in visible"
         :key="asset.id"
@@ -51,15 +51,17 @@
           </div>
           <StatusPill :status="asset.status" />
         </div>
-        <div class="asset-thumb" style="height: 96px; border-radius: 8px; background: linear-gradient(135deg, #1b222c, #141a22); display: grid; place-items: center; color: var(--faint); font-family: var(--mono); font-size: 10px">
-          {{ asset.id }} · {{ asset.version }}
+        <div class="asset-thumb">
+          <span class="thumb-icon" aria-hidden="true">▧</span>
+          <span class="thumb-label">暂无预览</span>
+          <span class="thumb-id">{{ asset.id }} · {{ asset.version }}</span>
         </div>
         <div class="asset-meta" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px">
           <span class="tag">{{ asset.size }}</span>
           <span class="tag">引用 {{ asset.refs }}</span>
-          <span class="tag">{{ asset.qc }}</span>
+          <span class="tag">{{ qcText(asset.qc) }}</span>
         </div>
-        <div class="card-sub" style="margin-top: 6px">{{ asset.rights }}</div>
+        <div class="card-sub" style="margin-top: 6px">{{ rightsText(asset.rights) }}</div>
         <p v-if="assetRightsBlockReason(asset)" class="muted text-bad" style="margin: 6px 0 0">
           需处理：{{ assetRightsBlockReason(asset) }}
         </p>
@@ -75,13 +77,13 @@
     >
       <div v-if="activeAsset" style="display: grid; gap: 12px">
         <div class="act-bar">
-          <button class="btn" @click="copy(activeAsset)">复制资产 ID</button>
+          <button class="btn" @click="copy(activeAsset)">复制资产编号</button>
           <button class="btn" @click="$router.push('/quality/reports')">查看质检</button>
           <button class="btn" @click="panel.close">关闭</button>
         </div>
 
         <div v-if="activeBlock" class="notice warn">{{ activeBlock }}</div>
-        <div v-else class="notice">授权与质检状态满足生产放行条件。</div>
+        <div v-else class="notice ok">授权与质检状态满足生产放行条件。</div>
 
         <dl class="kv-lite">
           <dt>资产</dt><dd>{{ activeAsset.id }}</dd>
@@ -92,8 +94,8 @@
           <dt>创建 / 执行</dt><dd>{{ activeAsset.creator }} / {{ activeAsset.executor }}</dd>
           <dt>规格</dt><dd>{{ activeAsset.size }}</dd>
           <dt>校验和</dt><dd>{{ activeAsset.checksum }}</dd>
-          <dt>质检</dt><dd>{{ activeAsset.qc }}</dd>
-          <dt>授权</dt><dd>{{ activeAsset.rights }}</dd>
+          <dt>质检</dt><dd>{{ qcText(activeAsset.qc) }}</dd>
+          <dt>授权</dt><dd>{{ rightsText(activeAsset.rights) }}</dd>
           <dt>授权到期</dt><dd>{{ activeAsset.rightsExpiry || '未登记到期日' }}</dd>
           <dt>引用</dt><dd>{{ activeAsset.refs }} 处</dd>
           <dt>正式</dt><dd>{{ activeAsset.formal ? '是' : '否' }}</dd>
@@ -107,7 +109,7 @@
           </div>
           <p class="card-sub" style="margin-bottom: 8px">按项目、分集、镜头与交付包回溯；引用变化需重新质检或补授权。</p>
           <p v-if="refsLoading" class="muted">正在加载引用关系…</p>
-          <div v-for="ref in references" :key="`${ref.project}-${ref.object}-${ref.kind}`" class="list-row">
+          <div v-for="ref in references" :key="`${ref.project}-${ref.object}-${ref.kind}`" class="list-row asset-ref-row">
             <span class="k">{{ ref.projectName }} · {{ ref.object }}</span>
             <span class="v"><StatusPill :status="ref.status" /></span>
             <p class="muted" style="grid-column: 1 / -1; margin: 4px 0 0">{{ ref.kind }} · {{ ref.detail }}</p>
@@ -155,12 +157,25 @@ const { search, filters: query, visible } = useTableQuery(assets, {
     return true
   },
 })
+query.cat = ''
+query.qc = ''
+query.gate = ''
 
 const categories = computed(() => {
   const list = [...new Set(assets.value.map((row) => String(row.cat ?? '')).filter(Boolean))]
   return list.length ? list : ['人物资产', '场景资产', '道具资产', '音频资产', '成片与交付资产']
 })
 const qcOptions = computed(() => [...new Set(assets.value.map((row) => String(row.qc ?? '')).filter(Boolean))])
+const QC_TEXT: Record<string, string> = {
+  PASS: '通过',
+  'FAIL（合规）': '未通过（合规）',
+}
+function qcText(value: unknown) {
+  return QC_TEXT[String(value ?? '')] ?? String(value ?? '—')
+}
+function rightsText(value: unknown) {
+  return String(value ?? '—').replaceAll('AI 生成', '模型生成')
+}
 const activeAsset = computed(() => assets.value.find((row) => String(row.id) === panel.activeId.value) ?? null)
 const activeBlock = computed(() => (activeAsset.value ? assetRightsBlockReason(activeAsset.value) : ''))
 
@@ -194,7 +209,7 @@ function open(row: Row) {
 }
 
 function copy(row: Row) {
-  navigator.clipboard?.writeText(String(row.id)).then(() => ui.toast('已复制资产 ID'), () => ui.toast('复制失败', 'bad'))
+  navigator.clipboard?.writeText(String(row.id)).then(() => ui.toast('已复制资产编号'), () => ui.toast('复制失败', 'bad'))
 }
 
 function upload() {
@@ -208,7 +223,7 @@ function upload() {
       { key: 'type', label: '类型', required: true, placeholder: '例如：人物参考图 / 道具参考图 / 配乐' },
       { key: 'origin', label: '来源 / 生成方式', required: true, placeholder: '例如：图像模型 I1 · 参数摘要 p-8821 / 第三方素材库' },
       { key: 'size', label: '规格', placeholder: '例如：1440×1920 · PNG' },
-      { key: 'rights', label: '授权标记', required: true, type: 'textarea', rows: 2, placeholder: '例如：AI 生成 · 无需真人授权 / 第三方授权 · 仅限本项目' },
+      { key: 'rights', label: '授权标记', required: true, type: 'textarea', rows: 2, placeholder: '例如：模型生成 · 无需真人授权 / 第三方授权 · 仅限本项目' },
       { key: 'rightsExpiry', label: '授权到期日', type: 'date', hint: '留空表示长期；已过期资产登记后仍会进入阻断状态。' },
       { key: 'note', label: '登记说明', type: 'textarea', rows: 2, placeholder: '可选：说明使用范围、授权依据或替换计划' },
     ],
@@ -241,3 +256,84 @@ watch(() => panel.activeId.value, (id) => {
 })
 onMounted(load)
 </script>
+
+<style scoped>
+.asset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+  gap: 14px;
+}
+
+.asset-card {
+  padding: 14px;
+}
+
+.asset-ref-row.list-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.asset-ref-row.list-row .k {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.asset-ref-row.list-row .v {
+  justify-self: end;
+}
+
+.asset-ref-row.list-row p {
+  grid-column: 1 / -1;
+}
+
+.asset-thumb {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border: 1px dashed #d7e2da;
+  border-radius: 8px;
+  background: #f5f8f5;
+  color: #7d8f83;
+}
+
+.thumb-icon {
+  position: static;
+  left: auto;
+  bottom: auto;
+  padding: 0;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+  color: #9fb1a5;
+}
+
+.thumb-label {
+  position: static;
+  left: auto;
+  bottom: auto;
+  padding: 0;
+  background: none;
+  color: #9aaba0;
+  font-size: 10px;
+}
+
+.thumb-id {
+  position: static;
+  left: auto;
+  bottom: auto;
+  padding: 0;
+  margin-left: auto;
+  background: none;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #5f7367;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

@@ -2,8 +2,9 @@
 import { computed, ref } from 'vue'
 import type { Row } from '../../../mock/db'
 import type { BatchGroup, EpisodeCard, EpisodeEvent, EpisodeState, EpisodeStepKey } from './episodeFlow'
-import { EPISODE_STEPS, episodeStateOf, padEpisode } from './episodeFlow'
+import { EPISODE_STEPS, episodeStateOf, isEpisodeStep, padEpisode } from './episodeFlow'
 import DataTable, { type Column } from '../../../components/ui/DataTable.vue'
+import StatusPill from '../../../components/ui/StatusPill.vue'
 import EmptyState from '../../../components/ui/EmptyState.vue'
 import { projectApi } from '../../../services/projects'
 import { useUiStore } from '../../../stores/ui'
@@ -40,6 +41,19 @@ const epEvents = computed<EpisodeEvent[]>(() => {
     .slice(0, 8)
 })
 const stepMeta = computed(() => EPISODE_STEPS.find((step) => step.key === props.step) ?? EPISODE_STEPS[0])
+const batchSummary = computed(() => {
+  const first = props.batch.episodes[0]?.no ?? 0
+  const last = props.batch.episodes[props.batch.episodes.length - 1]?.no ?? first
+  return `第 ${props.batch.index} 批 · 第 ${first}–${last} 集`
+})
+
+function stepNumber(key: EpisodeStepKey): string {
+  return `第 ${EPISODE_STEPS.findIndex((step) => step.key === key) + 1} 步`
+}
+
+function stepName(key: EpisodeStepKey): string {
+  return EPISODE_STEPS.find((step) => step.key === key)?.name ?? ''
+}
 const model = computed(() => {
   void props.revision
   return String(epState.value?.modelBaseline ?? epShots.value[0]?.model ?? '未接入')
@@ -76,6 +90,7 @@ const epTakeRows = computed(() => {
     }))
 })
 const takeShotCount = computed(() => new Set(epTakeRows.value.map((row) => String(row.shotId ?? row.shot))).size)
+const takeHasHistory = computed(() => epTakeRows.value.length > takeShotCount.value)
 const epTimelines = computed(() => list('timelines').filter((row) => Number(row.ep) === no.value))
 const epTimelineClips = computed(() =>
   list('timelineClips').filter((row) => Number(row.ep) === no.value),
@@ -136,9 +151,11 @@ const latestQcFail = computed(() => String(latestQcReport.value?.result ?? '') =
 const latestQcPass = computed(() => String(latestQcReport.value?.result ?? '') === 'PASS')
 const lockedScript = computed(() => allScripts.value.find((row) => Boolean(row.locked)) ?? null)
 const actionBusy = ref(false)
-const currentStateStep = computed(() => {
+const showTakes = ref(false)
+const currentStateStep = computed<EpisodeStepKey>(() => {
   void props.revision
-  return String(epState.value?.currentStep ?? flow.value.currentStep)
+  const value = String(epState.value?.currentStep ?? flow.value.currentStep)
+  return isEpisodeStep(value) ? value : flow.value.currentStep
 })
 const modelOptions = computed(() => {
   const names = new Set([
@@ -199,9 +216,9 @@ function confirmInput() {
   ui.openDialog({
     title: `确认第 ${no.value} 集输入`,
     subtitle: '核对分集任务单、前后集衔接、镜头需求与阻塞项。',
-    fields: actionFields('例：E18 结尾钩子已对齐，E20 开场无需补拍。'),
+    fields: actionFields('例：第 18 集结尾钩子已对齐，第 20 集开场无需补拍。'),
     submitLabel: '确认输入',
-    onSubmit: (values) => submitEpisodeAction('confirmInput', { note: values.note }, 'E0 输入确认'),
+    onSubmit: (values) => submitEpisodeAction('confirmInput', { note: values.note }, '输入确认'),
   })
 }
 
@@ -209,9 +226,9 @@ function lockScript() {
   ui.openDialog({
     title: `锁定第 ${no.value} 集剧本`,
     subtitle: '单集剧本定稿后锁定；后续修改必须新建版本。',
-    fields: actionFields('例：按审核意见调整第 3 场对白，锁定 V4。'),
+    fields: actionFields('例：按审核意见调整第 3 场对白，锁定第 4 版。'),
     submitLabel: '锁定剧本',
-    onSubmit: (values) => submitEpisodeAction('lockScript', { note: values.note }, 'E1 剧本锁定'),
+    onSubmit: (values) => submitEpisodeAction('lockScript', { note: values.note }, '剧本锁定'),
   })
 }
 
@@ -314,7 +331,7 @@ function openShotEditor(row: Row) {
   if (index < 0) return
   ui.openDialog({
     title: `编辑 ${String(row.no ?? '')} · 第 ${String(row.scene ?? '')} 场`,
-    subtitle: '保存为 E2 镜头草稿；锁定资产后生成不可变分镜版本。',
+    subtitle: '保存为镜头草稿；锁定资产后生成不可变分镜版本。',
     wide: true,
     fields: shotDialogFields(row),
     submitLabel: '保存镜头',
@@ -475,7 +492,7 @@ function comparePlanVersion(plan: Row) {
 async function rollbackPlan(plan: Row) {
   const ok = await ui.confirm(
     `返工到 ${String(plan.id ?? '')}`,
-    '将恢复该版本的镜头快照，并把当前单集退回 E2；已派发生产任务时会被拒绝。',
+    '将恢复该版本的镜头快照，并把当前单集退回镜头与资产阶段；已派发生产任务时会被拒绝。',
     true,
   )
   if (!ok) return
@@ -490,7 +507,7 @@ async function rollbackPlan(plan: Row) {
 function lockAssets() {
   ui.openDialog({
     title: `锁定第 ${no.value} 集镜头与资产`,
-    subtitle: '锁定镜头契约、关键资产与模型基线，作为 E3 生产的输入。',
+    subtitle: '锁定镜头契约、关键资产与模型基线，作为素材生产的输入。',
     fields: [
       {
         key: 'model',
@@ -498,13 +515,13 @@ function lockAssets() {
         type: 'select' as const,
         required: true,
         options: modelOptions.value,
-        hint: '本集所有镜头默认使用该模型；单镜头可在 E3 换模型生成新 take。',
+        hint: '本集所有镜头默认使用该模型；单镜头可在素材生产阶段换模型生成新条次。',
       },
       { key: 'note', label: '执行说明', type: 'textarea' as const, rows: 3, placeholder: '例：顾沉造型以 v3 锁定，雨夜街口场景不再改。' },
     ],
-    submitLabel: '锁定并进入 E3',
+    submitLabel: '锁定并进入素材生产',
     onSubmit: async (values) => {
-      await submitEpisodeAction('lockAssets', { model: values.model, note: values.note }, 'E2 资产与模型锁定')
+      await submitEpisodeAction('lockAssets', { model: values.model, note: values.note }, '资产与模型锁定')
       emit('select-step', 'E3')
     },
   })
@@ -516,7 +533,7 @@ function startProduction() {
     subtitle: '按本集镜头契约批量派发任务；已有活动任务不会重复创建。',
     fields: actionFields('例：先跑 6 个关键镜头，其余镜头按队列并发。'),
     submitLabel: '生成镜头任务',
-    onSubmit: (values) => submitEpisodeAction('startProduction', { note: values.note }, 'E3 素材生产启动'),
+    onSubmit: (values) => submitEpisodeAction('startProduction', { note: values.note }, '素材生产启动'),
   })
 }
 
@@ -539,11 +556,11 @@ function stageActionDialog(
 async function advanceQueue() {
   const ok = await ui.confirm(
     '推进本集队列',
-    'Mock 环境会把本集排队/执行中的镜头任务置为已通过，并推进到 E4。真实环境请由生成回调驱动。',
+    '模拟环境会把本集排队或执行中的镜头任务置为已通过，并推进到剪辑阶段。真实环境请由生成回调驱动。',
   )
   if (!ok) return
   try {
-    await submitEpisodeAction('advanceQueue', { note: 'Mock 队列推进：本集镜头任务全部通过' }, 'E3 队列推进')
+    await submitEpisodeAction('advanceQueue', { note: '模拟队列推进：本集镜头任务全部通过' }, '队列推进')
   } catch {
     // 错误已通过 toast 显示。
   }
@@ -555,14 +572,14 @@ function buildTimeline() {
     '按已接受的镜头素材建立 6 轨时间线；建立后仍需单独锁定。',
     'buildTimeline',
     '建立时间线',
-    '例：按 18 镜建立 V1，保留原素材版本。',
+    '例：按 18 镜建立第 1 版，保留原素材版本。',
   )
 }
 
 function rebuildTimeline() {
   stageActionDialog(
     `重建第 ${no.value} 集时间线`,
-    '替换片段后必须重建，才能把新 take 对齐回时间线并重新锁定。',
+    '替换片段后必须重建，才能把新条次对齐回时间线并重新锁定。',
     'rebuildTimeline',
     '重建时间线',
     '例：SH-03 已换 T2，重建后确认入出点与总时长。',
@@ -572,7 +589,7 @@ function rebuildTimeline() {
 function replaceClip(clip: Row) {
   ui.openDialog({
     title: `替换第 ${no.value} 集片段 ${clip.shot}`,
-    subtitle: '替换会生成新 take，旧 take 保留；时间线标记待重建，不会静默覆盖已锁定版本。',
+    subtitle: '替换会生成新条次，旧条次保留；时间线标记待重建，不会静默覆盖已锁定版本。',
     fields: [
       {
         key: 'model',
@@ -586,14 +603,14 @@ function replaceClip(clip: Row) {
     ],
     submitLabel: '替换片段',
     onSubmit: (values) =>
-      submitEpisodeAction('replaceClip', { clipId: clip.id, model: values.model, note: values.note }, 'E4 片段替换'),
+      submitEpisodeAction('replaceClip', { clipId: clip.id, model: values.model, note: values.note }, '片段替换'),
   })
 }
 
 function lockTimeline() {
   stageActionDialog(
     `锁定第 ${no.value} 集时间线`,
-    '锁定后片段替换必须新建版本；锁定即进入 E5 声音字幕。',
+    '锁定后片段替换必须新建版本；锁定即进入声音字幕。',
     'lockTimeline',
     '锁定时间线',
     '例：精剪完成，画面和时长不再调整。',
@@ -633,28 +650,28 @@ function runLipSync() {
 function checkMix() {
   stageActionDialog(
     `第 ${no.value} 集混音检查`,
-    '确认对白、音乐、音效与字幕全部就绪；通过后进入 E6 单集 QC。',
+    '确认对白、音乐、音效与字幕全部就绪；通过后进入单集质检。',
     'checkMix',
-    '混音检查并进入 QC',
+    '混音检查并进入单集质检',
     '例：对白 −16 LUFS，音乐 −18 LUFS，无削波。',
   )
 }
 
 function runEpisodeQc() {
   stageActionDialog(
-    `执行第 ${no.value} 集 QC`,
+    `执行第 ${no.value} 集质检`,
     '检查音画同步、字幕、时长、安全区与播放完整性。',
     'runEpisodeQc',
-    '执行单集 QC',
-    '例：按单集 QC 模板执行 42 项检查。',
+    '执行单集质检',
+    '例：按单集质检模板执行 42 项检查。',
   )
 }
 
 function failEpisodeQc() {
   const profiles = qcProfiles.value
   ui.openDialog({
-    title: `记录第 ${no.value} 集 QC 阻断`,
-    subtitle: '选择阻断模板，生成一条 FAIL 报告与对应问题项；随后必须退回 E4 或 E5 返工。',
+    title: `记录第 ${no.value} 集质检阻断`,
+    subtitle: '选择阻断模板，生成一条未通过报告与对应问题项；随后必须退回剪辑或声音字幕阶段返工。',
     fields: [
       ...(profiles.length
         ? [
@@ -668,7 +685,7 @@ function failEpisodeQc() {
                 value: String(profile.id ?? ''),
                 label: String(profile.name ?? profile.dim ?? profile.id ?? ''),
               })),
-              hint: '模板由 mock 质检配置提供，真实后端接入后可替换为实际检测项。',
+              hint: '模板由模拟质检配置提供，真实后端接入后可替换为实际检测项。',
             },
           ]
         : []),
@@ -680,22 +697,22 @@ function failEpisodeQc() {
         placeholder: '例：字幕第 3 行错字，口型偏移 80ms。',
       },
     ],
-    submitLabel: '记录 QC 阻断',
+    submitLabel: '记录质检阻断',
     onSubmit: (values) =>
       submitEpisodeAction(
         'failEpisodeQc',
         { profile: values.profile, note: values.note },
-        '记录 QC 阻断',
+        '记录质检阻断',
       ),
   })
 }
 
 function acceptEpisodeQc() {
   stageActionDialog(
-    `确认第 ${no.value} 集 QC 通过`,
-    '只有无阻断项的 QC 报告才能确认；确认后进入 E7 终审入库。',
+    `确认第 ${no.value} 集质检通过`,
+    '只有无阻断项的质检报告才能确认；确认后进入终审入库。',
     'acceptEpisodeQc',
-    '确认 QC 通过',
+    '确认质检通过',
     '例：阻断项 0，问题项已闭环。',
   )
 }
@@ -703,7 +720,7 @@ function acceptEpisodeQc() {
 function reworkEpisode() {
   ui.openDialog({
     title: `第 ${no.value} 集退回返工`,
-    subtitle: '选择返工目标；旧版本保留，返工完成后重新执行 QC。',
+    subtitle: '选择返工目标；旧版本保留，返工完成后重新执行质检。',
     fields: [
       {
         key: 'target',
@@ -711,38 +728,38 @@ function reworkEpisode() {
         type: 'select' as const,
         required: true,
         options: [
-          { value: 'E5', label: 'E5 声音字幕' },
-          { value: 'E4', label: 'E4 剪辑 / 时间线' },
+          { value: 'E5', label: '声音字幕' },
+          { value: 'E4', label: '剪辑与时间线' },
         ],
       },
-      ...actionFields('例：字幕第 3 行与口型偏移 80ms，退回 E5。'),
+      ...actionFields('例：字幕第 3 行与口型偏移 80 毫秒，退回声音字幕阶段。'),
     ],
     submitLabel: '创建返工',
-    onSubmit: (values) => submitEpisodeAction('reworkEpisode', { target: values.target, note: values.note }, 'E6 退回返工'),
+    onSubmit: (values) => submitEpisodeAction('reworkEpisode', { target: values.target, note: values.note }, '质检退回返工'),
   })
 }
 
 function approveEpisode() {
   stageActionDialog(
     `第 ${no.value} 集终审`,
-    '确认 QC 通过、版本冻结与权利资料完整；终审通过后生成单集包。',
+    '确认质检通过、版本冻结与权利资料完整；终审通过后生成单集包。',
     'approveEpisode',
     '终审通过',
-    '例：成片、字幕、QC 报告与授权资料齐备。',
+    '例：成片、字幕、质检报告与授权资料齐备。',
   )
 }
 
 function packageEpisode() {
   ui.openDialog({
     title: `生成第 ${no.value} 集交付包`,
-    subtitle: '冻结当前成片、字幕、QC 报告与元数据，写入单集交付记录。',
+    subtitle: '冻结当前成片、字幕、质检报告与元数据，写入单集交付记录。',
     fields: [
       { key: 'receiver', label: '接收方', type: 'text' as const, required: true, value: '企业内容库' },
       ...actionFields('例：单集包交付企业内容库，保留 30 天。'),
     ],
     submitLabel: '生成并入库',
     onSubmit: (values) =>
-      submitEpisodeAction('packageEpisode', { receiver: values.receiver, note: values.note }, 'E7 单集交付包'),
+      submitEpisodeAction('packageEpisode', { receiver: values.receiver, note: values.note }, '单集交付包'),
   })
 }
 
@@ -758,8 +775,8 @@ async function retryTask(task: Row) {
 
 function changeModel(task: Row) {
   ui.openDialog({
-    title: `换模型生成新 take · ${task.shot}`,
-    subtitle: `任务 ${task.id} 会标记为已替代，新模型生成独立 take，旧版本不覆盖。`,
+    title: `换模型生成新条次 · ${task.shot}`,
+    subtitle: `任务 ${task.id} 会标记为已替代，新模型生成独立条次，旧版本不覆盖。`,
     fields: [
       {
         key: 'model',
@@ -770,16 +787,16 @@ function changeModel(task: Row) {
       },
       { key: 'note', label: '换模原因', type: 'textarea' as const, rows: 3, required: true, placeholder: '例：人物连续性不足，换参考视频模型重跑。' },
     ],
-    submitLabel: '生成新 take',
-    onSubmit: (values) => submitEpisodeAction('changeModel', { taskId: task.id, model: values.model, note: values.note }, '换模型生成新 take'),
+    submitLabel: '生成新条次',
+    onSubmit: (values) => submitEpisodeAction('changeModel', { taskId: task.id, model: values.model, note: values.note }, '换模型生成新条次'),
   })
 }
 
 async function acceptTake(task: Row) {
-  const ok = await ui.confirm('接受这个 take', `接受镜头 ${task.shot} 的 take ${task.take ?? 1} 作为当前版本；旧 take 仍保留在版本链中。`)
+  const ok = await ui.confirm('接受这个条次', `接受镜头 ${task.shot} 的第 ${task.take ?? 1} 条作为当前版本；旧条次仍保留在版本链中。`)
   if (!ok) return
   try {
-    await submitEpisodeAction('acceptTake', { taskId: task.id }, `接受 ${task.shot} take ${task.take ?? 1}`)
+    await submitEpisodeAction('acceptTake', { taskId: task.id }, `接受 ${task.shot} 第 ${task.take ?? 1} 条`)
   } catch {
     // 错误已通过 toast 显示，保持当前状态。
   }
@@ -788,17 +805,16 @@ async function acceptTake(task: Row) {
 const actionHint = computed(() => {
   void props.revision
   if (!epState.value) return '正在读取单集状态…'
-  if (!epState.value.inputConfirmed) return '先完成 E0 输入确认'
-  if (!epState.value.scriptLocked) return 'E1 剧本锁定后进入镜头与资产'
-  if (!epShots.value.length) return 'E2 由分集稿生成镜头契约'
-  if (!epState.value.assetsLocked) return 'E2 镜头契约无缺项后锁定资产与模型'
-  if (!epState.value.productionStarted) return 'E3 已就绪，可批量生成镜头任务'
+  if (!epState.value.inputConfirmed) return '先完成输入确认'
+  if (!epState.value.scriptLocked) return '剧本锁定后进入镜头与资产'
+  if (!epShots.value.length) return '由分集稿生成镜头契约'
+  if (!epState.value.assetsLocked) return '镜头契约无缺项后锁定资产与模型'
+  if (!epState.value.productionStarted) return '素材生产已就绪，可批量生成镜头任务'
   const failed = epTasks.value.filter((row) => String(row.status ?? '') === '失败').length
   if (currentStateStep.value !== 'E3') {
-    const stage = EPISODE_STEPS.find((item) => item.key === currentStateStep.value)
-    return `当前停在 ${currentStateStep.value} ${stage?.name ?? ''}，上游阶段已完成，后续门禁需逐项确认`
+    return `当前停在${stepName(currentStateStep.value)}，上游阶段已完成，后续门禁需逐项确认`
   }
-  return `E3 生产中 · ${epTasks.value.length} 个任务${failed ? ` · ${failed} 个失败待处理` : ''}`
+  return `素材生产中 · ${epTasks.value.length} 个任务${failed ? ` · ${failed} 个失败待处理` : ''}`
 })
 
 const checks = computed(() => {
@@ -857,13 +873,13 @@ const checks = computed(() => {
   }
   if (props.step === 'E6') {
     return [
-      { label: '单集 QC 报告已出', ok: epQualityReports.value.length > 0 },
+      { label: '单集质检报告已出', ok: epQualityReports.value.length > 0 },
       { label: '无阻断项', ok: qcFails.value.length === 0 && !latestQcFail.value },
-      { label: 'QC 已确认', ok: Boolean(epState.value?.qcPassed) },
+      { label: '质检已确认', ok: Boolean(epState.value?.qcPassed) },
     ]
   }
   return [
-    { label: '单集 QC 已通过', ok: Boolean(epState.value?.qcPassed) },
+    { label: '单集质检已通过', ok: Boolean(epState.value?.qcPassed) },
     { label: '单集终审已通过', ok: Boolean(epState.value?.finalApproved) },
     { label: '单集交付包已生成', ok: Boolean(epState.value?.delivered) },
     { label: '平台入库记录已生成', ok: Boolean(epState.value?.delivered) },
@@ -879,7 +895,7 @@ const risks = computed(() => {
     items.push({ label: '过期片段', tone: 'warn', detail: `${staleTimelines.value.length} 个时间线存在过期片段` })
   }
   if (qcFails.value.length) {
-    items.push({ label: 'QC 阻断', tone: 'bad', detail: `${qcFails.value.length} 份单集 QC 报告 FAIL` })
+    items.push({ label: '质检阻断', tone: 'bad', detail: `${qcFails.value.length} 份单集质检报告未通过` })
   }
   if (missingShots.value.length) {
     items.push({ label: '镜头缺项', tone: 'warn', detail: `${missingShots.value.length} 个镜头契约字段缺失` })
@@ -932,7 +948,7 @@ const planDiffColumns: Column[] = [
 const taskColumns: Column[] = [
   { key: 'id', label: '任务' },
   { key: 'shot', label: '镜号' },
-  { key: 'take', label: 'Take', format: (row) => `T${row.take ?? 1}` },
+  { key: 'take', label: '条次', format: (row) => `第 ${row.take ?? 1} 条` },
   { key: 'kind', label: '类型' },
   { key: 'status', label: '状态', pill: true },
   { key: 'attempt', label: '尝试' },
@@ -942,7 +958,7 @@ const taskColumns: Column[] = [
 ]
 const takeColumns: Column[] = [
   { key: 'shot', label: '镜号' },
-  { key: 'takeLabel', label: '版本' },
+  { key: 'takeLabel', label: '条次', format: (row) => `第 ${row.take ?? 1} 条` },
   { key: 'model', label: '模型' },
   { key: 'status', label: '状态', pill: true },
   { key: 'takeSource', label: '来源' },
@@ -1019,6 +1035,34 @@ function stateLabel(state: string): string {
   return '待开始'
 }
 
+function actionText(value: unknown): string {
+  const raw = String(value ?? '')
+  const labels: Record<string, string> = {
+    starProduction: '素材生产启动',
+    startProduction: '素材生产启动',
+    lockAssets: '资产与模型锁定',
+    updateShots: '镜头更新',
+    rollbackPlan: '回滚镜头计划',
+    confirmInput: '输入确认',
+    lockScript: '剧本锁定',
+    advanceQueue: '队列推进',
+    acceptTake: '接受条次',
+    changeModel: '换模型',
+    lockTimeline: '时间线锁定',
+    replaceClip: '片段替换',
+    checkMix: '混音检查',
+    runEpisodeQc: '执行质检',
+    failEpisodeQc: '记录质检阻断',
+    acceptEpisodeQc: '确认质检通过',
+    reworkEpisode: '退回返工',
+    approveEpisode: '单集终审',
+    packageEpisode: '单集交付',
+    outputEpisode: '单集输出',
+    retryTask: '任务重试',
+  }
+  return labels[raw] ?? (raw || '阶段操作')
+}
+
 function openSibling(item: EpisodeCard | null) {
   if (item) emit('open-episode', item)
 }
@@ -1028,15 +1072,13 @@ function openSibling(item: EpisodeCard | null) {
   <section class="episode-workspace">
     <div class="ep-top">
       <div class="ep-breadcrumb">
-        <button class="link-btn" @click="emit('back')">← 返回 {{ batch.label }}</button>
-        <span>/</span>
-        <span>第 {{ episode.no }} 集</span>
+        <button class="link-btn" @click="emit('back')">← 返回第 {{ batch.index }} 批</button>
       </div>
 
       <div class="ep-title-row">
         <div>
           <h2 class="ep-title">第 {{ episode.no }} 集 · {{ epRow.title || '未命名单集' }}</h2>
-          <p class="ep-sub">{{ project?.id }} · {{ batch.label }} {{ batch.range }} · {{ epRow.duration || '时长待接入' }} · {{ epRow.status || '状态待接入' }}</p>
+          <p class="ep-sub">{{ project?.id }} · {{ batchSummary }} · {{ epRow.duration || '时长待接入' }} · {{ epRow.status || '状态待接入' }}</p>
         </div>
         <div class="ep-nav">
           <button class="btn" :disabled="!prevEpisode" @click="openSibling(prevEpisode)">上一集</button>
@@ -1047,7 +1089,7 @@ function openSibling(item: EpisodeCard | null) {
 
       <div class="ep-meta-grid">
         <div><span>负责人</span><b>{{ owner }}</b></div>
-        <div><span>当前阶段</span><b>{{ flow.currentStep }} · {{ flow.steps.find((item) => item.key === flow.currentStep)?.name }}</b></div>
+        <div><span>当前阶段</span><b>{{ flow.steps.find((item) => item.key === flow.currentStep)?.name }}</b></div>
         <div><span>参考模型</span><b>{{ model }}</b></div>
         <div><span>数据口径</span><b>{{ epState ? '单集状态 + 现有数据' : '按现有状态推断' }}</b></div>
       </div>
@@ -1162,7 +1204,7 @@ function openSibling(item: EpisodeCard | null) {
           :disabled="actionBusy"
           @click="checkMix"
         >
-          混音检查并进入 QC
+          混音检查并进入单集质检
         </button>
         <button
           v-if="currentStateStep === 'E6' && !epState.qcPassed && epQualityReports.length === 0"
@@ -1170,7 +1212,7 @@ function openSibling(item: EpisodeCard | null) {
           :disabled="actionBusy"
           @click="runEpisodeQc"
         >
-          执行单集 QC
+          执行单集质检
         </button>
         <button
           v-if="currentStateStep === 'E6' && !epState.qcPassed && epQualityReports.length === 0"
@@ -1178,7 +1220,7 @@ function openSibling(item: EpisodeCard | null) {
           :disabled="actionBusy"
           @click="failEpisodeQc"
         >
-          记录 QC 阻断
+          记录质检阻断
         </button>
         <button
           v-if="currentStateStep === 'E6' && !epState.qcPassed && latestQcPass"
@@ -1186,7 +1228,7 @@ function openSibling(item: EpisodeCard | null) {
           :disabled="actionBusy"
           @click="acceptEpisodeQc"
         >
-          确认 QC 通过
+          确认质检通过
         </button>
         <button
           v-if="currentStateStep === 'E6' && !epState.qcPassed && epQualityReports.length > 0"
@@ -1225,7 +1267,7 @@ function openSibling(item: EpisodeCard | null) {
           :aria-selected="props.step === item.key"
           @click="emit('select-step', item.key)"
         >
-          <span>{{ item.key }}</span>
+          <span>{{ stepNumber(item.key) }}</span>
           <b>{{ item.name }}</b>
           <small>{{ stateLabel(flow.steps.find((step) => step.key === item.key)?.state || 'pending') }}</small>
         </button>
@@ -1236,7 +1278,7 @@ function openSibling(item: EpisodeCard | null) {
       <div class="ep-main">
         <div class="ep-stage-head">
           <div>
-            <h3 class="card-title">{{ stepMeta.key }} · {{ stepMeta.name }}</h3>
+            <h3 class="card-title">{{ stepMeta.name }}</h3>
             <p class="card-sub">{{ stepMeta.hint }}</p>
           </div>
           <span class="pill" :class="{ accent: flow.tone === 'active', ok: flow.tone === 'done', bad: flow.tone === 'blocked' }">
@@ -1246,7 +1288,7 @@ function openSibling(item: EpisodeCard | null) {
 
         <template v-if="props.step === 'E0'">
           <div class="card">
-            <div class="card-head"><h3 class="card-title">输入清单</h3><span class="pill">E0 门禁</span></div>
+            <div class="card-head"><h3 class="card-title">输入清单</h3><span class="pill">输入门禁</span></div>
             <div class="check-grid">
               <div v-for="item in checks" :key="item.label" class="check-item">
                 <i :class="{ on: item.ok }">{{ item.ok ? '✓' : '' }}</i>
@@ -1258,8 +1300,8 @@ function openSibling(item: EpisodeCard | null) {
             <div class="card">
               <div class="card-head"><h3 class="card-title">前后集衔接</h3></div>
               <dl class="kv-lite">
-                <dt>上一集</dt><dd>{{ prevEpisode ? `E${padEpisode(prevEpisode.no)} · ${prevEpisode.row.title}` : '本批首集' }}</dd>
-                <dt>下一集</dt><dd>{{ nextEpisode ? `E${padEpisode(nextEpisode.no)} · ${nextEpisode.row.title}` : '本批末集' }}</dd>
+                <dt>上一集</dt><dd>{{ prevEpisode ? `第 ${prevEpisode.no} 集 · ${prevEpisode.row.title}` : '本批首集' }}</dd>
+                <dt>下一集</dt><dd>{{ nextEpisode ? `第 ${nextEpisode.no} 集 · ${nextEpisode.row.title}` : '本批末集' }}</dd>
                 <dt>本集场次</dt><dd>{{ epRow.scenes ?? '—' }} 场</dd>
                 <dt>本集镜头</dt><dd>{{ epRow.shots ?? epShots.length }} 镜</dd>
               </dl>
@@ -1319,13 +1361,13 @@ function openSibling(item: EpisodeCard | null) {
               <div>
                 <h3 class="card-title">分镜版本</h3>
                 <p class="card-sub">
-                  {{ episodePlans.length ? '每次锁定冻结一份镜头快照；当前版本点“修订当前版”，改完再锁定即形成新版本。' : '尚未固化。生成镜头并锁定资产后生成 V1；之后可按版本查看、对比和返工。' }}
+                  {{ episodePlans.length ? '每次锁定冻结一份镜头快照；当前版本点“修订当前版”，改完再锁定即形成新版本。' : '尚未固化。生成镜头并锁定资产后生成第 1 版；之后可按版本查看、对比和返工。' }}
                 </p>
               </div>
               <span class="pill">{{ episodePlans.length }} 个版本</span>
             </div>
-            <p v-if="!episodePlans.length" class="ep-note">还没有固化版本。锁定资产与模型后生成 V1，后续每次锁定递增。</p>
-            <DataTable v-else :columns="planColumns" :rows="episodePlans" row-key="id" empty-title="暂无固化版本，锁定资产后生成 V1">
+            <p v-if="!episodePlans.length" class="ep-note">还没有固化版本。锁定资产与模型后生成第 1 版，后续每次锁定递增。</p>
+            <DataTable v-else :columns="planColumns" :rows="episodePlans" row-key="id" empty-title="暂无固化版本，锁定资产后生成第 1 版">
               <template #actions="{ row }">
                 <div class="table-actions">
                   <span v-if="String(row.id) === String(epState?.planVersion)" class="current-plan">当前</span>
@@ -1394,7 +1436,7 @@ function openSibling(item: EpisodeCard | null) {
         <template v-else-if="props.step === 'E3'">
           <div class="card">
             <div class="card-head">
-              <div><h3 class="card-title">本集任务队列</h3><p class="card-sub">按镜头独立任务；失败可重试，换模型将创建新的 take。</p></div>
+              <div><h3 class="card-title">本集任务队列</h3><p class="card-sub">按镜头独立任务；失败可重试，换模型将创建新的条次。</p></div>
               <span class="pill" :class="{ warn: failedTasks.length }">{{ failedTasks.length }} 个失败</span>
             </div>
             <DataTable :columns="taskColumns" :rows="epTasks" row-key="id" wide empty-title="本集暂无生成任务">
@@ -1422,7 +1464,7 @@ function openSibling(item: EpisodeCard | null) {
                     :disabled="actionBusy"
                     @click="acceptTake(row)"
                   >
-                    接受 take
+                    接受条次
                   </button>
                 </div>
               </template>
@@ -1430,16 +1472,22 @@ function openSibling(item: EpisodeCard | null) {
           </div>
           <div class="card">
             <div class="card-head">
-              <div><h3 class="card-title">Take 版本树</h3><p class="card-sub">同一镜头保留全部 take；换模型只新增版本，不覆盖旧任务。已接受 take 才回写镜头状态。</p></div>
-              <span class="pill">{{ epTakeRows.length }} 个版本 / {{ takeShotCount }} 镜</span>
+              <div><h3 class="card-title">条次版本树</h3><p class="card-sub">同一镜头保留全部条次；换模型只新增版本，不覆盖旧任务。已接受条次才回写镜头状态。</p></div>
+              <div class="ep-head-end">
+                <span class="pill">{{ epTakeRows.length }} 个版本 / {{ takeShotCount }} 镜</span>
+                <button class="btn" @click="showTakes = !showTakes">{{ showTakes ? '收起明细' : '展开明细' }}</button>
+              </div>
             </div>
-            <DataTable :columns="takeColumns" :rows="epTakeRows" row-key="id" wide empty-title="本集暂无 take 版本" />
+            <p v-if="!showTakes" class="muted ep-take-summary">
+              {{ takeHasHistory ? `${takeShotCount} 个镜头共 ${epTakeRows.length} 个条次，展开可核对来源、位置与接受状态。` : `${takeShotCount} 个镜头均只有首版条次，暂无换模型或返工记录。` }}
+            </p>
+            <DataTable v-else :columns="takeColumns" :rows="epTakeRows" row-key="id" wide empty-title="本集暂无条次版本" />
           </div>
           <div class="ep-kpis">
             <div class="ep-kpi"><span>任务</span><b>{{ epTasks.length }}</b><small>本集镜头任务</small></div>
             <div class="ep-kpi"><span>执行中</span><b>{{ epTasks.filter((row) => row.status === '执行中').length }}</b><small>受并发约束</small></div>
             <div class="ep-kpi"><span>已通过</span><b>{{ epShots.filter((row) => row.status === '已通过').length }}</b><small>镜头级</small></div>
-            <div class="ep-kpi"><span>Take</span><b>{{ epTakeRows.length }}</b><small>{{ takeShotCount }} 个镜头有版本</small></div>
+            <div class="ep-kpi"><span>条次</span><b>{{ epTakeRows.length }}</b><small>{{ takeShotCount }} 个镜头有版本</small></div>
           </div>
         </template>
 
@@ -1492,7 +1540,7 @@ function openSibling(item: EpisodeCard | null) {
 
         <template v-else-if="props.step === 'E6'">
           <div class="card">
-            <div class="card-head"><h3 class="card-title">单集质检报告</h3><span class="pill" :class="{ warn: qcFails.length }">{{ qcFails.length }} 个 FAIL</span></div>
+            <div class="card-head"><h3 class="card-title">单集质检报告</h3><span class="pill" :class="{ warn: qcFails.length }">{{ qcFails.length }} 份未通过</span></div>
             <DataTable :columns="reportColumns" :rows="epQualityReports" row-key="id" wide empty-title="暂无本集质检报告" />
           </div>
           <div class="card">
@@ -1544,13 +1592,13 @@ function openSibling(item: EpisodeCard | null) {
             <span class="k">{{ risk.label }}</span>
             <span class="v">{{ risk.detail }}</span>
           </div>
-          <EmptyState v-if="!risks.length" title="暂无阻断" desc="当前本集没有失败任务、过期片段或 QC 阻断。" compact />
+          <EmptyState v-if="!risks.length" title="暂无阻断" desc="当前本集没有失败任务、过期片段或质检阻断。" compact />
         </div>
         <div class="card">
           <div class="card-head"><h3 class="card-title">版本与记录</h3></div>
           <dl class="kv-lite">
             <dt>集状态</dt><dd>{{ epRow.status || '—' }}</dd>
-            <dt>QC</dt><dd>{{ epRow.qc || '—' }}</dd>
+            <dt>质检</dt><dd><StatusPill :status="epRow.qc" /></dd>
             <dt>时间线</dt><dd>{{ epRow.timeline || '—' }}</dd>
             <dt>剧本锁定</dt><dd>{{ lockedScript ? '已锁定' : '未锁定/未拆分' }}</dd>
             <dt>模型基线</dt><dd>{{ epState?.modelBaseline || model }}</dd>
@@ -1560,17 +1608,17 @@ function openSibling(item: EpisodeCard | null) {
           <div v-if="epEvents.length" class="ep-event-list">
             <div v-for="event in epEvents" :key="event.id" class="ep-event">
               <div>
-                <b>{{ event.action }}</b>
+                <b>{{ actionText(event.action) }}</b>
                 <span>{{ event.at }}</span>
               </div>
               <p>{{ event.note }}</p>
             </div>
           </div>
-          <EmptyState v-else title="暂无动作" desc="E0–E7 的确认与生产动作会在此留痕。" compact />
+          <EmptyState v-else title="暂无动作" desc="八个阶段的确认与生产动作会在此留痕。" compact />
         </div>
         <div class="card">
           <div class="card-head"><h3 class="card-title">阶段说明</h3></div>
-          <p class="ep-note">E0–E7 已形成可操作闭环：输入确认、剧本锁定、资产与模型锁定、镜头任务、剪辑时间线、声音字幕、单集 QC、终审与单集交付包均可执行；素材完成由 Mock 队列推进。</p>
+          <p class="ep-note">八个阶段已形成可操作闭环：输入确认、剧本锁定、资产与模型锁定、镜头任务、剪辑时间线、声音字幕、单集质检、终审与单集交付包均可执行；素材完成由模拟队列推进。</p>
         </div>
       </aside>
     </div>
@@ -1870,6 +1918,20 @@ function openSibling(item: EpisodeCard | null) {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
+}
+.ep-head-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ep-take-summary {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 7px;
+  background: var(--surface-2);
+  font-size: 11px;
+  line-height: 1.6;
 }
 .ep-kpi {
   min-width: 0;

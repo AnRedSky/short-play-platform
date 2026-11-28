@@ -8,8 +8,8 @@
     </PageHeader>
 
     <div class="toolbar act-bar" style="margin-bottom: 14px">
-      <select v-model="ep" class="filter" @change="loadTimeline">
-        <option v-for="item in episodes" :key="item.ep" :value="item.ep">第 {{ item.ep }} 集 · {{ item.version }}</option>
+      <select v-model.number="ep" class="filter filter-wide" @change="loadTimeline">
+        <option v-for="item in episodes" :key="item.no" :value="Number(item.no)">第 {{ item.no }} 集 · {{ item.title }}</option>
       </select>
       <span class="filter-count">{{ timeline?.status }} · {{ timeline?.duration }} · 轨 {{ timeline?.tracks }}</span>
     </div>
@@ -26,7 +26,7 @@
         <div v-for="track in tracks" :key="track.name" class="lane">
           <span class="name">{{ track.name }}</span>
           <div class="track">
-            <div v-for="clip in track.items || []" :key="clip.label" class="clip" :style="{ width: `${(clip.w || 20) * 2.2}px`, borderColor: clip.label ? 'var(--line-strong)' : 'var(--line)' }">
+            <div v-for="clip in track.items || []" :key="clip.label" class="clip" :style="{ flex: `${clip.w || 20} 1 0`, borderColor: clip.label ? 'var(--line-strong)' : 'var(--line)' }">
               {{ clip.label }}
             </div>
           </div>
@@ -41,18 +41,13 @@
     <div class="spec-grid" style="grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr)">
       <div class="card">
         <div class="card-head"><h3 class="card-title">分集时间线</h3></div>
-        <DataTable :columns="columns" :rows="timelines" row-key="id" clickable @row-click="open">
-          <template #actions="{ row }">
-            <button class="link-btn" @click="pick(row)">查看轨道</button>
-            <button class="link-btn" @click="open(row)">详情</button>
-          </template>
-        </DataTable>
+        <DataTable :columns="columns" :rows="timelines" row-key="id" clickable @row-click="open" />
       </div>
       <aside class="spec-side">
         <div class="card">
           <div class="card-head"><h3 class="card-title">合成口径</h3></div>
           <dl class="kv-lite">
-            <dt>时基</dt><dd>{{ timeline?.timebase }}</dd>
+            <dt>时基</dt><dd>{{ timebaseText }}</dd>
             <dt>时长</dt><dd>{{ timeline?.duration }}</dd>
             <dt>片段</dt><dd>{{ timeline?.clips }} 个</dd>
             <dt>状态</dt><dd>{{ timeline?.status }}</dd>
@@ -86,12 +81,12 @@
           <dt>时间线版本</dt><dd>{{ activeTimeline.version }}</dd>
           <dt>轨道 / 片段</dt><dd>{{ activeTimeline.tracks }} 轨 / {{ activeTimeline.clips }} 个片段</dd>
           <dt>时长</dt><dd>{{ activeTimeline.duration }}</dd>
-          <dt>时基</dt><dd>{{ activeTimeline.timebase }}</dd>
+          <dt>时基</dt><dd>{{ String(activeTimeline.timebase ?? '—').replace('PTS', '时间戳') }}</dd>
           <dt>状态</dt><dd>{{ activeTimeline.status }}</dd>
           <dt>过期片段</dt><dd>{{ activeTimeline.stale ? `${activeTimeline.stale} 个` : '无' }}</dd>
         </dl>
-        <div class="notice" :class="activeTimeline.stale ? 'warn' : ''">
-          过期片段不为 0 时，质检与分集输出都会被阻断；重建索引只刷新片段引用，不覆盖已输出成片。
+        <div class="notice" :class="activeTimeline.stale ? 'warn' : 'ok'">
+          {{ activeTimeline.stale ? `有 ${activeTimeline.stale} 个过期片段，质检与分集输出会被阻断；重建索引只刷新片段引用，不覆盖已输出成片。` : '当前没有过期片段，质检与分集输出未被阻断；重建索引只刷新片段引用，不覆盖已输出成片。' }}
         </div>
       </div>
       <p v-else class="muted">记录不存在：链接中的时间线可能已删除，或不属于当前项目。</p>
@@ -126,15 +121,16 @@ const ep = ref<number | ''>('')
 const timeline = ref<Row | null>(null)
 const panel = useRoutePanel('post-timeline')
 const activeTimeline = computed(() => timelines.value.find((row) => String(row.id) === panel.activeId.value) ?? null)
+const timebaseText = computed(() => String(timeline.value?.timebase ?? '—').replace('PTS', '时间戳'))
 
 const columns: Column[] = [
-  { key: 'ep', label: '集' },
-  { key: 'version', label: '版本', mono: true },
-  { key: 'tracks', label: '轨道' },
-  { key: 'clips', label: '片段' },
-  { key: 'duration', label: '时长' },
-  { key: 'status', label: '状态', pill: true },
-  { key: 'stale', label: '过期片段' },
+  { key: 'ep', label: '集', width: '48px', nowrap: true },
+  { key: 'version', label: '版本', mono: true, nowrap: true },
+  { key: 'tracks', label: '轨道', width: '52px', nowrap: true },
+  { key: 'clips', label: '片段', width: '52px', nowrap: true },
+  { key: 'duration', label: '时长', width: '64px', nowrap: true },
+  { key: 'status', label: '状态', pill: true, width: '64px' },
+  { key: 'stale', label: '过期片段', width: '82px', nowrap: true },
 ]
 
 function routeEpisode() {
@@ -163,12 +159,6 @@ async function loadTimeline() {
 
 function open(row: Row) {
   panel.open(String(row.id ?? ''))
-}
-
-function pick(row: Row) {
-  timeline.value = row
-  ep.value = Number(row.ep)
-  if (panel.isOpen.value) panel.close()
 }
 
 async function submitQc(row: Row | null = timeline.value) {

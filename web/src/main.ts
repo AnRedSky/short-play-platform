@@ -9,6 +9,7 @@ import './styles/studio/base.css'
 import './styles/studio/components.css'
 import './styles/studio/studio.css'
 import './styles/app.css'
+import './styles/studio/theme-light.css'
 
 /**
  * mock 适配器：只替换传输层，不改页面与 api 调用。

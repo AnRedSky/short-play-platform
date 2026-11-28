@@ -9,7 +9,7 @@ export const EPISODE_STEPS = [
   { key: 'E3', name: '素材生产', short: '生产', hint: '镜头生成、审片与重试' },
   { key: 'E4', name: '剪辑', short: '剪辑', hint: '粗剪、精剪与画面锁定' },
   { key: 'E5', name: '声音字幕', short: '音字', hint: '对白、音效、混音与字幕' },
-  { key: 'E6', name: '单集 QC', short: '质检', hint: '全维质检、问题与复验' },
+  { key: 'E6', name: '单集质检', short: '质检', hint: '全维质检、问题与复验' },
   { key: 'E7', name: '终审入库', short: '交付', hint: '终审、打包与单集入库' },
 ] as const
 
@@ -236,8 +236,8 @@ export function buildBatchGroups(summary: Row, batchSize = BATCH_SIZE): BatchGro
 
       return {
         index,
-        label: `B${index}`,
-        range: `E${padEpisode(cards[0]?.no ?? 1)}–E${padEpisode(cards[cards.length - 1]?.no ?? 1)}`,
+        label: `第 ${index} 批`,
+        range: `第 ${padEpisode(cards[0]?.no ?? 1)}–${padEpisode(cards[cards.length - 1]?.no ?? 1)} 集`,
         episodes: cards,
         doneCount,
         qcCount,

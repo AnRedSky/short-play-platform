@@ -1682,7 +1682,7 @@ function scriptReview(id: string, body: Row): Envelope {
   rows('reviews').unshift({
     id: nextId('RV', 'reviews'),
     project: script.project,
-    node: '剧本审核（节点 A）',
+    node: '剧本审核（节点一）',
     object: script.id,
     version: script.version,
     auditor: String(currentIdentity().name ?? '').split(' · ')[0],

@@ -22,14 +22,10 @@
       <span class="filter-count">{{ visible.length }} 份报告</span>
     </div>
 
-    <div class="spec-grid" style="grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr)">
+    <div class="spec-grid" style="grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr); align-items: start">
       <div class="card">
         <div class="card-head"><h3 class="card-title">报告</h3><span class="card-sub">点击行查看报告详情与问题项</span></div>
-        <DataTable :columns="columns" :rows="visible" row-key="id" clickable @row-click="open">
-          <template #actions="{ row }">
-            <button class="link-btn" @click="open(row)">详情</button>
-          </template>
-        </DataTable>
+        <DataTable :columns="columns" :rows="visible" row-key="id" clickable @row-click="open" />
       </div>
 
       <aside class="spec-side">
@@ -59,7 +55,7 @@
     <AppDrawer
       :open="panel.isOpen.value"
       :title="activeReport ? `${activeReport.id} · ${activeReport.object}` : '质检报告详情'"
-      :subtitle="activeReport ? `${activeReport.level} · ${activeReport.version}` : '未找到该报告'"
+      :subtitle="activeReport ? `${activeReport.level} · ${cleanReportText(activeReport.version)}` : '未找到该报告'"
       @close="panel.close"
     >
       <div v-if="activeReport" style="display: grid; gap: 12px">
@@ -67,15 +63,15 @@
           <dt>报告</dt><dd>{{ activeReport.id }}</dd>
           <dt>检测对象</dt><dd>{{ activeReport.object }}</dd>
           <dt>检测层级</dt><dd>{{ activeReport.level }}</dd>
-          <dt>版本</dt><dd>{{ activeReport.version }}</dd>
+          <dt>版本</dt><dd>{{ cleanReportText(activeReport.version) }}</dd>
           <dt>结论</dt><dd><StatusPill :status="activeReport.result" /></dd>
           <dt>检查项</dt><dd>{{ activeReport.items }}</dd>
-          <dt>问题 / 待复核 / 阻断</dt><dd>{{ activeReport.issues }} / {{ activeReport.review }} / {{ activeReport.fail }}</dd>
+          <dt>问题统计</dt><dd>问题 {{ activeReport.issues }} / 待复核 {{ activeReport.review }} / 阻断 {{ activeReport.fail }}</dd>
           <dt>检测能力</dt><dd>{{ activeReport.engine }}</dd>
           <dt>执行时间</dt><dd>{{ activeReport.at }}</dd>
           <dt v-if="activeReport.acceptedBy">确认人</dt><dd v-if="activeReport.acceptedBy">{{ activeReport.acceptedBy }}</dd>
           <dt v-if="activeReport.acceptedAt">确认时间</dt><dd v-if="activeReport.acceptedAt">{{ activeReport.acceptedAt }}</dd>
-          <dt>说明</dt><dd>{{ activeReport.note || '—' }}</dd>
+          <dt>说明</dt><dd>{{ cleanReportText(activeReport.note) || '—' }}</dd>
         </dl>
 
         <div class="card" style="box-shadow: none; border: 1px solid var(--line)">
@@ -94,7 +90,7 @@
         <div v-if="activeReport.result !== 'PASS'" class="notice" :class="activePassBlock ? 'warn' : ''">
           {{ activePassBlock || '高风险项已清零，可填写确认说明后人工通过。' }}
         </div>
-        <div v-else class="notice">该报告已通过，高风险项与阻断项均已闭环。</div>
+        <div v-else class="notice ok">该报告已通过，高风险项与阻断项均已闭环。</div>
 
         <div style="display: flex; gap: 8px; flex-wrap: wrap">
           <button
@@ -143,15 +139,38 @@ const level = ref('')
 const selectedId = ref('')
 const panel = useRoutePanel('quality-report')
 
+function cleanReportText(value: unknown): string {
+  return String(value ?? '')
+    .replace(/\bEP(\d+)\b/gi, '第 $1 集')
+    .replace(/REVIEW_REQUIRED/g, '待复核')
+    .replace(/\bPASS\b/g, '通过')
+    .replace(/\bFAIL\b/g, '未通过')
+}
+
 const columns: Column[] = [
-  { key: 'id', label: '报告', mono: true },
-  { key: 'object', label: '对象' },
-  { key: 'level', label: '级别' },
-  { key: 'version', label: '版本' },
-  { key: 'result', label: '结论', pill: true },
-  { key: 'items', label: '检查项' },
-  { key: 'issues', label: '问题' },
-  { key: 'at', label: '时间', mono: true },
+  { key: 'id', label: '报告', mono: true, nowrap: true, width: '116px' },
+  {
+    key: 'object',
+    label: '检测对象',
+    nowrap: true,
+    format: (row) => String(row.object ?? '—').replace('集成片', '集'),
+  },
+  { key: 'result', label: '结论', pill: true, width: '70px' },
+  {
+    key: 'issues',
+    label: '问题',
+    width: '92px',
+    nowrap: true,
+    format: (row) => `${row.issues ?? 0} 项 · 阻断 ${row.fail ?? 0}`,
+  },
+  {
+    key: 'at',
+    label: '时间',
+    mono: true,
+    nowrap: true,
+    width: '106px',
+    format: (row) => String(row.at ?? '—').slice(0, 16),
+  },
 ]
 
 const levels = computed(() => [...new Set(reports.value.map((row) => String(row.level)))])
