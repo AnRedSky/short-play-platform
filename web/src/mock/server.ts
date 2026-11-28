@@ -524,6 +524,60 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
     script!.shots = Number(script!.shots ?? 0) + generated.length
     state.modelBaseline = model
     touch('E2', '待生产', reason || `由分集稿生成 ${generated.length} 个镜头契约；模型 ${model}`)
+  } else if (action === 'updateShots') {
+    if (!state.scriptLocked) throw new MockHttpError(409, 'episode_script_gate', '请先锁定 E1 剧本')
+    if (state.assetsLocked) throw new MockHttpError(409, 'episode_assets_locked', '镜头契约已固化，修改需新建版本')
+    requireStep('E2')
+    const incoming = Array.isArray(body.shots) ? body.shots as Row[] : []
+    if (!incoming.length) throw new MockHttpError(422, 'episode_shots_empty', '镜头契约至少保留 1 个镜头')
+    if (incoming.length > 100) throw new MockHttpError(422, 'episode_shots_overflow', '单集镜头不能超过 100 个')
+    const projectCode = String(project.id).split('-')[1] ?? String(project.id)
+    const existingIds = new Set(
+      rows('shots')
+        .filter((row) => String(row.project) === String(project.id) && Number(row.ep) === ep)
+        .map((row) => String(row.id)),
+    )
+    const model = String(incoming[0]?.model ?? state.modelBaseline ?? '视频模型 A')
+    const usedIds = new Set<string>()
+    const updated = incoming.map((item, index) => {
+      const baseId = String(item.id ?? '').trim()
+      const fallbackId = `SH-${projectCode}-E${pad2(ep)}-${pad2(index + 1)}`
+      const id = baseId && existingIds.has(baseId) && !usedIds.has(baseId) ? baseId : fallbackId
+      usedIds.add(id)
+      const duration = seconds(item.duration)
+      return {
+        id,
+        project: projectId,
+        ep,
+        scene: String(item.scene ?? '01').trim() || '01',
+        no: `SH-${pad2(index + 1)}`,
+        order: index + 1,
+        frame: String(item.frame ?? '中景').trim() || '中景',
+        angle: String(item.angle ?? '平视').trim() || '平视',
+        move: String(item.move ?? '固定').trim() || '固定',
+        lens: String(item.lens ?? '').trim(),
+        desc: String(item.desc ?? '').trim(),
+        chars: String(item.chars ?? '').trim(),
+        emotion: String(item.emotion ?? '').trim(),
+        line: String(item.line ?? '').trim(),
+        voice: String(item.voice ?? '').trim(),
+        duration: `${duration || 8} 秒`,
+        refs: String(item.refs ?? '').trim(),
+        model: String(item.model ?? model).trim() || model,
+        quality: String(item.quality ?? '人物一致性 / 画面异常 / 时长').trim(),
+        status: '待生成',
+        version: '待生成',
+      }
+    })
+    const table = rows('shots')
+    for (let index = table.length - 1; index >= 0; index -= 1) {
+      if (String(table[index].project) === String(project.id) && Number(table[index].ep) === ep) table.splice(index, 1)
+    }
+    table.unshift(...updated)
+    episode.shots = updated.length
+    episode.duration = `${updated.reduce((sum, shot) => sum + seconds(shot.duration), 0)} 秒`
+    state.modelBaseline = model
+    touch('E2', '待生产', reason || `镜头契约已更新为 ${updated.length} 镜；模型 ${model}`)
   } else if (action === 'lockAssets') {
     if (!state.scriptLocked) throw new MockHttpError(409, 'episode_script_gate', '请先锁定 E1 剧本')
     if (state.assetsLocked) return ok({ state, message: '资产已锁定' })
@@ -536,6 +590,7 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
     if (incomplete.length) throw new MockHttpError(422, 'episode_shot_incomplete', `${incomplete.length} 个镜头缺少画面、人物或时长`)
     state.assetsLocked = true
     state.modelBaseline = String(body.model ?? state.modelBaseline ?? '视频模型 A')
+    freezeEpisodePlan(project, ep, shots, state.modelBaseline)
     touch('E3', '生产中', reason || `镜头契约与资产已锁定；模型基线 ${state.modelBaseline}`)
   } else if (action === 'startProduction') {
     if (!state.assetsLocked) throw new MockHttpError(409, 'episode_asset_gate', '请先锁定 E2 镜头与资产')
@@ -2279,6 +2334,26 @@ function buildEpisodeShots(project: Row, draft: DraftEpisode, model: string): Ro
     }
   }
   return shots
+}
+
+function freezeEpisodePlan(project: Row, ep: number, shots: Row[], model: string): Row {
+  const projectCode = String(project.id).split('-')[1] ?? String(project.id)
+  const existing = rows('plans').filter((row) => String(row.project) === String(project.id) && String(row.scope) === `第 ${ep} 集`)
+  const version = existing.reduce((max, row) => Math.max(max, Number(String(row.version ?? '').replace(/\D/g, '')) || 0), 0) + 1
+  const plan = {
+    id: `PP-${projectCode}-E${pad2(ep)}-V${version}`,
+    project: project.id,
+    version: `v${version}`,
+    scope: `第 ${ep} 集`,
+    shots: shots.length,
+    tasks: shots.length,
+    frozen: now(),
+    status: '已固化',
+    model,
+    note: `E${pad2(ep)} 镜头契约固化；模型基线 ${model}`,
+  }
+  rows('plans').unshift(plan)
+  return plan
 }
 
 const SCRIPT_MODELS = ['剧本模型 A · 长篇结构', '剧本模型 B · 快节奏短剧', '剧本模型 C · 对话打磨']

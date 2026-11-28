@@ -150,6 +150,19 @@ const modelOptions = computed(() => {
   ])
   return [...names].filter(Boolean).map((value) => ({ value, label: value }))
 })
+const episodePlans = computed(() =>
+  list('plans')
+    .filter((row) => String(row.project) === String(projectId.value) && String(row.scope) === `第 ${no.value} 集`)
+    .sort((left, right) => Number(String(right.version ?? '').replace(/\D/g, '')) - Number(String(left.version ?? '').replace(/\D/g, ''))),
+)
+const latestPlan = computed(() => episodePlans.value[0] ?? null)
+const canEditShots = computed(
+  () => Boolean(epState.value?.scriptLocked) && !epState.value?.assetsLocked && currentStateStep.value === 'E2',
+)
+const shotFrameOptions = ['全景', '远景', '中景', '近景', '特写']
+const shotAngleOptions = ['平视', '略仰', '略俯', '俯拍', '低机位']
+const shotMoveOptions = ['固定', '缓慢推近', '缓慢后拉', '手持轻微跟随', '横移']
+
 
 async function submitEpisodeAction(action: string, payload: Record<string, unknown>, label: string) {
   const id = projectId.value
@@ -210,6 +223,163 @@ async function generateShots() {
   } catch {
     // 错误已通过 toast 显示，保持当前状态。
   }
+}
+
+function shotDialogFields(row: Row) {
+  return [
+    {
+      key: 'frame',
+      label: '景别',
+      type: 'select' as const,
+      required: true,
+      value: String(row.frame ?? '中景'),
+      options: shotFrameOptions.map((value) => ({ value, label: value })),
+    },
+    {
+      key: 'angle',
+      label: '机位角度',
+      type: 'select' as const,
+      required: true,
+      value: String(row.angle ?? '平视'),
+      options: shotAngleOptions.map((value) => ({ value, label: value })),
+    },
+    {
+      key: 'move',
+      label: '运镜',
+      type: 'select' as const,
+      required: true,
+      value: String(row.move ?? '固定'),
+      options: shotMoveOptions.map((value) => ({ value, label: value })),
+    },
+    { key: 'lens', label: '镜头倾向', value: String(row.lens ?? ''), placeholder: '例：35mm 倾向' },
+    { key: 'duration', label: '时长（秒）', type: 'number' as const, required: true, value: String(row.duration ?? '8').replace(/[^\d]/g, '') },
+    { key: 'chars', label: '人物', value: String(row.chars ?? ''), placeholder: '例：林夏、周野', full: true },
+    {
+      key: 'desc',
+      label: '画面描述',
+      type: 'textarea' as const,
+      rows: 3,
+      required: true,
+      value: String(row.desc ?? ''),
+      placeholder: '写清画面主体、动作、环境与情绪落点。',
+      full: true,
+    },
+    { key: 'line', label: '台词 / 旁白', value: String(row.line ?? ''), placeholder: '无台词填 —', full: true },
+    { key: 'refs', label: '人物 / 场景参考', value: String(row.refs ?? ''), placeholder: '例：CH-01 v3 · LC-01 v2', full: true },
+    {
+      key: 'model',
+      label: '镜头模型',
+      type: 'select' as const,
+      required: true,
+      value: String(row.model ?? modelOptions.value[0]?.value ?? '视频模型 A'),
+      options: modelOptions.value,
+      full: true,
+    },
+    { key: 'emotion', label: '情绪', value: String(row.emotion ?? ''), full: true },
+    { key: 'voice', label: '声音提示', value: String(row.voice ?? ''), full: true },
+  ]
+}
+
+function normalizeShot(values: Record<string, unknown>, base: Row): Row {
+  const duration = String(values.duration ?? '8').replace(/[^\d]/g, '') || '8'
+  return {
+    ...base,
+    frame: String(values.frame ?? '中景'),
+    angle: String(values.angle ?? '平视'),
+    move: String(values.move ?? '固定'),
+    lens: String(values.lens ?? ''),
+    duration: `${duration} 秒`,
+    chars: String(values.chars ?? ''),
+    desc: String(values.desc ?? ''),
+    line: String(values.line ?? ''),
+    refs: String(values.refs ?? ''),
+    model: String(values.model ?? modelOptions.value[0]?.value ?? '视频模型 A'),
+    emotion: String(values.emotion ?? ''),
+    voice: String(values.voice ?? ''),
+  }
+}
+
+async function saveShots(next: Row[], label: string) {
+  try {
+    await submitEpisodeAction('updateShots', { shots: next }, label)
+  } catch {
+    // 错误已通过 toast 显示，弹窗保留当前输入。
+  }
+}
+
+function openShotEditor(row: Row) {
+  const index = epShots.value.findIndex((item) => String(item.id) === String(row.id))
+  if (index < 0) return
+  ui.openDialog({
+    title: `编辑 ${String(row.no ?? '')} · 第 ${String(row.scene ?? '')} 场`,
+    subtitle: '保存为 E2 镜头草稿；锁定资产后生成不可变分镜版本。',
+    wide: true,
+    fields: shotDialogFields(row),
+    submitLabel: '保存镜头',
+    onSubmit: (values) => {
+      const next = epShots.value.map((item, cursor) => (cursor === index ? normalizeShot(values, item) : item))
+      return saveShots(next, `保存 ${String(row.no ?? '')} 镜头`)
+    },
+  })
+}
+
+function addShot() {
+  const base = epShots.value[epShots.value.length - 1]
+  ui.openDialog({
+    title: `新增第 ${no.value} 集镜头`,
+    subtitle: '新增镜头会排在当前集末尾；保存后可继续调整顺序。',
+    wide: true,
+    fields: shotDialogFields({
+      frame: '中景',
+      angle: '平视',
+      move: '固定',
+      lens: '35mm 倾向',
+      duration: '8 秒',
+      chars: String(base?.chars ?? ''),
+      desc: '',
+      line: '',
+      refs: String(base?.refs ?? ''),
+      model: String(base?.model ?? modelOptions.value[0]?.value ?? '视频模型 A'),
+      emotion: '',
+      voice: '',
+    }),
+    submitLabel: '新增镜头',
+    onSubmit: (values) => {
+      const row = normalizeShot(values, {
+        id: '',
+        project: projectId.value,
+        ep: no.value,
+        scene: String(base?.scene ?? '01'),
+        no: '',
+        status: '待生成',
+        version: '待生成',
+      })
+      return saveShots([...epShots.value, row], '新增镜头')
+    },
+  })
+}
+
+async function deleteShot(row: Row) {
+  if (epShots.value.length <= 1) {
+    ui.toast('至少保留 1 个镜头', 'bad')
+    return
+  }
+  const ok = await ui.confirm('删除这个镜头', `删除 ${String(row.no ?? '')} 后，后续镜头会重新编号；锁定前仍可继续新增。`, true)
+  if (!ok) return
+  await saveShots(
+    epShots.value.filter((item) => String(item.id) !== String(row.id)),
+    `删除 ${String(row.no ?? '')}`,
+  )
+}
+
+async function moveShot(row: Row, delta: number) {
+  const index = epShots.value.findIndex((item) => String(item.id) === String(row.id))
+  const target = index + delta
+  if (index < 0 || target < 0 || target >= epShots.value.length) return
+  const next = [...epShots.value]
+  const [item] = next.splice(index, 1)
+  next.splice(target, 0, item)
+  await saveShots(next, '调整镜头顺序')
 }
 
 function lockAssets() {
@@ -613,13 +783,19 @@ const risks = computed(() => {
 })
 
 const shotColumns: Column[] = [
-  { key: 'no', label: '镜号' },
-  { key: 'scene', label: '场' },
-  { key: 'frame', label: '景别' },
-  { key: 'duration', label: '时长' },
-  { key: 'status', label: '状态', pill: true },
-  { key: 'model', label: '模型' },
-  { key: 'desc', label: '画面' },
+  { key: 'no', label: '镜号', nowrap: true },
+  { key: 'scene', label: '场', nowrap: true },
+  { key: 'frame', label: '景别', nowrap: true },
+  { key: 'duration', label: '时长', nowrap: true },
+  { key: 'chars', label: '人物' },
+  {
+    key: 'desc',
+    label: '画面',
+    format: (row) => {
+      const text = String(row.desc ?? '')
+      return text.length > 32 ? `${text.slice(0, 32)}…` : text
+    },
+  },
 ]
 const taskColumns: Column[] = [
   { key: 'id', label: '任务' },
@@ -923,7 +1099,7 @@ function openSibling(item: EpisodeCard | null) {
       </div>
     </div>
 
-    <div class="ep-grid">
+    <div class="ep-grid" :class="{ 'ep-grid--wide': props.step === 'E2' }">
       <div class="ep-main">
         <div class="ep-stage-head">
           <div>
@@ -988,9 +1164,22 @@ function openSibling(item: EpisodeCard | null) {
           <div class="card">
             <div class="card-head">
               <div><h3 class="card-title">镜头契约</h3><p class="card-sub">本集 {{ epShots.length }} 镜；缺画面、人物或时长的镜头无法进入生产。</p></div>
-              <span class="pill" :class="{ warn: missingShots.length }">{{ missingShots.length }} 个缺项</span>
+              <div class="ep-head-pills">
+                <span class="pill" :class="{ accent: latestPlan }">{{ latestPlan ? `${latestPlan.id} · 已固化` : '草稿 · 未固化' }}</span>
+                <span class="pill" :class="{ warn: missingShots.length }">{{ missingShots.length }} 个缺项</span>
+                <button v-if="canEditShots" class="btn" :disabled="actionBusy" @click="addShot">新增镜头</button>
+              </div>
             </div>
-            <DataTable :columns="shotColumns" :rows="epShots" row-key="id" wide empty-title="暂无镜头契约" />
+            <DataTable :columns="shotColumns" :rows="epShots" row-key="id" wide empty-title="暂无镜头契约">
+              <template v-if="canEditShots" #actions="{ row }">
+                <div class="table-actions">
+                  <button class="link-btn" :disabled="actionBusy" @click="openShotEditor(row)">编辑</button>
+                  <button class="icon-act" :disabled="actionBusy" title="上移" aria-label="上移" @click="moveShot(row, -1)">↑</button>
+                  <button class="icon-act" :disabled="actionBusy" title="下移" aria-label="下移" @click="moveShot(row, 1)">↓</button>
+                  <button class="icon-act danger" :disabled="actionBusy" title="删除" aria-label="删除" @click="deleteShot(row)">✕</button>
+                </div>
+              </template>
+            </DataTable>
           </div>
           <div class="ep-split">
             <div class="card">
@@ -999,6 +1188,7 @@ function openSibling(item: EpisodeCard | null) {
                 <dt>项目资产</dt><dd>{{ projectAssets.length }} 个</dd>
                 <dt>参考模型</dt><dd>{{ model }}</dd>
                 <dt>模型基线</dt><dd>{{ epState?.modelBaseline || model }}</dd>
+                <dt>分镜版本</dt><dd>{{ latestPlan ? `${latestPlan.id} · ${latestPlan.status}` : '草稿未固化' }}</dd>
                 <dt>试跑</dt><dd>{{ epState?.assetsLocked ? '基线已锁定' : '待锁定' }}</dd>
               </dl>
             </div>
@@ -1296,14 +1486,49 @@ function openSibling(item: EpisodeCard | null) {
   font-size: 10px;
   line-height: 1.4;
 }
+.ep-head-pills {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 .table-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 3px;
   white-space: nowrap;
 }
 .table-actions .link-btn {
   font-size: 10px;
+}
+.icon-act {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+.icon-act:hover {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.icon-act.danger:hover {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+.icon-act:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .ep-event-list {
   display: grid;
@@ -1394,6 +1619,12 @@ function openSibling(item: EpisodeCard | null) {
   grid-template-columns: minmax(0, 1fr) 310px;
   gap: 14px;
   align-items: start;
+}
+.ep-grid--wide {
+  grid-template-columns: minmax(0, 1fr);
+}
+.ep-grid--wide .ep-side {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .ep-main {
   display: grid;

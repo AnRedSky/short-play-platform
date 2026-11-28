@@ -168,6 +168,37 @@ describe('episode E0–E3 contract', () => {
     })
   })
 
+  it('edits the E2 shot contract and freezes a per-episode plan version on lock', async () => {
+    const { handleMock, store } = await loadMock()
+    const e19Shots = store.table('shots').filter((row) => row.project === 'SP-26031' && row.ep === 19)
+    expect(e19Shots).toHaveLength(18)
+
+    const next = e19Shots.map((row, index) =>
+      index === 0 ? { ...row, desc: '导演修订：雨夜街口回头停步', duration: '12 秒' } : row,
+    )
+    await call(handleMock, '/api/v1/projects/SP-26031/episodes/19/actions', {
+      action: 'updateShots',
+      shots: next,
+    })
+    const updated = store.table('shots').filter((row) => row.project === 'SP-26031' && row.ep === 19)
+    expect(updated).toHaveLength(18)
+    expect(updated[0]).toMatchObject({ no: 'SH-01', desc: '导演修订：雨夜街口回头停步', duration: '12 秒' })
+
+    await call(handleMock, '/api/v1/projects/SP-26031/episodes/19/actions', {
+      action: 'lockAssets',
+      model: '视频模型 B',
+      note: 'E19 镜头契约与资产锁定',
+    })
+    const plan = store.table('plans').find((row) => row.id === 'PP-26031-E19-V1')
+    expect(plan).toMatchObject({
+      project: 'SP-26031',
+      scope: '第 19 集',
+      shots: 18,
+      status: '已固化',
+      model: '视频模型 B',
+    })
+  })
+
   it('walks E4 → E7 with timeline, audio, QC, final review and a single-episode package', async () => {
     const { handleMock, store } = await loadMock()
     await call(handleMock, '/api/v1/projects/SP-26031/summary')

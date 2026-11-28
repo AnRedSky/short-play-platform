@@ -160,6 +160,33 @@ test.describe('工作室 mock 全流程', () => {
     await episodeWorkspace.getByRole('button', { name: '生成镜头契约' }).click()
     await expect(episodeWorkspace).toContainText('本集 9 镜')
     await expect(episodeWorkspace).toContainText('0 个缺项')
+    await expect(episodeWorkspace).toContainText('草稿 · 未固化')
+    await expect(episodeWorkspace.getByRole('button', { name: '新增镜头' })).toBeVisible()
+
+    const firstShot = episodeWorkspace.locator('.table tbody tr').first()
+    await firstShot.getByRole('button', { name: '编辑' }).click()
+    const shotModal = page.locator('.modal').last()
+    await shotModal.locator('#dlg-desc').fill('导演修订：雨夜街口，林夏回头停步，信封被雨水打湿')
+    await shotModal.locator('#dlg-duration').fill('12')
+    await shotModal.getByRole('button', { name: '保存镜头' }).click()
+    await expect(episodeWorkspace).toContainText('导演修订')
+    await expect(episodeWorkspace).toContainText('12 秒')
+
+    await firstShot.getByRole('button', { name: '下移' }).click()
+    await expect(episodeWorkspace.locator('.table tbody tr').nth(1)).toContainText('导演修订')
+    await episodeWorkspace.locator('.table tbody tr').nth(1).getByRole('button', { name: '上移' }).click()
+    await expect(episodeWorkspace.locator('.table tbody tr').first()).toContainText('导演修订')
+
+    await episodeWorkspace.getByRole('button', { name: '新增镜头', exact: true }).click()
+    const addModal = page.locator('.modal').last()
+    await addModal.locator('#dlg-desc').fill('补一个雨中信封落地的特写')
+    await addModal.getByRole('button', { name: '新增镜头' }).click()
+    await expect(episodeWorkspace).toContainText('本集 10 镜')
+
+    await episodeWorkspace.locator('.table tbody tr').last().getByRole('button', { name: '删除' }).click()
+    const confirmModal = page.locator('.modal').last()
+    await confirmModal.getByRole('button', { name: '确认', exact: true }).click()
+    await expect(episodeWorkspace).toContainText('本集 9 镜')
     await expect(episodeWorkspace.getByRole('button', { name: '锁定资产与模型' })).toBeEnabled()
 
     await episodeWorkspace.getByRole('button', { name: '锁定资产与模型' }).click()
@@ -168,6 +195,10 @@ test.describe('工作室 mock 全流程', () => {
     await lockModal.getByRole('button', { name: '锁定并进入 E3' }).click()
     await expect(page).toHaveURL(/step=E3/)
     await expect(episodeWorkspace).toContainText('本集任务队列')
+
+    await page.locator('.ep-step').filter({ hasText: 'E2' }).click()
+    await expect(page).toHaveURL(/step=E2/)
+    await expect(episodeWorkspace).toContainText(`PP-${code?.split('-')[1]}-E01-V1 · 已固化`)
   })
 
   test('项目概览汇总详情，阶段管线固定顶部并可切换', async ({ page }) => {
