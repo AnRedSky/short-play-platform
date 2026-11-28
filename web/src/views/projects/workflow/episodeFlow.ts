@@ -62,6 +62,7 @@ export interface EpisodeState {
   finalApproved?: boolean
   delivered?: boolean
   modelBaseline?: string
+  planVersion?: string
   owner?: string
   updated?: string
 }

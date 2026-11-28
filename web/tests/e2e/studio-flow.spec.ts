@@ -199,6 +199,37 @@ test.describe('工作室 mock 全流程', () => {
     await page.locator('.ep-step').filter({ hasText: 'E2' }).click()
     await expect(page).toHaveURL(/step=E2/)
     await expect(episodeWorkspace).toContainText(`PP-${code?.split('-')[1]}-E01-V1 · 已固化`)
+
+    const versionCard = episodeWorkspace.locator('.card').filter({ has: page.locator('.card-title', { hasText: '分镜版本' }) })
+    await expect(versionCard).toContainText('1 个版本')
+    await versionCard.getByRole('button', { name: '返工到此版' }).click()
+    const rollbackModal = page.locator('.modal').last()
+    await rollbackModal.getByRole('button', { name: '确认', exact: true }).click()
+    await expect(episodeWorkspace).toContainText(`草稿 · 基于 PP-${code?.split('-')[1]}-E01-V1`)
+
+    await episodeWorkspace.locator('.table tbody tr').first().getByRole('button', { name: '编辑' }).click()
+    const v2Modal = page.locator('.modal').last()
+    await v2Modal.locator('#dlg-desc').fill('V2 修订：导演调整雨夜回头的落点与停顿')
+    await v2Modal.getByRole('button', { name: '保存镜头' }).click()
+    await episodeWorkspace.getByRole('button', { name: '锁定资产与模型' }).click()
+    const v2LockModal = page.locator('.modal').last()
+    await v2LockModal.getByRole('button', { name: '锁定并进入 E3' }).click()
+    await page.locator('.ep-step').filter({ hasText: 'E2' }).click()
+    await expect(episodeWorkspace).toContainText(`PP-${code?.split('-')[1]}-E01-V2 · 已固化`)
+    await expect(versionCard).toContainText('2 个版本')
+
+    await versionCard.locator('tbody tr').first().getByRole('button', { name: '对比上一版' }).click()
+    await expect(versionCard).toContainText('修改 1 镜')
+    await expect(versionCard).toContainText('画面')
+
+    await page.locator('.ep-step').filter({ hasText: 'E3' }).click()
+    await page.getByRole('button', { name: '生成镜头任务' }).click()
+    const taskModal = page.locator('.modal').last()
+    await taskModal.locator('#dlg-note').fill('按 V2 镜头计划派发 9 个镜头')
+    await taskModal.getByRole('button', { name: '生成镜头任务' }).click()
+    const taskRows = page.locator('.card').filter({ hasText: '本集任务队列' }).locator('tbody tr')
+    await expect(taskRows).toHaveCount(9)
+    await expect(taskRows.first()).toContainText(`PP-${code?.split('-')[1]}-E01-V2`)
   })
 
   test('项目概览汇总详情，阶段管线固定顶部并可切换', async ({ page }) => {

@@ -156,9 +156,11 @@ const episodePlans = computed(() =>
     .sort((left, right) => Number(String(right.version ?? '').replace(/\D/g, '')) - Number(String(left.version ?? '').replace(/\D/g, ''))),
 )
 const latestPlan = computed(() => episodePlans.value[0] ?? null)
-const canEditShots = computed(
-  () => Boolean(epState.value?.scriptLocked) && !epState.value?.assetsLocked && currentStateStep.value === 'E2',
-)
+const frozenPlan = computed(() => {
+  const locked = Boolean(epState.value?.assetsLocked) || Boolean(epState.value?.productionStarted) || currentStateStep.value !== 'E2'
+  if (!locked) return null
+  return episodePlans.value.find((row) => String(row.id) === String(epState.value?.planVersion)) ?? latestPlan.value
+})
 const shotFrameOptions = ['全景', '远景', '中景', '近景', '特写']
 const shotAngleOptions = ['平视', '略仰', '略俯', '俯拍', '低机位']
 const shotMoveOptions = ['固定', '缓慢推近', '缓慢后拉', '手持轻微跟随', '横移']
@@ -380,6 +382,109 @@ async function moveShot(row: Row, delta: number) {
   const [item] = next.splice(index, 1)
   next.splice(target, 0, item)
   await saveShots(next, '调整镜头顺序')
+}
+
+const planPreview = ref<{ mode: 'view' | 'compare'; title: string; summary: string; rows: Row[] } | null>(null)
+const planDiffFields = [
+  { key: 'desc', label: '画面' },
+  { key: 'duration', label: '时长' },
+  { key: 'frame', label: '景别' },
+  { key: 'angle', label: '角度' },
+  { key: 'move', label: '运镜' },
+  { key: 'chars', label: '人物' },
+  { key: 'line', label: '台词' },
+  { key: 'refs', label: '参考' },
+  { key: 'model', label: '模型' },
+]
+
+function planSnapshot(plan: Row): Row[] {
+  const rows = Array.isArray(plan.snapshot) ? (plan.snapshot as Row[]) : []
+  return [...rows].sort((left, right) => Number(left.order ?? 0) - Number(right.order ?? 0))
+}
+
+function showPlanVersion(plan: Row) {
+  const rows = planSnapshot(plan)
+  if (!rows.length) {
+    ui.toast('该版本没有镜头快照，无法查看', 'bad')
+    return
+  }
+  planPreview.value = {
+    mode: 'view',
+    title: `${String(plan.id ?? '')} 镜头快照`,
+    summary: `${rows.length} 镜 · ${String(plan.model ?? '—')} · ${String(plan.frozen ?? '').slice(0, 16).replace('T', ' ')}`,
+    rows,
+  }
+}
+
+function comparePlanVersion(plan: Row) {
+  const version = Number(String(plan.version ?? '').replace(/\D/g, '')) || 0
+  const baseline = episodePlans.value.find((row) => (Number(String(row.version ?? '').replace(/\D/g, '')) || 0) < version)
+  if (!baseline) {
+    ui.toast('没有更早的版本可对比', 'info')
+    return
+  }
+  const previous = planSnapshot(baseline)
+  const current = planSnapshot(plan)
+  if (!previous.length || !current.length) {
+    ui.toast('版本快照不完整，无法对比', 'bad')
+    return
+  }
+  const previousById = new Map(previous.map((row) => [String(row.id), row]))
+  const currentIds = new Set(current.map((row) => String(row.id)))
+  const rows: Row[] = []
+  let added = 0
+  let removed = 0
+  let changed = 0
+  for (const shot of current) {
+    const before = previousById.get(String(shot.id))
+    if (!before) {
+      added += 1
+      rows.push({ id: `${String(shot.id)}-added`, no: String(shot.no ?? ''), field: '新增', before: '—', after: shot.desc ?? '' })
+      continue
+    }
+    let touched = false
+    for (const field of planDiffFields) {
+      if (String(before[field.key] ?? '') === String(shot[field.key] ?? '')) continue
+      touched = true
+      rows.push({
+        id: `${String(shot.id)}-${field.key}`,
+        no: String(shot.no ?? ''),
+        field: field.label,
+        before: String(before[field.key] ?? '—'),
+        after: String(shot[field.key] ?? '—'),
+      })
+    }
+    if (touched) changed += 1
+  }
+  for (const shot of previous) {
+    if (currentIds.has(String(shot.id))) continue
+    removed += 1
+    rows.push({ id: `${String(shot.id)}-removed`, no: String(shot.no ?? ''), field: '删除', before: shot.desc ?? '', after: '—' })
+  }
+  const summary = added + removed + changed
+    ? `修改 ${changed} 镜，新增 ${added} 镜，删除 ${removed} 镜`
+    : '两个版本镜头完全一致'
+  planPreview.value = {
+    mode: 'compare',
+    title: `${String(plan.id ?? '')} 对比 ${String(baseline.id ?? '')}`,
+    summary,
+    rows,
+  }
+}
+
+async function rollbackPlan(plan: Row) {
+  const ok = await ui.confirm(
+    `返工到 ${String(plan.id ?? '')}`,
+    '将恢复该版本的镜头快照，并把当前单集退回 E2；已派发生产任务时会被拒绝。',
+    true,
+  )
+  if (!ok) return
+  try {
+    await submitEpisodeAction('rollbackPlan', { planId: String(plan.id) }, `返工到 ${String(plan.id ?? '')}`)
+    planPreview.value = null
+  } catch {
+    // 错误已通过 toast 显示，保留当前版本链。
+  }
 }
 
 function lockAssets() {
@@ -797,6 +902,33 @@ const shotColumns: Column[] = [
     },
   },
 ]
+const planColumns: Column[] = [
+  { key: 'id', label: '版本', mono: true },
+  { key: 'shots', label: '镜头', format: (row) => `${row.shots ?? 0} 镜` },
+  { key: 'model', label: '模型' },
+  { key: 'frozen', label: '固化时间', format: (row) => String(row.frozen ?? '').slice(0, 16).replace('T', ' ') },
+  { key: 'status', label: '状态', pill: true },
+]
+const planDiffColumns: Column[] = [
+  { key: 'no', label: '镜号', nowrap: true },
+  { key: 'field', label: '字段', nowrap: true },
+  {
+    key: 'before',
+    label: '旧版',
+    format: (row) => {
+      const text = String(row.before ?? '—')
+      return text.length > 28 ? `${text.slice(0, 28)}…` : text
+    },
+  },
+  {
+    key: 'after',
+    label: '新版',
+    format: (row) => {
+      const text = String(row.after ?? '—')
+      return text.length > 28 ? `${text.slice(0, 28)}…` : text
+    },
+  },
+]
 const taskColumns: Column[] = [
   { key: 'id', label: '任务' },
   { key: 'shot', label: '镜号' },
@@ -805,6 +937,7 @@ const taskColumns: Column[] = [
   { key: 'status', label: '状态', pill: true },
   { key: 'attempt', label: '尝试' },
   { key: 'model', label: '模型' },
+  { key: 'planVersion', label: '计划版本', format: (row) => String(row.planVersion ?? '') || '—' },
   { key: 'failReason', label: '失败原因' },
 ]
 const takeColumns: Column[] = [
@@ -1165,14 +1298,14 @@ function openSibling(item: EpisodeCard | null) {
             <div class="card-head">
               <div><h3 class="card-title">镜头契约</h3><p class="card-sub">本集 {{ epShots.length }} 镜；缺画面、人物或时长的镜头无法进入生产。</p></div>
               <div class="ep-head-pills">
-                <span class="pill" :class="{ accent: latestPlan }">{{ latestPlan ? `${latestPlan.id} · 已固化` : '草稿 · 未固化' }}</span>
+                <span class="pill" :class="{ accent: frozenPlan }">{{ frozenPlan ? `${frozenPlan.id} · 已固化` : latestPlan ? `草稿 · 基于 ${latestPlan.id}` : '草稿 · 未固化' }}</span>
                 <span class="pill" :class="{ warn: missingShots.length }">{{ missingShots.length }} 个缺项</span>
-                <button v-if="canEditShots" class="btn" :disabled="actionBusy" @click="addShot">新增镜头</button>
+                <button v-if="epState?.scriptLocked && !epState?.assetsLocked && epShots.length" class="btn" :disabled="actionBusy" @click="addShot">新增镜头</button>
               </div>
             </div>
             <DataTable :columns="shotColumns" :rows="epShots" row-key="id" wide empty-title="暂无镜头契约">
-              <template v-if="canEditShots" #actions="{ row }">
-                <div class="table-actions">
+              <template #actions="{ row }">
+                <div v-if="epState?.scriptLocked && !epState?.assetsLocked && epShots.length" class="table-actions">
                   <button class="link-btn" :disabled="actionBusy" @click="openShotEditor(row)">编辑</button>
                   <button class="icon-act" :disabled="actionBusy" title="上移" aria-label="上移" @click="moveShot(row, -1)">↑</button>
                   <button class="icon-act" :disabled="actionBusy" title="下移" aria-label="下移" @click="moveShot(row, 1)">↓</button>
@@ -1181,6 +1314,54 @@ function openSibling(item: EpisodeCard | null) {
               </template>
             </DataTable>
           </div>
+          <div v-if="episodePlans.length" class="card">
+            <div class="card-head">
+              <div><h3 class="card-title">分镜版本</h3><p class="card-sub">每次锁定冻结一份镜头快照；返工后可基于旧版形成新版本。</p></div>
+              <span class="pill">{{ episodePlans.length }} 个版本</span>
+            </div>
+            <DataTable :columns="planColumns" :rows="episodePlans" row-key="id" empty-title="暂无固化版本">
+              <template #actions="{ row }">
+                <div class="table-actions">
+                  <span v-if="String(row.id) === String(epState?.planVersion)" class="current-plan">当前</span>
+                  <button class="link-btn" @click="showPlanVersion(row)">查看</button>
+                  <button class="link-btn" @click="comparePlanVersion(row)">对比上一版</button>
+                  <button
+                    class="link-btn danger"
+                    :disabled="actionBusy || Boolean(epState?.productionStarted)"
+                    :title="epState?.productionStarted ? '本集已派发生产任务，请走返工流程' : '恢复该版本镜头并退回 E2'"
+                    @click="rollbackPlan(row)"
+                  >
+                    返工到此版
+                  </button>
+                </div>
+              </template>
+            </DataTable>
+            <div v-if="planPreview" class="plan-preview">
+              <div class="plan-preview-head">
+                <div>
+                  <h4>{{ planPreview.title }}</h4>
+                  <p>{{ planPreview.summary }}</p>
+                </div>
+                <button class="link-btn" @click="planPreview = null">收起</button>
+              </div>
+              <DataTable
+                v-if="planPreview.mode === 'view'"
+                :columns="shotColumns"
+                :rows="planPreview.rows"
+                row-key="id"
+                wide
+                empty-title="该版本没有镜头快照"
+              />
+              <DataTable
+                v-else
+                :columns="planDiffColumns"
+                :rows="planPreview.rows"
+                row-key="id"
+                wide
+                empty-title="两个版本镜头完全一致"
+              />
+            </div>
+          </div>
           <div class="ep-split">
             <div class="card">
               <div class="card-head"><h3 class="card-title">资产与模型</h3></div>
@@ -1188,7 +1369,7 @@ function openSibling(item: EpisodeCard | null) {
                 <dt>项目资产</dt><dd>{{ projectAssets.length }} 个</dd>
                 <dt>参考模型</dt><dd>{{ model }}</dd>
                 <dt>模型基线</dt><dd>{{ epState?.modelBaseline || model }}</dd>
-                <dt>分镜版本</dt><dd>{{ latestPlan ? `${latestPlan.id} · ${latestPlan.status}` : '草稿未固化' }}</dd>
+                <dt>分镜版本</dt><dd>{{ frozenPlan ? `${frozenPlan.id} · ${frozenPlan.status}` : latestPlan ? `草稿 · 基于 ${latestPlan.id}` : '草稿未固化' }}</dd>
                 <dt>试跑</dt><dd>{{ epState?.assetsLocked ? '基线已锁定' : '待锁定' }}</dd>
               </dl>
             </div>
@@ -1492,6 +1673,37 @@ function openSibling(item: EpisodeCard | null) {
   justify-content: flex-end;
   gap: 6px;
   flex-wrap: wrap;
+}
+.current-plan {
+  color: var(--accent-ink);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-size: 9px;
+  line-height: 16px;
+}
+.plan-preview {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.plan-preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.plan-preview-head h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-family: var(--mono);
+}
+.plan-preview-head p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 10px;
 }
 .table-actions {
   display: flex;

@@ -590,12 +590,57 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
     if (incomplete.length) throw new MockHttpError(422, 'episode_shot_incomplete', `${incomplete.length} 个镜头缺少画面、人物或时长`)
     state.assetsLocked = true
     state.modelBaseline = String(body.model ?? state.modelBaseline ?? '视频模型 A')
-    freezeEpisodePlan(project, ep, shots, state.modelBaseline)
+    state.planVersion = freezeEpisodePlan(project, ep, shots, state.modelBaseline).id
     touch('E3', '生产中', reason || `镜头契约与资产已锁定；模型基线 ${state.modelBaseline}`)
+  } else if (action === 'rollbackPlan') {
+    const planId = String(body.planId ?? '').trim()
+    const plan = rows('plans').find((row) => row.id === planId)
+    if (!plan || String(plan.project) !== projectId || String(plan.scope) !== `第 ${ep} 集`) {
+      throw new MockHttpError(404, 'episode_plan_not_found', `未找到第 ${ep} 集的镜头计划 ${planId}`)
+    }
+    if (!['E2', 'E3'].includes(String(state.currentStep))) {
+      throw new MockHttpError(409, 'episode_plan_step', '只在导演规划或素材生产阶段允许返工镜头计划')
+    }
+    const activeTasks = rows('tasks').filter(
+      (row) => row.project === projectId && Number(row.ep) === ep && !['已替代', '已取消'].includes(String(row.status)),
+    )
+    if (state.productionStarted || activeTasks.length) {
+      throw new MockHttpError(409, 'episode_plan_in_production', '本集已派发生产任务，请先走返工流程再修改计划版本')
+    }
+    const snapshot = Array.isArray(plan.snapshot) ? plan.snapshot as Row[] : []
+    if (!snapshot.length) throw new MockHttpError(422, 'episode_plan_snapshot', '该版本没有镜头快照，不能返工')
+    const projectCode = String(project.id).split('-')[1] ?? String(project.id)
+    const restored = snapshot.map((item, index) => ({
+      ...item,
+      id: String(item.id ?? `SH-${projectCode}-E${pad2(ep)}-${pad2(index + 1)}`),
+      project: projectId,
+      ep,
+      no: `SH-${pad2(index + 1)}`,
+      order: index + 1,
+      duration: `${seconds(item.duration) || 8} 秒`,
+      status: '待生成',
+      version: '待生成',
+    }))
+    const table = rows('shots')
+    for (let index = table.length - 1; index >= 0; index -= 1) {
+      if (String(table[index].project) === projectId && Number(table[index].ep) === ep) table.splice(index, 1)
+    }
+    table.unshift(...restored)
+    episode.shots = restored.length
+    episode.duration = `${restored.reduce((sum, shot) => sum + seconds(shot.duration), 0)} 秒`
+    state.assetsLocked = false
+    state.productionStarted = false
+    state.planVersion = ''
+    state.modelBaseline = String(plan.model ?? state.modelBaseline)
+    touch('E2', '待生产', reason || `返工到 ${plan.id}；镜头契约恢复为草稿`)
   } else if (action === 'startProduction') {
     if (!state.assetsLocked) throw new MockHttpError(409, 'episode_asset_gate', '请先锁定 E2 镜头与资产')
     const shots = rows('shots').filter((row) => row.project === projectId && Number(row.ep) === ep)
     if (!shots.length) throw new MockHttpError(409, 'episode_shot_empty', '本集没有可生产的镜头')
+    const currentPlan = rows('plans').find(
+      (row) => String(row.id) === String(state.planVersion) && String(row.project) === projectId,
+    )
+    const planVersion = String(currentPlan?.id ?? state.planVersion ?? '')
     const activeTasks = rows('tasks').filter(
       (row) => row.project === projectId && Number(row.ep) === ep && !['已替代', '已取消'].includes(String(row.status)),
     )
@@ -617,6 +662,7 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
           input: shot.refs ?? '—',
           output: 'MP4 1080×1920',
           model: state.modelBaseline,
+          planVersion,
           config: 'PRV-01',
           executor: project.owner ?? '林知远',
           resourceOwner: project.owner ?? '林知远',
@@ -2351,6 +2397,7 @@ function freezeEpisodePlan(project: Row, ep: number, shots: Row[], model: string
     status: '已固化',
     model,
     note: `E${pad2(ep)} 镜头契约固化；模型基线 ${model}`,
+    snapshot: shots.map((shot) => ({ ...shot })),
   }
   rows('plans').unshift(plan)
   return plan

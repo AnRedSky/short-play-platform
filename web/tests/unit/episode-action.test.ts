@@ -197,6 +197,38 @@ describe('episode E0–E3 contract', () => {
       status: '已固化',
       model: '视频模型 B',
     })
+    expect((plan?.snapshot as Array<Record<string, unknown>>)[0]).toMatchObject({ desc: '导演修订：雨夜街口回头停步' })
+
+    const rollback = (await call(handleMock, '/api/v1/projects/SP-26031/episodes/19/actions', {
+      action: 'rollbackPlan',
+      planId: 'PP-26031-E19-V1',
+    })) as { data: { state: Record<string, unknown> } }
+    expect(rollback.data.state).toMatchObject({ currentStep: 'E2', assetsLocked: false, planVersion: '' })
+    expect(
+      store.table('shots').filter((row) => row.project === 'SP-26031' && row.ep === 19)[0],
+    ).toMatchObject({ desc: '导演修订：雨夜街口回头停步' })
+
+    const v2Shots = store
+      .table('shots')
+      .filter((row) => row.project === 'SP-26031' && row.ep === 19)
+      .map((row, index) => (index === 0 ? { ...row, desc: 'V2 修订：雨夜回头落点调整' } : row))
+    await call(handleMock, '/api/v1/projects/SP-26031/episodes/19/actions', {
+      action: 'updateShots',
+      shots: v2Shots,
+    })
+    await call(handleMock, '/api/v1/projects/SP-26031/episodes/19/actions', {
+      action: 'lockAssets',
+      model: '视频模型 B',
+      note: 'E19 形成镜头计划 V2',
+    })
+    const v2 = store.table('plans').find((row) => row.id === 'PP-26031-E19-V2')
+    expect(v2).toMatchObject({ shots: 18, status: '已固化' })
+    expect((v2?.snapshot as Array<Record<string, unknown>>)[0]).toMatchObject({ desc: 'V2 修订：雨夜回头落点调整' })
+
+    await call(handleMock, '/api/v1/projects/SP-26031/episodes/19/actions', { action: 'startProduction' })
+    expect(
+      store.table('tasks').filter((row) => row.project === 'SP-26031' && row.ep === 19)[0],
+    ).toMatchObject({ planVersion: 'PP-26031-E19-V2' })
   })
 
   it('walks E4 → E7 with timeline, audio, QC, final review and a single-episode package', async () => {
