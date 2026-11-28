@@ -150,6 +150,24 @@ test.describe('工作室 mock 全流程', () => {
     await runGate(page, '审核通过并锁定', '生产准备中')
     await expect(page.locator('.project-action-strip')).not.toContainText('固化镜头计划')
     await expect(page.locator('.project-action-strip')).not.toContainText('转入后期')
+
+    await page.locator('.stage-card').filter({ hasText: '导演规划' }).click()
+    await expect(page).toHaveURL(/view=episode/)
+    await expect(page).toHaveURL(/step=E2/)
+    const episodeWorkspace = page.locator('.episode-workspace')
+    await expect(episodeWorkspace).toContainText('第 1 集')
+    await expect(episodeWorkspace).toContainText('E2 由分集稿生成镜头契约')
+    await episodeWorkspace.getByRole('button', { name: '生成镜头契约' }).click()
+    await expect(episodeWorkspace).toContainText('本集 9 镜')
+    await expect(episodeWorkspace).toContainText('0 个缺项')
+    await expect(episodeWorkspace.getByRole('button', { name: '锁定资产与模型' })).toBeEnabled()
+
+    await episodeWorkspace.getByRole('button', { name: '锁定资产与模型' }).click()
+    const lockModal = page.locator('.modal').last()
+    await expect(lockModal).toContainText('锁定镜头契约、关键资产与模型基线')
+    await lockModal.getByRole('button', { name: '锁定并进入 E3' }).click()
+    await expect(page).toHaveURL(/step=E3/)
+    await expect(episodeWorkspace).toContainText('本集任务队列')
   })
 
   test('项目概览汇总详情，阶段管线固定顶部并可切换', async ({ page }) => {
@@ -195,17 +213,13 @@ test.describe('工作室 mock 全流程', () => {
     await page.mouse.wheel(0, 900)
     await expect.poll(() => head.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(64)
 
-    const stageWorkspaces = [
-      ['剧本创作', '版本链'],
-      ['导演规划', '项目镜头契约'],
-    ] as const
-    for (const [stage, content] of stageWorkspaces) {
-      await dock.locator('.stage-card').filter({ hasText: stage }).click()
-      await expect(page.locator('.stage-content')).toContainText(content)
-      await expect(page.locator('.stage-kpi')).not.toHaveCount(0)
-      await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBe(0)
-    }
-    await expect(page.locator('.stage-head')).toContainText('进入「视频生产」')
+    await dock.locator('.stage-card').filter({ hasText: '导演规划' }).click()
+    await expect(page).toHaveURL(/view=episode/)
+    await expect(page).toHaveURL(/step=E2/)
+    await expect(page.locator('.episode-workspace')).toContainText('镜头契约')
+    await expect(page.locator('.ep-stage-head')).toContainText('镜头与资产')
+    await expect(dock.locator('.stage-card.active')).toContainText('导演规划')
+    await expect.poll(() => scroll.evaluate((el) => el.scrollTop)).toBe(0)
 
     const productionStages = [
       ['视频生产', 'E3', '素材生产'],

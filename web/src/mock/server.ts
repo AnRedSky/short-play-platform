@@ -500,10 +500,40 @@ function episodeAction(projectId: string, ep: number, body: Row): Envelope {
     requireStep('E1')
     state.scriptLocked = true
     touch('E2', '待生产', reason || '单集剧本定稿并锁定')
+  } else if (action === 'generateShots') {
+    if (!state.scriptLocked) throw new MockHttpError(409, 'episode_script_gate', '请先锁定 E1 剧本')
+    if (state.assetsLocked) throw new MockHttpError(409, 'episode_assets_locked', '镜头与资产已锁定，不能再重建镜头契约')
+    requireStep('E2')
+    const existing = rows('shots').filter((row) => row.project === projectId && Number(row.ep) === ep)
+    if (existing.length) throw new MockHttpError(409, 'episode_shots_exists', `第 ${ep} 集已有 ${existing.length} 个镜头，不能重复生成`)
+    const versions = rows('scripts')
+      .filter((row) => row.project === projectId)
+      .sort((left, right) => Number(String(right.version ?? '').replace(/\D/g, '')) - Number(String(left.version ?? '').replace(/\D/g, '')))
+    const script = versions.find((row) => Boolean(row.locked)) ?? versions[0]
+    const drafts = Array.isArray(script?.episodeDrafts) ? script!.episodeDrafts as DraftEpisode[] : []
+    const draft = drafts.find((row) => Number(row.no) === ep)
+    if (!draft) throw new MockHttpError(422, 'episode_script_missing', `第 ${ep} 集还没有分集稿，不能生成镜头契约`)
+    const model = String(body.model ?? state.modelBaseline ?? '视频模型 A')
+    const generated = buildEpisodeShots(project, draft, model)
+    rows('shots').unshift(...generated)
+    episode.scenes = draft.scenes.length
+    episode.shots = generated.length
+    episode.duration = `${generated.reduce((sum, shot) => sum + seconds(shot.duration), 0)} 秒`
+    episode.logline = draft.logline
+    episode.hook = draft.hook
+    script!.shots = Number(script!.shots ?? 0) + generated.length
+    state.modelBaseline = model
+    touch('E2', '待生产', reason || `由分集稿生成 ${generated.length} 个镜头契约；模型 ${model}`)
   } else if (action === 'lockAssets') {
     if (!state.scriptLocked) throw new MockHttpError(409, 'episode_script_gate', '请先锁定 E1 剧本')
     if (state.assetsLocked) return ok({ state, message: '资产已锁定' })
     requireStep('E2')
+    const shots = rows('shots').filter((row) => row.project === projectId && Number(row.ep) === ep)
+    if (!shots.length) throw new MockHttpError(409, 'episode_shot_empty', '请先生成镜头契约')
+    const incomplete = shots.filter(
+      (shot) => !String(shot.desc ?? '').trim() || !String(shot.chars ?? '').trim() || !String(shot.duration ?? '').trim(),
+    )
+    if (incomplete.length) throw new MockHttpError(422, 'episode_shot_incomplete', `${incomplete.length} 个镜头缺少画面、人物或时长`)
     state.assetsLocked = true
     state.modelBaseline = String(body.model ?? state.modelBaseline ?? '视频模型 A')
     touch('E3', '生产中', reason || `镜头契约与资产已锁定；模型基线 ${state.modelBaseline}`)
@@ -1439,6 +1469,18 @@ function transition(id: string, body: Row): Envelope {
     script.note = `${String(body.reason ?? script.note ?? '')} · 已提交审核`.trim()
   }
 
+  if (actionKey === 'approveScript') {
+    const versions = rows('scripts')
+      .filter((row) => row.project === id)
+      .sort((left, right) => Number(String(right.version ?? '').replace(/\D/g, '')) - Number(String(left.version ?? '').replace(/\D/g, '')))
+    const script = versions.find((row) => !row.locked) ?? versions[0]
+    if (!script) throw new MockHttpError(422, 'script_missing', '尚未建立剧本版本，不能通过审核')
+    script.status = '已通过 · 正式版本'
+    script.locked = true
+    script.updatedAt = now()
+    materializeEpisodes(project, script)
+  }
+
   const from = project.status
   const next = action.next === '__prev__' ? String(project._prevStatus ?? '生产中') : action.next
   project._prevStatus = from
@@ -1495,6 +1537,39 @@ function projectTimeline(id: string): Envelope {
   return ok(items)
 }
 
+function materializeEpisodes(project: Row, script: Row): number {
+  const drafts = Array.isArray(script.episodeDrafts) ? script.episodeDrafts as DraftEpisode[] : []
+  const existing = new Set(
+    rows('episodes')
+      .filter((row) => row.project === project.id)
+      .map((row) => Number(row.no ?? 0)),
+  )
+  let created = 0
+  const duration = String(project.duration ?? '80 秒 / 集').split('/')[0].trim()
+  for (const draft of drafts) {
+    const no = Number(draft.no ?? 0)
+    if (!no || existing.has(no)) continue
+    rows('episodes').push({
+      project: project.id,
+      no,
+      batch: Math.ceil(no / BATCH_SIZE),
+      title: draft.title,
+      logline: draft.logline,
+      hook: draft.hook,
+      scenes: Array.isArray(draft.scenes) ? draft.scenes.length : 0,
+      shots: 0,
+      duration,
+      status: '待生产',
+      qc: '待检',
+      timeline: '—',
+      updatedAt: now(),
+    })
+    created += 1
+  }
+  if (created) ensureEpisodeStates(project.id)
+  return created
+}
+
 function scriptReview(id: string, body: Row): Envelope {
   const script = byId('scripts', id)
   const result = String(body.result ?? '通过')
@@ -1502,6 +1577,7 @@ function scriptReview(id: string, body: Row): Envelope {
   script.status = result === '通过' ? '已通过 · 正式版本' : '已退回'
   script.locked = result === '通过'
   script.updatedAt = now()
+  if (project && result === '通过') materializeEpisodes(project, script)
   rows('reviews').unshift({
     id: nextId('RV', 'reviews'),
     project: script.project,
@@ -2120,6 +2196,89 @@ interface DraftEpisode {
   scenes: DraftScene[]
   edited?: boolean
   editedAt?: string
+}
+
+function buildEpisodeShots(project: Row, draft: DraftEpisode, model: string): Row[] {
+  const projectCode = String(project.id).split('-')[1] ?? String(project.id)
+  const characters = rows('characters').filter((row) => row.project === project.id)
+  const locations = rows('locations').filter((row) => row.project === project.id)
+  const shots: Row[] = []
+  let sequence = 0
+
+  for (const scene of draft.scenes) {
+    const lines = scene.lines ?? []
+    const matchedChars = characters
+      .filter((row) => scene.chars.includes(String(row.name ?? '')))
+      .map((row) => `${String(row.id)} ${String(row.version ?? '')}`.trim())
+    const matchedLocation = locations.find((row) => scene.location.includes(String(row.name ?? '')))
+    const refs = [
+      ...matchedChars,
+      matchedLocation ? `${String(matchedLocation.id)} ${String(matchedLocation.version ?? '')}`.trim() : '',
+    ].filter(Boolean).join(' · ') || `人物：${scene.chars} · 场景：${scene.location}`
+    const specs = [
+      {
+        frame: '全景',
+        angle: '平视',
+        move: '缓慢推近',
+        lens: '24mm 倾向',
+        line: '—',
+        voice: '环境声',
+        duration: 9,
+        emotion: '建立空间',
+        desc: `${scene.location} · ${scene.time}；${scene.action}`,
+      },
+      {
+        frame: '中景',
+        angle: '平视',
+        move: '手持轻微跟随',
+        lens: '35mm 倾向',
+        line: lines[0]?.text ?? '—',
+        voice: '对白 + 环境声',
+        duration: 10,
+        emotion: '推进动作',
+        desc: `围绕 ${scene.chars}：${scene.action}`,
+      },
+      {
+        frame: '特写',
+        angle: '略仰',
+        move: '固定',
+        lens: '85mm 倾向',
+        line: lines[1]?.text ?? '—',
+        voice: lines[1] ? '对白 + 环境声' : '环境声 + 呼吸',
+        duration: 8,
+        emotion: '情绪落点',
+        desc: `${scene.chars} 的情绪落点；${draft.hook || scene.action}`,
+      },
+    ]
+
+    for (const spec of specs) {
+      sequence += 1
+      shots.push({
+        id: `SH-${projectCode}-E${pad2(draft.no)}-${pad2(sequence)}`,
+        project: project.id,
+        ep: draft.no,
+        scene: scene.no,
+        no: `SH-${pad2(sequence)}`,
+        order: sequence,
+        frame: spec.frame,
+        angle: spec.angle,
+        move: spec.move,
+        lens: spec.lens,
+        desc: spec.desc,
+        chars: scene.chars,
+        emotion: spec.emotion,
+        line: spec.line,
+        voice: spec.voice,
+        duration: `${spec.duration} 秒`,
+        refs,
+        model,
+        quality: '人物一致性 / 画面异常 / 时长',
+        status: '待生成',
+        version: '待生成',
+      })
+    }
+  }
+  return shots
 }
 
 const SCRIPT_MODELS = ['剧本模型 A · 长篇结构', '剧本模型 B · 快节奏短剧', '剧本模型 C · 对话打磨']

@@ -20,7 +20,7 @@
           <div class="stage-dock-head">
             <div class="stage-dock-title">
               阶段管线
-              <span class="card-sub">项目概览汇总档案与进度；剧本、规划为项目级，生产到交付按单集顺序直达</span>
+              <span class="card-sub">项目概览汇总档案与进度；剧本为项目级，导演规划起按单集顺序直达</span>
             </div>
             <div class="stage-dock-meta">
               <span class="pill accent">当前 {{ (viewMode === 'episode' && selectedStage?.name) || currentStage?.name || '—' }}</span>
@@ -498,6 +498,7 @@ function navigateQuery(updates: Record<string, string | undefined>, clear: strin
 }
 
 const LEGACY_STAGE_STEP: Record<string, EpisodeStepKey> = {
+  plan: 'E2',
   video: 'E3',
   audio: 'E5',
   post: 'E4',

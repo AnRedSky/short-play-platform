@@ -200,6 +200,18 @@ function lockScript() {
   })
 }
 
+async function generateShots() {
+  try {
+    await submitEpisodeAction(
+      'generateShots',
+      { model: modelOptions.value[0]?.value ?? '视频模型 A' },
+      '生成镜头契约',
+    )
+  } catch {
+    // 错误已通过 toast 显示，保持当前状态。
+  }
+}
+
 function lockAssets() {
   ui.openDialog({
     title: `锁定第 ${no.value} 集镜头与资产`,
@@ -216,7 +228,10 @@ function lockAssets() {
       { key: 'note', label: '执行说明', type: 'textarea' as const, rows: 3, placeholder: '例：顾沉造型以 v3 锁定，雨夜街口场景不再改。' },
     ],
     submitLabel: '锁定并进入 E3',
-    onSubmit: (values) => submitEpisodeAction('lockAssets', { model: values.model, note: values.note }, 'E2 资产与模型锁定'),
+    onSubmit: async (values) => {
+      await submitEpisodeAction('lockAssets', { model: values.model, note: values.note }, 'E2 资产与模型锁定')
+      emit('select-step', 'E3')
+    },
   })
 }
 
@@ -500,7 +515,8 @@ const actionHint = computed(() => {
   if (!epState.value) return '正在读取单集状态…'
   if (!epState.value.inputConfirmed) return '先完成 E0 输入确认'
   if (!epState.value.scriptLocked) return 'E1 剧本锁定后进入镜头与资产'
-  if (!epState.value.assetsLocked) return 'E2 锁定镜头与资产后进入素材生产'
+  if (!epShots.value.length) return 'E2 由分集稿生成镜头契约'
+  if (!epState.value.assetsLocked) return 'E2 镜头契约无缺项后锁定资产与模型'
   if (!epState.value.productionStarted) return 'E3 已就绪，可批量生成镜头任务'
   const failed = epTasks.value.filter((row) => String(row.status ?? '') === '失败').length
   if (currentStateStep.value !== 'E3') {
@@ -536,7 +552,7 @@ const checks = computed(() => {
       { label: '契约缺项已清零', ok: missingShots.value.length === 0 },
       { label: '模型配置可读', ok: model.value !== '未接入' },
       { label: '资产与模型已锁定', ok: Boolean(epState.value?.assetsLocked) },
-      { label: '关键资产可引用', ok: projectAssets.value.length > 0 },
+      { label: '镜头参考已登记', ok: epShots.value.length > 0 && epShots.value.every((row) => Boolean(String(row.refs ?? '').trim())) },
     ]
   }
   if (props.step === 'E3') {
@@ -746,9 +762,17 @@ function openSibling(item: EpisodeCard | null) {
           锁定剧本
         </button>
         <button
-          v-if="epState.scriptLocked && !epState.assetsLocked"
+          v-if="epState.scriptLocked && !epState.assetsLocked && currentStateStep === 'E2' && !epShots.length"
           class="btn primary"
-          :disabled="actionBusy || currentStateStep !== 'E2'"
+          :disabled="actionBusy"
+          @click="generateShots"
+        >
+          生成镜头契约
+        </button>
+        <button
+          v-if="epState.scriptLocked && !epState.assetsLocked && epShots.length"
+          class="btn primary"
+          :disabled="actionBusy || currentStateStep !== 'E2' || missingShots.length > 0"
           @click="lockAssets"
         >
           锁定资产与模型
