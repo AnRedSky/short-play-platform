@@ -202,7 +202,7 @@ test.describe('工作室 mock 全流程', () => {
 
     const versionCard = episodeWorkspace.locator('.card').filter({ has: page.locator('.card-title', { hasText: '分镜版本' }) })
     await expect(versionCard).toContainText('1 个版本')
-    await versionCard.getByRole('button', { name: '返工到此版' }).click()
+    await versionCard.getByRole('button', { name: /修订当前版|返工到此版/ }).click()
     const rollbackModal = page.locator('.modal').last()
     await rollbackModal.getByRole('button', { name: '确认', exact: true }).click()
     await expect(episodeWorkspace).toContainText(`草稿 · 基于 PP-${code?.split('-')[1]}-E01-V1`)

@@ -1314,12 +1314,18 @@ function openSibling(item: EpisodeCard | null) {
               </template>
             </DataTable>
           </div>
-          <div v-if="episodePlans.length" class="card">
+          <div v-if="epShots.length || episodePlans.length" class="card">
             <div class="card-head">
-              <div><h3 class="card-title">分镜版本</h3><p class="card-sub">每次锁定冻结一份镜头快照；返工后可基于旧版形成新版本。</p></div>
+              <div>
+                <h3 class="card-title">分镜版本</h3>
+                <p class="card-sub">
+                  {{ episodePlans.length ? '每次锁定冻结一份镜头快照；当前版本点“修订当前版”，改完再锁定即形成新版本。' : '尚未固化。生成镜头并锁定资产后生成 V1；之后可按版本查看、对比和返工。' }}
+                </p>
+              </div>
               <span class="pill">{{ episodePlans.length }} 个版本</span>
             </div>
-            <DataTable :columns="planColumns" :rows="episodePlans" row-key="id" empty-title="暂无固化版本">
+            <p v-if="!episodePlans.length" class="ep-note">还没有固化版本。锁定资产与模型后生成 V1，后续每次锁定递增。</p>
+            <DataTable v-else :columns="planColumns" :rows="episodePlans" row-key="id" empty-title="暂无固化版本，锁定资产后生成 V1">
               <template #actions="{ row }">
                 <div class="table-actions">
                   <span v-if="String(row.id) === String(epState?.planVersion)" class="current-plan">当前</span>
@@ -1331,7 +1337,7 @@ function openSibling(item: EpisodeCard | null) {
                     :title="epState?.productionStarted ? '本集已派发生产任务，请走返工流程' : '恢复该版本镜头并退回 E2'"
                     @click="rollbackPlan(row)"
                   >
-                    返工到此版
+                    {{ String(row.id) === String(epState?.planVersion) ? '修订当前版' : '返工到此版' }}
                   </button>
                 </div>
               </template>

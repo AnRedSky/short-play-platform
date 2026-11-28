@@ -168,6 +168,23 @@ describe('episode E0–E3 contract', () => {
     })
   })
 
+  it('backfills a missing snapshot for a legacy latest plan on summary', async () => {
+    const { handleMock, store } = await loadMock()
+    await call(handleMock, '/api/v1/projects/SP-26031/episodes/19/actions', {
+      action: 'lockAssets',
+      model: '视频模型 A',
+    })
+    const plan = store.table('plans').find((row) => row.scope === '第 19 集')
+    expect(plan?.snapshot).toHaveLength(18)
+    delete (plan as Record<string, unknown>).snapshot
+
+    const summary = (await call(handleMock, '/api/v1/projects/SP-26031/summary')) as {
+      data: { plans: Array<Record<string, unknown>> }
+    }
+    const restored = summary.data.plans.find((row) => row.scope === '第 19 集')
+    expect(restored?.snapshot).toHaveLength(18)
+  })
+
   it('edits the E2 shot contract and freezes a per-episode plan version on lock', async () => {
     const { handleMock, store } = await loadMock()
     const e19Shots = store.table('shots').filter((row) => row.project === 'SP-26031' && row.ep === 19)

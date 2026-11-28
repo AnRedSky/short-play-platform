@@ -2403,6 +2403,32 @@ function freezeEpisodePlan(project: Row, ep: number, shots: Row[], model: string
   return plan
 }
 
+// 旧版本固化的计划没有 snapshot；只在“最新版本 + 本集已锁定/已派发”时用当前镜头补齐，
+// 保证历史项目也能查看、对比和返工，而不把草稿态误当成历史版本。
+function ensurePlanSnapshots(projectId: string, states: Row[]) {
+  const plans = rows('plans').filter((row) => String(row.project) === projectId)
+  let changed = false
+  for (const plan of plans) {
+    if (Array.isArray(plan.snapshot) && plan.snapshot.length) continue
+    const hit = String(plan.scope ?? '').match(/第\s*(\d+)\s*集/)
+    if (!hit) continue
+    const ep = Number(hit[1])
+    const siblings = plans.filter((row) => String(row.scope) === String(plan.scope))
+    const latest = siblings.reduce(
+      (max, row) => (Number(String(row.version ?? '').replace(/\D/g, '')) || 0) > (Number(String(max.version ?? '').replace(/\D/g, '')) || 0) ? row : max,
+      siblings[0],
+    )
+    if (!latest || String(latest.id) !== String(plan.id)) continue
+    const state = states.find((row) => Number(row.ep) === ep)
+    if (!state || (!state.assetsLocked && !state.productionStarted && state.currentStep !== 'E3')) continue
+    const shots = rows('shots').filter((row) => String(row.project) === projectId && Number(row.ep) === ep)
+    if (!shots.length) continue
+    plan.snapshot = shots.map((shot) => ({ ...shot }))
+    changed = true
+  }
+  if (changed) store.persist()
+}
+
 const SCRIPT_MODELS = ['剧本模型 A · 长篇结构', '剧本模型 B · 快节奏短剧', '剧本模型 C · 对话打磨']
 
 function scriptTitles(project: Row): string[] {
@@ -2962,6 +2988,7 @@ const CUSTOM: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
     for (const timeline of timelines) ensureTimelineClips(id, Number(timeline.ep), String(timeline.version))
     const projectCode = id.split('-')[1] ?? id
     const states = ensureEpisodeStates(id).sort((a, b) => Number(a.ep) - Number(b.ep))
+    ensurePlanSnapshots(id, states)
     syncProjectStatus(project, states)
     return ok({
       project,
