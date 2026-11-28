@@ -30,6 +30,7 @@ const routes: RouteRecordRaw[] = [
 
   { path: '/projects/workflow', name: 'projects-workflow', component: view('projects/workflow') },
   { path: '/projects/lifecycle', name: 'projects-lifecycle', component: view('projects/lifecycle') },
+  { path: '/studio/projects', name: 'studio-projects', component: () => import('../presentation/pages/project-overview/ProjectOverviewPage.vue') },
 
   { path: '/creation/brief', name: 'creation-brief', component: view('creation') },
   { path: '/creation/plan', name: 'creation-plan', component: view('SpecPage') },

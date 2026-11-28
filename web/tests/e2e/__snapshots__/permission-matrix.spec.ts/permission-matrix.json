@@ -51,7 +51,8 @@
     "/video/production": "allow",
     "/video/preview": "allow",
     "/workspace/home": "allow",
-    "/workspace/assistant": "allow"
+    "/workspace/assistant": "allow",
+    "/studio/projects": "allow"
   },
   "i-ops": {
     "/analytics/enterprise": "deny",
@@ -105,7 +106,8 @@
     "/video/production": "deny",
     "/video/preview": "deny",
     "/workspace/home": "allow",
-    "/workspace/assistant": "deny"
+    "/workspace/assistant": "deny",
+    "/studio/projects": "deny"
   },
   "i-admin": {
     "/analytics/enterprise": "allow",
@@ -159,7 +161,8 @@
     "/video/production": "deny",
     "/video/preview": "deny",
     "/workspace/home": "allow",
-    "/workspace/assistant": "deny"
+    "/workspace/assistant": "deny",
+    "/studio/projects": "allow"
   },
   "i-dept": {
     "/analytics/enterprise": "allow",
@@ -213,7 +216,8 @@
     "/video/production": "deny",
     "/video/preview": "deny",
     "/workspace/home": "allow",
-    "/workspace/assistant": "deny"
+    "/workspace/assistant": "deny",
+    "/studio/projects": "allow"
   },
   "i-staff": {
     "/analytics/enterprise": "deny",
@@ -267,7 +271,8 @@
     "/video/production": "allow",
     "/video/preview": "allow",
     "/workspace/home": "allow",
-    "/workspace/assistant": "allow"
+    "/workspace/assistant": "allow",
+    "/studio/projects": "allow"
   },
   "i-auditor": {
     "/analytics/enterprise": "allow",
@@ -321,6 +326,7 @@
     "/video/production": "deny",
     "/video/preview": "deny",
     "/workspace/home": "allow",
-    "/workspace/assistant": "deny"
+    "/workspace/assistant": "deny",
+    "/studio/projects": "allow"
   }
 }

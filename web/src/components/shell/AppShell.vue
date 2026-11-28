@@ -2,10 +2,10 @@
   <div class="shell">
     <aside class="sidebar">
       <div class="sb-brand">
-        <span class="mark">SP</span>
+        <span class="mark">短</span>
         <div>
           <b>短剧智能生产</b>
-          <small>STUDIO · MOCK API</small>
+          <small>智能生产 · 模拟数据</small>
         </div>
       </div>
 
@@ -37,7 +37,7 @@
             <small>{{ session.roleName }} · {{ session.identity?.dept }}</small>
           </div>
         </div>
-        <button class="btn ghost" style="justify-content: center" @click="resetMock">重置演示数据</button>
+        <button class="btn ghost" style="justify-content: center" @click="resetMock">重置验证数据</button>
       </div>
     </aside>
 
@@ -47,13 +47,13 @@
           <div class="crumb">
             <span>{{ currentGroup }}</span><span>/</span><b>{{ currentTitle }}</b>
           </div>
-          <select class="tb-proj" :value="project.currentId" @change="selectProject">
+          <select v-if="!isRebuildProjectPage" class="tb-proj" :value="project.currentId" @change="selectProject">
             <option v-for="option in project.options" :key="option.value" :value="option.value">{{ option.label }}</option>
           </select>
         </div>
         <div class="tb-right">
-          <span class="mode-chip" :class="{ mock: isMock }" :title="isMock ? 'mock API：接口契约与真实后端一致，切换 VITE_DATA_MODE=real 即接真实后端' : '真实后端 API'">
-            {{ isMock ? 'MOCK API' : 'REAL API' }}
+          <span class="mode-chip" :class="{ mock: isMock }" :title="isMock ? '模拟数据：接口契约与真实后端一致，切换数据模式即接真实后端' : '真实后端数据'">
+            {{ isMock ? '模拟数据' : '真实数据' }}
           </span>
           <button class="btn tb-bell" @click="inbox.openInbox()">
             通知
@@ -106,6 +106,7 @@ const meta = routesMeta as Array<{ group: string; path: string; title: string }>
 
 const currentTitle = computed(() => meta.find((item) => `/${item.path}` === route.path)?.title ?? '')
 const isCockpit = computed(() => route.path === '/projects/workflow')
+const isRebuildProjectPage = computed(() => route.path === '/studio/projects')
 const currentGroup = computed(() => {
   const group = menu.find((item) => item.children.some((sub) => sub.items.some((entry) => `/${entry.path}` === route.path)))
   return group?.label ?? '短剧制作'
@@ -130,13 +131,13 @@ async function switchIdentity(event: Event) {
 }
 
 async function resetMock() {
-  const yes = await ui.confirm('重置演示数据', '将把全部 mock 数据恢复到原型 9.7.8 的初始状态，当前操作记录会丢失。', true)
+  const yes = await ui.confirm('重置验证数据', '将把全部模拟数据恢复到初始验证状态，当前操作记录会丢失。', true)
   if (!yes) return
   await http.post('/mock/reset')
   await session.login('i-owner')
   await project.load()
   await inbox.load()
-  ui.toast('mock 数据已重置')
+  ui.toast('模拟数据已重置')
   router.push('/workspace/home')
 }
 
