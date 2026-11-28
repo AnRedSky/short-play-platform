@@ -32,7 +32,7 @@ const groupLabels: Record<string, string> = {
   audio: '音频与字幕',
   post: '后期与交付',
   quality: '质量与返工',
-  assets: '资产',
+  assets: '数字资产',
   models: '模型资源',
   tasks: '生产任务',
   cost: '成本与预算',

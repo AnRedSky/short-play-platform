@@ -283,22 +283,22 @@ onMounted(loadData)
 
 <style scoped>
 .rebuild-page {
-  --ink: #16211c;
-  --muted: #61706a;
-  --line: #d8e1dc;
-  --paper: #ffffff;
-  --soft: #f4f7f5;
-  --green: #1d6b4f;
-  --green-soft: #e8f4ee;
-  --amber: #9a5b13;
-  --red: #a33636;
+  --ink: #e9edf3;
+  --muted: #aab4c2;
+  --line: #2a313c;
+  --paper: #12161d;
+  --soft: #171c24;
+  --green: #f0a35e;
+  --green-soft: #241a11;
+  --amber: #ecc46a;
+  --red: #ff8f8f;
   display: flex;
   flex-direction: column;
   gap: 18px;
   min-height: 100%;
-  padding: 24px;
+  padding: 0;
   color: var(--ink);
-  background: #eef3f0;
+  background: transparent;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   box-sizing: border-box;
 }
@@ -329,14 +329,14 @@ h1 {
 }
 .notice {
   padding: 12px 16px;
-  border: 1px solid #b8d8c6;
+  border: 1px solid #513522;
   border-radius: 10px;
   background: var(--green-soft);
-  color: #194c39;
+  color: #f4c48d;
 }
 .notice.bad {
-  border-color: #e6bcbc;
-  background: #fbefef;
+  border-color: #4d2427;
+  background: #2a1517;
   color: var(--red);
 }
 .layout {
@@ -453,13 +453,13 @@ h2 {
   overflow: hidden;
   height: 8px;
   border-radius: 999px;
-  background: #e4ebe7;
+  background: #2a313c;
 }
 .progress-track span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #1d6b4f, #52a87d);
+  background: linear-gradient(90deg, #d98b45, #f7b878);
   transition: width 0.2s ease;
 }
 .rule-note {
@@ -495,7 +495,7 @@ h3 {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fbfdfc;
+  background: #171c24;
 }
 .batch + .batch {
   margin-top: 10px;
@@ -534,14 +534,14 @@ h3 {
 .episode-card:hover,
 .episode-card.selected {
   border-color: var(--green);
-  box-shadow: 0 0 0 2px #d7ede4;
+  box-shadow: 0 0 0 2px rgba(240, 163, 94, 0.42);
 }
 .episode-card.done {
-  background: #f5faf7;
+  background: #10241c;
 }
 .episode-card.blocked {
-  border-color: #dfb0b0;
-  background: #fdf5f5;
+  border-color: #4d2427;
+  background: #2a1517;
 }
 .ep-no {
   color: var(--muted);
@@ -562,13 +562,13 @@ h3 {
   overflow: hidden;
   height: 3px;
   border-radius: 999px;
-  background: #e4ebe7;
+  background: #2a313c;
 }
 .ep-bar i {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #58a681;
+  background: #f7b878;
 }
 .detail-section {
   padding-top: 4px;
@@ -606,7 +606,7 @@ h3 {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #bdcac4;
+  background: #3a4350;
 }
 .stage-step.done .stage-dot,
 .stage-step.current .stage-dot {
@@ -617,8 +617,8 @@ h3 {
   background: var(--green-soft);
 }
 .stage-step.blocked {
-  border-color: #dfb0b0;
-  background: #fdf5f5;
+  border-color: #4d2427;
+  background: #2a1517;
 }
 .stage-step.blocked .stage-dot {
   background: var(--red);
@@ -640,7 +640,7 @@ h3 {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fbfdfc;
+  background: #171c24;
 }
 .panel-title {
   margin-bottom: 10px;
@@ -661,7 +661,7 @@ h3 {
   border: 1px solid var(--green);
   border-radius: 8px;
   background: var(--green);
-  color: #fff;
+  color: #14100a;
   cursor: pointer;
 }
 .empty {
@@ -685,7 +685,7 @@ h3 {
 }
 .fact.on {
   background: var(--green-soft);
-  color: #194c39;
+  color: #f4c48d;
 }
 .fact-mark {
   display: inline-grid;
@@ -693,13 +693,13 @@ h3 {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #e3e9e6;
+  background: #2a313c;
   font-size: 10px;
   font-weight: 700;
 }
 .fact.on .fact-mark {
   background: var(--green);
-  color: #fff;
+  color: #14100a;
 }
 .governance {
   display: flex;
@@ -724,7 +724,7 @@ h3 {
   padding: 7px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: #171c24;
   color: var(--ink);
   cursor: pointer;
 }
@@ -732,7 +732,7 @@ h3 {
   border-color: var(--green);
 }
 .ghost.danger {
-  border-color: #e2b7b7;
+  border-color: #4d2427;
   color: var(--red);
 }
 @media (max-width: 980px) {

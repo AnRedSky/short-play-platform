@@ -16,8 +16,13 @@ function view(path: string) {
 }
 
 const routes: RouteRecordRaw[] = [
-  { path: '/', redirect: '/workspace/home' },
+  { path: '/', redirect: '/home' },
   { path: '/no-access', name: 'no-access', component: view('no-access') },
+
+  // 四个一级入口：首页 / 工作台 / 素材库 / 插件市场，设置挂在外壳底部功能区。
+  { path: '/home', name: 'shell-home', component: view('home') },
+  { path: '/plugins', name: 'shell-plugins', component: view('plugins') },
+  { path: '/settings', name: 'shell-settings', component: view('settings') },
 
   // 旧入口兼容：工作台与项目列表已合并，待办与通知、新建项目改为居中弹窗；项目详情已并入项目工作台。
   { path: '/projects/list', redirect: '/workspace/home' },

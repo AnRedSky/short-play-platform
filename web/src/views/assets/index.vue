@@ -1,6 +1,6 @@
 <template>
   <section class="page">
-    <PageHeader kicker="ASSETS / LIBRARY" title="资产库" desc="资产是跨项目复用的最小单元：人物、场景、道具与音频都带版本、校验和与授权标记。">
+    <PageHeader kicker="ASSETS / LIBRARY" title="素材库" desc="图片、视频、音频与其他素材统一在这里管理：每条素材都带版本、校验和与授权标记，可按分类、质检与放行筛选。">
       <HeadActions>
         <button class="btn" @click="load">刷新</button>
         <button class="btn primary" v-if="session.can('asset.manage')" @click="upload">登记资产</button>
@@ -295,10 +295,10 @@ onMounted(load)
   align-items: center;
   gap: 10px;
   padding: 0 12px;
-  border: 1px dashed #d7e2da;
+  border: 1px dashed var(--ds-border);
   border-radius: 8px;
-  background: #f5f8f5;
-  color: #7d8f83;
+  background: var(--ds-surface-2);
+  color: var(--ds-text-muted);
 }
 
 .thumb-icon {
@@ -309,7 +309,7 @@ onMounted(load)
   background: none;
   font-size: 18px;
   line-height: 1;
-  color: #9fb1a5;
+  color: var(--ds-text-disabled);
 }
 
 .thumb-label {
@@ -318,7 +318,7 @@ onMounted(load)
   bottom: auto;
   padding: 0;
   background: none;
-  color: #9aaba0;
+  color: var(--ds-text-muted);
   font-size: 10px;
 }
 
@@ -331,7 +331,7 @@ onMounted(load)
   background: none;
   font-family: var(--mono);
   font-size: 10px;
-  color: #5f7367;
+  color: var(--ds-text-disabled);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

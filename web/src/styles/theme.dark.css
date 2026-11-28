@@ -1,0 +1,594 @@
+/* theme.dark.css：全局暗色主题基线（最后导入，优先级高于 base / components / app）。
+ *
+ * 三件事：
+ * 1. 定义本项目的暗色令牌（背景、正文、辅助文字、分割线、交互、hover、激活、禁用、状态色）。
+ * 2. 把旧页面仍在使用的 legacy 变量指向同一套色值，保证 50 多个业务页与外壳同基线。
+ * 3. 覆盖 components.css 里写死的深色字面量，让全站只有一个颜色来源。
+ *
+ * 对比度（WCAG 2.1，相对亮度公式）：
+ *   正文 #e9edf3 / 卡片 #12161d        15.43:1  AAA
+ *   正文 #e9edf3 / 页面 #0b0e13        16.4:1   AAA
+ *   次要 #aab4c2 / 卡片 #12161d        8.65:1   AAA
+ *   辅助 #8d97a4 / 卡片 #12161d        6.13:1   AA（小字正文达标）
+ *   辅助 #8d97a4 / 输入 #1e242e        5.27:1   AA
+ *   禁用 #737d8b / 输入 #1e242e        3.74:1   ≥3:1（WCAG 对禁用控件豁免，这里仍按 3:1 兜底）
+ *   控件边框 #646f7d / 卡片 #12161d    3.55:1   ≥3:1（非文本对比度 1.4.11）
+ *   主交互 #f0a35e / 卡片 #12161d      8.73:1   按钮底色上的深字 #14100a 9.12:1
+ *   焦点环 #f0a35e / 页面 #0b0e13      9.30:1   ≥3:1
+ *   状态 成功 #5ed6a4 10.04:1 · 警告 #ecc46a 10.94:1 · 危险 #ff8f8f 8.27:1 · 信息 #8fb8ff 9.04:1
+ */
+
+:root {
+  /* ---------- 背景层级 ---------- */
+  --ds-bg: #0b0e13;            /* 页面底色 */
+  --ds-surface-1: #12161d;     /* 卡片、面板 */
+  --ds-surface-2: #171c24;     /* 卡片内次级区块、hover 底 */
+  --ds-surface-3: #1e242e;     /* 输入框、选中底、激活底 */
+  --ds-sidebar: #0a0d11;       /* 固定导航 */
+  --ds-overlay: rgba(4, 6, 10, 0.66);
+
+  /* ---------- 文字 ---------- */
+  --ds-text-primary: #e9edf3;
+  --ds-text-secondary: #aab4c2;
+  --ds-text-muted: #8d97a4;
+  --ds-text-disabled: #737d8b;
+
+  /* ---------- 分割线与控件边框 ---------- */
+  --ds-border: #2a313c;        /* 纯分割线，装饰性 */
+  --ds-border-strong: #646f7d; /* 需要被看见的控件边界、选中描边 */
+
+  /* ---------- 交互 ---------- */
+  --ds-interactive: #f0a35e;
+  --ds-interactive-hover: #f7b878;
+  --ds-interactive-active: #d98b45;
+  --ds-interactive-soft: #241a11;
+  --ds-interactive-line: #513522;
+  --ds-on-interactive: #14100a;
+  --ds-focus-ring: rgba(240, 163, 94, 0.42);
+
+  /* ---------- 状态 ---------- */
+  --ds-ok: #5ed6a4;
+  --ds-ok-soft: #10241c;
+  --ds-warn: #ecc46a;
+  --ds-warn-soft: #241f12;
+  --ds-danger: #ff8f8f;
+  --ds-danger-soft: #2a1517;
+  --ds-info: #8fb8ff;
+  --ds-info-soft: #131d2b;
+
+  /* ---------- 间距：8px 基础栅格 ---------- */
+  --space-half: 4px;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 48px;
+  --space-7: 56px;
+  --space-8: 64px;
+
+  /* ---------- 圆角 ---------- */
+  --radius-s: 6px;   /* 输入、标签 */
+  --radius-m: 8px;   /* 卡片、按钮、导航项 */
+  --radius-l: 12px;  /* 大面板、抽屉 */
+  --radius-pill: 999px;
+
+  /* ---------- 阴影：三级层级 ---------- */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.32);                                  /* 静态卡片 */
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.04) inset; /* 悬浮、下拉、提示 */
+  --shadow-3: 0 28px 72px rgba(0, 0, 0, 0.6);                                 /* 抽屉、弹窗 */
+
+  /* ---------- 布局 ---------- */
+  --nav-width: 240px;
+  --nav-width-collapsed: 72px;
+  --topbar-h: 64px;
+  --content-max: 1600px;
+  --page-gutter: 32px;
+
+  /* ---------- 动效 ---------- */
+  --motion-nav: 300ms;
+  --motion-fast: 150ms;
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* ---------- legacy 变量：旧页面与公共组件共用同一套色 ---------- */
+  --bg: var(--ds-bg);
+  --surface: var(--ds-surface-1);
+  --surface-2: var(--ds-surface-2);
+  --surface-3: var(--ds-surface-3);
+  --ink: var(--ds-text-primary);
+  --ink-2: var(--ds-text-secondary);
+  --muted: var(--ds-text-muted);
+  --faint: var(--ds-text-disabled);
+  --line: var(--ds-border);
+  --line-strong: var(--ds-border-strong);
+  --accent: var(--ds-interactive);
+  --accent-ink: #f4c48d;
+  --accent-soft: var(--ds-interactive-soft);
+  --accent-line: var(--ds-interactive-line);
+  --ok: var(--ds-ok);
+  --ok-soft: var(--ds-ok-soft);
+  --warn: var(--ds-warn);
+  --warn-soft: var(--ds-warn-soft);
+  --bad: var(--ds-danger);
+  --bad-soft: var(--ds-danger-soft);
+  --info: var(--ds-info);
+  --info-soft: var(--ds-info-soft);
+  --sidebar: var(--ds-sidebar);
+  --sidebar-2: #0e1219;
+  --sidebar-ink: #c9d3e0;
+  --sidebar-dim: #8b95a3;
+  --sidebar-active: #fff8ee;
+  --warn-line: #4f4225;
+  --shadow-card: var(--shadow-1);
+  --shadow-pop: var(--shadow-3);
+
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--ds-bg);
+  color: var(--ds-text-primary);
+}
+
+body {
+  background:
+    radial-gradient(1100px 520px at 12% -8%, rgba(240, 163, 94, 0.07), transparent 62%),
+    radial-gradient(900px 500px at 100% 0%, rgba(120, 150, 255, 0.04), transparent 60%),
+    var(--ds-bg);
+  background-attachment: fixed;
+}
+
+/* ---------- 旧组件颜色回收：全站单一来源 ---------- */
+.card {
+  background: var(--ds-surface-1);
+  border-color: var(--ds-border);
+  box-shadow: var(--shadow-1);
+}
+
+.card.flat {
+  background: var(--ds-surface-2);
+  box-shadow: none;
+}
+
+.card-sub,
+.muted {
+  color: var(--ds-text-muted);
+}
+
+.card-title,
+.table .cell-strong,
+.entity b,
+.empty b,
+.modal-head h3 {
+  color: var(--ds-text-primary);
+}
+
+.divider,
+.page-head,
+.card-head {
+  border-color: var(--ds-border);
+}
+
+.btn {
+  border-color: var(--ds-border-strong);
+  background: var(--ds-surface-2);
+  color: var(--ds-text-secondary);
+  border-radius: var(--radius-m);
+}
+
+.btn:hover {
+  background: var(--ds-surface-3);
+  border-color: var(--ds-border-strong);
+  color: var(--ds-text-primary);
+}
+
+.btn:disabled,
+.btn[disabled],
+.btn.is-disabled {
+  border-color: var(--ds-border);
+  background: var(--ds-surface-2);
+  color: var(--ds-text-disabled);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn.primary {
+  background: var(--ds-interactive);
+  border-color: var(--ds-interactive);
+  color: var(--ds-on-interactive);
+  box-shadow: 0 4px 14px rgba(240, 163, 94, 0.18);
+}
+
+.btn.primary:hover {
+  background: var(--ds-interactive-hover);
+  border-color: var(--ds-interactive-hover);
+  color: var(--ds-on-interactive);
+}
+
+.btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ds-text-muted);
+}
+
+.btn.ghost:hover {
+  background: var(--ds-surface-2);
+  color: var(--ds-text-primary);
+}
+
+.btn.danger {
+  color: var(--ds-danger);
+  border-color: var(--ds-danger-soft);
+  background: var(--ds-surface-2);
+}
+
+.btn.danger:hover {
+  background: var(--ds-danger-soft);
+}
+
+.btn-group {
+  background: var(--ds-surface-2);
+  border-color: var(--ds-border);
+}
+
+.btn-group .seg {
+  color: var(--ds-text-muted);
+  border-right-color: var(--ds-border);
+}
+
+.btn-group .seg.on {
+  background: var(--ds-interactive-soft);
+  color: var(--accent-ink);
+}
+
+.icon-btn {
+  color: var(--ds-text-muted);
+}
+
+.icon-btn:hover {
+  background: var(--ds-surface-2);
+  border-color: var(--ds-border);
+  color: var(--ds-text-primary);
+}
+
+.pill {
+  background: var(--ds-surface-2);
+  color: var(--ds-text-muted);
+}
+
+.pill.ok {
+  background: var(--ds-ok-soft);
+  color: var(--ds-ok);
+}
+
+.pill.warn {
+  background: var(--ds-warn-soft);
+  color: var(--ds-warn);
+}
+
+.pill.bad {
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger);
+}
+
+.pill.info {
+  background: var(--ds-info-soft);
+  color: var(--ds-info);
+}
+
+.pill.accent {
+  background: var(--ds-interactive-soft);
+  color: var(--accent-ink);
+}
+
+.pill.outline {
+  background: transparent;
+  border-color: var(--ds-border-strong);
+  color: var(--ds-text-muted);
+}
+
+.tag {
+  background: var(--ds-surface-2);
+  border-color: var(--ds-border);
+  color: var(--ds-text-muted);
+}
+
+.table-wrap {
+  background: var(--ds-surface-1);
+  border-color: var(--ds-border);
+}
+
+.table thead th {
+  background: var(--ds-surface-2);
+  color: var(--ds-text-muted);
+}
+
+.table tbody td {
+  border-bottom-color: var(--ds-border);
+  color: var(--ds-text-secondary);
+}
+
+.table tbody tr:hover td {
+  background: var(--ds-surface-2);
+}
+
+.table-foot {
+  background: var(--ds-surface-2);
+  border-top-color: var(--ds-border);
+  color: var(--ds-text-muted);
+}
+
+.entity small {
+  color: var(--ds-text-disabled);
+}
+
+.avatar {
+  background: var(--ds-interactive-soft);
+  color: var(--accent-ink);
+}
+
+.avatar.mono {
+  background: var(--ds-surface-2);
+}
+
+.empty,
+.empty-icon {
+  color: var(--ds-text-muted);
+}
+
+.empty-icon {
+  background: var(--ds-surface-2);
+}
+
+.toolbar .search,
+.search,
+.filter,
+.field,
+.field-wrap input,
+.field-wrap select,
+.field-wrap textarea {
+  background: var(--ds-surface-2);
+  border-color: var(--ds-border-strong);
+  color: var(--ds-text-primary);
+  border-radius: var(--radius-s);
+}
+
+.search::placeholder,
+.field::placeholder {
+  color: var(--ds-text-disabled);
+}
+
+.search:focus,
+.filter:focus,
+.field:focus,
+.field-wrap input:focus,
+.field-wrap select:focus,
+.field-wrap textarea:focus {
+  border-color: var(--ds-interactive);
+  box-shadow: 0 0 0 3px var(--ds-focus-ring);
+}
+
+.field-label {
+  color: var(--ds-text-secondary);
+}
+
+.field-hint {
+  color: var(--ds-text-disabled);
+}
+
+.field.invalid {
+  border-color: var(--ds-danger);
+  background: var(--ds-danger-soft);
+}
+
+.radio-card {
+  background: var(--ds-surface-2);
+  border-color: var(--ds-border);
+}
+
+.radio-card:hover {
+  background: var(--ds-surface-3);
+  border-color: var(--ds-border-strong);
+}
+
+.radio-card.on {
+  background: var(--ds-interactive-soft);
+  border-color: var(--ds-interactive-line);
+}
+
+.tabs {
+  border-bottom-color: var(--ds-border);
+}
+
+.tab {
+  color: var(--ds-text-muted);
+}
+
+.tab:hover {
+  color: var(--ds-text-primary);
+}
+
+.tab.active {
+  color: var(--accent-ink);
+  border-bottom-color: var(--ds-interactive);
+}
+
+.progress,
+.stackbar {
+  background: var(--ds-surface-2);
+  border-color: var(--ds-border);
+}
+
+.chain-node {
+  background: var(--ds-surface-1);
+  border-color: var(--ds-border);
+}
+
+.chain-node.done {
+  background: var(--ds-ok-soft);
+  border-color: #24503d;
+}
+
+.chain-node.now {
+  background: var(--ds-interactive-soft);
+  border-color: var(--ds-interactive-line);
+}
+
+.chain-node.blocked {
+  background: var(--ds-danger-soft);
+  border-color: #4d2427;
+}
+
+.chain-arrow {
+  color: var(--ds-border-strong);
+}
+
+.shot-card {
+  background: var(--ds-surface-1);
+  border-color: var(--ds-border);
+}
+
+.shot-frame {
+  background: linear-gradient(145deg, #1a2029, #101319);
+  border-bottom-color: var(--ds-border);
+}
+
+.modal-backdrop {
+  background: var(--ds-overlay);
+}
+
+.modal,
+.job-card {
+  background: var(--ds-surface-1);
+  border-color: var(--ds-border);
+  box-shadow: var(--shadow-3);
+}
+
+.modal-foot {
+  background: var(--ds-surface-1);
+  border-top-color: var(--ds-border);
+}
+
+.drawer {
+  background: var(--ds-surface-1);
+  border-left-color: var(--ds-border);
+  box-shadow: var(--shadow-3);
+}
+
+.toast {
+  background: var(--ds-surface-3);
+  color: var(--ds-text-primary);
+  border: 1px solid var(--ds-border-strong);
+  box-shadow: var(--shadow-2);
+}
+
+.toast.bad {
+  background: var(--ds-danger-soft);
+  border-color: #5a2a2e;
+  color: var(--ds-danger);
+}
+
+.notice {
+  background: var(--ds-interactive-soft);
+  border-color: var(--ds-interactive-line);
+  color: #e8bd93;
+}
+
+.notice.warn {
+  background: var(--ds-warn-soft);
+  border-color: #4f4225;
+  color: var(--ds-warn);
+}
+
+.notice.bad {
+  background: var(--ds-danger-soft);
+  border-color: #4d2427;
+  color: var(--ds-danger);
+}
+
+.notice.ok {
+  background: var(--ds-ok-soft);
+  border-color: #214a39;
+  color: var(--ds-ok);
+}
+
+.notice.info {
+  background: var(--ds-info-soft);
+  border-color: #24384f;
+  color: var(--ds-info);
+}
+
+.kanban-col {
+  background: var(--ds-surface-2);
+  border-color: var(--ds-border);
+}
+
+.kanban-item,
+.kv {
+  background: var(--ds-surface-1);
+  border-color: var(--ds-border);
+}
+
+.code,
+.masked,
+.chip,
+.diff-row,
+.demo-identity {
+  background: var(--ds-surface-2);
+  border-color: var(--ds-border-strong);
+  color: var(--ds-text-secondary);
+}
+
+.chip:hover {
+  background: var(--ds-interactive-soft);
+  border-color: var(--ds-interactive-line);
+  color: var(--accent-ink);
+}
+
+.script-paper {
+  background: var(--ds-surface-2);
+  border-color: var(--ds-border);
+}
+
+.form-error {
+  background: var(--ds-danger-soft);
+  border-color: #4d2427;
+  color: var(--ds-danger);
+}
+
+/* ---------- 焦点可见：键盘操作统一主色环 ---------- */
+:focus-visible {
+  outline: 2px solid var(--ds-interactive);
+  outline-offset: 2px;
+}
+
+/* ---------- 结构基线里的浅色残留回收（布局沿用 theme-light，颜色一律回收） ---------- */
+.status-cell.primary {
+  background: linear-gradient(135deg, #1b1409, var(--ds-surface-1));
+}
+
+.shot-frame {
+  background: linear-gradient(145deg, #1a2029, #101319);
+}
+
+.script-paper {
+  background: var(--ds-surface-2);
+  border-color: var(--ds-border);
+}
+
+.script-paper .script-line {
+  border-bottom-color: var(--ds-border);
+}
+
+.job-mask {
+  background: var(--ds-overlay);
+}
+
+/* 数据表格首列吸附阴影在暗色下需要更轻 */
+.table-wrap.has-x .table thead th:first-child,
+.table-wrap.has-x .table tbody td:first-child,
+.table-wrap.has-x .table thead th:last-child,
+.table-wrap.has-x .table tbody td:last-child {
+  box-shadow: 0 0 12px -6px rgba(0, 0, 0, 0.6);
+}

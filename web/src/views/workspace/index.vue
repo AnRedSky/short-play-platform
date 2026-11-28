@@ -47,6 +47,27 @@
       </div>
 
       <aside class="ws-side">
+        <div class="card ws-modules">
+          <div class="card-head">
+            <h3 class="card-title">工作台模块</h3>
+            <span class="card-sub">三个核心入口</span>
+          </div>
+          <div class="module-list">
+            <button class="module-item" @click="go('projects/workflow')">
+              <b>项目管理</b>
+              <small>项目详情与流水线推进</small>
+            </button>
+            <button class="module-item" @click="go('post/delivery')">
+              <b>项目文件管理</b>
+              <small>交付包、版本与项目文件</small>
+            </button>
+            <button class="module-item" @click="go('tasks/list')">
+              <b>创作任务管理</b>
+              <small>生产任务、重试与排队</small>
+            </button>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-head">
             <h3 class="card-title">当前项目流水线</h3>
@@ -251,6 +272,11 @@ onMounted(load)
 .ws-projects { display: grid; gap: 12px; min-width: 0; }
 .ws-tabs { margin-bottom: 0; }
 .ws-side { display: grid; gap: 14px; }
+.module-list { display: grid; gap: 6px; }
+.module-item { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-ctl, 8px); background: var(--surface-2); color: var(--muted); text-align: left; cursor: pointer; transition: border-color .15s ease, color .15s ease, background .15s ease; }
+.module-item:hover { border-color: var(--line-strong); background: var(--surface-3); color: var(--ink); }
+.module-item b { font-size: 12.5px; font-weight: 640; color: var(--ink); }
+.module-item small { font-size: 11px; color: var(--muted); }
 @media (max-width: 1280px) {
   .ws-grid { grid-template-columns: minmax(0, 1fr); }
 }

@@ -9,7 +9,10 @@ import './styles/studio/base.css'
 import './styles/studio/components.css'
 import './styles/studio/studio.css'
 import './styles/app.css'
+// 结构基线在前（保留业务页的栅格、状态条、素材卡等布局），
+// 暗色令牌与配色覆盖在后：全站只有一个颜色来源，布局不受影响。
 import './styles/studio/theme-light.css'
+import './styles/theme.dark.css'
 
 /**
  * mock 适配器：只替换传输层，不改页面与 api 调用。
